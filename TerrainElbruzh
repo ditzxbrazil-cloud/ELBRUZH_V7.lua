@@ -1,15 +1,15 @@
--- [[ ELBRUZH V14.2 - JUALAN SYSTEM FIX ]] --
+-- [[ ELBRUZH V14.3 - ANTI-FAIL KEY SYSTEM ]] --
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local lp = game:GetService("Players").LocalPlayer
 
--- URL RAW GITHUB (Wajib link yang ada tulisan /main/)
+-- URL RAW GITHUB (PASTIKAN SUDAH BENAR)
 local KEY_URL = "https://raw.githubusercontent.com/ditzxbrazil-cloud/ELBRUZH_V7.lua/main/keySystem"
-local SAVE_PATH = "ELBRUZH_Auth_" .. lp.UserId .. ".json"
+local SAVE_FILE = "ELBRUZH_LOCK_DATA.json"
 
 _G.AccessGranted = false
 
--- Fungsi cek ke GitHub (Anti-Error gsub)
+-- FUNGSI VERIFIKASI SUPER BERSIH
 local function verify(input)
     if not input or input == "" then return false end
     
@@ -18,12 +18,15 @@ local function verify(input)
     end)
     
     if success and result then
-        local cleanInput = input:gsub("%s+", "")
+        -- Bersihkan input user dari spasi/enter
+        local cleanInput = input:gsub("%s+", ""):gsub("%c+", "")
         local myID = tostring(lp.UserId)
         
         for line in result:gmatch("[^\r\n]+") do
-            local cleanLine = line:gsub("%s+", "")
-            -- Syarat: Kode di GitHub harus sama dengan input DAN ada UserID pembeli di dalamnya
+            -- Bersihkan tiap baris di GitHub dari spasi/enter
+            local cleanLine = line:gsub("%s+", ""):gsub("%c+", "")
+            
+            -- LOGIKA: Baris harus sama persis DAN mengandung ID kamu
             if cleanInput == cleanLine and cleanInput:find(myID) then
                 return true
             end
@@ -32,18 +35,18 @@ local function verify(input)
     return false
 end
 
--- Cek apakah sudah pernah login (Auto-Login)
-if isfile(SAVE_PATH) then
-    local content = readfile(SAVE_PATH)
-    local success, data = pcall(function() return HttpService:JSONDecode(content) end)
-    if success and data and data.Key then
+-- SISTEM AUTO-LOGIN
+if isfile(SAVE_FILE) then
+    local content = readfile(SAVE_FILE)
+    local s, data = pcall(function() return HttpService:JSONDecode(content) end)
+    if s and data and data.Key then
         if verify(data.Key) then
             _G.AccessGranted = true
         end
     end
 end
 
--- Tampilkan Menu Login kalau belum terverifikasi
+-- MENU LOGIN (MUNCUL JIKA BELUM LOGIN)
 if not _G.AccessGranted then
     local sg = Instance.new("ScreenGui", CoreGui)
     local main = Instance.new("Frame", sg)
@@ -55,16 +58,14 @@ if not _G.AccessGranted then
 
     local title = Instance.new("TextLabel", main)
     title.Size = UDim2.new(1, 0, 0, 40)
-    title.Text = "COPY YOUR ID: " .. lp.UserId
+    title.Text = "COPY ID: " .. lp.UserId
     title.TextColor3 = Color3.new(1, 1, 1)
     title.BackgroundTransparency = 1
-    title.TextSize = 12
 
     local box = Instance.new("TextBox", main)
     box.Size = UDim2.new(0, 240, 0, 40)
     box.Position = UDim2.new(0.5, -120, 0.45)
-    box.PlaceholderText = "Input Key..."
-    box.Text = ""
+    box.PlaceholderText = "Paste Key Here..."
     box.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     box.TextColor3 = Color3.new(1, 1, 1)
     Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
@@ -72,28 +73,32 @@ if not _G.AccessGranted then
     local btn = Instance.new("TextButton", main)
     btn.Size = UDim2.new(0, 120, 0, 35)
     btn.Position = UDim2.new(0.5, -60, 0.8)
-    btn.Text = "LOGIN"
+    btn.Text = "ACTIVATE"
     btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
     btn.TextColor3 = Color3.new(1, 1, 1)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 
     btn.MouseButton1Click:Connect(function()
-        if verify(box.Text) then
-            writefile(SAVE_PATH, HttpService:JSONEncode({Key = box.Text}))
+        local input = box.Text
+        if verify(input) then
+            writefile(SAVE_FILE, HttpService:JSONEncode({Key = input}))
             btn.Text = "SUCCESS!"
-            task.wait(1)
+            task.wait(0.5)
             _G.AccessGranted = true
             sg:Destroy()
         else
-            btn.Text = "WRONG KEY/ID!"
+            btn.Text = "INVALID / WRONG ID"
+            btn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
             task.wait(1)
-            btn.Text = "LOGIN"
+            btn.Text = "ACTIVATE"
+            btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
         end
     end)
 end
 
 repeat task.wait() until _G.AccessGranted == true
--- [[ LANJUTKAN SCRIPT ELBRUZH ASLI KAMU DI SINI ]] --
+-- [[ SCRIPT ELBRUZH LANJUT DI SINI ]] --
+print("Welcome back, " .. lp.Name)
 --// TERRAIN BY ELBRUZH 
 --// Terrain Editor v14.2 - Updated Presets
 --// PASTE KE EXECUTOR
