@@ -1,4 +1,4 @@
---// shhhhnayy05 Copy Map System v4.0 - Full Game Copy
+--// shhhhnayy05 Copy Map System v4.1 - Fixed Progress & No Humanoid
 --// Support: Krnl, Synapse X, Electron, Script-Ware, Oxygen U, Codex, Delta, Hydrogen
 
 local shhhhnayy05 = {}
@@ -19,12 +19,6 @@ local Lighting = game:GetService("Lighting")
 local SoundService = game:GetService("SoundService")
 local Teams = game:GetService("Teams")
 local Chat = game:GetService("Chat")
-local LocalizationService = game:GetService("LocalizationService")
-local MaterialService = game:GetService("MaterialService")
-local PhysicsService = game:GetService("PhysicsService")
-local PolicyService = game:GetService("PolicyService")
-local TextChatService = game:GetService("TextChatService")
-local VirtualUser = game:GetService("VirtualUser")
 
 --// Executor Detection
 local function GetExecutor()
@@ -50,20 +44,16 @@ shhhhnayy05.IsCopying = false
 shhhhnayy05.ShouldStop = false
 shhhhnayy05.CopyOptions = {
     Workspace = true,
-    ReplicatedStorage = true,
-    ServerStorage = true,
-    ServerScriptService = true,
-    StarterPlayer = true,
-    StarterGui = true,
-    StarterPack = true,
-    Lighting = true,
-    SoundService = true,
-    Teams = true,
-    Chat = true,
-    LocalizationService = true,
-    MaterialService = true,
-    IncludeScripts = false, -- Scripts tidak bisa di-clone sepenuhnya
-    IncludeTerrain = true
+    ReplicatedStorage = false,
+    ServerStorage = false,
+    ServerScriptService = false,
+    StarterPlayer = false,
+    StarterGui = false,
+    StarterPack = false,
+    Lighting = false,
+    SoundService = false,
+    Teams = false,
+    Chat = false
 }
 
 --// Initialize
@@ -71,17 +61,17 @@ if isfolder and makefolder and not isfolder(shhhhnayy05.MapsFolder) then
     makefolder(shhhhnayy05.MapsFolder)
 end
 
---// GUI Setup
+--// GUI Setup - ORIGINAL SIZE 420x520
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "shhhhnayy05_CopyMap_v4"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
 
---// Main Frame
+--// Main Frame - ORIGINAL SIZE
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 450, 0, 600)
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -300)
+MainFrame.Size = UDim2.new(0, 420, 0, 520)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -260)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
@@ -111,7 +101,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0.6, 0, 0.6, 0)
 Title.Position = UDim2.new(0.03, 0, 0.1, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "🗺️ shhhhnayy05 Full Copy"
+Title.Text = "🗺️ shhhhnayy05 Copy Map"
 Title.TextColor3 = Color3.fromRGB(0, 200, 255)
 Title.TextScaled = true
 Title.Font = Enum.Font.GothamBold
@@ -221,9 +211,9 @@ spawn(function()
     end
 end)
 
---// Options Section
+--// Options Section - COMPACT
 local OptionsFrame = Instance.new("Frame")
-OptionsFrame.Size = UDim2.new(1, 0, 0, 120)
+OptionsFrame.Size = UDim2.new(1, 0, 0, 70)
 OptionsFrame.Position = UDim2.new(0, 0, 0, 88)
 OptionsFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
 OptionsFrame.BorderSizePixel = 0
@@ -231,50 +221,44 @@ OptionsFrame.Parent = Content
 Instance.new("UICorner", OptionsFrame).CornerRadius = UDim.new(0, 8)
 
 local OptionsTitle = Instance.new("TextLabel")
-OptionsTitle.Size = UDim2.new(1, -10, 0, 22)
-OptionsTitle.Position = UDim2.new(0, 5, 0, 5)
+OptionsTitle.Size = UDim2.new(1, -10, 0, 20)
+OptionsTitle.Position = UDim2.new(0, 5, 0, 3)
 OptionsTitle.BackgroundTransparency = 1
-OptionsTitle.Text = "⚙️ COPY OPTIONS"
+OptionsTitle.Text = "⚙️ SERVICES"
 OptionsTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
 OptionsTitle.TextScaled = true
 OptionsTitle.Font = Enum.Font.GothamBold
 OptionsTitle.TextXAlignment = Enum.TextXAlignment.Left
 OptionsTitle.Parent = OptionsFrame
 
---// Options Toggles
-local function CreateToggle(parent, text, pos, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0.48, -5, 0, 24)
-    frame.Position = pos
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
-    
+--// Compact Toggle Function
+local function CreateMiniToggle(parent, text, pos, default, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 20, 0, 20)
-    btn.Position = UDim2.new(0, 0, 0.5, -10)
-    btn.BackgroundColor3 = default and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(100, 100, 100)
+    btn.Size = UDim2.new(0, 16, 0, 16)
+    btn.Position = pos
+    btn.BackgroundColor3 = default and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(80, 80, 80)
     btn.Text = default and "✓" or ""
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 14
+    btn.TextSize = 10
     btn.Font = Enum.Font.GothamBold
-    btn.Parent = frame
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    btn.Parent = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 3)
     
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -28, 1, 0)
-    lbl.Position = UDim2.new(0, 26, 0, 0)
+    lbl.Size = UDim2.new(0, 70, 0, 16)
+    lbl.Position = UDim2.new(0, 20, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
     lbl.TextScaled = true
     lbl.Font = Enum.Font.Gotham
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Parent = frame
+    lbl.Parent = btn
     
     local enabled = default
     btn.MouseButton1Click:Connect(function()
         enabled = not enabled
-        btn.BackgroundColor3 = enabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(100, 100, 100)
+        btn.BackgroundColor3 = enabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(80, 80, 80)
         btn.Text = enabled and "✓" or ""
         if callback then callback(enabled) end
     end)
@@ -282,17 +266,21 @@ local function CreateToggle(parent, text, pos, default, callback)
     return btn
 end
 
-CreateToggle(OptionsFrame, "Workspace", UDim2.new(0, 5, 0, 30), true, function(v) shhhhnayy05.CopyOptions.Workspace = v end)
-CreateToggle(OptionsFrame, "ReplicatedStorage", UDim2.new(0.5, 5, 0, 30), true, function(v) shhhhnayy05.CopyOptions.ReplicatedStorage = v end)
-CreateToggle(OptionsFrame, "ServerStorage", UDim2.new(0, 5, 0, 58), true, function(v) shhhhnayy05.CopyOptions.ServerStorage = v end)
-CreateToggle(OptionsFrame, "ServerScriptService", UDim2.new(0.5, 5, 0, 58), true, function(v) shhhhnayy05.CopyOptions.ServerScriptService = v end)
-CreateToggle(OptionsFrame, "StarterPlayer", UDim2.new(0, 5, 0, 86), true, function(v) shhhhnayy05.CopyOptions.StarterPlayer = v end)
-CreateToggle(OptionsFrame, "StarterGui", UDim2.new(0.5, 5, 0, 86), true, function(v) shhhhnayy05.CopyOptions.StarterGui = v end)
+--// 2 Rows of toggles
+CreateMiniToggle(OptionsFrame, "Workspace", UDim2.new(0, 5, 0, 26), true, function(v) shhhhnayy05.CopyOptions.Workspace = v end)
+CreateMiniToggle(OptionsFrame, "RepStorage", UDim2.new(0, 100, 0, 26), false, function(v) shhhhnayy05.CopyOptions.ReplicatedStorage = v end)
+CreateMiniToggle(OptionsFrame, "SrvStorage", UDim2.new(0, 195, 0, 26), false, function(v) shhhhnayy05.CopyOptions.ServerStorage = v end)
+CreateMiniToggle(OptionsFrame, "SrvScript", UDim2.new(0, 290, 0, 26), false, function(v) shhhhnayy05.CopyOptions.ServerScriptService = v end)
 
---// Copy Section
+CreateMiniToggle(OptionsFrame, "StarterPlr", UDim2.new(0, 5, 0, 46), false, function(v) shhhhnayy05.CopyOptions.StarterPlayer = v end)
+CreateMiniToggle(OptionsFrame, "StarterGui", UDim2.new(0, 100, 0, 46), false, function(v) shhhhnayy05.CopyOptions.StarterGui = v end)
+CreateMiniToggle(OptionsFrame, "Lighting", UDim2.new(0, 195, 0, 46), false, function(v) shhhhnayy05.CopyOptions.Lighting = v end)
+CreateMiniToggle(OptionsFrame, "Sound", UDim2.new(0, 290, 0, 46), false, function(v) shhhhnayy05.CopyOptions.SoundService = v end)
+
+--// Copy Section - ORIGINAL POSITION
 local CopyFrame = Instance.new("Frame")
 CopyFrame.Size = UDim2.new(1, 0, 0, 160)
-CopyFrame.Position = UDim2.new(0, 0, 0, 216)
+CopyFrame.Position = UDim2.new(0, 0, 0, 164)
 CopyFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
 CopyFrame.BorderSizePixel = 0
 CopyFrame.Parent = Content
@@ -325,7 +313,7 @@ local NameInput = Instance.new("TextBox")
 NameInput.Size = UDim2.new(1, -90, 0, 26)
 NameInput.Position = UDim2.new(0, 85, 0, 30)
 NameInput.BackgroundColor3 = Color3.fromRGB(50, 55, 70)
-NameInput.Text = "FullMap_" .. game.PlaceId .. "_" .. os.date("%H%M")
+NameInput.Text = "Map_" .. game.PlaceId .. "_" .. os.date("%H%M")
 NameInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 NameInput.TextScaled = true
 NameInput.Font = Enum.Font.Gotham
@@ -394,10 +382,10 @@ StopBtn.Parent = CopyFrame
 StopBtn.Visible = false
 Instance.new("UICorner", StopBtn).CornerRadius = UDim.new(0, 6)
 
---// Saved Maps Section
+--// Saved Maps Section - ORIGINAL POSITION
 local SavedFrame = Instance.new("Frame")
-SavedFrame.Size = UDim2.new(1, 0, 1, -384)
-SavedFrame.Position = UDim2.new(0, 0, 0, 380)
+SavedFrame.Size = UDim2.new(1, 0, 1, -332)
+SavedFrame.Position = UDim2.new(0, 0, 0, 328)
 SavedFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
 SavedFrame.BorderSizePixel = 0
 SavedFrame.Parent = Content
@@ -456,8 +444,8 @@ Instance.new("UIStroke", MinIcon).Thickness = 2
 
 --// Notification
 local NotifFrame = Instance.new("Frame")
-NotifFrame.Size = UDim2.new(0, 320, 0, 70)
-NotifFrame.Position = UDim2.new(0.5, -160, 0, -80)
+NotifFrame.Size = UDim2.new(0, 300, 0, 65)
+NotifFrame.Position = UDim2.new(0.5, -150, 0, -80)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
 NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
@@ -483,13 +471,23 @@ local function Notify(text, color)
     NotifText.Text = text
     NotifStroke.Color = color or Color3.fromRGB(0, 200, 100)
     TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
-        Position = UDim2.new(0.5, -160, 0, 20)
+        Position = UDim2.new(0.5, -150, 0, 20)
     }):Play()
     task.delay(3, function()
         TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
-            Position = UDim2.new(0.5, -160, 0, -80)
+            Position = UDim2.new(0.5, -150, 0, -80)
         }):Play()
     end)
+end
+
+--// Check if object is a player character (skip Humanoid/Character)
+local function IsPlayerCharacter(obj)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character and (obj == player.Character or obj:IsDescendantOf(player.Character)) then
+            return true
+        end
+    end
+    return false
 end
 
 --// Get all services to copy
@@ -506,21 +504,23 @@ local function GetServicesToCopy()
     if shhhhnayy05.CopyOptions.SoundService then table.insert(services, {Name = "SoundService", Service = SoundService}) end
     if shhhhnayy05.CopyOptions.Teams then table.insert(services, {Name = "Teams", Service = Teams}) end
     if shhhhnayy05.CopyOptions.Chat then table.insert(services, {Name = "Chat", Service = Chat}) end
-    if shhhhnayy05.CopyOptions.LocalizationService then table.insert(services, {Name = "LocalizationService", Service = LocalizationService}) end
-    if shhhhnayy05.CopyOptions.MaterialService then table.insert(services, {Name = "MaterialService", Service = MaterialService}) end
     return services
 end
 
---// Deep Clone Function (Real-time)
+--// Deep Clone Function - NO HUMANOID, NO PLAYER CHARACTERS
 local function DeepClone(instance, parent, onProgress, serviceName)
     if shhhhnayy05.ShouldStop then return nil end
+    
+    --// SKIP: Humanoid, Player Characters, Scripts
+    if instance:IsA("Humanoid") then return nil end
+    if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then return nil end
+    if IsPlayerCharacter(instance) then return nil end
     
     local clone
     local className = instance.ClassName
     
     --// Skip unwanted items
     if className == "Camera" or className == "Terrain" then return nil end
-    if not shhhhnayy05.CopyOptions.IncludeScripts and (className == "Script" or className == "LocalScript" or className == "ModuleScript") then return nil end
     
     --// Create instance based on class
     local success = pcall(function()
@@ -536,7 +536,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.Anchored = instance.Anchored
             clone.CastShadow = instance.CastShadow
             clone.Shape = instance.Shape
-            --// Surfaces
             for _, face in ipairs({"Top", "Bottom", "Left", "Right", "Front", "Back"}) do
                 clone[face.."Surface"] = instance[face.."Surface"]
             end
@@ -595,9 +594,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             
         elseif className == "Model" then
             clone = Instance.new("Model")
-            if instance.PrimaryPart then
-                --// Will set after cloning children
-            end
             
         elseif className == "Folder" then
             clone = Instance.new("Folder")
@@ -646,9 +642,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.Volume = instance.Volume
             clone.PlaybackSpeed = instance.PlaybackSpeed
             clone.Looped = instance.Looped
-            clone.RollOffMode = instance.RollOffMode
-            clone.RollOffMaxDistance = instance.RollOffMaxDistance
-            clone.RollOffMinDistance = instance.RollOffMinDistance
             
         elseif className == "ParticleEmitter" then
             clone = Instance.new("ParticleEmitter")
@@ -660,8 +653,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.Speed = instance.Speed
             clone.Acceleration = instance.Acceleration
             clone.RotSpeed = instance.RotSpeed
-            clone.LightEmission = instance.LightEmission
-            clone.LightInfluence = instance.LightInfluence
             clone.Texture = instance.Texture
             
         elseif className == "Fire" then
@@ -681,7 +672,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
         elseif className == "Sparkles" then
             clone = Instance.new("Sparkles")
             clone.Color = instance.Color
-            clone.SparkleColor = instance.SparkleColor
             
         elseif className == "BillboardGui" then
             clone = Instance.new("BillboardGui")
@@ -689,14 +679,12 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.StudsOffset = instance.StudsOffset
             clone.AlwaysOnTop = instance.AlwaysOnTop
             clone.MaxDistance = instance.MaxDistance
-            clone.LightInfluence = instance.LightInfluence
             
         elseif className == "SurfaceGui" then
             clone = Instance.new("SurfaceGui")
             clone.Face = instance.Face
             clone.CanvasSize = instance.CanvasSize
             clone.AlwaysOnTop = instance.AlwaysOnTop
-            clone.LightInfluence = instance.LightInfluence
             
         elseif className == "Frame" then
             clone = Instance.new("Frame")
@@ -704,33 +692,25 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.Position = instance.Position
             clone.BackgroundColor3 = instance.BackgroundColor3
             clone.BackgroundTransparency = instance.BackgroundTransparency
-            clone.BorderColor3 = instance.BorderColor3
-            clone.BorderSizePixel = instance.BorderSizePixel
             
         elseif className == "TextLabel" then
             clone = Instance.new("TextLabel")
             clone.Size = instance.Size
             clone.Position = instance.Position
             clone.BackgroundColor3 = instance.BackgroundColor3
-            clone.BackgroundTransparency = instance.BackgroundTransparency
             clone.Text = instance.Text
             clone.TextColor3 = instance.TextColor3
             clone.TextScaled = instance.TextScaled
-            clone.TextSize = instance.TextSize
             clone.Font = instance.Font
-            clone.TextXAlignment = instance.TextXAlignment
-            clone.TextYAlignment = instance.TextYAlignment
             
         elseif className == "TextButton" then
             clone = Instance.new("TextButton")
             clone.Size = instance.Size
             clone.Position = instance.Position
             clone.BackgroundColor3 = instance.BackgroundColor3
-            clone.BackgroundTransparency = instance.BackgroundTransparency
             clone.Text = instance.Text
             clone.TextColor3 = instance.TextColor3
             clone.TextScaled = instance.TextScaled
-            clone.TextSize = instance.TextSize
             clone.Font = instance.Font
             
         elseif className == "ImageLabel" then
@@ -739,7 +719,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.Position = instance.Position
             clone.BackgroundColor3 = instance.BackgroundColor3
             clone.Image = instance.Image
-            clone.ImageColor3 = instance.ImageColor3
             
         elseif className == "ImageButton" then
             clone = Instance.new("ImageButton")
@@ -748,99 +727,37 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.BackgroundColor3 = instance.BackgroundColor3
             clone.Image = instance.Image
             
-        elseif className == "Weld" then
-            clone = Instance.new("Weld")
+        elseif className == "Weld" or className == "Motor" or className == "Motor6D" or className == "Snap" or className == "Glue" then
+            clone = Instance.new(className)
             clone.C0 = instance.C0
             clone.C1 = instance.C1
-            --// Part0 and Part1 set after parent
             
         elseif className == "WeldConstraint" then
             clone = Instance.new("WeldConstraint")
             
-        elseif className == "Motor" then
-            clone = Instance.new("Motor")
-            clone.C0 = instance.C0
-            clone.C1 = instance.C1
-            
-        elseif className == "Motor6D" then
-            clone = Instance.new("Motor6D")
-            clone.C0 = instance.C0
-            clone.C1 = instance.C1
-            
-        elseif className == "Snap" then
-            clone = Instance.new("Snap")
-            clone.C0 = instance.C0
-            clone.C1 = instance.C1
-            
-        elseif className == "Glue" then
-            clone = Instance.new("Glue")
-            clone.C0 = instance.C0
-            clone.C1 = instance.C1
-            
-        elseif className == "RopeConstraint" then
-            clone = Instance.new("RopeConstraint")
+        elseif className == "RopeConstraint" or className == "RodConstraint" then
+            clone = Instance.new(className)
             clone.Length = instance.Length
             clone.Visible = instance.Visible
             clone.Color = instance.Color
             clone.Thickness = instance.Thickness
             
-        elseif className == "RodConstraint" then
-            clone = Instance.new("RodConstraint")
-            clone.Length = instance.Length
-            clone.Visible = instance.Visible
-            clone.Color = instance.Color
-            clone.Thickness = instance.Thickness
-            
-        elseif className == "HingeConstraint" then
-            clone = Instance.new("HingeConstraint")
-            clone.Visible = instance.Visible
-            clone.Color = instance.Color
-            
-        elseif className == "BallSocketConstraint" then
-            clone = Instance.new("BallSocketConstraint")
-            clone.Visible = instance.Visible
-            clone.Color = instance.Color
-            
-        elseif className == "PrismaticConstraint" then
-            clone = Instance.new("PrismaticConstraint")
-            clone.Visible = instance.Visible
-            clone.Color = instance.Color
-            
-        elseif className == "CylindricalConstraint" then
-            clone = Instance.new("CylindricalConstraint")
-            clone.Visible = instance.Visible
-            clone.Color = instance.Color
-            
-        elseif className == "SpringConstraint" then
-            clone = Instance.new("SpringConstraint")
+        elseif className == "HingeConstraint" or className == "BallSocketConstraint" or className == "PrismaticConstraint" or className == "CylindricalConstraint" or className == "SpringConstraint" then
+            clone = Instance.new(className)
             clone.Visible = instance.Visible
             clone.Color = instance.Color
             
         elseif className == "Attachment" then
             clone = Instance.new("Attachment")
             clone.WorldPosition = instance.WorldPosition
-            clone.WorldOrientation = instance.WorldOrientation
             clone.Position = instance.Position
-            clone.Orientation = instance.Orientation
-            
-        elseif className == "Humanoid" then
-            clone = Instance.new("Humanoid")
-            clone.Health = instance.Health
-            clone.MaxHealth = instance.MaxHealth
-            clone.WalkSpeed = instance.WalkSpeed
-            clone.JumpPower = instance.JumpPower
-            
-        elseif className == "HumanoidDescription" then
-            clone = Instance.new("HumanoidDescription")
             
         elseif className == "Accessory" then
             clone = Instance.new("Accessory")
-            clone.AttachmentPoint = instance.AttachmentPoint
             
         elseif className == "Tool" then
             clone = Instance.new("Tool")
             clone.Grip = instance.Grip
-            clone.GripPos = instance.GripPos
             
         elseif className == "HopperBin" then
             clone = Instance.new("HopperBin")
@@ -852,7 +769,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.CFrame = instance.CFrame
             clone.Color = instance.Color
             clone.Material = instance.Material
-            clone.Transparency = instance.Transparency
             
         elseif className == "VehicleSeat" then
             clone = Instance.new("VehicleSeat")
@@ -860,7 +776,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.CFrame = instance.CFrame
             clone.Color = instance.Color
             clone.Material = instance.Material
-            clone.Transparency = instance.Transparency
             clone.MaxSpeed = instance.MaxSpeed
             clone.Torque = instance.Torque
             
@@ -870,8 +785,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.CFrame = instance.CFrame
             clone.Color = instance.Color
             clone.Material = instance.Material
-            clone.Transparency = instance.Transparency
-            clone.Duration = instance.Duration
             clone.Neutral = instance.Neutral
             
         elseif className == "ClickDetector" then
@@ -884,7 +797,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.ObjectText = instance.ObjectText
             clone.HoldDuration = instance.HoldDuration
             clone.MaxActivationDistance = instance.MaxActivationDistance
-            clone.KeyboardKeyCode = instance.KeyboardKeyCode
             
         elseif className == "Vector3Value" then
             clone = Instance.new("Vector3Value")
@@ -925,49 +837,14 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone.SkyboxLf = instance.SkyboxLf
             clone.SkyboxRt = instance.SkyboxRt
             clone.SkyboxUp = instance.SkyboxUp
-            clone.SunTextureId = instance.SunTextureId
-            clone.MoonTextureId = instance.MoonTextureId
-            clone.SunAngularSize = instance.SunAngularSize
-            clone.MoonAngularSize = instance.MoonAngularSize
-            clone.StarCount = instance.StarCount
             
         elseif className == "Atmosphere" then
             clone = Instance.new("Atmosphere")
             clone.Density = instance.Density
-            clone.Offset = instance.Offset
             clone.Color = instance.Color
-            clone.Decay = instance.Decay
-            clone.Glare = instance.Glare
-            clone.Haze = instance.Haze
             
-        elseif className == "BloomEffect" then
-            clone = Instance.new("BloomEffect")
-            clone.Intensity = instance.Intensity
-            clone.Size = instance.Size
-            clone.Threshold = instance.Threshold
-            
-        elseif className == "BlurEffect" then
-            clone = Instance.new("BlurEffect")
-            clone.Size = instance.Size
-            
-        elseif className == "ColorCorrectionEffect" then
-            clone = Instance.new("ColorCorrectionEffect")
-            clone.Brightness = instance.Brightness
-            clone.Contrast = instance.Contrast
-            clone.Saturation = instance.Saturation
-            clone.TintColor = instance.TintColor
-            
-        elseif className == "DepthOfFieldEffect" then
-            clone = Instance.new("DepthOfFieldEffect")
-            clone.FarIntensity = instance.FarIntensity
-            clone.FocusDistance = instance.FocusDistance
-            clone.InFocusRadius = instance.InFocusRadius
-            clone.NearIntensity = instance.NearIntensity
-            
-        elseif className == "SunRaysEffect" then
-            clone = Instance.new("SunRaysEffect")
-            clone.Intensity = instance.Intensity
-            clone.Spread = instance.Spread
+        elseif className == "BloomEffect" or className == "BlurEffect" or className == "ColorCorrectionEffect" or className == "DepthOfFieldEffect" or className == "SunRaysEffect" then
+            clone = Instance.new(className)
             
         elseif className == "Team" then
             clone = Instance.new("Team")
@@ -978,146 +855,23 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone = Instance.new("SoundGroup")
             clone.Volume = instance.Volume
             
-        elseif className == "EqualizerSoundEffect" then
-            clone = Instance.new("EqualizerSoundEffect")
-            clone.HighGain = instance.HighGain
-            clone.MidGain = instance.MidGain
-            clone.LowGain = instance.LowGain
-            
-        elseif className == "ReverbSoundEffect" then
-            clone = Instance.new("ReverbSoundEffect")
-            clone.DecayTime = instance.DecayTime
-            clone.Density = instance.Density
-            clone.Diffusion = instance.Diffusion
-            clone.DryLevel = instance.DryLevel
-            clone.WetLevel = instance.WetLevel
-            
-        elseif className == "EchoSoundEffect" then
-            clone = Instance.new("EchoSoundEffect")
-            clone.Delay = instance.Delay
-            clone.DryLevel = instance.DryLevel
-            clone.Feedback = instance.Feedback
-            clone.WetLevel = instance.WetLevel
-            
-        elseif className == "ChorusSoundEffect" then
-            clone = Instance.new("ChorusSoundEffect")
-            clone.Depth = instance.Depth
-            clone.Mix = instance.Mix
-            clone.Rate = instance.Rate
-            
-        elseif className == "DistortionSoundEffect" then
-            clone = Instance.new("DistortionSoundEffect")
-            clone.Level = instance.Level
-            
-        elseif className == "PitchShiftSoundEffect" then
-            clone = Instance.new("PitchShiftSoundEffect")
-            clone.Octave = instance.Octave
-            
-        elseif className == "TremoloSoundEffect" then
-            clone = Instance.new("TremoloSoundEffect")
-            clone.Depth = instance.Depth
-            clone.Duty = instance.Duty
-            clone.Frequency = instance.Frequency
-            
-        elseif className == "CompressorSoundEffect" then
-            clone = Instance.new("CompressorSoundEffect")
-            clone.Attack = instance.Attack
-            clone.GainMakeup = instance.GainMakeup
-            clone.Ratio = instance.Ratio
-            clone.Release = instance.Release
-            clone.Threshold = instance.Threshold
-            
         elseif className == "ScreenGui" then
             clone = Instance.new("ScreenGui")
             clone.ResetOnSpawn = instance.ResetOnSpawn
             clone.ZIndexBehavior = instance.ZIndexBehavior
-            clone.DisplayOrder = instance.DisplayOrder
-            clone.Enabled = instance.Enabled
-            
-        elseif className == "BillboardGui" then
-            clone = Instance.new("BillboardGui")
-            clone.Size = instance.Size
-            clone.StudsOffset = instance.StudsOffset
-            clone.AlwaysOnTop = instance.AlwaysOnTop
-            clone.MaxDistance = instance.MaxDistance
-            clone.LightInfluence = instance.LightInfluence
-            
-        elseif className == "SurfaceGui" then
-            clone = Instance.new("SurfaceGui")
-            clone.Face = instance.Face
-            clone.CanvasSize = instance.CanvasSize
-            clone.AlwaysOnTop = instance.AlwaysOnTop
-            clone.LightInfluence = instance.LightInfluence
             
         elseif className == "ScrollingFrame" then
             clone = Instance.new("ScrollingFrame")
             clone.Size = instance.Size
-            clone.Position = instance.Position
             clone.CanvasSize = instance.CanvasSize
-            clone.ScrollBarThickness = instance.ScrollBarThickness
-            clone.BackgroundColor3 = instance.BackgroundColor3
-            clone.BackgroundTransparency = instance.BackgroundTransparency
             
         elseif className == "TextBox" then
             clone = Instance.new("TextBox")
             clone.Size = instance.Size
-            clone.Position = instance.Position
-            clone.BackgroundColor3 = instance.BackgroundColor3
             clone.Text = instance.Text
-            clone.TextColor3 = instance.TextColor3
-            clone.TextScaled = instance.TextScaled
-            clone.Font = instance.Font
-            clone.ClearTextOnFocus = instance.ClearTextOnFocus
             
-        elseif className == "ViewportFrame" then
-            clone = Instance.new("ViewportFrame")
-            clone.Size = instance.Size
-            clone.Position = instance.Position
-            clone.BackgroundColor3 = instance.BackgroundColor3
-            
-        elseif className == "VideoFrame" then
-            clone = Instance.new("VideoFrame")
-            clone.Size = instance.Size
-            clone.Position = instance.Position
-            clone.Video = instance.Video
-            
-        elseif className == "UIListLayout" then
-            clone = Instance.new("UIListLayout")
-            clone.Padding = instance.Padding
-            clone.SortOrder = instance.SortOrder
-            clone.HorizontalAlignment = instance.HorizontalAlignment
-            clone.VerticalAlignment = instance.VerticalAlignment
-            
-        elseif className == "UIGridLayout" then
-            clone = Instance.new("UIGridLayout")
-            clone.CellSize = instance.CellSize
-            clone.CellPadding = instance.CellPadding
-            clone.SortOrder = instance.SortOrder
-            
-        elseif className == "UIPageLayout" then
-            clone = Instance.new("UIPageLayout")
-            clone.Padding = instance.Padding
-            clone.TweenTime = instance.TweenTime
-            
-        elseif className == "UITableLayout" then
-            clone = Instance.new("UITableLayout")
-            clone.Padding = instance.Padding
-            
-        elseif className == "UIAspectRatioConstraint" then
-            clone = Instance.new("UIAspectRatioConstraint")
-            clone.AspectRatio = instance.AspectRatio
-            clone.AspectType = instance.AspectType
-            clone.DominantAxis = instance.DominantAxis
-            
-        elseif className == "UISizeConstraint" then
-            clone = Instance.new("UISizeConstraint")
-            clone.MaxSize = instance.MaxSize
-            clone.MinSize = instance.MinSize
-            
-        elseif className == "UITextSizeConstraint" then
-            clone = Instance.new("UITextSizeConstraint")
-            clone.MaxTextSize = instance.MaxTextSize
-            clone.MinTextSize = instance.MinTextSize
+        elseif className == "UIListLayout" or className == "UIGridLayout" or className == "UIPageLayout" then
+            clone = Instance.new(className)
             
         elseif className == "UICorner" then
             clone = Instance.new("UICorner")
@@ -1127,41 +881,14 @@ local function DeepClone(instance, parent, onProgress, serviceName)
             clone = Instance.new("UIStroke")
             clone.Color = instance.Color
             clone.Thickness = instance.Thickness
-            clone.Transparency = instance.Transparency
-            
-        elseif className == "UIGradient" then
-            clone = Instance.new("UIGradient")
-            clone.Color = instance.Color
-            clone.Offset = instance.Offset
-            clone.Rotation = instance.Rotation
             
         elseif className == "UIPadding" then
             clone = Instance.new("UIPadding")
-            clone.PaddingBottom = instance.PaddingBottom
-            clone.PaddingLeft = instance.PaddingLeft
-            clone.PaddingRight = instance.PaddingRight
-            clone.PaddingTop = instance.PaddingTop
-            
-        elseif className == "UIScale" then
-            clone = Instance.new("UIScale")
-            clone.Scale = instance.Scale
-            
-        elseif className == "Script" or className == "LocalScript" or className == "ModuleScript" then
-            --// Scripts can't be fully cloned, create placeholder
-            clone = Instance.new("StringValue")
-            clone.Name = instance.Name .. "_[" .. className .. "]"
-            clone.Value = "-- Script content cannot be cloned via client-side"
             
         elseif className == "RemoteEvent" or className == "RemoteFunction" or className == "BindableEvent" or className == "BindableFunction" then
-            --// Remote objects
             clone = Instance.new(className)
-            
-        elseif className == "ValueBase" then
-            clone = Instance.new(className)
-            clone.Value = instance.Value
             
         else
-            --// Unknown type, use Folder as fallback
             clone = Instance.new("Folder")
             clone.Name = instance.Name .. "_[" .. className .. "]"
         end
@@ -1171,7 +898,6 @@ local function DeepClone(instance, parent, onProgress, serviceName)
     clone.Name = instance.Name
     clone.Parent = parent
     
-    --// Call progress callback
     if onProgress then
         onProgress(instance.Name, serviceName)
     end
@@ -1192,13 +918,13 @@ local function DeepClone(instance, parent, onProgress, serviceName)
     return clone
 end
 
---// Start Copy Process
+--// Start Copy Process - FIXED PROGRESS 0-100%
 local function StartCopy()
     if shhhhnayy05.IsCopying then return end
     
     local mapName = NameInput.Text
     if mapName == "" then
-        mapName = "FullMap_" .. game.PlaceId .. "_" .. os.time()
+        mapName = "Map_" .. game.PlaceId .. "_" .. os.time()
     end
     mapName = mapName:gsub("[^%w%s_-]", ""):gsub("%s+", "_")
     
@@ -1207,15 +933,29 @@ local function StartCopy()
     CopyBtn.Visible = false
     StopBtn.Visible = true
     
-    --// Get services to copy
+    --// Reset progress
+    ProgressBar.Size = UDim2.new(0, 0, 1, 0)
+    ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    ProgressText.Text = "0% - Initializing..."
+    
     local servicesToCopy = GetServicesToCopy()
     
-    --// Count total objects first
-    local totalObjects = 0
-    local serviceCounts = {}
+    if #servicesToCopy == 0 then
+        Notify("⚠️ No services selected!", Color3.fromRGB(255, 100, 100))
+        shhhhnayy05.IsCopying = false
+        CopyBtn.Visible = true
+        StopBtn.Visible = false
+        DetailText.Text = "❌ Select at least one service"
+        return
+    end
     
+    --// PHASE 1: Count total objects (10% of progress)
     DetailText.Text = "🔍 Counting objects..."
     DetailText.TextColor3 = Color3.fromRGB(255, 200, 100)
+    
+    local totalObjects = 0
+    local serviceCounts = {}
+    local countedObjects = {} -- Track counted objects to avoid duplicates
     
     for _, svcInfo in ipairs(servicesToCopy) do
         local svc = svcInfo.Service
@@ -1223,13 +963,21 @@ local function StartCopy()
         local count = 0
         
         for _, item in ipairs(svc:GetChildren()) do
-            if not item:IsA("Terrain") and not item:IsA("Camera") then
-                count = count + 1
-                for _ in ipairs(item:GetDescendants()) do
+            --// Skip player characters during counting too
+            if item:IsA("Terrain") or item:IsA("Camera") or item:IsA("Humanoid") then continue end
+            if IsPlayerCharacter(item) then continue end
+            
+            count = count + 1
+            for _, desc in ipairs(item:GetDescendants()) do
+                if not desc:IsA("Humanoid") and not IsPlayerCharacter(desc) then
                     count = count + 1
                 end
             end
-            if count % 100 == 0 then
+            
+            if count % 500 == 0 then
+                local countProgress = math.min(10, math.floor((count / 1000) * 10))
+                ProgressBar.Size = UDim2.new(countProgress / 100, 0, 1, 0)
+                ProgressText.Text = countProgress .. "% - Counting: " .. svcName .. "..."
                 RunService.Heartbeat:Wait()
             end
         end
@@ -1238,79 +986,91 @@ local function StartCopy()
         totalObjects = totalObjects + count
     end
     
+    --// Update progress to 10% after counting
+    ProgressBar.Size = UDim2.new(0.1, 0, 1, 0)
+    ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
+    ProgressText.Text = "10% - Found " .. totalObjects .. " objects"
+    
     if totalObjects == 0 then
         Notify("⚠️ No objects found to copy!", Color3.fromRGB(255, 100, 100))
         shhhhnayy05.IsCopying = false
         CopyBtn.Visible = true
         StopBtn.Visible = false
         DetailText.Text = "❌ No objects found"
-        DetailText.TextColor3 = Color3.fromRGB(255, 100, 100)
         return
     end
     
-    --// Create main container
+    --// PHASE 2: Copy objects (10% - 90% of progress)
     local mainContainer = Instance.new("Folder")
-    mainContainer.Name = "shhhhnayy05_FullCopy_" .. mapName
+    mainContainer.Name = "shhhhnayy05_Copy_" .. mapName
     mainContainer.Parent = Workspace
     
     local copiedCount = 0
     local startTime = tick()
+    local lastUpdate = 0
     
-    --// Copy each service
-    for _, svcInfo in ipairs(servicesToCopy) do
+    for svcIndex, svcInfo in ipairs(servicesToCopy) do
         if shhhhnayy05.ShouldStop then break end
         
         local svc = svcInfo.Service
         local svcName = svcInfo.Name
         
-        --// Create service folder
         local svcFolder = Instance.new("Folder")
         svcFolder.Name = svcName
         svcFolder.Parent = mainContainer
         
         DetailText.Text = "📦 Copying " .. svcName .. "..."
-        DetailText.TextColor3 = Color3.fromRGB(100, 200, 255)
         
         for _, item in ipairs(svc:GetChildren()) do
             if shhhhnayy05.ShouldStop then break end
-            if item:IsA("Terrain") or item:IsA("Camera") then continue end
+            if item:IsA("Terrain") or item:IsA("Camera") or item:IsA("Humanoid") then continue end
+            if IsPlayerCharacter(item) then continue end
             
-            --// Update progress
-            local progress = math.floor((copiedCount / totalObjects) * 100)
-            ProgressBar.Size = UDim2.new(progress/100, 0, 1, 0)
-            ProgressText.Text = string.format("%d%% - %s: %s (%d/%d)", progress, svcName, item.Name, copiedCount, totalObjects)
-            
-            --// Color coding
-            if progress < 30 then
-                ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-            elseif progress < 70 then
-                ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
-            else
-                ProgressBar.BackgroundColor3 = Color3.fromRGB(80, 255, 120)
-            end
-            
-            --// Clone with progress callback
+            --// Clone the item
             DeepClone(item, svcFolder, function(childName, sName)
                 copiedCount = copiedCount + 1
-                --// Update every 10 objects to prevent lag
-                if copiedCount % 10 == 0 then
-                    local prog = math.floor((copiedCount / totalObjects) * 100)
-                    ProgressBar.Size = UDim2.new(prog/100, 0, 1, 0)
-                    ProgressText.Text = string.format("%d%% - %s > %s", prog, svcName, childName)
+                
+                --// Calculate progress: 10% (counting) + (copied/total * 80%)
+                local copyProgress = (copiedCount / totalObjects) * 80
+                local totalProgress = 10 + copyProgress
+                
+                --// Update UI every 5 objects or every 0.1 seconds
+                local now = tick()
+                if copiedCount % 5 == 0 or (now - lastUpdate) > 0.1 then
+                    lastUpdate = now
+                    
+                    --// Clamp progress between 10% and 90%
+                    totalProgress = math.clamp(totalProgress, 10, 90)
+                    
+                    ProgressBar.Size = UDim2.new(totalProgress / 100, 0, 1, 0)
+                    
+                    --// Color coding based on progress
+                    if totalProgress < 40 then
+                        ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+                    elseif totalProgress < 70 then
+                        ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
+                    else
+                        ProgressBar.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+                    end
+                    
+                    ProgressText.Text = string.format("%d%% - %s > %s (%d/%d)", 
+                        math.floor(totalProgress), svcName, childName, copiedCount, totalObjects)
                     DetailText.Text = string.format("📦 %s > %s", svcName, childName)
+                    
                     RunService.Heartbeat:Wait()
                 end
             end, svcName)
-            
-            copiedCount = copiedCount + 1
         end
     end
     
-    --// Save to file
+    --// PHASE 3: Save to file (90% - 100% of progress)
     if not shhhhnayy05.ShouldStop then
         DetailText.Text = "💾 Saving to file..."
+        ProgressBar.Size = UDim2.new(0.9, 0, 1, 0)
+        ProgressText.Text = "90% - Saving..."
+        ProgressBar.BackgroundColor3 = Color3.fromRGB(100, 255, 150)
         
-        --// Serialize container to JSON
+        --// Serialize
         local function SerializeToTable(inst)
             local data = {
                 Class = inst.ClassName,
@@ -1326,33 +1086,19 @@ local function StartCopy()
                     data.Props.Color = {inst.Color.R, inst.Color.G, inst.Color.B}
                     data.Props.Material = tostring(inst.Material)
                     data.Props.Transparency = inst.Transparency
-                    data.Props.Reflectance = inst.Reflectance
                     data.Props.CanCollide = inst.CanCollide
                     data.Props.Anchored = inst.Anchored
-                    data.Props.CastShadow = inst.CastShadow
-                    if inst:IsA("Part") then
-                        data.Props.Shape = tostring(inst.Shape)
-                    end
                 elseif inst:IsA("MeshPart") then
                     data.Props.MeshId = inst.MeshId
                     data.Props.TextureID = inst.TextureID
                 elseif inst:IsA("Decal") or inst:IsA("Texture") then
                     data.Props.Texture = inst.Texture
-                    data.Props.Face = tostring(inst.Face)
                 elseif inst:IsA("Light") then
-                    data.Props.Color = {inst.Color.R, inst.Color.G, inst.Color.B}
                     data.Props.Brightness = inst.Brightness
                     data.Props.Range = inst.Range
                 elseif inst:IsA("Sound") then
                     data.Props.SoundId = inst.SoundId
                     data.Props.Volume = inst.Volume
-                elseif inst:IsA("Sky") then
-                    data.Props.SkyboxBk = inst.SkyboxBk
-                    data.Props.SkyboxDn = inst.SkyboxDn
-                    data.Props.SkyboxFt = inst.SkyboxFt
-                    data.Props.SkyboxLf = inst.SkyboxLf
-                    data.Props.SkyboxRt = inst.SkyboxRt
-                    data.Props.SkyboxUp = inst.SkyboxUp
                 end
             end)
             
@@ -1367,8 +1113,6 @@ local function StartCopy()
             Meta = {
                 Name = mapName,
                 PlaceId = game.PlaceId,
-                PlaceName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,
-                JobId = game.JobId,
                 Created = os.date("%Y-%m-%d %H:%M:%S"),
                 TotalObjects = copiedCount,
                 Executor = GetExecutor(),
@@ -1381,9 +1125,12 @@ local function StartCopy()
             table.insert(mapData.Meta.Services, svcFolder.Name)
             for _, child in ipairs(svcFolder:GetChildren()) do
                 table.insert(mapData.Objects, SerializeToTable(child))
-                RunService.Heartbeat:Wait()
             end
         end
+        
+        --// Update to 95%
+        ProgressBar.Size = UDim2.new(0.95, 0, 1, 0)
+        ProgressText.Text = "95% - Encoding..."
         
         --// Save
         local jsonData = HttpService:JSONEncode(mapData)
@@ -1406,6 +1153,11 @@ local function StartCopy()
         
         mainContainer.Name = "shhhhnayy05_Saved_" .. mapName
         
+        --// 100% Complete
+        ProgressBar.Size = UDim2.new(1, 0, 1, 0)
+        ProgressBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+        ProgressText.Text = "100% - Complete!"
+        
         Notify(string.format("✅ Saved: %s (%d objects)", mapName, copiedCount), Color3.fromRGB(100, 255, 150))
         RefreshList()
     else
@@ -1419,9 +1171,7 @@ local function StartCopy()
     StopBtn.Visible = false
     
     if not shhhhnayy05.ShouldStop then
-        ProgressBar.Size = UDim2.new(1, 0, 1, 0)
-        ProgressText.Text = "100% - Complete!"
-        DetailText.Text = string.format("✅ Done in %.1fs | %d objects copied", tick() - startTime, copiedCount)
+        DetailText.Text = string.format("✅ Done in %.1fs | %d objects", tick() - startTime, copiedCount)
         DetailText.TextColor3 = Color3.fromRGB(100, 255, 150)
         
         task.delay(3, function()
@@ -1489,7 +1239,6 @@ local function LoadMap(index)
             elseif class == "Motor" then inst = Instance.new("Motor")
             elseif class == "Motor6D" then inst = Instance.new("Motor6D")
             elseif class == "Attachment" then inst = Instance.new("Attachment")
-            elseif class == "Humanoid" then inst = Instance.new("Humanoid")
             elseif class == "Accessory" then inst = Instance.new("Accessory")
             elseif class == "Tool" then inst = Instance.new("Tool")
             elseif class == "Seat" then inst = Instance.new("Seat")
@@ -1499,23 +1248,13 @@ local function LoadMap(index)
             elseif class == "ProximityPrompt" then inst = Instance.new("ProximityPrompt")
             elseif class == "Sky" then inst = Instance.new("Sky")
             elseif class == "Atmosphere" then inst = Instance.new("Atmosphere")
-            elseif class == "BloomEffect" then inst = Instance.new("BloomEffect")
-            elseif class == "BlurEffect" then inst = Instance.new("BlurEffect")
-            elseif class == "ColorCorrectionEffect" then inst = Instance.new("ColorCorrectionEffect")
-            elseif class == "DepthOfFieldEffect" then inst = Instance.new("DepthOfFieldEffect")
-            elseif class == "SunRaysEffect" then inst = Instance.new("SunRaysEffect")
             elseif class == "Team" then inst = Instance.new("Team")
             elseif class == "ScreenGui" then inst = Instance.new("ScreenGui")
             elseif class == "ScrollingFrame" then inst = Instance.new("ScrollingFrame")
             elseif class == "TextBox" then inst = Instance.new("TextBox")
-            elseif class == "ViewportFrame" then inst = Instance.new("ViewportFrame")
-            elseif class == "UIListLayout" then inst = Instance.new("UIListLayout")
-            elseif class == "UIGridLayout" then inst = Instance.new("UIGridLayout")
             elseif class == "UICorner" then inst = Instance.new("UICorner")
             elseif class == "UIStroke" then inst = Instance.new("UIStroke")
-            elseif class == "UIGradient" then inst = Instance.new("UIGradient")
-            elseif class == "UIPadding" then inst = Instance.new("UIPadding")
-            elseif class == "UIScale" then inst = Instance.new("UIScale")
+            elseif class == "UIListLayout" then inst = Instance.new("UIListLayout")
             else inst = Instance.new("Folder") end
             
             inst.Name = data.Name
@@ -1531,16 +1270,10 @@ local function LoadMap(index)
                             inst.Color = Color3.new(unpack(val))
                         elseif prop == "Material" then
                             inst.Material = Enum.Material[val]
-                        elseif prop == "Shape" then
-                            inst.Shape = Enum.PartType[val]
-                        elseif prop == "Face" then
-                            inst.Face = Enum.NormalId[val]
                         elseif prop == "Texture" then
                             inst.Texture = val
                         elseif prop == "MeshId" then
                             inst.MeshId = val
-                        elseif prop == "TextureID" then
-                            inst.TextureID = val
                         elseif prop == "SoundId" then
                             inst.SoundId = val
                         elseif prop == "Transparency" then
@@ -1549,18 +1282,6 @@ local function LoadMap(index)
                             inst.CanCollide = val
                         elseif prop == "Anchored" then
                             inst.Anchored = val
-                        elseif prop == "Brightness" then
-                            inst.Brightness = val
-                        elseif prop == "Range" then
-                            inst.Range = val
-                        elseif prop == "Volume" then
-                            inst.Volume = val
-                        elseif prop == "SkyboxBk" then inst.SkyboxBk = val
-                        elseif prop == "SkyboxDn" then inst.SkyboxDn = val
-                        elseif prop == "SkyboxFt" then inst.SkyboxFt = val
-                        elseif prop == "SkyboxLf" then inst.SkyboxLf = val
-                        elseif prop == "SkyboxRt" then inst.SkyboxRt = val
-                        elseif prop == "SkyboxUp" then inst.SkyboxUp = val
                         end
                     end)
                 end
@@ -1606,7 +1327,7 @@ function RefreshList()
     
     for i, map in ipairs(shhhhnayy05.SavedMaps) do
         local btn = Instance.new("Frame")
-        btn.Size = UDim2.new(1, -6, 0, 85)
+        btn.Size = UDim2.new(1, -6, 0, 75)
         btn.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
         btn.LayoutOrder = i
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
@@ -1622,28 +1343,9 @@ function RefreshList()
         nameLbl.TextXAlignment = Enum.TextXAlignment.Left
         nameLbl.Parent = btn
         
-        --// Services info
-        local servicesText = ""
-        if map.Data.Meta.Services then
-            servicesText = table.concat(map.Data.Meta.Services, ", ")
-        else
-            servicesText = "Workspace only"
-        end
-        
-        local svcLbl = Instance.new("TextLabel")
-        svcLbl.Size = UDim2.new(0.58, -5, 0, 14)
-        svcLbl.Position = UDim2.new(0, 8, 0, 26)
-        svcLbl.BackgroundTransparency = 1
-        svcLbl.Text = "📦 " .. servicesText:sub(1, 30) .. (servicesText:len() > 30 and "..." or "")
-        svcLbl.TextColor3 = Color3.fromRGB(180, 180, 180)
-        svcLbl.TextScaled = true
-        svcLbl.Font = Enum.Font.Gotham
-        svcLbl.TextXAlignment = Enum.TextXAlignment.Left
-        svcLbl.Parent = btn
-        
         local infoLbl = Instance.new("TextLabel")
-        infoLbl.Size = UDim2.new(0.58, -5, 0, 14)
-        infoLbl.Position = UDim2.new(0, 8, 0, 42)
+        infoLbl.Size = UDim2.new(0.58, -5, 0, 16)
+        infoLbl.Position = UDim2.new(0, 8, 0, 26)
         infoLbl.BackgroundTransparency = 1
         infoLbl.Text = string.format("🕐 %s", map.Data.Meta.Created)
         infoLbl.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -1654,7 +1356,7 @@ function RefreshList()
         
         local countLbl = Instance.new("TextLabel")
         countLbl.Size = UDim2.new(0.58, -5, 0, 16)
-        countLbl.Position = UDim2.new(0, 8, 0, 58)
+        countLbl.Position = UDim2.new(0, 8, 0, 48)
         countLbl.BackgroundTransparency = 1
         countLbl.Text = string.format("🧱 %d objects | 💾 %.2f KB", map.Data.Meta.TotalObjects, map.Size / 1024)
         countLbl.TextColor3 = Color3.fromRGB(100, 255, 150)
@@ -1709,7 +1411,7 @@ function RefreshList()
     end
     
     StatsLabel.Text = string.format("📊 Maps: %d | Total: %.2f MB", totalMaps, totalSize / (1024*1024))
-    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, #shhhhnayy05.SavedMaps * 91 + 10)
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, #shhhhnayy05.SavedMaps * 81 + 10)
 end
 
 --// Load Existing Maps
@@ -1785,7 +1487,7 @@ LoadExistingMaps()
 
 --// Welcome
 task.delay(0.5, function()
-    Notify("🗺️ shhhhnayy05 Full Copy v4.0 Loaded!", Color3.fromRGB(0, 200, 255))
+    Notify("🗺️ shhhhnayy05 Copy Map v4.1 Loaded!", Color3.fromRGB(0, 200, 255))
     task.wait(0.5)
     Notify("💡 Select services & click 'START COPY'", Color3.fromRGB(200, 200, 200))
 end)
