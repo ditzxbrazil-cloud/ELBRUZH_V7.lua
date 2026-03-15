@@ -1,4 +1,4 @@
---// shhhhnayy05 Copy Map System v4.2 - Fixed Progress & Complete Copy
+--// shhhhnayy05 Copy Map System v4.3 - Permanent File Storage
 --// Support: Krnl, Synapse X, Electron, Script-Ware, Oxygen U, Codex, Delta, Hydrogen
 
 local shhhhnayy05 = {}
@@ -37,7 +37,7 @@ local function GetExecutor()
     else return "Unknown" end
 end
 
---// Storage
+--// Storage - FIXED: Unique folder per game to avoid conflicts
 shhhhnayy05.MapsFolder = "shhhhnayy05_Maps"
 shhhhnayy05.SavedMaps = {}
 shhhhnayy05.IsCopying = false
@@ -56,10 +56,21 @@ shhhhnayy05.CopyOptions = {
     Chat = false
 }
 
---// Initialize
-if isfolder and makefolder and not isfolder(shhhhnayy05.MapsFolder) then
-    makefolder(shhhhnayy05.MapsFolder)
+--// Initialize - Create folder if not exists
+local function InitializeStorage()
+    if isfolder then
+        if not isfolder(shhhhnayy05.MapsFolder) then
+            local success, err = pcall(function()
+                makefolder(shhhhnayy05.MapsFolder)
+            end)
+            if not success then
+                warn("Failed to create folder: " .. tostring(err))
+            end
+        end
+    end
 end
+
+InitializeStorage()
 
 --// GUI Setup - ORIGINAL SIZE 420x520
 local ScreenGui = Instance.new("ScreenGui")
@@ -973,7 +984,7 @@ local function StartCopy()
     DetailText.Text = "🔍 Analyzing services..."
     
     local totalObjects = 0
-    local serviceObjects = {} -- Store objects per service
+    local serviceObjects = {}
     
     for _, svcInfo in ipairs(servicesToCopy) do
         local svc = svcInfo.Service
@@ -987,7 +998,7 @@ local function StartCopy()
             if IsPlayerCharacter(item) then continue end
             
             --// Count this item and all descendants
-            local itemCount = 1 -- The item itself
+            local itemCount = 1
             for _ in ipairs(item:GetDescendants()) do
                 itemCount = itemCount + 1
             end
@@ -995,7 +1006,6 @@ local function StartCopy()
             table.insert(svcItems, {Item = item, Count = itemCount})
             svcCount = svcCount + itemCount
             
-            --// Yield every 1000 objects to prevent freeze
             if svcCount % 1000 == 0 then
                 RunService.Heartbeat:Wait()
             end
@@ -1008,7 +1018,6 @@ local function StartCopy()
         }
         totalObjects = totalObjects + svcCount
         
-        --// Update counting progress
         local countProgress = math.min(10, math.floor((#servicesToCopy > 0 and (table.find(servicesToCopy, svcInfo) or 1) / #servicesToCopy * 10) or 0))
         ProgressBar.Size = UDim2.new(countProgress / 100, 0, 1, 0)
         ProgressText.Text = countProgress .. "% - Counting " .. svcName .. "..."
@@ -1043,8 +1052,7 @@ local function StartCopy()
     local lastUpdate = 0
     local objectsProcessed = 0
     
-    --// Calculate progress allocation per service
-    local copyProgressRange = 80 -- 10% to 90%
+    local copyProgressRange = 80
     local progressPerObject = copyProgressRange / totalObjects
     
     for svcIndex, svcInfo in ipairs(servicesToCopy) do
@@ -1054,39 +1062,32 @@ local function StartCopy()
         local svcData = serviceObjects[svcName]
         
         if not svcData or svcData.Count == 0 then
-            --// Skip empty services
             continue
         end
         
         stats.currentService = svcName
         
-        --// Create service folder
         local svcFolder = Instance.new("Folder")
         svcFolder.Name = svcName
         svcFolder.Parent = mainContainer
         
         DetailText.Text = "📦 [" .. svcIndex .. "/" .. #servicesToCopy .. "] Copying " .. svcName .. " (" .. #svcData.Items .. " items)..."
         
-        --// Copy each item in this service
         for itemIndex, itemData in ipairs(svcData.Items) do
             if shhhhnayy05.ShouldStop then break end
             
             local item = itemData.Item
             
-            --// Clone with progress tracking
             DeepClone(item, svcFolder, function(childName, sName, childStats)
                 objectsProcessed = objectsProcessed + 1
                 
-                --// Calculate accurate progress
                 local currentProgress = 10 + (objectsProcessed * progressPerObject)
                 currentProgress = math.clamp(currentProgress, 10, 90)
                 
-                --// Update UI throttling
                 local now = tick()
                 if objectsProcessed % 10 == 0 or (now - lastUpdate) > 0.1 then
                     lastUpdate = now
                     
-                    --// Color coding
                     if currentProgress < 40 then
                         ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
                     elseif currentProgress < 70 then
@@ -1113,7 +1114,7 @@ local function StartCopy()
         ProgressText.Text = "90% - Serializing..."
         ProgressBar.BackgroundColor3 = Color3.fromRGB(100, 255, 150)
         
-        --// Serialize
+        --// Serialize with better error handling
         local function SerializeToTable(inst)
             local data = {
                 Class = inst.ClassName,
@@ -1122,7 +1123,7 @@ local function StartCopy()
                 Children = {}
             }
             
-            pcall(function()
+            local success, err = pcall(function()
                 if inst:IsA("BasePart") then
                     data.Props.CFrame = {inst.CFrame:GetComponents()}
                     data.Props.Size = {inst.Size.X, inst.Size.Y, inst.Size.Z}
@@ -1144,6 +1145,10 @@ local function StartCopy()
                     data.Props.Volume = inst.Volume
                 end
             end)
+            
+            if not success then
+                warn("Serialize error for " .. inst.Name .. ": " .. tostring(err))
+            end
             
             for _, child in ipairs(inst:GetChildren()) do
                 table.insert(data.Children, SerializeToTable(child))
@@ -1172,38 +1177,62 @@ local function StartCopy()
             end
         end
         
-        --// 95%
         ProgressBar.Size = UDim2.new(0.95, 0, 1, 0)
         ProgressText.Text = "95% - Writing file..."
         
-        --// Save
-        local jsonData = HttpService:JSONEncode(mapData)
-        local fileName = shhhhnayy05.MapsFolder .. "/" .. mapName .. ".json"
+        --// FIXED: Better file saving with error checking
+        local fileSaved = false
+        local jsonData = ""
         
-        if writefile then
-            pcall(function()
-                writefile(fileName, jsonData)
+        local encodeSuccess, encodeErr = pcall(function()
+            jsonData = HttpService:JSONEncode(mapData)
+        end)
+        
+        if encodeSuccess and jsonData and jsonData ~= "" then
+            local fileName = shhhhnayy05.MapsFolder .. "/" .. mapName .. ".json"
+            
+            local writeSuccess, writeErr = pcall(function()
+                if writefile then
+                    writefile(fileName, jsonData)
+                    --// Verify file was written
+                    if isfile and isfile(fileName) then
+                        fileSaved = true
+                    end
+                end
             end)
+            
+            if not writeSuccess then
+                warn("Failed to write file: " .. tostring(writeErr))
+            end
+            
+            --// Store in memory regardless of file write success
+            table.insert(shhhhnayy05.SavedMaps, {
+                Name = mapName,
+                Data = mapData,
+                Container = mainContainer,
+                File = fileSaved and fileName or nil,
+                Size = #jsonData,
+                SavedAt = os.time()
+            })
+            
+            mainContainer.Name = "shhhhnayy05_Saved_" .. mapName
+            
+            ProgressBar.Size = UDim2.new(1, 0, 1, 0)
+            ProgressBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+            ProgressText.Text = "100% - Complete!"
+            
+            if fileSaved then
+                Notify(string.format("✅ Saved: %s (%d objects)", mapName, stats.copied), Color3.fromRGB(100, 255, 150))
+            else
+                Notify(string.format("⚠️ Saved to memory only: %s", mapName), Color3.fromRGB(255, 200, 100))
+            end
+            
+            RefreshList()
+        else
+            warn("Failed to encode JSON: " .. tostring(encodeErr))
+            Notify("❌ Failed to save map!", Color3.fromRGB(255, 100, 100))
+            mainContainer:Destroy()
         end
-        
-        --// Store in memory
-        table.insert(shhhhnayy05.SavedMaps, {
-            Name = mapName,
-            Data = mapData,
-            Container = mainContainer,
-            File = writefile and fileName or nil,
-            Size = #jsonData
-        })
-        
-        mainContainer.Name = "shhhhnayy05_Saved_" .. mapName
-        
-        --// 100% Complete
-        ProgressBar.Size = UDim2.new(1, 0, 1, 0)
-        ProgressBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-        ProgressText.Text = "100% - Complete!"
-        
-        Notify(string.format("✅ Saved: %s (%d objects, %d skipped)", mapName, stats.copied, stats.skipped), Color3.fromRGB(100, 255, 150))
-        RefreshList()
     else
         mainContainer:Destroy()
         Notify("⏹️ Copy cancelled", Color3.fromRGB(255, 150, 100))
@@ -1458,27 +1487,76 @@ function RefreshList()
     ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, #shhhhnayy05.SavedMaps * 81 + 10)
 end
 
---// Load Existing Maps
+--// FIXED: Load Existing Maps with better error handling
 local function LoadExistingMaps()
-    if isfolder and listfiles then
-        pcall(function()
-            local files = listfiles(shhhhnayy05.MapsFolder)
-            for _, file in ipairs(files) do
-                if file:match("%.json$") then
-                    local content = readfile(file)
-                    local data = HttpService:JSONDecode(content)
+    if not isfolder or not listfiles then
+        Notify("⚠️ File system not supported", Color3.fromRGB(255, 150, 100))
+        return
+    end
+    
+    --// Ensure folder exists
+    if not isfolder(shhhhnayy05.MapsFolder) then
+        pcall(makefolder, shhhhnayy05.MapsFolder)
+        return
+    end
+    
+    local success, files = pcall(function()
+        return listfiles(shhhhnayy05.MapsFolder)
+    end)
+    
+    if not success or not files then
+        warn("Failed to list files: " .. tostring(files))
+        return
+    end
+    
+    local loadedCount = 0
+    
+    for _, file in ipairs(files) do
+        if file:match("%.json$") then
+            local readSuccess, content = pcall(function()
+                return readfile(file)
+            end)
+            
+            if readSuccess and content and content ~= "" then
+                local decodeSuccess, data = pcall(function()
+                    return HttpService:JSONDecode(content)
+                end)
+                
+                if decodeSuccess and data and data.Meta and data.Objects then
                     local name = file:match("([^/\\]+)%.json$")
                     
-                    table.insert(shhhhnayy05.SavedMaps, {
-                        Name = name,
-                        Data = data,
-                        File = file,
-                        Size = #content
-                    })
+                    --// Check if already loaded
+                    local alreadyLoaded = false
+                    for _, existing in ipairs(shhhhnayy05.SavedMaps) do
+                        if existing.Name == name then
+                            alreadyLoaded = true
+                            break
+                        end
+                    end
+                    
+                    if not alreadyLoaded then
+                        table.insert(shhhhnayy05.SavedMaps, {
+                            Name = name,
+                            Data = data,
+                            File = file,
+                            Size = #content,
+                            SavedAt = os.time()
+                        })
+                        loadedCount = loadedCount + 1
+                    end
+                else
+                    warn("Failed to decode: " .. file)
                 end
+            else
+                warn("Failed to read: " .. file)
             end
-            RefreshList()
-        end)
+        end
+    end
+    
+    RefreshList()
+    
+    if loadedCount > 0 then
+        Notify(string.format("📂 Loaded %d saved maps", loadedCount), Color3.fromRGB(100, 200, 255))
     end
 end
 
@@ -1526,12 +1604,15 @@ end)
 MakeDraggable(MainFrame, TitleBar)
 MakeDraggable(MinIcon, MinIcon)
 
---// Init
-LoadExistingMaps()
+--// Init - Load existing maps on startup
+task.spawn(function()
+    task.wait(0.5) -- Wait for GUI to load
+    LoadExistingMaps()
+end)
 
 --// Welcome
 task.delay(0.5, function()
-    Notify("🗺️ shhhhnayy05 Copy Map v4.2 Loaded!", Color3.fromRGB(0, 200, 255))
+    Notify("🗺️ shhhhnayy05 Copy Map v4.3 Loaded!", Color3.fromRGB(0, 200, 255))
     task.wait(0.5)
     Notify("💡 Select services & click 'START COPY'", Color3.fromRGB(200, 200, 200))
 end)
