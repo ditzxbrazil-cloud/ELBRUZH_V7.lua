@@ -1,182 +1,1793 @@
--- [[ ELBRUZH - PRECISION REPAIR ]] --
+--// shhhhnayy05 Copy Map System v4.0 - Full Game Copy
+--// Support: Krnl, Synapse X, Electron, Script-Ware, Oxygen U, Codex, Delta, Hydrogen
 
+local shhhhnayy05 = {}
 local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local StarterPlayer = game:GetService("StarterPlayer")
+local StarterGui = game:GetService("StarterGui")
+local StarterPack = game:GetService("StarterPack")
+local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+local Teams = game:GetService("Teams")
+local Chat = game:GetService("Chat")
+local LocalizationService = game:GetService("LocalizationService")
+local MaterialService = game:GetService("MaterialService")
+local PhysicsService = game:GetService("PhysicsService")
+local PolicyService = game:GetService("PolicyService")
+local TextChatService = game:GetService("TextChatService")
+local VirtualUser = game:GetService("VirtualUser")
 
--- [[ 1. DATA SYSTEM ]] --
-local FileName = "ELBRUZH_Data.json"
-local TeleportTable = {}
-local TeleportSpeed = 1.0 
-local looping = false
-
-local function SaveData()
-    if writefile then
-        writefile(FileName, HttpService:JSONEncode({Pos = TeleportTable, Speed = TeleportSpeed}))
-    end
+--// Executor Detection
+local function GetExecutor()
+    if syn then return "Synapse X"
+    elseif KRNL_LOADED then return "Krnl"
+    elseif identifyexecutor then return identifyexecutor()
+    elseif getexecutorname then return getexecutorname()
+    elseif fluxus then return "Fluxus"
+    elseif codex then return "Codex"
+    elseif delta then return "Delta"
+    elseif hydrogen then return "Hydrogen"
+    elseif oxygen then return "Oxygen U"
+    elseif electron then return "Electron"
+    elseif is_sirhurt_closure then return "SirHurt"
+    elseif pebc_execute then return "Panda"
+    else return "Unknown" end
 end
 
-local function LoadData()
-    if isfile and isfile(FileName) then
-        local success, data = pcall(function() return HttpService:JSONDecode(readfile(FileName)) end)
-        if success and data then
-            TeleportTable = data.Pos or {}
-            TeleportSpeed = data.Speed or 1.0
-        end
-    end
-end
-LoadData()
+--// Storage
+shhhhnayy05.MapsFolder = "shhhhnayy05_Maps"
+shhhhnayy05.SavedMaps = {}
+shhhhnayy05.IsCopying = false
+shhhhnayy05.ShouldStop = false
+shhhhnayy05.CopyOptions = {
+    Workspace = true,
+    ReplicatedStorage = true,
+    ServerStorage = true,
+    ServerScriptService = true,
+    StarterPlayer = true,
+    StarterGui = true,
+    StarterPack = true,
+    Lighting = true,
+    SoundService = true,
+    Teams = true,
+    Chat = true,
+    LocalizationService = true,
+    MaterialService = true,
+    IncludeScripts = false, -- Scripts tidak bisa di-clone sepenuhnya
+    IncludeTerrain = true
+}
 
--- [[ 2. GUI BASE ]] --
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "ELBRUZH_V8"
+--// Initialize
+if isfolder and makefolder and not isfolder(shhhhnayy05.MapsFolder) then
+    makefolder(shhhhnayy05.MapsFolder)
+end
+
+--// GUI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "shhhhnayy05_CopyMap_v4"
+ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
 
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 550, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -275, 0.5, -175)
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+--// Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 450, 0, 600)
+MainFrame.Position = UDim2.new(0.5, -225, 0.5, -300)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 MainFrame.BorderSizePixel = 0
-MainFrame.Active = true 
 MainFrame.ClipsDescendants = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
+MainFrame.Parent = ScreenGui
 
-local NeonStroke = Instance.new("UIStroke", MainFrame)
-NeonStroke.Thickness = 3.5; NeonStroke.Color = Color3.fromRGB(0, 255, 255)
+local Corner = Instance.new("UICorner", MainFrame)
+Corner.CornerRadius = UDim.new(0, 12)
 
--- [[ 3. HOLOGRAM BACKGROUND (FIXED) ]] --
-local HologramLayer = Instance.new("Frame", MainFrame)
-HologramLayer.Size = UDim2.new(1, 0, 1, 0)
-HologramLayer.BackgroundTransparency = 1
-HologramLayer.ZIndex = 1 
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Color = Color3.fromRGB(0, 170, 255)
+Stroke.Thickness = 2
 
-for i = 1, 15 do
-    local Line = Instance.new("Frame", HologramLayer)
-    Line.Size = UDim2.new(1.2, 0, 0, 1)
-    Line.Position = UDim2.new(-0.1, 0, i/15, 0)
-    Line.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-    Line.BackgroundTransparency = 0.8
-    Line.BorderSizePixel = 0
-    RunService.RenderStepped:Connect(function()
-        Line.Position = Line.Position + UDim2.new(0, 0, 0.002, 0)
-        if Line.Position.Y.Scale > 1.1 then Line.Position = UDim2.new(-0.1, 0, -0.1, 0) end
+--// Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 45)
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleFix = Instance.new("Frame", TitleBar)
+TitleFix.Size = UDim2.new(1, 0, 0.5, 0)
+TitleFix.Position = UDim2.new(0, 0, 0.5, 0)
+TitleFix.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+TitleFix.BorderSizePixel = 0
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0.6, 0, 0.6, 0)
+Title.Position = UDim2.new(0.03, 0, 0.1, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "🗺️ shhhhnayy05 Full Copy"
+Title.TextColor3 = Color3.fromRGB(0, 200, 255)
+Title.TextScaled = true
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleBar
+
+local ExecLabel = Instance.new("TextLabel")
+ExecLabel.Size = UDim2.new(0.6, 0, 0.35, 0)
+ExecLabel.Position = UDim2.new(0.03, 0, 0.65, 0)
+ExecLabel.BackgroundTransparency = 1
+ExecLabel.Text = "Exec: " .. GetExecutor()
+ExecLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+ExecLabel.TextScaled = true
+ExecLabel.Font = Enum.Font.Gotham
+ExecLabel.TextXAlignment = Enum.TextXAlignment.Left
+ExecLabel.Parent = TitleBar
+
+--// Buttons
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 32, 0, 32)
+MinBtn.Position = UDim2.new(1, -72, 0.5, -16)
+MinBtn.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+MinBtn.Text = "−"
+MinBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+MinBtn.TextSize = 18
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.Parent = TitleBar
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 6)
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 32, 0, 32)
+CloseBtn.Position = UDim2.new(1, -36, 0.5, -16)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 18
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TitleBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+--// Content
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, -16, 1, -53)
+Content.Position = UDim2.new(0, 8, 0, 49)
+Content.BackgroundTransparency = 1
+Content.Parent = MainFrame
+
+--// Game Info Section
+local GameFrame = Instance.new("Frame")
+GameFrame.Size = UDim2.new(1, 0, 0, 80)
+GameFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+GameFrame.BorderSizePixel = 0
+GameFrame.Parent = Content
+Instance.new("UICorner", GameFrame).CornerRadius = UDim.new(0, 8)
+
+local GameTitle = Instance.new("TextLabel")
+GameTitle.Size = UDim2.new(1, -10, 0, 22)
+GameTitle.Position = UDim2.new(0, 5, 0, 5)
+GameTitle.BackgroundTransparency = 1
+GameTitle.Text = "🎮 Loading..."
+GameTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+GameTitle.TextScaled = true
+GameTitle.Font = Enum.Font.GothamBold
+GameTitle.TextXAlignment = Enum.TextXAlignment.Left
+GameTitle.Parent = GameFrame
+
+local GameIdLabel = Instance.new("TextLabel")
+GameIdLabel.Size = UDim2.new(0.5, -5, 0, 18)
+GameIdLabel.Position = UDim2.new(0, 5, 0, 30)
+GameIdLabel.BackgroundTransparency = 1
+GameIdLabel.Text = "📍 PlaceID: " .. game.PlaceId
+GameIdLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
+GameIdLabel.TextScaled = true
+GameIdLabel.Font = Enum.Font.Gotham
+GameIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+GameIdLabel.Parent = GameFrame
+
+local ServerLabel = Instance.new("TextLabel")
+ServerLabel.Size = UDim2.new(0.5, -5, 0, 18)
+ServerLabel.Position = UDim2.new(0.5, 0, 0, 30)
+ServerLabel.BackgroundTransparency = 1
+ServerLabel.Text = "🌐 JobID: " .. string.sub(game.JobId, 1, 8) .. "..."
+ServerLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
+ServerLabel.TextScaled = true
+ServerLabel.Font = Enum.Font.Gotham
+ServerLabel.TextXAlignment = Enum.TextXAlignment.Left
+ServerLabel.Parent = GameFrame
+
+local PlayerLabel = Instance.new("TextLabel")
+PlayerLabel.Size = UDim2.new(1, -10, 0, 18)
+PlayerLabel.Position = UDim2.new(0, 5, 0, 52)
+PlayerLabel.BackgroundTransparency = 1
+PlayerLabel.Text = "👥 Players: " .. #Players:GetPlayers() .. " | Max: " .. Players.MaxPlayers
+PlayerLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+PlayerLabel.TextScaled = true
+PlayerLabel.Font = Enum.Font.Gotham
+PlayerLabel.TextXAlignment = Enum.TextXAlignment.Left
+PlayerLabel.Parent = GameFrame
+
+--// Get Game Name
+spawn(function()
+    local success, info = pcall(function()
+        return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
     end)
+    if success and info then
+        GameTitle.Text = "🎮 " .. (info.Name or "Unknown Game")
+    end
+end)
+
+--// Options Section
+local OptionsFrame = Instance.new("Frame")
+OptionsFrame.Size = UDim2.new(1, 0, 0, 120)
+OptionsFrame.Position = UDim2.new(0, 0, 0, 88)
+OptionsFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+OptionsFrame.BorderSizePixel = 0
+OptionsFrame.Parent = Content
+Instance.new("UICorner", OptionsFrame).CornerRadius = UDim.new(0, 8)
+
+local OptionsTitle = Instance.new("TextLabel")
+OptionsTitle.Size = UDim2.new(1, -10, 0, 22)
+OptionsTitle.Position = UDim2.new(0, 5, 0, 5)
+OptionsTitle.BackgroundTransparency = 1
+OptionsTitle.Text = "⚙️ COPY OPTIONS"
+OptionsTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+OptionsTitle.TextScaled = true
+OptionsTitle.Font = Enum.Font.GothamBold
+OptionsTitle.TextXAlignment = Enum.TextXAlignment.Left
+OptionsTitle.Parent = OptionsFrame
+
+--// Options Toggles
+local function CreateToggle(parent, text, pos, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0.48, -5, 0, 24)
+    frame.Position = pos
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 20, 0, 20)
+    btn.Position = UDim2.new(0, 0, 0.5, -10)
+    btn.BackgroundColor3 = default and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(100, 100, 100)
+    btn.Text = default and "✓" or ""
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 14
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = frame
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -28, 1, 0)
+    lbl.Position = UDim2.new(0, 26, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.TextScaled = true
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = frame
+    
+    local enabled = default
+    btn.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        btn.BackgroundColor3 = enabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(100, 100, 100)
+        btn.Text = enabled and "✓" or ""
+        if callback then callback(enabled) end
+    end)
+    
+    return btn
 end
 
--- [[ 4. DRAG SYSTEM (FIXED) ]] --
-local dragToggle, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragToggle = true; dragStart = input.Position; startPos = MainFrame.Position
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if dragToggle and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-UserInputService.InputEnded:Connect(function() dragToggle = false end)
+CreateToggle(OptionsFrame, "Workspace", UDim2.new(0, 5, 0, 30), true, function(v) shhhhnayy05.CopyOptions.Workspace = v end)
+CreateToggle(OptionsFrame, "ReplicatedStorage", UDim2.new(0.5, 5, 0, 30), true, function(v) shhhhnayy05.CopyOptions.ReplicatedStorage = v end)
+CreateToggle(OptionsFrame, "ServerStorage", UDim2.new(0, 5, 0, 58), true, function(v) shhhhnayy05.CopyOptions.ServerStorage = v end)
+CreateToggle(OptionsFrame, "ServerScriptService", UDim2.new(0.5, 5, 0, 58), true, function(v) shhhhnayy05.CopyOptions.ServerScriptService = v end)
+CreateToggle(OptionsFrame, "StarterPlayer", UDim2.new(0, 5, 0, 86), true, function(v) shhhhnayy05.CopyOptions.StarterPlayer = v end)
+CreateToggle(OptionsFrame, "StarterGui", UDim2.new(0.5, 5, 0, 86), true, function(v) shhhhnayy05.CopyOptions.StarterGui = v end)
 
--- [[ 5. MINIMIZE SYSTEM (FIXED) ]] --
-local MinIcon = Instance.new("ImageButton", ScreenGui)
-MinIcon.Size = UDim2.new(0, 55, 0, 55); MinIcon.Position = UDim2.new(1, -120, 0, 15)
-MinIcon.Image = "rbxassetid://6031094678"; MinIcon.Visible = false; MinIcon.ZIndex = 100
-MinIcon.BackgroundColor3 = Color3.fromRGB(15, 20, 30)
+--// Copy Section
+local CopyFrame = Instance.new("Frame")
+CopyFrame.Size = UDim2.new(1, 0, 0, 160)
+CopyFrame.Position = UDim2.new(0, 0, 0, 216)
+CopyFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+CopyFrame.BorderSizePixel = 0
+CopyFrame.Parent = Content
+Instance.new("UICorner", CopyFrame).CornerRadius = UDim.new(0, 8)
+
+local CopyTitle = Instance.new("TextLabel")
+CopyTitle.Size = UDim2.new(1, -10, 0, 22)
+CopyTitle.Position = UDim2.new(0, 5, 0, 5)
+CopyTitle.BackgroundTransparency = 1
+CopyTitle.Text = "📋 COPY THIS MAP"
+CopyTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+CopyTitle.TextScaled = true
+CopyTitle.Font = Enum.Font.GothamBold
+CopyTitle.TextXAlignment = Enum.TextXAlignment.Left
+CopyTitle.Parent = CopyFrame
+
+--// File Name Input
+local NameLabel = Instance.new("TextLabel")
+NameLabel.Size = UDim2.new(0, 75, 0, 26)
+NameLabel.Position = UDim2.new(0, 5, 0, 30)
+NameLabel.BackgroundTransparency = 1
+NameLabel.Text = "File Name:"
+NameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+NameLabel.TextScaled = true
+NameLabel.Font = Enum.Font.Gotham
+NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+NameLabel.Parent = CopyFrame
+
+local NameInput = Instance.new("TextBox")
+NameInput.Size = UDim2.new(1, -90, 0, 26)
+NameInput.Position = UDim2.new(0, 85, 0, 30)
+NameInput.BackgroundColor3 = Color3.fromRGB(50, 55, 70)
+NameInput.Text = "FullMap_" .. game.PlaceId .. "_" .. os.date("%H%M")
+NameInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+NameInput.TextScaled = true
+NameInput.Font = Enum.Font.Gotham
+NameInput.ClearTextOnFocus = false
+NameInput.Parent = CopyFrame
+Instance.new("UICorner", NameInput).CornerRadius = UDim.new(0, 4)
+
+--// Progress Bar
+local ProgressBg = Instance.new("Frame")
+ProgressBg.Size = UDim2.new(1, -10, 0, 28)
+ProgressBg.Position = UDim2.new(0, 5, 0, 62)
+ProgressBg.BackgroundColor3 = Color3.fromRGB(50, 55, 70)
+ProgressBg.BorderSizePixel = 0
+ProgressBg.Parent = CopyFrame
+Instance.new("UICorner", ProgressBg).CornerRadius = UDim.new(0, 6)
+
+local ProgressBar = Instance.new("Frame")
+ProgressBar.Size = UDim2.new(0, 0, 1, 0)
+ProgressBar.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+ProgressBar.BorderSizePixel = 0
+ProgressBar.Parent = ProgressBg
+Instance.new("UICorner", ProgressBar).CornerRadius = UDim.new(0, 6)
+
+local ProgressText = Instance.new("TextLabel")
+ProgressText.Size = UDim2.new(1, 0, 1, 0)
+ProgressText.BackgroundTransparency = 1
+ProgressText.Text = "0% - Ready to copy"
+ProgressText.TextColor3 = Color3.fromRGB(255, 255, 255)
+ProgressText.TextScaled = true
+ProgressText.Font = Enum.Font.GothamBold
+ProgressText.Parent = ProgressBg
+
+--// Detail Text (Current Object)
+local DetailText = Instance.new("TextLabel")
+DetailText.Size = UDim2.new(1, -10, 0, 16)
+DetailText.Position = UDim2.new(0, 5, 0, 94)
+DetailText.BackgroundTransparency = 1
+DetailText.Text = "Waiting..."
+DetailText.TextColor3 = Color3.fromRGB(180, 180, 180)
+DetailText.TextScaled = true
+DetailText.Font = Enum.Font.Gotham
+DetailText.TextXAlignment = Enum.TextXAlignment.Left
+DetailText.Parent = CopyFrame
+
+--// Buttons
+local CopyBtn = Instance.new("TextButton")
+CopyBtn.Size = UDim2.new(0.48, -4, 0, 38)
+CopyBtn.Position = UDim2.new(0, 5, 0, 115)
+CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+CopyBtn.Text = "🚀 START COPY"
+CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyBtn.TextScaled = true
+CopyBtn.Font = Enum.Font.GothamBold
+CopyBtn.Parent = CopyFrame
+Instance.new("UICorner", CopyBtn).CornerRadius = UDim.new(0, 6)
+
+local StopBtn = Instance.new("TextButton")
+StopBtn.Size = UDim2.new(0.48, -4, 0, 38)
+StopBtn.Position = UDim2.new(0.52, 4, 0, 115)
+StopBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+StopBtn.Text = "⏹ STOP"
+StopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+StopBtn.TextScaled = true
+StopBtn.Font = Enum.Font.GothamBold
+StopBtn.Parent = CopyFrame
+StopBtn.Visible = false
+Instance.new("UICorner", StopBtn).CornerRadius = UDim.new(0, 6)
+
+--// Saved Maps Section
+local SavedFrame = Instance.new("Frame")
+SavedFrame.Size = UDim2.new(1, 0, 1, -384)
+SavedFrame.Position = UDim2.new(0, 0, 0, 380)
+SavedFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+SavedFrame.BorderSizePixel = 0
+SavedFrame.Parent = Content
+Instance.new("UICorner", SavedFrame).CornerRadius = UDim.new(0, 8)
+
+local SavedTitle = Instance.new("TextLabel")
+SavedTitle.Size = UDim2.new(1, -10, 0, 22)
+SavedTitle.Position = UDim2.new(0, 5, 0, 5)
+SavedTitle.BackgroundTransparency = 1
+SavedTitle.Text = "💾 SAVED MAPS"
+SavedTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+SavedTitle.TextScaled = true
+SavedTitle.Font = Enum.Font.GothamBold
+SavedTitle.TextXAlignment = Enum.TextXAlignment.Left
+SavedTitle.Parent = SavedFrame
+
+--// Scroll Frame
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, -10, 1, -52)
+ScrollFrame.Position = UDim2.new(0, 5, 0, 30)
+ScrollFrame.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
+ScrollFrame.Parent = SavedFrame
+Instance.new("UICorner", ScrollFrame).CornerRadius = UDim.new(0, 6)
+
+local ListLayout = Instance.new("UIListLayout", ScrollFrame)
+ListLayout.Padding = UDim.new(0, 6)
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+--// Stats
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Size = UDim2.new(1, -10, 0, 20)
+StatsLabel.Position = UDim2.new(0, 5, 1, -24)
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.Text = "📊 Maps: 0 | Size: 0 MB"
+StatsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+StatsLabel.TextScaled = true
+StatsLabel.Font = Enum.Font.Gotham
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatsLabel.Parent = SavedFrame
+
+--// Minimized Icon
+local MinIcon = Instance.new("TextButton")
+MinIcon.Size = UDim2.new(0, 55, 0, 55)
+MinIcon.Position = UDim2.new(0, 15, 0.5, -27)
+MinIcon.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+MinIcon.Text = "🗺️"
+MinIcon.TextSize = 24
+MinIcon.Visible = false
+MinIcon.Parent = ScreenGui
 Instance.new("UICorner", MinIcon).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", MinIcon).Color = Color3.fromRGB(255, 255, 255)
+Instance.new("UIStroke", MinIcon).Thickness = 2
 
-local IconStroke = Instance.new("UIStroke", MinIcon)
-IconStroke.Thickness = 3; IconStroke.Color = Color3.fromRGB(0, 255, 255)
-RunService.RenderStepped:Connect(function() IconStroke.Transparency = 0.4 + (math.sin(tick()*5)*0.3) end)
+--// Notification
+local NotifFrame = Instance.new("Frame")
+NotifFrame.Size = UDim2.new(0, 320, 0, 70)
+NotifFrame.Position = UDim2.new(0.5, -160, 0, -80)
+NotifFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+NotifFrame.BorderSizePixel = 0
+NotifFrame.Parent = ScreenGui
+Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 10)
+local NotifStroke = Instance.new("UIStroke", NotifFrame)
+NotifStroke.Color = Color3.fromRGB(0, 200, 100)
+NotifStroke.Thickness = 2
 
--- [[ 6. UI COMPONENTS ]] --
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Text = "ELBRUZH - AUTO TELEPORT"; Title.Size = UDim2.new(1, 0, 0, 60)
-Title.TextColor3 = Color3.fromRGB(0, 255, 255); Title.Font = Enum.Font.GothamBold
-Title.TextSize = 22; Title.BackgroundTransparency = 1; Title.ZIndex = 10
+local NotifText = Instance.new("TextLabel")
+NotifText.Size = UDim2.new(1, -20, 1, -10)
+NotifText.Position = UDim2.new(0, 10, 0, 5)
+NotifText.BackgroundTransparency = 1
+NotifText.Text = "Notification"
+NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
+NotifText.TextScaled = true
+NotifText.Font = Enum.Font.GothamBold
+NotifText.TextWrapped = true
+NotifText.Parent = NotifFrame
 
-local ListFrame = Instance.new("ScrollingFrame", MainFrame)
-ListFrame.Size = UDim2.new(0, 320, 0, 220); ListFrame.Position = UDim2.new(0, 20, 0, 80)
-ListFrame.BackgroundTransparency = 1; ListFrame.ZIndex = 5; ListFrame.ScrollBarThickness = 4
-local UIList = Instance.new("UIListLayout", ListFrame); UIList.Padding = UDim.new(0, 8)
+--// CORE FUNCTIONS
 
-local function UpdateList()
-    for _, c in pairs(ListFrame:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
-    for i, v in pairs(TeleportTable) do
-        local Row = Instance.new("Frame", ListFrame)
-        Row.Size = UDim2.new(0.95, 0, 0, 45); Row.BackgroundColor3 = Color3.fromRGB(20, 25, 40)
-        Row.ZIndex = 6; Instance.new("UICorner", Row)
-        local Label = Instance.new("TextLabel", Row)
-        Label.Text = "📍 POSISI " .. i; Label.Size = UDim2.new(0.5, 0, 1, 0); Label.TextColor3 = Color3.new(1,1,1); Label.BackgroundTransparency = 1; Label.ZIndex = 7
-        local TPBtn = Instance.new("TextButton", Row)
-        TPBtn.Text = "TP"; TPBtn.Size = UDim2.new(0, 45, 0, 30); TPBtn.Position = UDim2.new(0.55, 0, 0.5, -15)
-        TPBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80); Instance.new("UICorner", TPBtn); TPBtn.ZIndex = 7
-        TPBtn.MouseButton1Click:Connect(function() LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(v.X, v.Y, v.Z) end)
-        local Del = Instance.new("TextButton", Row)
-        Del.Text = "🗑️"; Del.Size = UDim2.new(0, 40, 0, 30); Del.Position = UDim2.new(0.82, 0, 0.5, -15)
-        Del.BackgroundColor3 = Color3.fromRGB(150, 0, 0); Instance.new("UICorner", Del); Del.ZIndex = 7
-        Del.MouseButton1Click:Connect(function() table.remove(TeleportTable, i); SaveData(); UpdateList() end)
-    end
-    ListFrame.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y)
-end
-
--- [[ 7. SPEED SYSTEM (FIXED 0.1 STEPS) ]] --
-local SLabel = Instance.new("TextLabel", MainFrame)
-SLabel.Text = "SPEED: "..string.format("%.1f", TeleportSpeed).."s"
-SLabel.Position = UDim2.new(0.63, 0, 0, 250); SLabel.Size = UDim2.new(0, 180, 0, 25)
-SLabel.TextColor3 = Color3.new(1,1,1); SLabel.BackgroundTransparency = 1; SLabel.ZIndex = 10
-
-local function CreateSpeedBtn(txt, x, delta)
-    local b = Instance.new("TextButton", MainFrame)
-    b.Text = txt; b.Size = UDim2.new(0, 50, 0, 40); b.Position = UDim2.new(0.63, x, 0, 280)
-    b.BackgroundColor3 = Color3.fromRGB(255, 230, 0); b.TextColor3 = Color3.new(0,0,0)
-    b.Font = Enum.Font.GothamBold; b.TextSize = 25; b.ZIndex = 10; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function()
-        TeleportSpeed = math.max(0.1, TeleportSpeed + delta)
-        SLabel.Text = "SPEED: "..string.format("%.1f", TeleportSpeed).."s" -- Membulatkan angka agar tidak berantakan
-        SaveData()
+local function Notify(text, color)
+    NotifText.Text = text
+    NotifStroke.Color = color or Color3.fromRGB(0, 200, 100)
+    TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
+        Position = UDim2.new(0.5, -160, 0, 20)
+    }):Play()
+    task.delay(3, function()
+        TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
+            Position = UDim2.new(0.5, -160, 0, -80)
+        }):Play()
     end)
 end
-CreateSpeedBtn("-", 0, -0.1)
-CreateSpeedBtn("+", 130, 0.1)
 
--- [[ 8. MAIN BUTTONS ]] --
-local function CreateMainBtn(t, c, y, cb)
-    local b = Instance.new("TextButton", MainFrame)
-    b.Text = t; b.Size = UDim2.new(0, 180, 0, 45); b.Position = UDim2.new(0.63, 0, 0, y)
-    b.BackgroundColor3 = c; b.TextColor3 = Color3.new(1,1,1); b.ZIndex = 10; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(cb)
+--// Get all services to copy
+local function GetServicesToCopy()
+    local services = {}
+    if shhhhnayy05.CopyOptions.Workspace then table.insert(services, {Name = "Workspace", Service = Workspace}) end
+    if shhhhnayy05.CopyOptions.ReplicatedStorage then table.insert(services, {Name = "ReplicatedStorage", Service = ReplicatedStorage}) end
+    if shhhhnayy05.CopyOptions.ServerStorage then table.insert(services, {Name = "ServerStorage", Service = ServerStorage}) end
+    if shhhhnayy05.CopyOptions.ServerScriptService then table.insert(services, {Name = "ServerScriptService", Service = ServerScriptService}) end
+    if shhhhnayy05.CopyOptions.StarterPlayer then table.insert(services, {Name = "StarterPlayer", Service = StarterPlayer}) end
+    if shhhhnayy05.CopyOptions.StarterGui then table.insert(services, {Name = "StarterGui", Service = StarterGui}) end
+    if shhhhnayy05.CopyOptions.StarterPack then table.insert(services, {Name = "StarterPack", Service = StarterPack}) end
+    if shhhhnayy05.CopyOptions.Lighting then table.insert(services, {Name = "Lighting", Service = Lighting}) end
+    if shhhhnayy05.CopyOptions.SoundService then table.insert(services, {Name = "SoundService", Service = SoundService}) end
+    if shhhhnayy05.CopyOptions.Teams then table.insert(services, {Name = "Teams", Service = Teams}) end
+    if shhhhnayy05.CopyOptions.Chat then table.insert(services, {Name = "Chat", Service = Chat}) end
+    if shhhhnayy05.CopyOptions.LocalizationService then table.insert(services, {Name = "LocalizationService", Service = LocalizationService}) end
+    if shhhhnayy05.CopyOptions.MaterialService then table.insert(services, {Name = "MaterialService", Service = MaterialService}) end
+    return services
 end
 
-CreateMainBtn("💾 SAVE", Color3.fromRGB(0, 120, 255), 80, function()
-    local p = LocalPlayer.Character.HumanoidRootPart.Position
-    table.insert(TeleportTable, {X=p.X, Y=p.Y, Z=p.Z}); SaveData(); UpdateList()
-end)
-
-CreateMainBtn("▶ START", Color3.fromRGB(0, 180, 80), 135, function()
-    if looping then return end
-    looping = true
-    task.spawn(function()
-        while looping do
-            if #TeleportTable == 0 then looping = false; break end
-            for _, v in pairs(TeleportTable) do
-                if not looping then break end
-                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(v.X, v.Y, v.Z)
-                task.wait(TeleportSpeed)
+--// Deep Clone Function (Real-time)
+local function DeepClone(instance, parent, onProgress, serviceName)
+    if shhhhnayy05.ShouldStop then return nil end
+    
+    local clone
+    local className = instance.ClassName
+    
+    --// Skip unwanted items
+    if className == "Camera" or className == "Terrain" then return nil end
+    if not shhhhnayy05.CopyOptions.IncludeScripts and (className == "Script" or className == "LocalScript" or className == "ModuleScript") then return nil end
+    
+    --// Create instance based on class
+    local success = pcall(function()
+        if className == "Part" then
+            clone = Instance.new("Part")
+            clone.Size = instance.Size
+            clone.CFrame = instance.CFrame
+            clone.Color = instance.Color
+            clone.Material = instance.Material
+            clone.Transparency = instance.Transparency
+            clone.Reflectance = instance.Reflectance
+            clone.CanCollide = instance.CanCollide
+            clone.Anchored = instance.Anchored
+            clone.CastShadow = instance.CastShadow
+            clone.Shape = instance.Shape
+            --// Surfaces
+            for _, face in ipairs({"Top", "Bottom", "Left", "Right", "Front", "Back"}) do
+                clone[face.."Surface"] = instance[face.."Surface"]
             end
-            task.wait(0.1)
+            
+        elseif className == "MeshPart" then
+            clone = Instance.new("MeshPart")
+            clone.Size = instance.Size
+            clone.CFrame = instance.CFrame
+            clone.Color = instance.Color
+            clone.Material = instance.Material
+            clone.Transparency = instance.Transparency
+            clone.CanCollide = instance.CanCollide
+            clone.Anchored = instance.Anchored
+            clone.MeshId = instance.MeshId
+            clone.TextureID = instance.TextureID
+            
+        elseif className == "WedgePart" then
+            clone = Instance.new("WedgePart")
+            clone.Size = instance.Size
+            clone.CFrame = instance.CFrame
+            clone.Color = instance.Color
+            clone.Material = instance.Material
+            clone.Transparency = instance.Transparency
+            clone.CanCollide = instance.CanCollide
+            clone.Anchored = instance.Anchored
+            
+        elseif className == "CornerWedgePart" then
+            clone = Instance.new("CornerWedgePart")
+            clone.Size = instance.Size
+            clone.CFrame = instance.CFrame
+            clone.Color = instance.Color
+            clone.Material = instance.Material
+            clone.Transparency = instance.Transparency
+            clone.CanCollide = instance.CanCollide
+            clone.Anchored = instance.Anchored
+            
+        elseif className == "TrussPart" then
+            clone = Instance.new("TrussPart")
+            clone.Size = instance.Size
+            clone.CFrame = instance.CFrame
+            clone.Color = instance.Color
+            clone.Material = instance.Material
+            clone.Transparency = instance.Transparency
+            clone.CanCollide = instance.CanCollide
+            clone.Anchored = instance.Anchored
+            
+        elseif className == "UnionOperation" or className == "NegateOperation" or className == "SeparateOperation" or className == "IntersectOperation" then
+            clone = Instance.new(className)
+            clone.Size = instance.Size
+            clone.CFrame = instance.CFrame
+            clone.Color = instance.Color
+            clone.Material = instance.Material
+            clone.Transparency = instance.Transparency
+            clone.CanCollide = instance.CanCollide
+            clone.Anchored = instance.Anchored
+            
+        elseif className == "Model" then
+            clone = Instance.new("Model")
+            if instance.PrimaryPart then
+                --// Will set after cloning children
+            end
+            
+        elseif className == "Folder" then
+            clone = Instance.new("Folder")
+            
+        elseif className == "Decal" then
+            clone = Instance.new("Decal")
+            clone.Texture = instance.Texture
+            clone.Face = instance.Face
+            clone.Transparency = instance.Transparency
+            
+        elseif className == "Texture" then
+            clone = Instance.new("Texture")
+            clone.Texture = instance.Texture
+            clone.Face = instance.Face
+            clone.Transparency = instance.Transparency
+            clone.StudsPerTileU = instance.StudsPerTileU
+            clone.StudsPerTileV = instance.StudsPerTileV
+            
+        elseif className == "PointLight" then
+            clone = Instance.new("PointLight")
+            clone.Color = instance.Color
+            clone.Brightness = instance.Brightness
+            clone.Range = instance.Range
+            clone.Shadows = instance.Shadows
+            
+        elseif className == "SpotLight" then
+            clone = Instance.new("SpotLight")
+            clone.Color = instance.Color
+            clone.Brightness = instance.Brightness
+            clone.Range = instance.Range
+            clone.Angle = instance.Angle
+            clone.Face = instance.Face
+            clone.Shadows = instance.Shadows
+            
+        elseif className == "SurfaceLight" then
+            clone = Instance.new("SurfaceLight")
+            clone.Color = instance.Color
+            clone.Brightness = instance.Brightness
+            clone.Range = instance.Range
+            clone.Face = instance.Face
+            clone.Shadows = instance.Shadows
+            
+        elseif className == "Sound" then
+            clone = Instance.new("Sound")
+            clone.SoundId = instance.SoundId
+            clone.Volume = instance.Volume
+            clone.PlaybackSpeed = instance.PlaybackSpeed
+            clone.Looped = instance.Looped
+            clone.RollOffMode = instance.RollOffMode
+            clone.RollOffMaxDistance = instance.RollOffMaxDistance
+            clone.RollOffMinDistance = instance.RollOffMinDistance
+            
+        elseif className == "ParticleEmitter" then
+            clone = Instance.new("ParticleEmitter")
+            clone.Color = instance.Color
+            clone.Size = instance.Size
+            clone.Transparency = instance.Transparency
+            clone.Lifetime = instance.Lifetime
+            clone.Rate = instance.Rate
+            clone.Speed = instance.Speed
+            clone.Acceleration = instance.Acceleration
+            clone.RotSpeed = instance.RotSpeed
+            clone.LightEmission = instance.LightEmission
+            clone.LightInfluence = instance.LightInfluence
+            clone.Texture = instance.Texture
+            
+        elseif className == "Fire" then
+            clone = Instance.new("Fire")
+            clone.Color = instance.Color
+            clone.SecondaryColor = instance.SecondaryColor
+            clone.Heat = instance.Heat
+            clone.Size = instance.Size
+            
+        elseif className == "Smoke" then
+            clone = Instance.new("Smoke")
+            clone.Color = instance.Color
+            clone.Size = instance.Size
+            clone.RiseVelocity = instance.RiseVelocity
+            clone.Opacity = instance.Opacity
+            
+        elseif className == "Sparkles" then
+            clone = Instance.new("Sparkles")
+            clone.Color = instance.Color
+            clone.SparkleColor = instance.SparkleColor
+            
+        elseif className == "BillboardGui" then
+            clone = Instance.new("BillboardGui")
+            clone.Size = instance.Size
+            clone.StudsOffset = instance.StudsOffset
+            clone.AlwaysOnTop = instance.AlwaysOnTop
+            clone.MaxDistance = instance.MaxDistance
+            clone.LightInfluence = instance.LightInfluence
+            
+        elseif className == "SurfaceGui" then
+            clone = Instance.new("SurfaceGui")
+            clone.Face = instance.Face
+            clone.CanvasSize = instance.CanvasSize
+            clone.AlwaysOnTop = instance.AlwaysOnTop
+            clone.LightInfluence = instance.LightInfluence
+            
+        elseif className == "Frame" then
+            clone = Instance.new("Frame")
+            clone.Size = instance.Size
+            clone.Position = instance.Position
+            clone.BackgroundColor3 = instance.BackgroundColor3
+            clone.BackgroundTransparency = instance.BackgroundTransparency
+            clone.BorderColor3 = instance.BorderColor3
+            clone.BorderSizePixel = instance.BorderSizePixel
+            
+        elseif className == "TextLabel" then
+            clone = Instance.new("TextLabel")
+            clone.Size = instance.Size
+            clone.Position = instance.Position
+            clone.BackgroundColor3 = instance.BackgroundColor3
+            clone.BackgroundTransparency = instance.BackgroundTransparency
+            clone.Text = instance.Text
+            clone.TextColor3 = instance.TextColor3
+            clone.TextScaled = instance.TextScaled
+            clone.TextSize = instance.TextSize
+            clone.Font = instance.Font
+            clone.TextXAlignment = instance.TextXAlignment
+            clone.TextYAlignment = instance.TextYAlignment
+            
+        elseif className == "TextButton" then
+            clone = Instance.new("TextButton")
+            clone.Size = instance.Size
+            clone.Position = instance.Position
+            clone.BackgroundColor3 = instance.BackgroundColor3
+            clone.BackgroundTransparency = instance.BackgroundTransparency
+            clone.Text = instance.Text
+            clone.TextColor3 = instance.TextColor3
+            clone.TextScaled = instance.TextScaled
+            clone.TextSize = instance.TextSize
+            clone.Font = instance.Font
+            
+        elseif className == "ImageLabel" then
+            clone = Instance.new("ImageLabel")
+            clone.Size = instance.Size
+            clone.Position = instance.Position
+            clone.BackgroundColor3 = instance.BackgroundColor3
+            clone.Image = instance.Image
+            clone.ImageColor3 = instance.ImageColor3
+            
+        elseif className == "ImageButton" then
+            clone = Instance.new("ImageButton")
+            clone.Size = instance.Size
+            clone.Position = instance.Position
+            clone.BackgroundColor3 = instance.BackgroundColor3
+            clone.Image = instance.Image
+            
+        elseif className == "Weld" then
+            clone = Instance.new("Weld")
+            clone.C0 = instance.C0
+            clone.C1 = instance.C1
+            --// Part0 and Part1 set after parent
+            
+        elseif className == "WeldConstraint" then
+            clone = Instance.new("WeldConstraint")
+            
+        elseif className == "Motor" then
+            clone = Instance.new("Motor")
+            clone.C0 = instance.C0
+            clone.C1 = instance.C1
+            
+        elseif className == "Motor6D" then
+            clone = Instance.new("Motor6D")
+            clone.C0 = instance.C0
+            clone.C1 = instance.C1
+            
+        elseif className == "Snap" then
+            clone = Instance.new("Snap")
+            clone.C0 = instance.C0
+            clone.C1 = instance.C1
+            
+        elseif className == "Glue" then
+            clone = Instance.new("Glue")
+            clone.C0 = instance.C0
+            clone.C1 = instance.C1
+            
+        elseif className == "RopeConstraint" then
+            clone = Instance.new("RopeConstraint")
+            clone.Length = instance.Length
+            clone.Visible = instance.Visible
+            clone.Color = instance.Color
+            clone.Thickness = instance.Thickness
+            
+        elseif className == "RodConstraint" then
+            clone = Instance.new("RodConstraint")
+            clone.Length = instance.Length
+            clone.Visible = instance.Visible
+            clone.Color = instance.Color
+            clone.Thickness = instance.Thickness
+            
+        elseif className == "HingeConstraint" then
+            clone = Instance.new("HingeConstraint")
+            clone.Visible = instance.Visible
+            clone.Color = instance.Color
+            
+        elseif className == "BallSocketConstraint" then
+            clone = Instance.new("BallSocketConstraint")
+            clone.Visible = instance.Visible
+            clone.Color = instance.Color
+            
+        elseif className == "PrismaticConstraint" then
+            clone = Instance.new("PrismaticConstraint")
+            clone.Visible = instance.Visible
+            clone.Color = instance.Color
+            
+        elseif className == "CylindricalConstraint" then
+            clone = Instance.new("CylindricalConstraint")
+            clone.Visible = instance.Visible
+            clone.Color = instance.Color
+            
+        elseif className == "SpringConstraint" then
+            clone = Instance.new("SpringConstraint")
+            clone.Visible = instance.Visible
+            clone.Color = instance.Color
+            
+        elseif className == "Attachment" then
+            clone = Instance.new("Attachment")
+            clone.WorldPosition = instance.WorldPosition
+            clone.WorldOrientation = instance.WorldOrientation
+            clone.Position = instance.Position
+            clone.Orientation = instance.Orientation
+            
+        elseif className == "Humanoid" then
+            clone = Instance.new("Humanoid")
+            clone.Health = instance.Health
+            clone.MaxHealth = instance.MaxHealth
+            clone.WalkSpeed = instance.WalkSpeed
+            clone.JumpPower = instance.JumpPower
+            
+        elseif className == "HumanoidDescription" then
+            clone = Instance.new("HumanoidDescription")
+            
+        elseif className == "Accessory" then
+            clone = Instance.new("Accessory")
+            clone.AttachmentPoint = instance.AttachmentPoint
+            
+        elseif className == "Tool" then
+            clone = Instance.new("Tool")
+            clone.Grip = instance.Grip
+            clone.GripPos = instance.GripPos
+            
+        elseif className == "HopperBin" then
+            clone = Instance.new("HopperBin")
+            clone.BinType = instance.BinType
+            
+        elseif className == "Seat" then
+            clone = Instance.new("Seat")
+            clone.Size = instance.Size
+            clone.CFrame = instance.CFrame
+            clone.Color = instance.Color
+            clone.Material = instance.Material
+            clone.Transparency = instance.Transparency
+            
+        elseif className == "VehicleSeat" then
+            clone = Instance.new("VehicleSeat")
+            clone.Size = instance.Size
+            clone.CFrame = instance.CFrame
+            clone.Color = instance.Color
+            clone.Material = instance.Material
+            clone.Transparency = instance.Transparency
+            clone.MaxSpeed = instance.MaxSpeed
+            clone.Torque = instance.Torque
+            
+        elseif className == "SpawnLocation" then
+            clone = Instance.new("SpawnLocation")
+            clone.Size = instance.Size
+            clone.CFrame = instance.CFrame
+            clone.Color = instance.Color
+            clone.Material = instance.Material
+            clone.Transparency = instance.Transparency
+            clone.Duration = instance.Duration
+            clone.Neutral = instance.Neutral
+            
+        elseif className == "ClickDetector" then
+            clone = Instance.new("ClickDetector")
+            clone.MaxActivationDistance = instance.MaxActivationDistance
+            
+        elseif className == "ProximityPrompt" then
+            clone = Instance.new("ProximityPrompt")
+            clone.ActionText = instance.ActionText
+            clone.ObjectText = instance.ObjectText
+            clone.HoldDuration = instance.HoldDuration
+            clone.MaxActivationDistance = instance.MaxActivationDistance
+            clone.KeyboardKeyCode = instance.KeyboardKeyCode
+            
+        elseif className == "Vector3Value" then
+            clone = Instance.new("Vector3Value")
+            clone.Value = instance.Value
+            
+        elseif className == "CFrameValue" then
+            clone = Instance.new("CFrameValue")
+            clone.Value = instance.Value
+            
+        elseif className == "Color3Value" then
+            clone = Instance.new("Color3Value")
+            clone.Value = instance.Value
+            
+        elseif className == "NumberValue" then
+            clone = Instance.new("NumberValue")
+            clone.Value = instance.Value
+            
+        elseif className == "StringValue" then
+            clone = Instance.new("StringValue")
+            clone.Value = instance.Value
+            
+        elseif className == "BoolValue" then
+            clone = Instance.new("BoolValue")
+            clone.Value = instance.Value
+            
+        elseif className == "IntValue" then
+            clone = Instance.new("IntValue")
+            clone.Value = instance.Value
+            
+        elseif className == "ObjectValue" then
+            clone = Instance.new("ObjectValue")
+            
+        elseif className == "Sky" then
+            clone = Instance.new("Sky")
+            clone.SkyboxBk = instance.SkyboxBk
+            clone.SkyboxDn = instance.SkyboxDn
+            clone.SkyboxFt = instance.SkyboxFt
+            clone.SkyboxLf = instance.SkyboxLf
+            clone.SkyboxRt = instance.SkyboxRt
+            clone.SkyboxUp = instance.SkyboxUp
+            clone.SunTextureId = instance.SunTextureId
+            clone.MoonTextureId = instance.MoonTextureId
+            clone.SunAngularSize = instance.SunAngularSize
+            clone.MoonAngularSize = instance.MoonAngularSize
+            clone.StarCount = instance.StarCount
+            
+        elseif className == "Atmosphere" then
+            clone = Instance.new("Atmosphere")
+            clone.Density = instance.Density
+            clone.Offset = instance.Offset
+            clone.Color = instance.Color
+            clone.Decay = instance.Decay
+            clone.Glare = instance.Glare
+            clone.Haze = instance.Haze
+            
+        elseif className == "BloomEffect" then
+            clone = Instance.new("BloomEffect")
+            clone.Intensity = instance.Intensity
+            clone.Size = instance.Size
+            clone.Threshold = instance.Threshold
+            
+        elseif className == "BlurEffect" then
+            clone = Instance.new("BlurEffect")
+            clone.Size = instance.Size
+            
+        elseif className == "ColorCorrectionEffect" then
+            clone = Instance.new("ColorCorrectionEffect")
+            clone.Brightness = instance.Brightness
+            clone.Contrast = instance.Contrast
+            clone.Saturation = instance.Saturation
+            clone.TintColor = instance.TintColor
+            
+        elseif className == "DepthOfFieldEffect" then
+            clone = Instance.new("DepthOfFieldEffect")
+            clone.FarIntensity = instance.FarIntensity
+            clone.FocusDistance = instance.FocusDistance
+            clone.InFocusRadius = instance.InFocusRadius
+            clone.NearIntensity = instance.NearIntensity
+            
+        elseif className == "SunRaysEffect" then
+            clone = Instance.new("SunRaysEffect")
+            clone.Intensity = instance.Intensity
+            clone.Spread = instance.Spread
+            
+        elseif className == "Team" then
+            clone = Instance.new("Team")
+            clone.TeamColor = instance.TeamColor
+            clone.AutoAssignable = instance.AutoAssignable
+            
+        elseif className == "SoundGroup" then
+            clone = Instance.new("SoundGroup")
+            clone.Volume = instance.Volume
+            
+        elseif className == "EqualizerSoundEffect" then
+            clone = Instance.new("EqualizerSoundEffect")
+            clone.HighGain = instance.HighGain
+            clone.MidGain = instance.MidGain
+            clone.LowGain = instance.LowGain
+            
+        elseif className == "ReverbSoundEffect" then
+            clone = Instance.new("ReverbSoundEffect")
+            clone.DecayTime = instance.DecayTime
+            clone.Density = instance.Density
+            clone.Diffusion = instance.Diffusion
+            clone.DryLevel = instance.DryLevel
+            clone.WetLevel = instance.WetLevel
+            
+        elseif className == "EchoSoundEffect" then
+            clone = Instance.new("EchoSoundEffect")
+            clone.Delay = instance.Delay
+            clone.DryLevel = instance.DryLevel
+            clone.Feedback = instance.Feedback
+            clone.WetLevel = instance.WetLevel
+            
+        elseif className == "ChorusSoundEffect" then
+            clone = Instance.new("ChorusSoundEffect")
+            clone.Depth = instance.Depth
+            clone.Mix = instance.Mix
+            clone.Rate = instance.Rate
+            
+        elseif className == "DistortionSoundEffect" then
+            clone = Instance.new("DistortionSoundEffect")
+            clone.Level = instance.Level
+            
+        elseif className == "PitchShiftSoundEffect" then
+            clone = Instance.new("PitchShiftSoundEffect")
+            clone.Octave = instance.Octave
+            
+        elseif className == "TremoloSoundEffect" then
+            clone = Instance.new("TremoloSoundEffect")
+            clone.Depth = instance.Depth
+            clone.Duty = instance.Duty
+            clone.Frequency = instance.Frequency
+            
+        elseif className == "CompressorSoundEffect" then
+            clone = Instance.new("CompressorSoundEffect")
+            clone.Attack = instance.Attack
+            clone.GainMakeup = instance.GainMakeup
+            clone.Ratio = instance.Ratio
+            clone.Release = instance.Release
+            clone.Threshold = instance.Threshold
+            
+        elseif className == "ScreenGui" then
+            clone = Instance.new("ScreenGui")
+            clone.ResetOnSpawn = instance.ResetOnSpawn
+            clone.ZIndexBehavior = instance.ZIndexBehavior
+            clone.DisplayOrder = instance.DisplayOrder
+            clone.Enabled = instance.Enabled
+            
+        elseif className == "BillboardGui" then
+            clone = Instance.new("BillboardGui")
+            clone.Size = instance.Size
+            clone.StudsOffset = instance.StudsOffset
+            clone.AlwaysOnTop = instance.AlwaysOnTop
+            clone.MaxDistance = instance.MaxDistance
+            clone.LightInfluence = instance.LightInfluence
+            
+        elseif className == "SurfaceGui" then
+            clone = Instance.new("SurfaceGui")
+            clone.Face = instance.Face
+            clone.CanvasSize = instance.CanvasSize
+            clone.AlwaysOnTop = instance.AlwaysOnTop
+            clone.LightInfluence = instance.LightInfluence
+            
+        elseif className == "ScrollingFrame" then
+            clone = Instance.new("ScrollingFrame")
+            clone.Size = instance.Size
+            clone.Position = instance.Position
+            clone.CanvasSize = instance.CanvasSize
+            clone.ScrollBarThickness = instance.ScrollBarThickness
+            clone.BackgroundColor3 = instance.BackgroundColor3
+            clone.BackgroundTransparency = instance.BackgroundTransparency
+            
+        elseif className == "TextBox" then
+            clone = Instance.new("TextBox")
+            clone.Size = instance.Size
+            clone.Position = instance.Position
+            clone.BackgroundColor3 = instance.BackgroundColor3
+            clone.Text = instance.Text
+            clone.TextColor3 = instance.TextColor3
+            clone.TextScaled = instance.TextScaled
+            clone.Font = instance.Font
+            clone.ClearTextOnFocus = instance.ClearTextOnFocus
+            
+        elseif className == "ViewportFrame" then
+            clone = Instance.new("ViewportFrame")
+            clone.Size = instance.Size
+            clone.Position = instance.Position
+            clone.BackgroundColor3 = instance.BackgroundColor3
+            
+        elseif className == "VideoFrame" then
+            clone = Instance.new("VideoFrame")
+            clone.Size = instance.Size
+            clone.Position = instance.Position
+            clone.Video = instance.Video
+            
+        elseif className == "UIListLayout" then
+            clone = Instance.new("UIListLayout")
+            clone.Padding = instance.Padding
+            clone.SortOrder = instance.SortOrder
+            clone.HorizontalAlignment = instance.HorizontalAlignment
+            clone.VerticalAlignment = instance.VerticalAlignment
+            
+        elseif className == "UIGridLayout" then
+            clone = Instance.new("UIGridLayout")
+            clone.CellSize = instance.CellSize
+            clone.CellPadding = instance.CellPadding
+            clone.SortOrder = instance.SortOrder
+            
+        elseif className == "UIPageLayout" then
+            clone = Instance.new("UIPageLayout")
+            clone.Padding = instance.Padding
+            clone.TweenTime = instance.TweenTime
+            
+        elseif className == "UITableLayout" then
+            clone = Instance.new("UITableLayout")
+            clone.Padding = instance.Padding
+            
+        elseif className == "UIAspectRatioConstraint" then
+            clone = Instance.new("UIAspectRatioConstraint")
+            clone.AspectRatio = instance.AspectRatio
+            clone.AspectType = instance.AspectType
+            clone.DominantAxis = instance.DominantAxis
+            
+        elseif className == "UISizeConstraint" then
+            clone = Instance.new("UISizeConstraint")
+            clone.MaxSize = instance.MaxSize
+            clone.MinSize = instance.MinSize
+            
+        elseif className == "UITextSizeConstraint" then
+            clone = Instance.new("UITextSizeConstraint")
+            clone.MaxTextSize = instance.MaxTextSize
+            clone.MinTextSize = instance.MinTextSize
+            
+        elseif className == "UICorner" then
+            clone = Instance.new("UICorner")
+            clone.CornerRadius = instance.CornerRadius
+            
+        elseif className == "UIStroke" then
+            clone = Instance.new("UIStroke")
+            clone.Color = instance.Color
+            clone.Thickness = instance.Thickness
+            clone.Transparency = instance.Transparency
+            
+        elseif className == "UIGradient" then
+            clone = Instance.new("UIGradient")
+            clone.Color = instance.Color
+            clone.Offset = instance.Offset
+            clone.Rotation = instance.Rotation
+            
+        elseif className == "UIPadding" then
+            clone = Instance.new("UIPadding")
+            clone.PaddingBottom = instance.PaddingBottom
+            clone.PaddingLeft = instance.PaddingLeft
+            clone.PaddingRight = instance.PaddingRight
+            clone.PaddingTop = instance.PaddingTop
+            
+        elseif className == "UIScale" then
+            clone = Instance.new("UIScale")
+            clone.Scale = instance.Scale
+            
+        elseif className == "Script" or className == "LocalScript" or className == "ModuleScript" then
+            --// Scripts can't be fully cloned, create placeholder
+            clone = Instance.new("StringValue")
+            clone.Name = instance.Name .. "_[" .. className .. "]"
+            clone.Value = "-- Script content cannot be cloned via client-side"
+            
+        elseif className == "RemoteEvent" or className == "RemoteFunction" or className == "BindableEvent" or className == "BindableFunction" then
+            --// Remote objects
+            clone = Instance.new(className)
+            
+        elseif className == "ValueBase" then
+            clone = Instance.new(className)
+            clone.Value = instance.Value
+            
+        else
+            --// Unknown type, use Folder as fallback
+            clone = Instance.new("Folder")
+            clone.Name = instance.Name .. "_[" .. className .. "]"
         end
     end)
+    
+    if not clone then return nil end
+    clone.Name = instance.Name
+    clone.Parent = parent
+    
+    --// Call progress callback
+    if onProgress then
+        onProgress(instance.Name, serviceName)
+    end
+    
+    --// Clone children recursively
+    for _, child in ipairs(instance:GetChildren()) do
+        DeepClone(child, clone, onProgress, serviceName)
+        if shhhhnayy05.ShouldStop then return nil end
+    end
+    
+    --// Set PrimaryPart for Model after children cloned
+    if className == "Model" and instance.PrimaryPart then
+        pcall(function()
+            clone.PrimaryPart = clone:FindFirstChild(instance.PrimaryPart.Name)
+        end)
+    end
+    
+    return clone
+end
+
+--// Start Copy Process
+local function StartCopy()
+    if shhhhnayy05.IsCopying then return end
+    
+    local mapName = NameInput.Text
+    if mapName == "" then
+        mapName = "FullMap_" .. game.PlaceId .. "_" .. os.time()
+    end
+    mapName = mapName:gsub("[^%w%s_-]", ""):gsub("%s+", "_")
+    
+    shhhhnayy05.IsCopying = true
+    shhhhnayy05.ShouldStop = false
+    CopyBtn.Visible = false
+    StopBtn.Visible = true
+    
+    --// Get services to copy
+    local servicesToCopy = GetServicesToCopy()
+    
+    --// Count total objects first
+    local totalObjects = 0
+    local serviceCounts = {}
+    
+    DetailText.Text = "🔍 Counting objects..."
+    DetailText.TextColor3 = Color3.fromRGB(255, 200, 100)
+    
+    for _, svcInfo in ipairs(servicesToCopy) do
+        local svc = svcInfo.Service
+        local svcName = svcInfo.Name
+        local count = 0
+        
+        for _, item in ipairs(svc:GetChildren()) do
+            if not item:IsA("Terrain") and not item:IsA("Camera") then
+                count = count + 1
+                for _ in ipairs(item:GetDescendants()) do
+                    count = count + 1
+                end
+            end
+            if count % 100 == 0 then
+                RunService.Heartbeat:Wait()
+            end
+        end
+        
+        serviceCounts[svcName] = count
+        totalObjects = totalObjects + count
+    end
+    
+    if totalObjects == 0 then
+        Notify("⚠️ No objects found to copy!", Color3.fromRGB(255, 100, 100))
+        shhhhnayy05.IsCopying = false
+        CopyBtn.Visible = true
+        StopBtn.Visible = false
+        DetailText.Text = "❌ No objects found"
+        DetailText.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    --// Create main container
+    local mainContainer = Instance.new("Folder")
+    mainContainer.Name = "shhhhnayy05_FullCopy_" .. mapName
+    mainContainer.Parent = Workspace
+    
+    local copiedCount = 0
+    local startTime = tick()
+    
+    --// Copy each service
+    for _, svcInfo in ipairs(servicesToCopy) do
+        if shhhhnayy05.ShouldStop then break end
+        
+        local svc = svcInfo.Service
+        local svcName = svcInfo.Name
+        
+        --// Create service folder
+        local svcFolder = Instance.new("Folder")
+        svcFolder.Name = svcName
+        svcFolder.Parent = mainContainer
+        
+        DetailText.Text = "📦 Copying " .. svcName .. "..."
+        DetailText.TextColor3 = Color3.fromRGB(100, 200, 255)
+        
+        for _, item in ipairs(svc:GetChildren()) do
+            if shhhhnayy05.ShouldStop then break end
+            if item:IsA("Terrain") or item:IsA("Camera") then continue end
+            
+            --// Update progress
+            local progress = math.floor((copiedCount / totalObjects) * 100)
+            ProgressBar.Size = UDim2.new(progress/100, 0, 1, 0)
+            ProgressText.Text = string.format("%d%% - %s: %s (%d/%d)", progress, svcName, item.Name, copiedCount, totalObjects)
+            
+            --// Color coding
+            if progress < 30 then
+                ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+            elseif progress < 70 then
+                ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
+            else
+                ProgressBar.BackgroundColor3 = Color3.fromRGB(80, 255, 120)
+            end
+            
+            --// Clone with progress callback
+            DeepClone(item, svcFolder, function(childName, sName)
+                copiedCount = copiedCount + 1
+                --// Update every 10 objects to prevent lag
+                if copiedCount % 10 == 0 then
+                    local prog = math.floor((copiedCount / totalObjects) * 100)
+                    ProgressBar.Size = UDim2.new(prog/100, 0, 1, 0)
+                    ProgressText.Text = string.format("%d%% - %s > %s", prog, svcName, childName)
+                    DetailText.Text = string.format("📦 %s > %s", svcName, childName)
+                    RunService.Heartbeat:Wait()
+                end
+            end, svcName)
+            
+            copiedCount = copiedCount + 1
+        end
+    end
+    
+    --// Save to file
+    if not shhhhnayy05.ShouldStop then
+        DetailText.Text = "💾 Saving to file..."
+        
+        --// Serialize container to JSON
+        local function SerializeToTable(inst)
+            local data = {
+                Class = inst.ClassName,
+                Name = inst.Name,
+                Props = {},
+                Children = {}
+            }
+            
+            pcall(function()
+                if inst:IsA("BasePart") then
+                    data.Props.CFrame = {inst.CFrame:GetComponents()}
+                    data.Props.Size = {inst.Size.X, inst.Size.Y, inst.Size.Z}
+                    data.Props.Color = {inst.Color.R, inst.Color.G, inst.Color.B}
+                    data.Props.Material = tostring(inst.Material)
+                    data.Props.Transparency = inst.Transparency
+                    data.Props.Reflectance = inst.Reflectance
+                    data.Props.CanCollide = inst.CanCollide
+                    data.Props.Anchored = inst.Anchored
+                    data.Props.CastShadow = inst.CastShadow
+                    if inst:IsA("Part") then
+                        data.Props.Shape = tostring(inst.Shape)
+                    end
+                elseif inst:IsA("MeshPart") then
+                    data.Props.MeshId = inst.MeshId
+                    data.Props.TextureID = inst.TextureID
+                elseif inst:IsA("Decal") or inst:IsA("Texture") then
+                    data.Props.Texture = inst.Texture
+                    data.Props.Face = tostring(inst.Face)
+                elseif inst:IsA("Light") then
+                    data.Props.Color = {inst.Color.R, inst.Color.G, inst.Color.B}
+                    data.Props.Brightness = inst.Brightness
+                    data.Props.Range = inst.Range
+                elseif inst:IsA("Sound") then
+                    data.Props.SoundId = inst.SoundId
+                    data.Props.Volume = inst.Volume
+                elseif inst:IsA("Sky") then
+                    data.Props.SkyboxBk = inst.SkyboxBk
+                    data.Props.SkyboxDn = inst.SkyboxDn
+                    data.Props.SkyboxFt = inst.SkyboxFt
+                    data.Props.SkyboxLf = inst.SkyboxLf
+                    data.Props.SkyboxRt = inst.SkyboxRt
+                    data.Props.SkyboxUp = inst.SkyboxUp
+                end
+            end)
+            
+            for _, child in ipairs(inst:GetChildren()) do
+                table.insert(data.Children, SerializeToTable(child))
+            end
+            
+            return data
+        end
+        
+        local mapData = {
+            Meta = {
+                Name = mapName,
+                PlaceId = game.PlaceId,
+                PlaceName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,
+                JobId = game.JobId,
+                Created = os.date("%Y-%m-%d %H:%M:%S"),
+                TotalObjects = copiedCount,
+                Executor = GetExecutor(),
+                Services = {}
+            },
+            Objects = {}
+        }
+        
+        for _, svcFolder in ipairs(mainContainer:GetChildren()) do
+            table.insert(mapData.Meta.Services, svcFolder.Name)
+            for _, child in ipairs(svcFolder:GetChildren()) do
+                table.insert(mapData.Objects, SerializeToTable(child))
+                RunService.Heartbeat:Wait()
+            end
+        end
+        
+        --// Save
+        local jsonData = HttpService:JSONEncode(mapData)
+        local fileName = shhhhnayy05.MapsFolder .. "/" .. mapName .. ".json"
+        
+        if writefile then
+            pcall(function()
+                writefile(fileName, jsonData)
+            end)
+        end
+        
+        --// Store in memory
+        table.insert(shhhhnayy05.SavedMaps, {
+            Name = mapName,
+            Data = mapData,
+            Container = mainContainer,
+            File = writefile and fileName or nil,
+            Size = #jsonData
+        })
+        
+        mainContainer.Name = "shhhhnayy05_Saved_" .. mapName
+        
+        Notify(string.format("✅ Saved: %s (%d objects)", mapName, copiedCount), Color3.fromRGB(100, 255, 150))
+        RefreshList()
+    else
+        mainContainer:Destroy()
+        Notify("⏹️ Copy cancelled", Color3.fromRGB(255, 150, 100))
+    end
+    
+    --// Reset UI
+    shhhhnayy05.IsCopying = false
+    CopyBtn.Visible = true
+    StopBtn.Visible = false
+    
+    if not shhhhnayy05.ShouldStop then
+        ProgressBar.Size = UDim2.new(1, 0, 1, 0)
+        ProgressText.Text = "100% - Complete!"
+        DetailText.Text = string.format("✅ Done in %.1fs | %d objects copied", tick() - startTime, copiedCount)
+        DetailText.TextColor3 = Color3.fromRGB(100, 255, 150)
+        
+        task.delay(3, function()
+            ProgressBar.Size = UDim2.new(0, 0, 1, 0)
+            ProgressBar.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+            ProgressText.Text = "0% - Ready"
+            DetailText.Text = "Waiting..."
+            DetailText.TextColor3 = Color3.fromRGB(180, 180, 180)
+        end)
+    else
+        ProgressBar.Size = UDim2.new(0, 0, 1, 0)
+        ProgressBar.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        ProgressText.Text = "0% - Ready"
+        DetailText.Text = "Waiting..."
+        DetailText.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+end
+
+--// Stop Copy
+local function StopCopy()
+    shhhhnayy05.ShouldStop = true
+    shhhhnayy05.IsCopying = false
+end
+
+--// Load Map (Deserialize from saved data)
+local function LoadMap(index)
+    local map = shhhhnayy05.SavedMaps[index]
+    if not map then return end
+    
+    Notify("📥 Loading: " .. map.Name .. "...", Color3.fromRGB(100, 150, 255))
+    
+    local function CreateFromData(data, parent)
+        local inst
+        local class = data.Class
+        
+        pcall(function()
+            if class == "Part" then inst = Instance.new("Part")
+            elseif class == "MeshPart" then inst = Instance.new("MeshPart")
+            elseif class == "WedgePart" then inst = Instance.new("WedgePart")
+            elseif class == "CornerWedgePart" then inst = Instance.new("CornerWedgePart")
+            elseif class == "TrussPart" then inst = Instance.new("TrussPart")
+            elseif class == "UnionOperation" then inst = Instance.new("UnionOperation")
+            elseif class == "NegateOperation" then inst = Instance.new("NegateOperation")
+            elseif class == "Model" then inst = Instance.new("Model")
+            elseif class == "Folder" then inst = Instance.new("Folder")
+            elseif class == "Decal" then inst = Instance.new("Decal")
+            elseif class == "Texture" then inst = Instance.new("Texture")
+            elseif class == "PointLight" then inst = Instance.new("PointLight")
+            elseif class == "SpotLight" then inst = Instance.new("SpotLight")
+            elseif class == "SurfaceLight" then inst = Instance.new("SurfaceLight")
+            elseif class == "Sound" then inst = Instance.new("Sound")
+            elseif class == "ParticleEmitter" then inst = Instance.new("ParticleEmitter")
+            elseif class == "Fire" then inst = Instance.new("Fire")
+            elseif class == "Smoke" then inst = Instance.new("Smoke")
+            elseif class == "Sparkles" then inst = Instance.new("Sparkles")
+            elseif class == "BillboardGui" then inst = Instance.new("BillboardGui")
+            elseif class == "SurfaceGui" then inst = Instance.new("SurfaceGui")
+            elseif class == "Frame" then inst = Instance.new("Frame")
+            elseif class == "TextLabel" then inst = Instance.new("TextLabel")
+            elseif class == "TextButton" then inst = Instance.new("TextButton")
+            elseif class == "ImageLabel" then inst = Instance.new("ImageLabel")
+            elseif class == "ImageButton" then inst = Instance.new("ImageButton")
+            elseif class == "Weld" then inst = Instance.new("Weld")
+            elseif class == "WeldConstraint" then inst = Instance.new("WeldConstraint")
+            elseif class == "Motor" then inst = Instance.new("Motor")
+            elseif class == "Motor6D" then inst = Instance.new("Motor6D")
+            elseif class == "Attachment" then inst = Instance.new("Attachment")
+            elseif class == "Humanoid" then inst = Instance.new("Humanoid")
+            elseif class == "Accessory" then inst = Instance.new("Accessory")
+            elseif class == "Tool" then inst = Instance.new("Tool")
+            elseif class == "Seat" then inst = Instance.new("Seat")
+            elseif class == "VehicleSeat" then inst = Instance.new("VehicleSeat")
+            elseif class == "SpawnLocation" then inst = Instance.new("SpawnLocation")
+            elseif class == "ClickDetector" then inst = Instance.new("ClickDetector")
+            elseif class == "ProximityPrompt" then inst = Instance.new("ProximityPrompt")
+            elseif class == "Sky" then inst = Instance.new("Sky")
+            elseif class == "Atmosphere" then inst = Instance.new("Atmosphere")
+            elseif class == "BloomEffect" then inst = Instance.new("BloomEffect")
+            elseif class == "BlurEffect" then inst = Instance.new("BlurEffect")
+            elseif class == "ColorCorrectionEffect" then inst = Instance.new("ColorCorrectionEffect")
+            elseif class == "DepthOfFieldEffect" then inst = Instance.new("DepthOfFieldEffect")
+            elseif class == "SunRaysEffect" then inst = Instance.new("SunRaysEffect")
+            elseif class == "Team" then inst = Instance.new("Team")
+            elseif class == "ScreenGui" then inst = Instance.new("ScreenGui")
+            elseif class == "ScrollingFrame" then inst = Instance.new("ScrollingFrame")
+            elseif class == "TextBox" then inst = Instance.new("TextBox")
+            elseif class == "ViewportFrame" then inst = Instance.new("ViewportFrame")
+            elseif class == "UIListLayout" then inst = Instance.new("UIListLayout")
+            elseif class == "UIGridLayout" then inst = Instance.new("UIGridLayout")
+            elseif class == "UICorner" then inst = Instance.new("UICorner")
+            elseif class == "UIStroke" then inst = Instance.new("UIStroke")
+            elseif class == "UIGradient" then inst = Instance.new("UIGradient")
+            elseif class == "UIPadding" then inst = Instance.new("UIPadding")
+            elseif class == "UIScale" then inst = Instance.new("UIScale")
+            else inst = Instance.new("Folder") end
+            
+            inst.Name = data.Name
+            
+            if data.Props then
+                for prop, val in pairs(data.Props) do
+                    pcall(function()
+                        if prop == "CFrame" and typeof(val) == "table" then
+                            inst.CFrame = CFrame.new(unpack(val))
+                        elseif prop == "Size" and typeof(val) == "table" then
+                            inst.Size = Vector3.new(unpack(val))
+                        elseif prop == "Color" and typeof(val) == "table" then
+                            inst.Color = Color3.new(unpack(val))
+                        elseif prop == "Material" then
+                            inst.Material = Enum.Material[val]
+                        elseif prop == "Shape" then
+                            inst.Shape = Enum.PartType[val]
+                        elseif prop == "Face" then
+                            inst.Face = Enum.NormalId[val]
+                        elseif prop == "Texture" then
+                            inst.Texture = val
+                        elseif prop == "MeshId" then
+                            inst.MeshId = val
+                        elseif prop == "TextureID" then
+                            inst.TextureID = val
+                        elseif prop == "SoundId" then
+                            inst.SoundId = val
+                        elseif prop == "Transparency" then
+                            inst.Transparency = val
+                        elseif prop == "CanCollide" then
+                            inst.CanCollide = val
+                        elseif prop == "Anchored" then
+                            inst.Anchored = val
+                        elseif prop == "Brightness" then
+                            inst.Brightness = val
+                        elseif prop == "Range" then
+                            inst.Range = val
+                        elseif prop == "Volume" then
+                            inst.Volume = val
+                        elseif prop == "SkyboxBk" then inst.SkyboxBk = val
+                        elseif prop == "SkyboxDn" then inst.SkyboxDn = val
+                        elseif prop == "SkyboxFt" then inst.SkyboxFt = val
+                        elseif prop == "SkyboxLf" then inst.SkyboxLf = val
+                        elseif prop == "SkyboxRt" then inst.SkyboxRt = val
+                        elseif prop == "SkyboxUp" then inst.SkyboxUp = val
+                        end
+                    end)
+                end
+            end
+            
+            inst.Parent = parent
+            
+            for _, childData in ipairs(data.Children) do
+                CreateFromData(childData, inst)
+            end
+        end)
+        
+        return inst
+    end
+    
+    local folder = Instance.new("Folder")
+    folder.Name = "shhhhnayy05_Loaded_" .. map.Name
+    folder.Parent = Workspace
+    
+    local count = 0
+    for _, objData in ipairs(map.Data.Objects) do
+        CreateFromData(objData, folder)
+        count = count + 1
+        if count % 20 == 0 then
+            RunService.Heartbeat:Wait()
+        end
+    end
+    
+    pcall(function()
+        if game.Selection then
+            game.Selection:Set({folder})
+        end
+    end)
+    
+    Notify(string.format("✅ Loaded: %d objects", count), Color3.fromRGB(100, 255, 150))
+end
+
+--// Refresh List
+function RefreshList()
+    for _, child in ipairs(ScrollFrame:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    
+    for i, map in ipairs(shhhhnayy05.SavedMaps) do
+        local btn = Instance.new("Frame")
+        btn.Size = UDim2.new(1, -6, 0, 85)
+        btn.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
+        btn.LayoutOrder = i
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+        
+        local nameLbl = Instance.new("TextLabel")
+        nameLbl.Size = UDim2.new(0.58, -5, 0, 20)
+        nameLbl.Position = UDim2.new(0, 8, 0, 5)
+        nameLbl.BackgroundTransparency = 1
+        nameLbl.Text = "📁 " .. map.Name
+        nameLbl.TextColor3 = Color3.fromRGB(0, 200, 255)
+        nameLbl.TextScaled = true
+        nameLbl.Font = Enum.Font.GothamBold
+        nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+        nameLbl.Parent = btn
+        
+        --// Services info
+        local servicesText = ""
+        if map.Data.Meta.Services then
+            servicesText = table.concat(map.Data.Meta.Services, ", ")
+        else
+            servicesText = "Workspace only"
+        end
+        
+        local svcLbl = Instance.new("TextLabel")
+        svcLbl.Size = UDim2.new(0.58, -5, 0, 14)
+        svcLbl.Position = UDim2.new(0, 8, 0, 26)
+        svcLbl.BackgroundTransparency = 1
+        svcLbl.Text = "📦 " .. servicesText:sub(1, 30) .. (servicesText:len() > 30 and "..." or "")
+        svcLbl.TextColor3 = Color3.fromRGB(180, 180, 180)
+        svcLbl.TextScaled = true
+        svcLbl.Font = Enum.Font.Gotham
+        svcLbl.TextXAlignment = Enum.TextXAlignment.Left
+        svcLbl.Parent = btn
+        
+        local infoLbl = Instance.new("TextLabel")
+        infoLbl.Size = UDim2.new(0.58, -5, 0, 14)
+        infoLbl.Position = UDim2.new(0, 8, 0, 42)
+        infoLbl.BackgroundTransparency = 1
+        infoLbl.Text = string.format("🕐 %s", map.Data.Meta.Created)
+        infoLbl.TextColor3 = Color3.fromRGB(180, 180, 180)
+        infoLbl.TextScaled = true
+        infoLbl.Font = Enum.Font.Gotham
+        infoLbl.TextXAlignment = Enum.TextXAlignment.Left
+        infoLbl.Parent = btn
+        
+        local countLbl = Instance.new("TextLabel")
+        countLbl.Size = UDim2.new(0.58, -5, 0, 16)
+        countLbl.Position = UDim2.new(0, 8, 0, 58)
+        countLbl.BackgroundTransparency = 1
+        countLbl.Text = string.format("🧱 %d objects | 💾 %.2f KB", map.Data.Meta.TotalObjects, map.Size / 1024)
+        countLbl.TextColor3 = Color3.fromRGB(100, 255, 150)
+        countLbl.TextScaled = true
+        countLbl.Font = Enum.Font.Gotham
+        countLbl.TextXAlignment = Enum.TextXAlignment.Left
+        countLbl.Parent = btn
+        
+        local loadBtn = Instance.new("TextButton")
+        loadBtn.Size = UDim2.new(0.2, -4, 0, 32)
+        loadBtn.Position = UDim2.new(0.6, 0, 0.5, -16)
+        loadBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+        loadBtn.Text = "📥 LOAD"
+        loadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        loadBtn.TextScaled = true
+        loadBtn.Font = Enum.Font.GothamBold
+        loadBtn.Parent = btn
+        Instance.new("UICorner", loadBtn).CornerRadius = UDim.new(0, 4)
+        
+        local delBtn = Instance.new("TextButton")
+        delBtn.Size = UDim2.new(0.18, -4, 0, 32)
+        delBtn.Position = UDim2.new(0.81, 4, 0.5, -16)
+        delBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+        delBtn.Text = "🗑️"
+        delBtn.TextSize = 18
+        delBtn.Parent = btn
+        Instance.new("UICorner", delBtn).CornerRadius = UDim.new(0, 4)
+        
+        loadBtn.MouseButton1Click:Connect(function()
+            LoadMap(i)
+        end)
+        
+        delBtn.MouseButton1Click:Connect(function()
+            table.remove(shhhhnayy05.SavedMaps, i)
+            if map.File and delfile then
+                pcall(function() delfile(map.File) end)
+            end
+            if map.Container then
+                pcall(function() map.Container:Destroy() end)
+            end
+            RefreshList()
+            Notify("🗑️ Deleted: " .. map.Name, Color3.fromRGB(255, 100, 100))
+        end)
+        
+        btn.Parent = ScrollFrame
+    end
+    
+    local totalMaps = #shhhhnayy05.SavedMaps
+    local totalSize = 0
+    for _, m in ipairs(shhhhnayy05.SavedMaps) do
+        totalSize = totalSize + m.Size
+    end
+    
+    StatsLabel.Text = string.format("📊 Maps: %d | Total: %.2f MB", totalMaps, totalSize / (1024*1024))
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, #shhhhnayy05.SavedMaps * 91 + 10)
+end
+
+--// Load Existing Maps
+local function LoadExistingMaps()
+    if isfolder and listfiles then
+        pcall(function()
+            local files = listfiles(shhhhnayy05.MapsFolder)
+            for _, file in ipairs(files) do
+                if file:match("%.json$") then
+                    local content = readfile(file)
+                    local data = HttpService:JSONDecode(content)
+                    local name = file:match("([^/\\]+)%.json$")
+                    
+                    table.insert(shhhhnayy05.SavedMaps, {
+                        Name = name,
+                        Data = data,
+                        File = file,
+                        Size = #content
+                    })
+                end
+            end
+            RefreshList()
+        end)
+    end
+end
+
+--// Dragging
+local function MakeDraggable(frame, handle)
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+--// Minimize
+local minimized = false
+local function ToggleMinimize()
+    minimized = not minimized
+    MainFrame.Visible = not minimized
+    MinIcon.Visible = minimized
+end
+
+--// Connections
+CopyBtn.MouseButton1Click:Connect(StartCopy)
+StopBtn.MouseButton1Click:Connect(StopCopy)
+MinBtn.MouseButton1Click:Connect(ToggleMinimize)
+MinIcon.MouseButton1Click:Connect(ToggleMinimize)
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+    shhhhnayy05.ShouldStop = true
 end)
 
-CreateMainBtn("⏹ STOP", Color3.fromRGB(200, 40, 40), 190, function() looping = false end)
+MakeDraggable(MainFrame, TitleBar)
+MakeDraggable(MinIcon, MinIcon)
 
-local CloseBtn = Instance.new("TextButton", MainFrame)
-CloseBtn.Text = "X"; CloseBtn.Size = UDim2.new(0, 40, 0, 40); CloseBtn.Position = UDim2.new(1, -45, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0); CloseBtn.ZIndex = 20; Instance.new("UICorner", CloseBtn)
-CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false; MinIcon.Visible = true end)
-MinIcon.MouseButton1Click:Connect(function() MainFrame.Visible = true; MinIcon.Visible = false end)
+--// Init
+LoadExistingMaps()
 
-UpdateList()
+--// Welcome
+task.delay(0.5, function()
+    Notify("🗺️ shhhhnayy05 Full Copy v4.0 Loaded!", Color3.fromRGB(0, 200, 255))
+    task.wait(0.5)
+    Notify("💡 Select services & click 'START COPY'", Color3.fromRGB(200, 200, 200))
+end)
+
+return shhhhnayy05
