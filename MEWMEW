@@ -1,4 +1,4 @@
---// shhhhnayy05 Copy Map System v4.1 - Fixed Progress & No Humanoid
+--// shhhhnayy05 Copy Map System v4.2 - Fixed Progress & Complete Copy
 --// Support: Krnl, Synapse X, Electron, Script-Ware, Oxygen U, Codex, Delta, Hydrogen
 
 local shhhhnayy05 = {}
@@ -508,19 +508,31 @@ local function GetServicesToCopy()
 end
 
 --// Deep Clone Function - NO HUMANOID, NO PLAYER CHARACTERS
-local function DeepClone(instance, parent, onProgress, serviceName)
+local function DeepClone(instance, parent, onProgress, serviceName, stats)
     if shhhhnayy05.ShouldStop then return nil end
     
     --// SKIP: Humanoid, Player Characters, Scripts
-    if instance:IsA("Humanoid") then return nil end
-    if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then return nil end
-    if IsPlayerCharacter(instance) then return nil end
+    if instance:IsA("Humanoid") then 
+        if stats then stats.skipped = stats.skipped + 1 end
+        return nil 
+    end
+    if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then 
+        if stats then stats.skipped = stats.skipped + 1 end
+        return nil 
+    end
+    if IsPlayerCharacter(instance) then 
+        if stats then stats.skipped = stats.skipped + 1 end
+        return nil 
+    end
     
     local clone
     local className = instance.ClassName
     
     --// Skip unwanted items
-    if className == "Camera" or className == "Terrain" then return nil end
+    if className == "Camera" or className == "Terrain" then 
+        if stats then stats.skipped = stats.skipped + 1 end
+        return nil 
+    end
     
     --// Create instance based on class
     local success = pcall(function()
@@ -894,17 +906,23 @@ local function DeepClone(instance, parent, onProgress, serviceName)
         end
     end)
     
-    if not clone then return nil end
+    if not clone then 
+        if stats then stats.failed = stats.failed + 1 end
+        return nil 
+    end
+    
     clone.Name = instance.Name
     clone.Parent = parent
     
+    if stats then stats.copied = stats.copied + 1 end
+    
     if onProgress then
-        onProgress(instance.Name, serviceName)
+        onProgress(instance.Name, serviceName, stats)
     end
     
     --// Clone children recursively
     for _, child in ipairs(instance:GetChildren()) do
-        DeepClone(child, clone, onProgress, serviceName)
+        DeepClone(child, clone, onProgress, serviceName, stats)
         if shhhhnayy05.ShouldStop then return nil end
     end
     
@@ -937,6 +955,8 @@ local function StartCopy()
     ProgressBar.Size = UDim2.new(0, 0, 1, 0)
     ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     ProgressText.Text = "0% - Initializing..."
+    DetailText.Text = "Starting..."
+    DetailText.TextColor3 = Color3.fromRGB(255, 200, 100)
     
     local servicesToCopy = GetServicesToCopy()
     
@@ -949,47 +969,54 @@ local function StartCopy()
         return
     end
     
-    --// PHASE 1: Count total objects (10% of progress)
-    DetailText.Text = "🔍 Counting objects..."
-    DetailText.TextColor3 = Color3.fromRGB(255, 200, 100)
+    --// PHASE 1: Count total objects accurately
+    DetailText.Text = "🔍 Analyzing services..."
     
     local totalObjects = 0
-    local serviceCounts = {}
-    local countedObjects = {} -- Track counted objects to avoid duplicates
+    local serviceObjects = {} -- Store objects per service
     
     for _, svcInfo in ipairs(servicesToCopy) do
         local svc = svcInfo.Service
         local svcName = svcInfo.Name
-        local count = 0
+        local svcCount = 0
+        local svcItems = {}
         
         for _, item in ipairs(svc:GetChildren()) do
-            --// Skip player characters during counting too
+            --// Skip unwanted
             if item:IsA("Terrain") or item:IsA("Camera") or item:IsA("Humanoid") then continue end
             if IsPlayerCharacter(item) then continue end
             
-            count = count + 1
-            for _, desc in ipairs(item:GetDescendants()) do
-                if not desc:IsA("Humanoid") and not IsPlayerCharacter(desc) then
-                    count = count + 1
-                end
+            --// Count this item and all descendants
+            local itemCount = 1 -- The item itself
+            for _ in ipairs(item:GetDescendants()) do
+                itemCount = itemCount + 1
             end
             
-            if count % 500 == 0 then
-                local countProgress = math.min(10, math.floor((count / 1000) * 10))
-                ProgressBar.Size = UDim2.new(countProgress / 100, 0, 1, 0)
-                ProgressText.Text = countProgress .. "% - Counting: " .. svcName .. "..."
+            table.insert(svcItems, {Item = item, Count = itemCount})
+            svcCount = svcCount + itemCount
+            
+            --// Yield every 1000 objects to prevent freeze
+            if svcCount % 1000 == 0 then
                 RunService.Heartbeat:Wait()
             end
         end
         
-        serviceCounts[svcName] = count
-        totalObjects = totalObjects + count
+        serviceObjects[svcName] = {
+            Items = svcItems,
+            Count = svcCount,
+            Service = svc
+        }
+        totalObjects = totalObjects + svcCount
+        
+        --// Update counting progress
+        local countProgress = math.min(10, math.floor((#servicesToCopy > 0 and (table.find(servicesToCopy, svcInfo) or 1) / #servicesToCopy * 10) or 0))
+        ProgressBar.Size = UDim2.new(countProgress / 100, 0, 1, 0)
+        ProgressText.Text = countProgress .. "% - Counting " .. svcName .. "..."
     end
     
-    --// Update progress to 10% after counting
     ProgressBar.Size = UDim2.new(0.1, 0, 1, 0)
     ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
-    ProgressText.Text = "10% - Found " .. totalObjects .. " objects"
+    ProgressText.Text = "10% - Found " .. totalObjects .. " objects in " .. #servicesToCopy .. " services"
     
     if totalObjects == 0 then
         Notify("⚠️ No objects found to copy!", Color3.fromRGB(255, 100, 100))
@@ -1000,74 +1027,90 @@ local function StartCopy()
         return
     end
     
-    --// PHASE 2: Copy objects (10% - 90% of progress)
+    --// PHASE 2: Copy all services
     local mainContainer = Instance.new("Folder")
     mainContainer.Name = "shhhhnayy05_Copy_" .. mapName
     mainContainer.Parent = Workspace
     
-    local copiedCount = 0
+    local stats = {
+        copied = 0,
+        skipped = 0,
+        failed = 0,
+        currentService = ""
+    }
+    
     local startTime = tick()
     local lastUpdate = 0
+    local objectsProcessed = 0
+    
+    --// Calculate progress allocation per service
+    local copyProgressRange = 80 -- 10% to 90%
+    local progressPerObject = copyProgressRange / totalObjects
     
     for svcIndex, svcInfo in ipairs(servicesToCopy) do
         if shhhhnayy05.ShouldStop then break end
         
-        local svc = svcInfo.Service
         local svcName = svcInfo.Name
+        local svcData = serviceObjects[svcName]
         
+        if not svcData or svcData.Count == 0 then
+            --// Skip empty services
+            continue
+        end
+        
+        stats.currentService = svcName
+        
+        --// Create service folder
         local svcFolder = Instance.new("Folder")
         svcFolder.Name = svcName
         svcFolder.Parent = mainContainer
         
-        DetailText.Text = "📦 Copying " .. svcName .. "..."
+        DetailText.Text = "📦 [" .. svcIndex .. "/" .. #servicesToCopy .. "] Copying " .. svcName .. " (" .. #svcData.Items .. " items)..."
         
-        for _, item in ipairs(svc:GetChildren()) do
+        --// Copy each item in this service
+        for itemIndex, itemData in ipairs(svcData.Items) do
             if shhhhnayy05.ShouldStop then break end
-            if item:IsA("Terrain") or item:IsA("Camera") or item:IsA("Humanoid") then continue end
-            if IsPlayerCharacter(item) then continue end
             
-            --// Clone the item
-            DeepClone(item, svcFolder, function(childName, sName)
-                copiedCount = copiedCount + 1
+            local item = itemData.Item
+            
+            --// Clone with progress tracking
+            DeepClone(item, svcFolder, function(childName, sName, childStats)
+                objectsProcessed = objectsProcessed + 1
                 
-                --// Calculate progress: 10% (counting) + (copied/total * 80%)
-                local copyProgress = (copiedCount / totalObjects) * 80
-                local totalProgress = 10 + copyProgress
+                --// Calculate accurate progress
+                local currentProgress = 10 + (objectsProcessed * progressPerObject)
+                currentProgress = math.clamp(currentProgress, 10, 90)
                 
-                --// Update UI every 5 objects or every 0.1 seconds
+                --// Update UI throttling
                 local now = tick()
-                if copiedCount % 5 == 0 or (now - lastUpdate) > 0.1 then
+                if objectsProcessed % 10 == 0 or (now - lastUpdate) > 0.1 then
                     lastUpdate = now
                     
-                    --// Clamp progress between 10% and 90%
-                    totalProgress = math.clamp(totalProgress, 10, 90)
-                    
-                    ProgressBar.Size = UDim2.new(totalProgress / 100, 0, 1, 0)
-                    
-                    --// Color coding based on progress
-                    if totalProgress < 40 then
+                    --// Color coding
+                    if currentProgress < 40 then
                         ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-                    elseif totalProgress < 70 then
+                    elseif currentProgress < 70 then
                         ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
                     else
                         ProgressBar.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
                     end
                     
+                    ProgressBar.Size = UDim2.new(currentProgress / 100, 0, 1, 0)
                     ProgressText.Text = string.format("%d%% - %s > %s (%d/%d)", 
-                        math.floor(totalProgress), svcName, childName, copiedCount, totalObjects)
-                    DetailText.Text = string.format("📦 %s > %s", svcName, childName)
+                        math.floor(currentProgress), svcName, childName, objectsProcessed, totalObjects)
+                    DetailText.Text = string.format("📦 [%d/%d] %s > %s", svcIndex, #servicesToCopy, svcName, childName)
                     
                     RunService.Heartbeat:Wait()
                 end
-            end, svcName)
+            end, svcName, stats)
         end
     end
     
-    --// PHASE 3: Save to file (90% - 100% of progress)
+    --// PHASE 3: Save to file (90% - 100%)
     if not shhhhnayy05.ShouldStop then
         DetailText.Text = "💾 Saving to file..."
         ProgressBar.Size = UDim2.new(0.9, 0, 1, 0)
-        ProgressText.Text = "90% - Saving..."
+        ProgressText.Text = "90% - Serializing..."
         ProgressBar.BackgroundColor3 = Color3.fromRGB(100, 255, 150)
         
         --// Serialize
@@ -1114,7 +1157,8 @@ local function StartCopy()
                 Name = mapName,
                 PlaceId = game.PlaceId,
                 Created = os.date("%Y-%m-%d %H:%M:%S"),
-                TotalObjects = copiedCount,
+                TotalObjects = stats.copied,
+                Skipped = stats.skipped,
                 Executor = GetExecutor(),
                 Services = {}
             },
@@ -1128,9 +1172,9 @@ local function StartCopy()
             end
         end
         
-        --// Update to 95%
+        --// 95%
         ProgressBar.Size = UDim2.new(0.95, 0, 1, 0)
-        ProgressText.Text = "95% - Encoding..."
+        ProgressText.Text = "95% - Writing file..."
         
         --// Save
         local jsonData = HttpService:JSONEncode(mapData)
@@ -1158,7 +1202,7 @@ local function StartCopy()
         ProgressBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
         ProgressText.Text = "100% - Complete!"
         
-        Notify(string.format("✅ Saved: %s (%d objects)", mapName, copiedCount), Color3.fromRGB(100, 255, 150))
+        Notify(string.format("✅ Saved: %s (%d objects, %d skipped)", mapName, stats.copied, stats.skipped), Color3.fromRGB(100, 255, 150))
         RefreshList()
     else
         mainContainer:Destroy()
@@ -1171,7 +1215,7 @@ local function StartCopy()
     StopBtn.Visible = false
     
     if not shhhhnayy05.ShouldStop then
-        DetailText.Text = string.format("✅ Done in %.1fs | %d objects", tick() - startTime, copiedCount)
+        DetailText.Text = string.format("✅ Done in %.1fs | Copied: %d | Skipped: %d", tick() - startTime, stats.copied, stats.skipped)
         DetailText.TextColor3 = Color3.fromRGB(100, 255, 150)
         
         task.delay(3, function()
@@ -1487,7 +1531,7 @@ LoadExistingMaps()
 
 --// Welcome
 task.delay(0.5, function()
-    Notify("🗺️ shhhhnayy05 Copy Map v4.1 Loaded!", Color3.fromRGB(0, 200, 255))
+    Notify("🗺️ shhhhnayy05 Copy Map v4.2 Loaded!", Color3.fromRGB(0, 200, 255))
     task.wait(0.5)
     Notify("💡 Select services & click 'START COPY'", Color3.fromRGB(200, 200, 200))
 end)
