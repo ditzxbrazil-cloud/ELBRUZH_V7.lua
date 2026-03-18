@@ -1,5 +1,5 @@
 --[[
-    shhhhnayy05 Terrain Generator Pro
+    shhhhnayy05 Terrain Generator Pro - FIXED VERSION
     Real World Terrain from Google Maps Coordinates
     Support Executor Level 7-8
     Created by: shhhhnayy05
@@ -9,36 +9,79 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 
 -- shhhhnayy05 Configuration
 local shhhhnayy05_Config = {
-    Version = "2.0.0",
+    Version = "2.1.0",
     Creator = "shhhhnayy05",
     MaxTerrainSize = 512,
     DefaultHeightScale = 50,
-    WaterLevel = 0,
     Seed = math.random(1, 1000000),
-    
-    -- API Configuration (Simulated - Real implementation needs backend)
-    ElevationAPI = "https://api.open-elevation.com/api/v1/lookup",
-    MapboxToken = "YOUR_MAPBOX_TOKEN_HERE", -- Replace with real token
 }
 
--- GUI Creation
+-- Deteksi environment executor
+local function shhhhnayy05_GetGuiParent()
+    -- Coba beberapa cara untuk parent GUI
+    
+    -- Cara 1: CoreGui (untuk most executors)
+    local success, result = pcall(function()
+        return CoreGui
+    end)
+    if success and result then
+        return result
+    end
+    
+    -- Cara 2: PlayerGui
+    success, result = pcall(function()
+        return LocalPlayer:WaitForChild("PlayerGui", 5)
+    end)
+    if success and result then
+        return result
+    end
+    
+    -- Cara 3: RobloxGui (khusus some executors)
+    success, result = pcall(function()
+        return CoreGui:WaitForChild("RobloxGui", 5)
+    end)
+    if success and result then
+        return result
+    end
+    
+    -- Fallback ke Workspace (tidak direkomendasikan tapi better than nothing)
+    return Workspace
+end
+
+-- GUI Creation - FIXED
 local function shhhhnayy05_CreateGUI()
+    local parent = shhhhnayy05_GetGuiParent()
+    
+    -- Hapus GUI lama jika ada
+    local oldGui = parent:FindFirstChild("shhhhnayy05_TerrainPro")
+    if oldGui then
+        oldGui:Destroy()
+    end
+    
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "shhhhnayy05_TerrainPro"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.DisplayOrder = 999999
     
-    -- Main Frame dengan efek glassmorphism
+    -- Parent dengan pengecekan
+    local success, err = pcall(function()
+        ScreenGui.Parent = parent
+    end)
+    
+    if not success then
+        warn("shhhhnayy05: Failed to parent to " .. tostring(parent) .. ", trying Workspace...")
+        ScreenGui.Parent = Workspace
+    end
+    
+    -- Main Frame
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Size = UDim2.new(0, 500, 0, 600)
@@ -47,6 +90,8 @@ local function shhhhnayy05_CreateGUI()
     MainFrame.BackgroundTransparency = 0.1
     MainFrame.BorderSizePixel = 0
     MainFrame.ClipsDescendants = true
+    MainFrame.Active = true -- Penting untuk drag
+    MainFrame.Draggable = true -- Built-in draggable
     MainFrame.Parent = ScreenGui
     
     -- Corner radius
@@ -562,18 +607,6 @@ local function shhhhnayy05_CreateGUI()
     Glow.ImageTransparency = 0.8
     Glow.Parent = MinimizedIcon
     
-    -- Particle effect for icon
-    local ParticleEmitter = Instance.new("ParticleEmitter")
-    ParticleEmitter.Texture = "rbxassetid://258128463"
-    ParticleEmitter.Rate = 10
-    ParticleEmitter.Lifetime = NumberRange.new(1, 2)
-    ParticleEmitter.Size = NumberSequence.new(0.5, 0)
-    ParticleEmitter.Transparency = NumberSequence.new(0, 1)
-    ParticleEmitter.Speed = NumberRange.new(5, 10)
-    ParticleEmitter.SpreadAngle = Vector2.new(180, 180)
-    ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(0, 170, 255))
-    ParticleEmitter.Parent = MinimizedIcon
-    
     return {
         ScreenGui = ScreenGui,
         MainFrame = MainFrame,
@@ -593,7 +626,7 @@ local function shhhhnayy05_CreateGUI()
     }
 end
 
--- Noise Functions untuk generate terrain realistis
+-- Noise Functions
 local function shhhhnayy05_Noise(x, y, seed)
     local n = math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453
     return n - math.floor(n)
@@ -657,8 +690,6 @@ function shhhhnayy05_TerrainGenerator:GenerateFromCoordinates(lat, long, size, h
     if self.IsGenerating then return end
     self.IsGenerating = true
     
-    -- Simulasi fetch data elevation berdasarkan koordinat
-    -- Dalam implementasi real, ini akan memanggil API seperti Google Elevation API
     local seed = (lat * 10000 + long * 100) % 1000000
     local octaves = detail == "Low" and 2 or (detail == "Medium" and 4 or 6)
     
@@ -674,37 +705,26 @@ function shhhhnayy05_TerrainGenerator:GenerateFromCoordinates(lat, long, size, h
         Timestamp = os.time()
     }
     
-    -- Generate heightmap menggunakan Perlin Noise
-    -- Ini mensimulasikan terrain real berdasarkan koordinat
     for x = 1, size do
         terrainData.Heights[x] = {}
         terrainData.Materials[x] = {}
         
         for z = 1, size do
-            -- Scale coordinates untuk noise
             local nx = x / size * 4
             local nz = z / size * 4
             
-            -- Multiple octaves untuk detail
             local height = shhhhnayy05_PerlinNoise(nx, nz, seed, octaves, 0.5)
-            
-            -- Tambahkan variasi regional berdasarkan latitude
             local regionalFactor = math.sin(lat * math.pi / 180) * 0.3
             height = height + regionalFactor * shhhhnayy05_PerlinNoise(nx * 0.5, nz * 0.5, seed + 1000, 2, 0.5)
-            
-            -- Normalize ke 0-1
             height = math.clamp((height + 1) / 2, 0, 1)
             
-            -- Apply height scale dengan variasi
             local finalHeight = math.floor(height * heightScale)
             terrainData.Heights[x][z] = finalHeight
             
-            -- Determine material berdasarkan height dan slope
             local material = self:GetMaterialFromHeight(finalHeight, heightScale, generateWater)
             terrainData.Materials[x][z] = material
         end
         
-        -- Progress update setiap 10 rows
         if x % 10 == 0 then
             local progress = x / size
             self:UpdateProgress(progress, "Generating heightmap...")
@@ -739,31 +759,24 @@ function shhhhnayy05_TerrainGenerator:SpawnTerrain(terrainData, updateProgress)
     local heights = terrainData.Heights
     local materials = terrainData.Materials
     
-    -- Clear existing generated terrain
     self:ClearGeneratedTerrain()
     
-    -- Calculate center offset
     local centerOffset = Vector3.new(-size/2, 0, -size/2)
     
-    -- Generate terrain menggunakan FillBlock dan FillCylinder
     for x = 1, size, 4 do
         for z = 1, size, 4 do
-            local height = heights[x][z]
-            local material = materials[x][z]
+            local height = heights[x] and heights[x][z] or 10
+            local material = materials[x] and materials[x][z] or Enum.Material.Grass
             
             local pos = Vector3.new(x + centerOffset.X, height/2, z + centerOffset.Z)
             local size_vec = Vector3.new(4, math.max(height, 1), 4)
             
-            -- Buat region terrain
             if material == Enum.Material.Water then
-                -- Water level
                 terrain:FillBlock(CFrame.new(pos.X, 5, pos.Z), Vector3.new(4, 10, 4), material)
             else
-                -- Ground terrain
                 terrain:FillBlock(CFrame.new(pos.X, height/2, pos.Z), size_vec, material)
             end
             
-            -- Simpan reference untuk clear nanti
             table.insert(self.GeneratedTerrain, {
                 Position = pos,
                 Size = size_vec,
@@ -771,7 +784,6 @@ function shhhhnayy05_TerrainGenerator:SpawnTerrain(terrainData, updateProgress)
             })
         end
         
-        -- Update progress
         if x % 20 == 0 then
             local progress = x / size
             updateProgress(progress, "Spawning terrain blocks...")
@@ -779,9 +791,7 @@ function shhhhnayy05_TerrainGenerator:SpawnTerrain(terrainData, updateProgress)
         end
     end
     
-    -- Add decorative elements (trees, rocks) untuk Grass areas
     self:AddDecorations(terrainData, centerOffset)
-    
     return true
 end
 
@@ -792,17 +802,14 @@ function shhhhnayy05_TerrainGenerator:AddDecorations(terrainData, centerOffset)
     
     for x = 1, size, 8 do
         for z = 1, size, 8 do
-            if materials[x][z] == Enum.Material.Grass then
+            if materials[x] and materials[x][z] == Enum.Material.Grass then
                 local height = heights[x][z]
                 local pos = Vector3.new(x + centerOffset.X, height + 1, z + centerOffset.Z)
                 
-                -- Random chance untuk tree/rock
                 local rand = math.random()
                 if rand > 0.85 then
-                    -- Spawn tree
                     self:CreateTree(pos)
                 elseif rand > 0.7 then
-                    -- Spawn rock
                     self:CreateRock(pos)
                 end
             end
@@ -814,7 +821,6 @@ function shhhhnayy05_TerrainGenerator:CreateTree(position)
     local tree = Instance.new("Model")
     tree.Name = "shhhhnayy05_Tree"
     
-    -- Trunk
     local trunk = Instance.new("Part")
     trunk.Name = "Trunk"
     trunk.Size = Vector3.new(2, 8, 2)
@@ -824,7 +830,6 @@ function shhhhnayy05_TerrainGenerator:CreateTree(position)
     trunk.Anchored = true
     trunk.Parent = tree
     
-    -- Leaves
     local leaves = Instance.new("Part")
     leaves.Name = "Leaves"
     leaves.Size = Vector3.new(8, 6, 8)
@@ -859,16 +864,13 @@ function shhhhnayy05_TerrainGenerator:ClearGeneratedTerrain()
     end
     self.GeneratedTerrain = {}
     
-    -- Clear terrain regions
     local terrain = Workspace.Terrain
     terrain:Clear()
 end
 
 function shhhhnayy05_TerrainGenerator:UpdateProgress(progress, message)
-    -- Will be connected to GUI
 end
 
--- Export ke Script Function
 function shhhhnayy05_TerrainGenerator:ExportToScript()
     if not self.TerrainData or not self.TerrainData.Heights then
         return nil, "No terrain data to export"
@@ -898,7 +900,6 @@ function shhhhnayy05_TerrainGenerator:ExportToScript()
     table.insert(scriptLines, "-- Heightmap Data (Compressed)")
     table.insert(scriptLines, "local HeightMap = {")
     
-    -- Compress height data
     for x = 1, data.Size, 10 do
         local rowData = {}
         for z = 1, data.Size, 10 do
@@ -956,206 +957,168 @@ function shhhhnayy05_TerrainGenerator:ExportToScript()
     return table.concat(scriptLines, "\n"), nil
 end
 
--- Initialize
-local GUI = shhhhnayy05_CreateGUI()
-local Generator = shhhhnayy05_TerrainGenerator.new()
-local isMinimized = false
-local generateWater = true
+-- Initialize dengan error handling
+local success, result = pcall(function()
+    local GUI = shhhhnayy05_CreateGUI()
+    local Generator = shhhhnayy05_TerrainGenerator.new()
+    local isMinimized = false
+    local generateWater = true
 
--- Drag functionality
-local dragging = false
-local dragInput, dragStart, startPos
+    -- Button Functions
+    GUI.CloseBtn.MouseButton1Click:Connect(function()
+        GUI.ScreenGui:Destroy()
+    end)
 
-GUI.MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = GUI.MainFrame.Position
-    end
-end)
-
-GUI.MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-GUI.MainFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if dragging and dragInput then
-        local delta = dragInput.Position - dragStart
-        GUI.MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- Button Functions
-GUI.CloseBtn.MouseButton1Click:Connect(function()
-    GUI.ScreenGui:Destroy()
-end)
-
-GUI.MinimizeBtn.MouseButton1Click:Connect(function()
-    isMinimized = true
-    GUI.MainFrame.Visible = false
-    GUI.MinimizedIcon.Visible = true
-    
-    -- Animation
-    GUI.MinimizedIcon.Size = UDim2.new(0, 0, 0, 0)
-    TweenService:Create(GUI.MinimizedIcon, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
-        Size = UDim2.new(0, 60, 0, 60)
-    }):Play()
-end)
-
-GUI.MinimizedIcon.MouseButton1Click:Connect(function()
-    isMinimized = false
-    GUI.MainFrame.Visible = true
-    GUI.MinimizedIcon.Visible = false
-    
-    -- Animation
-    GUI.MainFrame.Size = UDim2.new(0, 400, 0, 400)
-    TweenService:Create(GUI.MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
-        Size = UDim2.new(0, 500, 0, 600)
-    }):Play()
-end)
-
--- Water Toggle
-GUI.WaterToggle.MouseButton1Click:Connect(function()
-    generateWater = not generateWater
-    if generateWater then
-        GUI.WaterToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        GUI.WaterToggle.Text = "ON"
-    else
-        GUI.WaterToggle.BackgroundColor33 = Color3.fromRGB(200, 50, 50)
-        GUI.WaterToggle.Text = "OFF"
-    end
-end)
-
--- Spawn Terrain
-GUI.SpawnBtn.MouseButton1Click:Connect(function()
-    if Generator.IsGenerating then
-        GUI.StatusLabel.Text = "Status: Sedang generate..."
-        GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 180, 0)
-        return
-    end
-    
-    local lat = tonumber(GUI.LatInput.Text) or 0
-    local long = tonumber(GUI.LongInput.Text) or 0
-    local size = tonumber(GUI.SizeInput.Text) or 256
-    local height = tonumber(GUI.HeightInput.Text) or 50
-    local detail = GUI.DetailDropdown.Text
-    
-    -- Clamp values
-    size = math.clamp(size, 64, 512)
-    height = math.clamp(height, 10, 200)
-    
-    GUI.StatusLabel.Text = "Status: Menyiapkan data..."
-    GUI.StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
-    
-    task.spawn(function()
-        -- Generate data
-        local terrainData = Generator:GenerateFromCoordinates(lat, long, size, height, detail, generateWater)
+    GUI.MinimizeBtn.MouseButton1Click:Connect(function()
+        isMinimized = true
+        GUI.MainFrame.Visible = false
+        GUI.MinimizedIcon.Visible = true
         
-        if terrainData then
-            GUI.StatusLabel.Text = "Status: Spawning terrain..."
+        GUI.MinimizedIcon.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(GUI.MinimizedIcon, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+            Size = UDim2.new(0, 60, 0, 60)
+        }):Play()
+    end)
+
+    GUI.MinimizedIcon.MouseButton1Click:Connect(function()
+        isMinimized = false
+        GUI.MainFrame.Visible = true
+        GUI.MinimizedIcon.Visible = false
+        
+        GUI.MainFrame.Size = UDim2.new(0, 400, 0, 400)
+        TweenService:Create(GUI.MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+            Size = UDim2.new(0, 500, 0, 600)
+        }):Play()
+    end)
+
+    -- Water Toggle
+    GUI.WaterToggle.MouseButton1Click:Connect(function()
+        generateWater = not generateWater
+        if generateWater then
+            GUI.WaterToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+            GUI.WaterToggle.Text = "ON"
+        else
+            GUI.WaterToggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            GUI.WaterToggle.Text = "OFF"
+        end
+    end)
+
+    -- Spawn Terrain
+    GUI.SpawnBtn.MouseButton1Click:Connect(function()
+        if Generator.IsGenerating then
+            GUI.StatusLabel.Text = "Status: Sedang generate..."
+            GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 180, 0)
+            return
+        end
+        
+        local lat = tonumber(GUI.LatInput.Text) or 0
+        local long = tonumber(GUI.LongInput.Text) or 0
+        local size = tonumber(GUI.SizeInput.Text) or 256
+        local height = tonumber(GUI.HeightInput.Text) or 50
+        local detail = GUI.DetailDropdown.Text
+        
+        size = math.clamp(size, 64, 512)
+        height = math.clamp(height, 10, 200)
+        
+        GUI.StatusLabel.Text = "Status: Menyiapkan data..."
+        GUI.StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
+        
+        task.spawn(function()
+            local terrainData = Generator:GenerateFromCoordinates(lat, long, size, height, detail, generateWater)
             
-            -- Update progress callback
-            local function updateProgress(progress, msg)
-                GUI.ProgressFill.Size = UDim2.new(progress, 0, 1, 0)
-                GUI.StatusLabel.Text = "Status: " .. msg .. " (" .. math.floor(progress * 100) .. "%)"
+            if terrainData then
+                GUI.StatusLabel.Text = "Status: Spawning terrain..."
+                
+                local function updateProgress(progress, msg)
+                    GUI.ProgressFill.Size = UDim2.new(progress, 0, 1, 0)
+                    GUI.StatusLabel.Text = "Status: " .. msg .. " (" .. math.floor(progress * 100) .. "%)"
+                end
+                
+                Generator.UpdateProgress = updateProgress
+                
+                Generator:SpawnTerrain(terrainData, updateProgress)
+                
+                GUI.ProgressFill.Size = UDim2.new(1, 0, 1, 0)
+                GUI.StatusLabel.Text = "Status: Terrain berhasil digenerate!"
+                GUI.StatusLabel.TextColor3 = Color3.fromRGB(0, 200, 100)
+                
+                task.wait(2)
+                GUI.ProgressFill.Size = UDim2.new(0, 0, 1, 0)
+            else
+                GUI.StatusLabel.Text = "Status: Gagal generate terrain"
+                GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+            end
+        end)
+    end)
+
+    -- Export to Script
+    GUI.ExportBtn.MouseButton1Click:Connect(function()
+        local scriptCode, err = Generator:ExportToScript()
+        
+        if scriptCode then
+            if syn and syn.write_clipboard then
+                syn.write_clipboard(scriptCode)
+                GUI.StatusLabel.Text = "Status: Script copied to clipboard!"
+            elseif setclipboard then
+                setclipboard(scriptCode)
+                GUI.StatusLabel.Text = "Status: Script copied to clipboard!"
+            else
+                local filename = "shhhhnayy05_Terrain_" .. os.time() .. ".lua"
+                if writefile then
+                    writefile(filename, scriptCode)
+                    GUI.StatusLabel.Text = "Status: Script saved as " .. filename
+                else
+                    GUI.StatusLabel.Text = "Status: Script generated (check console)"
+                    print("=== TERRAIN SCRIPT ===")
+                    print(scriptCode)
+                end
             end
             
-            Generator.UpdateProgress = updateProgress
-            
-            -- Spawn terrain
-            Generator:SpawnTerrain(terrainData, updateProgress)
-            
-            GUI.ProgressFill.Size = UDim2.new(1, 0, 1, 0)
-            GUI.StatusLabel.Text = "Status: Terrain berhasil digenerate!"
             GUI.StatusLabel.TextColor3 = Color3.fromRGB(0, 200, 100)
-            
-            task.wait(2)
-            GUI.ProgressFill.Size = UDim2.new(0, 0, 1, 0)
         else
-            GUI.StatusLabel.Text = "Status: Gagal generate terrain"
+            GUI.StatusLabel.Text = "Status: " .. (err or "Export failed")
             GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
         end
     end)
-end)
 
--- Export to Script
-GUI.ExportBtn.MouseButton1Click:Connect(function()
-    local scriptCode, err = Generator:ExportToScript()
-    
-    if scriptCode then
-        -- Copy to clipboard (if supported by executor)
-        if syn and syn.write_clipboard then
-            syn.write_clipboard(scriptCode)
-            GUI.StatusLabel.Text = "Status: Script copied to clipboard!"
-        elseif setclipboard then
-            setclipboard(scriptCode)
-            GUI.StatusLabel.Text = "Status: Script copied to clipboard!"
-        else
-            -- Save to file
-            local filename = "shhhhnayy05_Terrain_" .. os.time() .. ".lua"
-            writefile(filename, scriptCode)
-            GUI.StatusLabel.Text = "Status: Script saved as " .. filename
-        end
+    -- Hover effects
+    local function addHoverEffect(button, originalColor)
+        button.MouseEnter:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {
+                BackgroundColor3 = originalColor:Lerp(Color3.fromRGB(255, 255, 255), 0.2)
+            }):Play()
+        end)
         
-        GUI.StatusLabel.TextColor3 = Color3.fromRGB(0, 200, 100)
-        
-        -- Show preview
-        print("=== shhhhnayy05 TERRAIN SCRIPT EXPORT ===")
-        print(scriptCode:sub(1, 2000))
-        print("... [Script continues] ...")
-    else
-        GUI.StatusLabel.Text = "Status: " .. (err or "Export failed")
-        GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        button.MouseLeave:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {
+                BackgroundColor3 = originalColor
+            }):Play()
+        end)
     end
+
+    addHoverEffect(GUI.SpawnBtn, Color3.fromRGB(0, 170, 255))
+    addHoverEffect(GUI.ExportBtn, Color3.fromRGB(100, 0, 200))
+
+    -- Animasi awal
+    GUI.MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    GUI.MainFrame.Visible = true
+
+    TweenService:Create(GUI.MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 500, 0, 600)
+    }):Play()
+
+    print("🏔️ shhhhnayy05 Terrain Generator Pro loaded successfully!")
+    print("✅ GUI Created and Visible")
+    
+    return true
 end)
 
--- Hover effects
-local function addHoverEffect(button, originalColor)
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2), {
-            BackgroundColor3 = originalColor:Lerp(Color3.fromRGB(255, 255, 255), 0.2)
-        }):Play()
-    end)
-    
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2), {
-            BackgroundColor3 = originalColor
-        }):Play()
-    end)
+if not success then
+    warn("❌ shhhhnayy05 Error: " .. tostring(result))
+    -- Fallback notification
+    local notif = Instance.new("Hint")
+    notif.Text = "shhhhnayy05 Terrain Error: " .. tostring(result)
+    notif.Parent = Workspace
+    task.wait(5)
+    notif:Destroy()
 end
-
-addHoverEffect(GUI.SpawnBtn, Color3.fromRGB(0, 170, 255))
-addHoverEffect(GUI.ExportBtn, Color3.fromRGB(100, 0, 200))
-
--- Quick Locations Dropdown
-local locations = {
-    {name = "Gunung Everest", lat = 27.9881, long = 86.9250},
-    {name = "Grand Canyon", lat = 36.1069, long = -112.1129},
-    {name = "Mount Fuji", lat = 35.3606, long = 138.7274},
-    {name = "Sahara Desert", lat = 23.4162, long = 25.6628},
-    {name = "Amazon Rainforest", lat = -3.4653, long = -62.2159},
-    {name = "Swiss Alps", lat = 46.8182, long = 8.2275},
-    {name = "Iceland", lat = 64.9631, long = -19.0208},
-    {name = "New Zealand", lat = -40.9006, long = 174.8860}
-}
-
--- Animasi awal
-GUI.MainFrame.Size = UDim2.new(0, 0, 0, 0)
-GUI.MainFrame.Visible = true
-
-TweenService:Create(GUI.MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-    Size = UDim2.new(0, 500, 0, 600)
-}):Play()
-
-print("🏔️ shhhhnayy05 Terrain Generator Pro loaded successfully!")
-print("📍 Support: Google Maps Coordinates")
-print("🚀 Features: Real Terrain Generation + Script Export")
-print("⚡ Executor Level: 7-8 Supported")
