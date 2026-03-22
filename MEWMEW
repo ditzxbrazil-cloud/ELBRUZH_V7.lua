@@ -112,7 +112,7 @@ local currentRockColorIndex = 2
 --// CURRENT COLOR TRACKER
 shhhhnayy05.CurrentColor = grassColors[currentGrassColorIndex].color
 
---// MATERIALS LIST (REAL TERRAIN ONLY)
+--// MATERIALS LIST (REAL TERRAIN ONLY) - WOODLOG REMOVED
 local terrainMaterials = {
 	Enum.Material.Grass,
 	Enum.Material.Ground,
@@ -1551,5 +1551,6 @@ print("🎨 Modes: Smooth & Flatten")
 print("🔷 Shapes: Full Block & Ball")
 print("🎨 Colors: Grass, Ground, Leavygrass, Rock")
 print("💾 Convert to Script feature ready!")
+print("📦 Materials: 17 valid terrain materials (WoodLog removed)")
 
 return shhhhnayy05
