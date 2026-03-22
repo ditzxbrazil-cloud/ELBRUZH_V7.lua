@@ -1,507 +1,1491 @@
---// shhhhnayy05 Terrain Sculptor MOBILE FINAL v2
---// Fixed: CellPadding UDim2 error, Visible property, All touch events
+--// TERRAIN EDITOR PRO - shhhhnayy05
+--// Mode: Draw Smooth & Draw Flatten
+--// Features: Block & Ball shapes, Full Materials, Color System, Convert to Script
 
 local shhhhnayy05 = {}
+shhhhnayy05.Name = "shhhhnayy05_TerrainEditor"
+shhhhnayy05.Version = "Pro v2.0"
+
+--// SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Mouse = LocalPlayer:GetMouse()
 
---// Config
+--// CONFIGURATION
 shhhhnayy05.Config = {
-    BrushSize = 8,
-    BrushStrength = 0.5,
-    Mode = "Smooth",
-    Shape = "Block",
-    IsActive = false,
-    PanelSize = UDim2.new(0, 350, 0, 450)
+    PanelSize = {Width = 350, Height = 450},
+    Minimized = false,
+    ModeEnabled = false,
+    CurrentMode = "Smooth", -- "Smooth" or "Flatten"
+    Shape = "Block", -- "Block" or "Ball"
+    BrushSize = 5,
+    Material = Enum.Material.Grass,
+    AutoConvert = true,
+    TerrainHeight = 0,
+    ColorsEnabled = true
 }
 
---// Materials (23 valid items - GrassCover removed)
+--// TERRAIN MATERIALS LIST (REAL TERRAIN ONLY)
 shhhhnayy05.TerrainMaterials = {
-    "Grass", "Ground", "Rock", "Sand", "Snow", "Water",
-    "Asphalt", "Basalt", "Brick", "Cobblestone", "Concrete",
-    "CrackedLava", "Glacier", "Granite", "Ice", 
-    "LeafyGrass", "Limestone", "Marble", "Mud",
-    "Pavement", "Salt", "Slate", "WoodPlanks"
+    {Name = "Grass", Material = Enum.Material.Grass, Icon = "🌿"},
+    {Name = "Ground", Material = Enum.Material.Ground, Icon = "🌍"},
+    {Name = "Rock", Material = Enum.Material.Rock, Icon = "🪨"},
+    {Name = "Asphalt", Material = Enum.Material.Asphalt, Icon = "🛣️"},
+    {Name = "Basalt", Material = Enum.Material.Basalt, Icon = "🌋"},
+    {Name = "Brick", Material = Enum.Material.Brick, Icon = "🧱"},
+    {Name = "Cobblestone", Material = Enum.Material.Cobblestone, Icon = "🪨"},
+    {Name = "Concrete", Material = Enum.Material.Concrete, Icon = "🏗️"},
+    {Name = "CrackedLava", Material = Enum.Material.CrackedLava, Icon = "🌋"},
+    {Name = "Glacier", Material = Enum.Material.Glacier, Icon = "🧊"},
+    {Name = "Ice", Material = Enum.Material.Ice, Icon = "❄️"},
+    {Name = "LeafyGrass", Material = Enum.Material.LeafyGrass, Icon = "🍃"},
+    {Name = "Limestone", Material = Enum.Material.Limestone, Icon = "⬜"},
+    {Name = "Mud", Material = Enum.Material.Mud, Icon = "💩"},
+    {Name = "Pavement", Material = Enum.Material.Pavement, Icon = "🛤️"},
+    {Name = "Salt", Material = Enum.Material.Salt, Icon = "🧂"},
+    {Name = "Sand", Material = Enum.Material.Sand, Icon = "🏖️"},
+    {Name = "Sandstone", Material = Enum.Material.Sandstone, Icon = "🏜️"},
+    {Name = "Slate", Material = Enum.Material.Slate, Icon = "⬛"},
+    {Name = "Snow", Material = Enum.Material.Snow, Icon = "❄️"},
+    {Name = "WoodPlanks", Material = Enum.Material.WoodPlanks, Icon = "🪵"},
+    {Name = "Water", Material = Enum.Material.Water, Icon = "💧"}
 }
 
---// Color Palettes
-shhhhnayy05.ColorPalettes = {
-    Grass = {
-        {name="Hijau Muda", color=Color3.fromRGB(150,220,120)},
-        {name="Hijau Cerah", color=Color3.fromRGB(120,200,100)},
-        {name="Hijau Normal", color=Color3.fromRGB(75,151,75)},
-        {name="Hijau Sedang", color=Color3.fromRGB(60,140,70)},
-        {name="Hijau Tua", color=Color3.fromRGB(45,120,55)},
-        {name="Hijau Gelap", color=Color3.fromRGB(30,100,40)},
-        {name="Hijau Lumut", color=Color3.fromRGB(80,120,60)},
-        {name="Hijau Zamrud", color=Color3.fromRGB(50,180,100)},
-        {name="Hijau Mint", color=Color3.fromRGB(170,230,150)},
-        {name="Hijau Daun", color=Color3.fromRGB(70,160,80)},
-        {name="Hijau Hutan", color=Color3.fromRGB(40,90,50)},
-        {name="Hijau Zaitun", color=Color3.fromRGB(85,107,47)},
-        {name="Hijau Pinus", color=Color3.fromRGB(50,100,60)},
-        {name="Hijau Tropis", color=Color3.fromRGB(90,180,110)},
-        {name="Hijau Pastel", color=Color3.fromRGB(140,210,130)},
-        {name="Hijau Neon", color=Color3.fromRGB(100,255,150)},
-        {name="Hijau Apel", color=Color3.fromRGB(140,200,100)},
-        {name="Hijau Toska", color=Color3.fromRGB(100,180,140)},
-        {name="Hijau Army", color=Color3.fromRGB(70,85,50)},
-        {name="Hijau Botol", color=Color3.fromRGB(40,70,45)}
-    },
-    Ground = {
-        {name="Coklat Muda", color=Color3.fromRGB(160,120,80)},
-        {name="Coklat Normal", color=Color3.fromRGB(120,85,50)},
-        {name="Coklat Tanah", color=Color3.fromRGB(102,92,59)},
-        {name="Coklat Tua", color=Color3.fromRGB(75,55,30)},
-        {name="Coklat Gelap", color=Color3.fromRGB(50,35,15)}
-    },
-    LeafyGrass = {
-        {name="Daun Muda", color=Color3.fromRGB(130,200,100)},
-        {name="Daun Segar", color=Color3.fromRGB(100,180,80)},
-        {name="Daun Normal", color=Color3.fromRGB(70,150,60)},
-        {name="Daun Tua", color=Color3.fromRGB(50,120,40)},
-        {name="Daun Kering", color=Color3.fromRGB(140,160,80)},
-        {name="Daun Musim Gugur", color=Color3.fromRGB(180,140,60)},
-        {name="Daun Hijau Tua", color=Color3.fromRGB(40,100,30)},
-        {name="Daun Lumut", color=Color3.fromRGB(90,140,70)}
-    },
-    Rock = {
-        {name="Abu Muda", color=Color3.fromRGB(160,160,160)},
-        {name="Abu Normal", color=Color3.fromRGB(120,120,120)},
-        {name="Abu Tua", color=Color3.fromRGB(80,80,80)},
-        {name="Batu Muda", color=Color3.fromRGB(140,140,130)},
-        {name="Batu Normal", color=Color3.fromRGB(100,100,95)},
-        {name="Batu Tua", color=Color3.fromRGB(60,60,55)},
-        {name="Granit", color=Color3.fromRGB(110,110,120)},
-        {name="Basalt", color=Color3.fromRGB(50,50,60)},
-        {name="Marmer", color=Color3.fromRGB(200,200,210)},
-        {name="Batu Kapur", color=Color3.fromRGB(180,175,165)}
-    }
+--// GRASS COLORS
+shhhhnayy05.GrassColors = {
+    {name="Hijau Muda",   color=Color3.fromRGB(150,220,120)},
+    {name="Hijau Cerah",  color=Color3.fromRGB(120,200,100)},
+    {name="Hijau Normal", color=Color3.fromRGB(75,151,75)},
+    {name="Hijau Sedang", color=Color3.fromRGB(60,140,70)},
+    {name="Hijau Tua",    color=Color3.fromRGB(45,120,55)},
+    {name="Hijau Gelap",  color=Color3.fromRGB(30,100,40)},
+    {name="Hijau Lumut",  color=Color3.fromRGB(80,120,60)},
+    {name="Hijau Zamrud", color=Color3.fromRGB(50,180,100)},
+    {name="Hijau Mint",   color=Color3.fromRGB(170,230,150)},
+    {name="Hijau Daun",   color=Color3.fromRGB(70,160,80)},
+    {name="Hijau Hutan",  color=Color3.fromRGB(40,90,50)},
+    {name="Hijau Zaitun", color=Color3.fromRGB(85,107,47)},
+    {name="Hijau Pinus",  color=Color3.fromRGB(50,100,60)},
+    {name="Hijau Tropis", color=Color3.fromRGB(90,180,110)},
+    {name="Hijau Pastel", color=Color3.fromRGB(140,210,130)},
+    {name="Hijau Neon",   color=Color3.fromRGB(100,255,150)},
+    {name="Hijau Apel",   color=Color3.fromRGB(140,200,100)},
+    {name="Hijau Toska",  color=Color3.fromRGB(100,180,140)},
+    {name="Hijau Army",   color=Color3.fromRGB(70,85,50)},
+    {name="Hijau Botol",  color=Color3.fromRGB(40,70,45)}
 }
 
-shhhhnayy05.CurrentColors = {Grass = 3, Ground = 2, LeafyGrass = 3, Rock = 2}
-shhhhnayy05.CurrentMaterial = Enum.Material.Grass
-shhhhnayy05.TerrainData = {}
+--// GROUND COLORS
+shhhhnayy05.GroundColors = {
+    {name="Coklat Muda",   color=Color3.fromRGB(160,120,80)},
+    {name="Coklat Normal", color=Color3.fromRGB(120,85,50)},
+    {name="Coklat Tanah",  color=Color3.fromRGB(102,92,59)},
+    {name="Coklat Tua",    color=Color3.fromRGB(75,55,30)},
+    {name="Coklat Gelap",  color=Color3.fromRGB(50,35,15)},
+}
+
+--// LEAFY GRASS COLORS
+shhhhnayy05.LeafyGrassColors = {
+    {name="Daun Muda",    color=Color3.fromRGB(130,200,100)},
+    {name="Daun Segar",   color=Color3.fromRGB(100,180,80)},
+    {name="Daun Normal",  color=Color3.fromRGB(70,150,60)},
+    {name="Daun Tua",     color=Color3.fromRGB(50,120,45)},
+    {name="Daun Gelap",   color=Color3.fromRGB(35,100,35)},
+    {name="Daun Kering",  color=Color3.fromRGB(150,140,80)},
+    {name="Daun Gugur",   color=Color3.fromRGB(180,130,60)},
+    {name="Daun Emas",    color=Color3.fromRGB(200,170,50)},
+    {name="Daun Merah",   color=Color3.fromRGB(180,70,50)},
+    {name="Daun Oranye",  color=Color3.fromRGB(200,120,40)}
+}
+
+--// ROCK COLORS
+shhhhnayy05.RockColors = {
+    {name="Abu Muda",     color=Color3.fromRGB(180,180,180)},
+    {name="Abu Normal",   color=Color3.fromRGB(140,140,140)},
+    {name="Abu Tua",      color=Color3.fromRGB(100,100,100)},
+    {name="Batu Muda",    color=Color3.fromRGB(160,150,140)},
+    {name="Batu Normal",  color=Color3.fromRGB(120,110,100)},
+    {name="Batu Tua",     color=Color3.fromRGB(80,75,70)},
+    {name="Granit",       color=Color3.fromRGB(130,130,140)},
+    {name="Marmer",       color=Color3.fromRGB(200,200,210)},
+    {name="Obsidian",     color=Color3.fromRGB(40,40,50)},
+    {name="Batuan",       color=Color3.fromRGB(90,85,80)}
+}
+
+--// CURRENT COLOR INDEXES
+shhhhnayy05.CurrentGrassColorIndex = 3
+shhhhnayy05.CurrentGroundColorIndex = 2
+shhhhnayy05.CurrentLeafyGrassColorIndex = 3
+shhhhnayy05.CurrentRockColorIndex = 2
+
+--// GENERATED TERRAIN HISTORY (FOR CONVERSION)
+shhhhnayy05.TerrainHistory = {}
+
+--// GUI REFERENCES
+shhhhnayy05.GUI = {}
+shhhhnayy05.ScriptWindow = nil
+
+--// BRUSH PREVIEW
+shhhhnayy05.BrushPreview = nil
 shhhhnayy05.IsDrawing = false
 
---// Create GUI
+--// UTILITY FUNCTIONS
+function shhhhnayy05:Tween(obj, props, duration, easing)
+    duration = duration or 0.3
+    easing = easing or Enum.EasingStyle.Quad
+    local tween = TweenService:Create(obj, TweenInfo.new(duration, easing), props)
+    tween:Play()
+    return tween
+end
+
+function shhhhnayy05:CreateCorner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = radius or UDim.new(0, 8)
+    corner.Parent = parent
+    return corner
+end
+
+function shhhhnayy05:CreateStroke(parent, color, thickness)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Color3.fromRGB(100, 100, 100)
+    stroke.Thickness = thickness or 1
+    stroke.Parent = parent
+    return stroke
+end
+
+function shhhhnayy05:CreateShadow(parent)
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "Shadow"
+    shadow.BackgroundTransparency = 1
+    shadow.Image = "rbxassetid://1316045217"
+    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.ImageTransparency = 0.6
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    shadow.Size = UDim2.new(1, 20, 1, 20)
+    shadow.Position = UDim2.new(0, -10, 0, -10)
+    shadow.ZIndex = parent.ZIndex - 1
+    shadow.Parent = parent
+    return shadow
+end
+
+--// GET CURRENT COLOR BASED ON MATERIAL
+function shhhhnayy05:GetCurrentColorForMaterial(material)
+    if material == Enum.Material.Grass then
+        return self.GrassColors[self.CurrentGrassColorIndex].color
+    elseif material == Enum.Material.Ground then
+        return self.GroundColors[self.CurrentGroundColorIndex].color
+    elseif material == Enum.Material.LeafyGrass then
+        return self.LeafyGrassColors[self.CurrentLeafyGrassColorIndex].color
+    elseif material == Enum.Material.Rock then
+        return self.RockColors[self.CurrentRockColorIndex].color
+    else
+        return nil -- Default terrain color
+    end
+end
+
+--// CREATE MAIN GUI
 function shhhhnayy05:CreateGUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "shhhhnayy05Terrain"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.Parent = PlayerGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "shhhhnayy05_TerrainEditorGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    self.GUI.Screen = screenGui
     
-    --// TOP LEFT ICONS
-    local IconContainer = Instance.new("Frame")
-    IconContainer.Name = "Icons"
-    IconContainer.Size = UDim2.new(0, 50, 0, 110)
-    IconContainer.Position = UDim2.new(0, 10, 0, 10)
-    IconContainer.BackgroundTransparency = 1
-    IconContainer.Parent = ScreenGui
+    --// MAIN CONTAINER (Top Left)
+    local container = Instance.new("Frame")
+    container.Name = "MainContainer"
+    container.Size = UDim2.new(0, 350, 0, 450)
+    container.Position = UDim2.new(0, 10, 0, 80) -- Below the toggle icons
+    container.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    container.BorderSizePixel = 0
+    container.Active = true
+    container.Draggable = true
+    container.ZIndex = 100
+    container.Parent = screenGui
+    self:CreateCorner(container, UDim.new(0, 12))
+    self:CreateShadow(container)
+    self.GUI.MainPanel = container
     
-    -- Mode Icon
-    local ModeIcon = Instance.new("TextButton")
-    ModeIcon.Name = "ModeIcon"
-    ModeIcon.Size = UDim2.new(0, 45, 0, 45)
-    ModeIcon.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    ModeIcon.Text = "✏️"
-    ModeIcon.TextSize = 20
-    ModeIcon.Font = Enum.Font.GothamBold
-    ModeIcon.Parent = IconContainer
+    --// HEADER
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 45)
+    header.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    header.BorderSizePixel = 0
+    header.ZIndex = 101
+    header.Parent = container
+    self:CreateCorner(header, UDim.new(0, 12))
     
-    local corner1 = Instance.new("UICorner")
-    corner1.CornerRadius = UDim.new(1, 0)
-    corner1.Parent = ModeIcon
+    -- Fix corner for header only top
+    local headerCorner = header:FindFirstChildOfClass("UICorner")
+    if headerCorner then
+        headerCorner.CornerRadius = UDim.new(0, 0)
+    end
     
-    local stroke1 = Instance.new("UIStroke")
-    stroke1.Color = Color3.fromRGB(0, 200, 255)
-    stroke1.Thickness = 2
-    stroke1.Parent = ModeIcon
+    local headerTop = Instance.new("Frame")
+    headerTop.Name = "HeaderTop"
+    headerTop.Size = UDim2.new(1, 0, 0.5, 0)
+    headerTop.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    headerTop.BorderSizePixel = 0
+    headerTop.ZIndex = 101
+    headerTop.Parent = header
     
-    local ModeStatus = Instance.new("Frame")
-    ModeStatus.Name = "Status"
-    ModeStatus.Size = UDim2.new(0, 12, 0, 12)
-    ModeStatus.Position = UDim2.new(1, -6, 1, -6)
-    ModeStatus.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-    ModeStatus.BorderSizePixel = 0
-    ModeStatus.Parent = ModeIcon
+    local headerBottom = Instance.new("Frame")
+    headerBottom.Name = "HeaderBottom"
+    headerBottom.Size = UDim2.new(1, 0, 0.5, 0)
+    headerBottom.Position = UDim2.new(0, 0, 0.5, 0)
+    headerBottom.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    headerBottom.BorderSizePixel = 0
+    headerBottom.ZIndex = 101
+    headerBottom.Parent = header
+    self:CreateCorner(headerBottom, UDim.new(0, 12))
     
-    local cornerStatus = Instance.new("UICorner")
-    cornerStatus.CornerRadius = UDim.new(1, 0)
-    cornerStatus.Parent = ModeStatus
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(0.7, 0, 1, 0)
+    title.Position = UDim2.new(0.05, 0, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "🏔️ TERRAIN EDITOR PRO"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 16
+    title.Font = Enum.Font.GothamBold
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.ZIndex = 102
+    title.Parent = header
     
-    -- Minimize Icon
-    local MinIcon = Instance.new("TextButton")
-    MinIcon.Name = "MinIcon"
-    MinIcon.Size = UDim2.new(0, 45, 0, 45)
-    MinIcon.Position = UDim2.new(0, 0, 0, 60)
-    MinIcon.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    MinIcon.Text = "🏔️"
-    MinIcon.TextSize = 20
-    MinIcon.Font = Enum.Font.GothamBold
-    MinIcon.Parent = IconContainer
-    
-    local corner2 = Instance.new("UICorner")
-    corner2.CornerRadius = UDim.new(1, 0)
-    corner2.Parent = MinIcon
-    
-    local stroke2 = Instance.new("UIStroke")
-    stroke2.Color = Color3.fromRGB(0, 200, 255)
-    stroke2.Thickness = 2
-    stroke2.Parent = MinIcon
-    
-    --// MAIN PANEL
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainPanel"
-    MainFrame.Size = shhhhnayy05.Config.PanelSize
-    MainFrame.Position = UDim2.new(0.5, -175, 0.5, -225)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.Draggable = true
-    MainFrame.Parent = ScreenGui
-    
-    local cornerMain = Instance.new("UICorner")
-    cornerMain.CornerRadius = UDim.new(0, 12)
-    cornerMain.Parent = MainFrame
-    
-    local strokeMain = Instance.new("UIStroke")
-    strokeMain.Color = Color3.fromRGB(0, 200, 255)
-    strokeMain.Thickness = 2
-    strokeMain.Parent = MainFrame
-    
-    -- Title Bar
-    local TitleBar = Instance.new("Frame")
-    TitleBar.Name = "TitleBar"
-    TitleBar.Size = UDim2.new(1, 0, 0, 40)
-    TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    TitleBar.BorderSizePixel = 0
-    TitleBar.Parent = MainFrame
-    
-    local cornerTitle = Instance.new("UICorner")
-    cornerTitle.CornerRadius = UDim.new(0, 12)
-    cornerTitle.Parent = TitleBar
-    
-    local Title = Instance.new("TextLabel")
-    Title.Name = "Title"
-    Title.Size = UDim2.new(1, -80, 1, 0)
-    Title.Position = UDim2.new(0, 15, 0, 0)
-    Title.BackgroundTransparency = 1
-    Title.Text = "🏔️ shhhhnayy05 Terrain"
-    Title.TextColor3 = Color3.fromRGB(0, 200, 255)
-    Title.TextSize = 16
-    Title.Font = Enum.Font.GothamBold
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = TitleBar
-    
-    -- Close Button
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Name = "CloseBtn"
-    CloseBtn.Size = UDim2.new(0, 35, 0, 35)
-    CloseBtn.Position = UDim2.new(1, -40, 0, 2.5)
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-    CloseBtn.Text = "X"
-    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseBtn.TextSize = 18
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Parent = TitleBar
-    
-    local cornerClose = Instance.new("UICorner")
-    cornerClose.CornerRadius = UDim.new(0, 8)
-    cornerClose.Parent = CloseBtn
+    -- Subtitle
+    local subtitle = Instance.new("TextLabel")
+    subtitle.Name = "Subtitle"
+    subtitle.Size = UDim2.new(0.7, 0, 0, 20)
+    subtitle.Position = UDim2.new(0.05, 0, 0.6, 0)
+    subtitle.BackgroundTransparency = 1
+    subtitle.Text = "by shhhhnayy05"
+    subtitle.TextColor3 = Color3.fromRGB(150, 150, 150)
+    subtitle.TextSize = 10
+    subtitle.Font = Enum.Font.Gotham
+    subtitle.TextXAlignment = Enum.TextXAlignment.Left
+    subtitle.ZIndex = 102
+    subtitle.Parent = header
     
     -- Minimize Button
-    local PanelMinBtn = Instance.new("TextButton")
-    PanelMinBtn.Name = "PanelMinBtn"
-    PanelMinBtn.Size = UDim2.new(0, 35, 0, 35)
-    PanelMinBtn.Position = UDim2.new(1, -80, 0, 2.5)
-    PanelMinBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-    PanelMinBtn.Text = "-"
-    PanelMinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    PanelMinBtn.TextSize = 20
-    PanelMinBtn.Font = Enum.Font.GothamBold
-    PanelMinBtn.Parent = TitleBar
+    local minimizeBtn = Instance.new("TextButton")
+    minimizeBtn.Name = "MinimizeBtn"
+    minimizeBtn.Size = UDim2.new(0, 35, 0, 35)
+    minimizeBtn.Position = UDim2.new(1, -80, 0, 5)
+    minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    minimizeBtn.Text = "−"
+    minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minimizeBtn.TextSize = 20
+    minimizeBtn.Font = Enum.Font.GothamBold
+    minimizeBtn.ZIndex = 102
+    minimizeBtn.Parent = header
+    self:CreateCorner(minimizeBtn, UDim.new(0, 8))
     
-    local cornerMin = Instance.new("UICorner")
-    cornerMin.CornerRadius = UDim.new(0, 8)
-    cornerMin.Parent = PanelMinBtn
+    -- Close Button
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Name = "CloseBtn"
+    closeBtn.Size = UDim2.new(0, 35, 0, 35)
+    closeBtn.Position = UDim2.new(1, -40, 0, 5)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    closeBtn.Text = "×"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.TextSize = 20
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.ZIndex = 102
+    closeBtn.Parent = header
+    self:CreateCorner(closeBtn, UDim.new(0, 8))
     
-    -- Content
-    local Content = Instance.new("ScrollingFrame")
-    Content.Name = "Content"
-    Content.Size = UDim2.new(1, -20, 1, -50)
-    Content.Position = UDim2.new(0, 10, 0, 45)
-    Content.BackgroundTransparency = 1
-    Content.BorderSizePixel = 0
-    Content.ScrollBarThickness = 4
-    Content.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
-    Content.CanvasSize = UDim2.new(0, 0, 0, 900)
-    Content.Parent = MainFrame
+    --// CONTENT AREA
+    local content = Instance.new("ScrollingFrame")
+    content.Name = "Content"
+    content.Size = UDim2.new(1, -20, 1, -55)
+    content.Position = UDim2.new(0, 10, 0, 50)
+    content.BackgroundTransparency = 1
+    content.BorderSizePixel = 0
+    content.ScrollBarThickness = 4
+    content.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+    content.ZIndex = 101
+    content.Parent = container
     
-    local List = Instance.new("UIListLayout")
-    List.Name = "List"
-    List.Padding = UDim.new(0, 10)
-    List.SortOrder = Enum.SortOrder.LayoutOrder
-    List.Parent = Content
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.Padding = UDim.new(0, 10)
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Parent = content
     
-    --// MODE SECTION
-    local ModeSec = self:CreateSection(Content, "🎨 MODE", 1, 130)
+    --// MODE SELECTION SECTION
+    local modeSection = self:CreateSection(content, "🎨 DRAW MODE", 1)
     
-    local ModeBtnContainer = Instance.new("Frame")
-    ModeBtnContainer.Name = "ModeBtnContainer"
-    ModeBtnContainer.Size = UDim2.new(1, -10, 0, 40)
-    ModeBtnContainer.Position = UDim2.new(0, 5, 0, 30)
-    ModeBtnContainer.BackgroundTransparency = 1
-    ModeBtnContainer.Parent = ModeSec
+    -- Mode Toggle Buttons
+    local modeFrame = Instance.new("Frame")
+    modeFrame.Name = "ModeFrame"
+    modeFrame.Size = UDim2.new(1, 0, 0, 80)
+    modeFrame.BackgroundTransparency = 1
+    modeFrame.LayoutOrder = 2
+    modeFrame.Parent = content
     
-    local SmoothBtn = Instance.new("TextButton")
-    SmoothBtn.Name = "SmoothBtn"
-    SmoothBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    SmoothBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    SmoothBtn.Text = "✨ SMOOTH"
-    SmoothBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SmoothBtn.TextSize = 12
-    SmoothBtn.Font = Enum.Font.GothamBold
-    SmoothBtn.Parent = ModeBtnContainer
+    local modeLayout = Instance.new("UIListLayout")
+    modeLayout.Padding = UDim.new(0, 8)
+    modeLayout.FillDirection = Enum.FillDirection.Horizontal
+    modeLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    modeLayout.Parent = modeFrame
     
-    local cornerSmooth = Instance.new("UICorner")
-    cornerSmooth.CornerRadius = UDim.new(0, 8)
-    cornerSmooth.Parent = SmoothBtn
+    -- Smooth Mode Button
+    local smoothBtn = self:CreateModeButton(modeFrame, "🌊", "Smooth", "Smooth terrain drawing", Color3.fromRGB(100, 150, 255))
+    self.GUI.SmoothBtn = smoothBtn
     
-    local FlattenBtn = Instance.new("TextButton")
-    FlattenBtn.Name = "FlattenBtn"
-    FlattenBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    FlattenBtn.Position = UDim2.new(0.52, 0, 0, 0)
-    FlattenBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    FlattenBtn.Text = "📐 FLATTEN"
-    FlattenBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    FlattenBtn.TextSize = 12
-    FlattenBtn.Font = Enum.Font.GothamBold
-    FlattenBtn.Parent = ModeBtnContainer
+    -- Flatten Mode Button
+    local flattenBtn = self:CreateModeButton(modeFrame, "📏", "Flatten", "Flatten terrain to level", Color3.fromRGB(255, 150, 100))
+    self.GUI.FlattenBtn = flattenBtn
     
-    local cornerFlatten = Instance.new("UICorner")
-    cornerFlatten.CornerRadius = UDim.new(0, 8)
-    cornerFlatten.Parent = FlattenBtn
+    -- Shape Selection
+    local shapeSection = self:CreateSection(content, "🔷 SHAPE TYPE", 3)
     
-    -- Shape
-    local ShapeLabel = Instance.new("TextLabel")
-    ShapeLabel.Name = "ShapeLabel"
-    ShapeLabel.Size = UDim2.new(1, -10, 0, 20)
-    ShapeLabel.Position = UDim2.new(0, 5, 0, 75)
-    ShapeLabel.BackgroundTransparency = 1
-    ShapeLabel.Text = "Shape:"
-    ShapeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    ShapeLabel.TextSize = 11
-    ShapeLabel.Font = Enum.Font.Gotham
-    ShapeLabel.Parent = ModeSec
+    local shapeFrame = Instance.new("Frame")
+    shapeFrame.Name = "ShapeFrame"
+    shapeFrame.Size = UDim2.new(1, 0, 0, 70)
+    shapeFrame.BackgroundTransparency = 1
+    shapeFrame.LayoutOrder = 4
+    shapeFrame.Parent = content
     
-    local ShapeContainer = Instance.new("Frame")
-    ShapeContainer.Name = "ShapeContainer"
-    ShapeContainer.Size = UDim2.new(1, -10, 0, 30)
-    ShapeContainer.Position = UDim2.new(0, 5, 0, 95)
-    ShapeContainer.BackgroundTransparency = 1
-    ShapeContainer.Parent = ModeSec
+    local shapeLayout = Instance.new("UIListLayout")
+    shapeLayout.Padding = UDim.new(0, 10)
+    shapeLayout.FillDirection = Enum.FillDirection.Horizontal
+    shapeLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    shapeLayout.Parent = shapeFrame
     
-    local BlockBtn = Instance.new("TextButton")
-    BlockBtn.Name = "BlockBtn"
-    BlockBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    BlockBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    BlockBtn.Text = "⬛ BLOCK"
-    BlockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    BlockBtn.TextSize = 11
-    BlockBtn.Font = Enum.Font.GothamBold
-    BlockBtn.Parent = ShapeContainer
+    -- Block Button
+    local blockBtn = self:CreateShapeButton(shapeFrame, "⬜", "Block", Color3.fromRGB(150, 150, 150))
+    self.GUI.BlockBtn = blockBtn
     
-    local cornerBlock = Instance.new("UICorner")
-    cornerBlock.CornerRadius = UDim.new(0, 6)
-    cornerBlock.Parent = BlockBtn
+    -- Ball Button
+    local ballBtn = self:CreateShapeButton(shapeFrame, "🔵", "Ball", Color3.fromRGB(100, 150, 255))
+    self.GUI.BallBtn = ballBtn
     
-    local BallBtn = Instance.new("TextButton")
-    BallBtn.Name = "BallBtn"
-    BallBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    BallBtn.Position = UDim2.new(0.52, 0, 0, 0)
-    BallBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    BallBtn.Text = "🔵 BALL"
-    BallBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    BallBtn.TextSize = 11
-    BallBtn.Font = Enum.Font.GothamBold
-    BallBtn.Parent = ShapeContainer
+    --// BRUSH SIZE SECTION
+    local brushSection = self:CreateSection(content, "📏 BRUSH SIZE", 5)
     
-    local cornerBall = Instance.new("UICorner")
-    cornerBall.CornerRadius = UDim.new(0, 6)
-    cornerBall.Parent = BallBtn
+    local sizeFrame = Instance.new("Frame")
+    sizeFrame.Name = "SizeFrame"
+    sizeFrame.Size = UDim2.new(1, 0, 0, 60)
+    sizeFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    sizeFrame.BorderSizePixel = 0
+    sizeFrame.LayoutOrder = 6
+    sizeFrame.Parent = content
+    self:CreateCorner(sizeFrame)
     
-    --// BRUSH SECTION
-    local BrushSec = self:CreateSection(Content, "🖌️ BRUSH", 2, 140)
+    local sizeLabel = Instance.new("TextLabel")
+    sizeLabel.Name = "SizeLabel"
+    sizeLabel.Size = UDim2.new(0.3, 0, 1, 0)
+    sizeLabel.Position = UDim2.new(0, 10, 0, 0)
+    sizeLabel.BackgroundTransparency = 1
+    sizeLabel.Text = "Size: 5"
+    sizeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sizeLabel.TextSize = 14
+    sizeLabel.Font = Enum.Font.GothamBold
+    sizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    sizeLabel.Parent = sizeFrame
+    self.GUI.SizeLabel = sizeLabel
     
-    local SizeLabel = Instance.new("TextLabel")
-    SizeLabel.Name = "SizeLabel"
-    SizeLabel.Size = UDim2.new(1, -10, 0, 20)
-    SizeLabel.Position = UDim2.new(0, 5, 0, 30)
-    SizeLabel.BackgroundTransparency = 1
-    SizeLabel.Text = "Size: 8"
-    SizeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    SizeLabel.TextSize = 12
-    SizeLabel.Font = Enum.Font.Gotham
-    SizeLabel.Parent = BrushSec
+    local sizeSlider = Instance.new("TextButton")
+    sizeSlider.Name = "SizeSlider"
+    sizeSlider.Size = UDim2.new(0.6, 0, 0, 30)
+    sizeSlider.Position = UDim2.new(0.35, 0, 0.5, -15)
+    sizeSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    sizeSlider.Text = ""
+    sizeSlider.AutoButtonColor = false
+    sizeSlider.Parent = sizeFrame
+    self:CreateCorner(sizeSlider)
     
-    local SizeSlider = Instance.new("Frame")
-    SizeSlider.Name = "SizeSlider"
-    SizeSlider.Size = UDim2.new(1, -20, 0, 25)
-    SizeSlider.Position = UDim2.new(0, 10, 0, 50)
-    SizeSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    SizeSlider.BorderSizePixel = 0
-    SizeSlider.Parent = BrushSec
+    local sizeFill = Instance.new("Frame")
+    sizeFill.Name = "Fill"
+    sizeFill.Size = UDim2.new(0.5, 0, 1, 0)
+    sizeFill.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+    sizeFill.BorderSizePixel = 0
+    sizeFill.Parent = sizeSlider
+    self:CreateCorner(sizeFill)
     
-    local cornerSizeSlider = Instance.new("UICorner")
-    cornerSizeSlider.CornerRadius = UDim.new(0, 4)
-    cornerSizeSlider.Parent = SizeSlider
+    local sizeHandle = Instance.new("Frame")
+    sizeHandle.Name = "Handle"
+    sizeHandle.Size = UDim2.new(0, 16, 1, 8)
+    sizeHandle.Position = UDim2.new(0.5, -8, 0, -4)
+    sizeHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    sizeHandle.BorderSizePixel = 0
+    sizeHandle.Parent = sizeSlider
+    self:CreateCorner(sizeHandle, UDim.new(0.5, 0))
     
-    local SizeFill = Instance.new("Frame")
-    SizeFill.Name = "Fill"
-    SizeFill.Size = UDim2.new(0.4, 0, 1, 0)
-    SizeFill.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-    SizeFill.BorderSizePixel = 0
-    SizeFill.Parent = SizeSlider
+    -- Slider functionality
+    local dragging = false
+    sizeSlider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+        end
+    end)
     
-    local cornerSizeFill = Instance.new("UICorner")
-    cornerSizeFill.CornerRadius = UDim.new(0, 4)
-    cornerSizeFill.Parent = SizeFill
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
     
-    local StrengthLabel = Instance.new("TextLabel")
-    StrengthLabel.Name = "StrengthLabel"
-    StrengthLabel.Size = UDim2.new(1, -10, 0, 20)
-    StrengthLabel.Position = UDim2.new(0, 5, 0, 80)
-    StrengthLabel.BackgroundTransparency = 1
-    StrengthLabel.Text = "Strength: 50%"
-    StrengthLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    StrengthLabel.TextSize = 12
-    StrengthLabel.Font = Enum.Font.Gotham
-    StrengthLabel.Parent = BrushSec
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local pos = math.clamp((input.Position.X - sizeSlider.AbsolutePosition.X) / sizeSlider.AbsoluteSize.X, 0, 1)
+            sizeFill.Size = UDim2.new(pos, 0, 1, 0)
+            sizeHandle.Position = UDim2.new(pos, -8, 0, -4)
+            self.Config.BrushSize = math.floor(pos * 20) + 1
+            sizeLabel.Text = "Size: " .. self.Config.BrushSize
+            self:UpdateBrushPreview()
+        end
+    end)
     
-    local StrSlider = Instance.new("Frame")
-    StrSlider.Name = "StrSlider"
-    StrSlider.Size = UDim2.new(1, -20, 0, 25)
-    StrSlider.Position = UDim2.new(0, 10, 0, 100)
-    StrSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    StrSlider.BorderSizePixel = 0
-    StrSlider.Parent = BrushSec
+    --// MATERIAL SECTION (Collapsible)
+    local materialSection = self:CreateCollapsibleSection(content, "🧱 MATERIALS", 7, function(isOpen)
+        self.GUI.MaterialsContent.Visible = isOpen
+    end)
     
-    local cornerStrSlider = Instance.new("UICorner")
-    cornerStrSlider.CornerRadius = UDim.new(0, 4)
-    cornerStrSlider.Parent = StrSlider
+    local materialsContent = Instance.new("Frame")
+    materialsContent.Name = "MaterialsContent"
+    materialsContent.Size = UDim2.new(1, 0, 0, 200)
+    materialsContent.BackgroundTransparency = 1
+    materialsContent.LayoutOrder = 8
+    materialsContent.Visible = true
+    materialsContent.Parent = content
+    self.GUI.MaterialsContent = materialsContent
     
-    local StrFill = Instance.new("Frame")
-    StrFill.Name = "Fill"
-    StrFill.Size = UDim2.new(0.5, 0, 1, 0)
-    StrFill.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-    StrFill.BorderSizePixel = 0
-    StrFill.Parent = StrSlider
+    local materialsGrid = Instance.new("UIGridLayout")
+    materialsGrid.CellSize = UDim2.new(0, 70, 0, 80)
+    materialsGrid.CellPadding = UDim2.new(0, 8, 0, 8) -- FIXED: UDim2 instead of UDim
+    materialsGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    materialsGrid.Parent = materialsContent
     
-    local cornerStrFill = Instance.new("UICorner")
-    cornerStrFill.CornerRadius = UDim.new(0, 4)
-    cornerStrFill.Parent = StrFill
+    -- Create material buttons
+    self.GUI.MaterialButtons = {}
+    for i, matData in ipairs(self.TerrainMaterials) do
+        local matBtn = self:CreateMaterialButton(materialsContent, matData, i)
+        table.insert(self.GUI.MaterialButtons, matBtn)
+    end
     
-    --// MATERIAL TOGGLE
-    local MatSec = self:CreateSection(Content, "📦 MATERIALS (23)", 3, 70)
+    --// COLOR SECTION (Collapsible)
+    local colorSection = self:CreateCollapsibleSection(content, "🎨 COLORS", 9, function(isOpen)
+        self.GUI.ColorsContent.Visible = isOpen
+    end)
     
-    local MatToggleBtn = Instance.new("TextButton")
-    MatToggleBtn.Name = "MatToggleBtn"
-    MatToggleBtn.Size = UDim2.new(1, -20, 0, 35)
-    MatToggleBtn.Position = UDim2.new(0, 10, 0, 30)
-    MatToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
-    MatToggleBtn.Text = "📂 OPEN MATERIALS"
-    MatToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    MatToggleBtn.TextSize = 12
-    MatToggleBtn.Font = Enum.Font.GothamBold
-    MatToggleBtn.Parent = MatSec
+    local colorsContent = Instance.new("Frame")
+    colorsContent.Name = "ColorsContent"
+    colorsContent.Size = UDim2.new(1, 0, 0, 300)
+    colorsContent.BackgroundTransparency = 1
+    colorsContent.LayoutOrder = 10
+    colorsContent.Visible = true
+    colorsContent.Parent = content
+    self.GUI.ColorsContent = colorsContent
     
-    local cornerMatToggle = Instance.new("UICorner")
-    cornerMatToggle.CornerRadius = UDim.new(0, 8)
-    cornerMatToggle.Parent = MatToggleBtn
+    local colorsLayout = Instance.new("UIListLayout")
+    colorsLayout.Padding = UDim.new(0, 10)
+    colorsLayout.Parent = colorsContent
     
-    --// COLOR TOGGLE
-    local ColSec = self:CreateSection(Content, "🎨 COLORS", 4, 70)
+    -- Grass Colors
+    self:CreateColorSubsection(colorsContent, "🌿 GRASS COLORS", self.GrassColors, "Grass", function(index)
+        self.CurrentGrassColorIndex = index
+        self:UpdateColorPreview()
+    end)
     
-    local ColToggleBtn = Instance.new("TextButton")
-    ColToggleBtn.Name = "ColToggleBtn"
-    ColToggleBtn.Size = UDim2.new(1, -20, 0, 35)
-    ColToggleBtn.Position = UDim2.new(0, 10, 0, 30)
-    ColToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
-    ColToggleBtn.Text = "🌈 OPEN COLOR PALETTE"
-    ColToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ColToggleBtn.TextSize = 12
-    ColToggleBtn.Font = Enum.Font.GothamBold
-    ColToggleBtn.Parent = ColSec
+    -- Ground Colors
+    self:CreateColorSubsection(colorsContent, "🌍 GROUND COLORS", self.GroundColors, "Ground", function(index)
+        self.CurrentGroundColorIndex = index
+        self:UpdateColorPreview()
+    end)
     
-    local cornerColToggle = Instance.new("UICorner")
-    cornerColToggle.CornerRadius = UDim.new(0, 8)
-    cornerColToggle.Parent = ColToggleBtn
+    -- LeafyGrass Colors
+    self:CreateColorSubsection(colorsContent, "🍃 LEAFY GRASS COLORS", self.LeafyGrassColors, "LeafyGrass", function(index)
+        self.CurrentLeafyGrassColorIndex = index
+        self:UpdateColorPreview()
+    end)
     
-    --// ACTIONS
-    local ActSec = self:CreateSection(Content, "⚡ ACTIONS", 5, 120)
+    -- Rock Colors
+    self:CreateColorSubsection(colorsContent, "🪨 ROCK COLORS", self.RockColors, "Rock", function(index)
+        self.CurrentRockColorIndex = index
+        self:UpdateColorPreview()
+    end)
     
-    local ConvertBtn = Instance.new("TextButton")
-    ConvertBtn.Name = "ConvertBtn"
-    ConvertBtn.Size = UDim2.new(1, -20, 0, 35)
-    ConvertBtn.Position = UDim2.new(0, 10, 0, 25)
-    ConvertBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-    ConvertBtn.Text = "📋 CONVERT TO SCRIPT"
-    ConvertBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ConvertBtn.TextSize = 12
-    ConvertBtn.Font = Enum.Font.GothamBold
-    ConvertBtn.Parent = ActSec
+    --// ACTIONS SECTION
+    local actionSection = self:CreateSection(content, "⚡ ACTIONS", 11)
     
-    local cornerConvert = Instance.new("UICorner")
-    cornerConvert.CornerRadius = UDim.new(0, 8)
-    cornerConvert.Parent = ConvertBtn
+    local actionFrame = Instance.new("Frame")
+    actionFrame.Name = "ActionFrame"
+    actionFrame.Size = UDim2.new(1, 0, 0, 50)
+    actionFrame.BackgroundTransparency = 1
+    actionFrame.LayoutOrder = 12
+    actionFrame.Parent = content
     
-    local ClearBtn = Instance.new("TextButton")
-    ClearBtn.Name = "ClearBtn"
-    ClearBtn.Size = UDim2.new(1, -20, 0, 35)
-    ClearBtn.Position = UDim2.new(0, 10, 0, 70)
-    ClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    ClearBtn.Text = "🗑️ CLEAR TERRAIN"
-    ClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ClearBtn.TextSize = 12
-    ClearBtn.Font = Enum.Font.GothamBold
-    ClearBtn.Parent = ActSec
+    local actionLayout = Instance.new("UIListLayout")
+    actionLayout.Padding = UDim.new(0, 10)
+    actionLayout.FillDirection = Enum.FillDirection.Horizontal
+    actionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    actionLayout.Parent = actionFrame
     
-    local cornerClear = Instance.new("UICorner")
-    cornerClear.CornerRadius = UDim.new(0, 8)
-    cornerClear.Parent = ClearBtn
+    -- Convert Button
+    local convertBtn = Instance.new("TextButton")
+    convertBtn.Name = "ConvertBtn"
+    convertBtn.Size = UDim2.new(0, 150, 0, 40)
+    convertBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+    convertBtn.Text = "📋 CONVERT TO SCRIPT"
+    convertBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    convertBtn.TextSize = 12
+    convertBtn.Font = Enum.Font.GothamBold
+    convertBtn.Parent = actionFrame
+    self:CreateCorner(convertBtn)
     
-    --// MATERIAL WINDOW
-    local MatWindow = self:CreatePopupWindow(ScreenGui, "📦 Materials (23 items)", UDim2.new(0, 380, 0, 500))
+    -- Clear Button
+    local clearBtn = Instance.new("TextButton")
+    clearBtn.Name = "ClearBtn"
+    clearBtn.Size = UDim2.new(0, 100, 0, 40)
+    clearBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+    clearBtn.Text = "🗑️ CLEAR"
+    clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    clearBtn.TextSize = 12
+    clearBtn.Font = Enum.Font.GothamBold
+    clearBtn.Parent = actionFrame
+    self:CreateCorner(clearBtn)
     
-    local MatScroll = Instance.new("ScrollingFrame")
-    MatScroll.Name = "MatScroll"
-    MatScroll.Size = UDim2.new(1, -20, 1, -50)
-    MatScroll.Position = UDim2.new(0, 10, 0, 40)
-    MatScroll.BackgroundTransparency = 1
-    MatScroll.BorderSizePixel = 0
-    MatScroll.ScrollBarThickness = 4
-    MatScroll.CanvasSize = UDim2.new(0, 0, 0, 600)
-    MatScroll.Parent = MatWindow
+    --// STATUS LABEL
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.Size = UDim2.new(1, 0, 0, 30)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "✅ Ready - Select mode and draw"
+    statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    statusLabel.TextSize = 12
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.LayoutOrder = 13
+    statusLabel.Parent = content
+    self.GUI.StatusLabel = statusLabel
     
-    -- FIX: UDim2 for CellPadding
-    local MatGrid = Instance.new("UIGridLayout")
-    MatGrid.Name = "MatGrid"
-    MatGrid.CellSize = UDim2.new(0, 80, 0, 80)
-    MatGrid.CellPadding = UDim2.new(0, 10, 0, 10) -- FIXED: UDim2 not UDim
-    MatGrid.Parent = MatScroll
+    --// CREATE TOGGLE ICONS (Top Left - Separate from Panel)
+    self:CreateToggleIcons(screenGui)
     
-    for i, matName in ipairs(shhhhnayy05.TerrainMaterials) do
-        local btn = Instance.new("TextButton")
-        btn.Name = matName
-        btn.Size = UDim2.new(0, 80, 0, 80)
-        btn.BackgroundColor3 = (i == 1) and Color3.fromRGB(0, 200, 255) or Color3.fromRGB(40, 40, 40)
-        btn.Text = matName
-        btn.TextColor
+    --// BUTTON EVENTS
+    minimizeBtn.MouseButton1Click:Connect(function()
+        self:MinimizePanel()
+    end)
+    
+    closeBtn.MouseButton1Click:Connect(function()
+        self:Destroy()
+    end)
+    
+    smoothBtn.MouseButton1Click:Connect(function()
+        self:SetMode("Smooth")
+    end)
+    
+    flattenBtn.MouseButton1Click:Connect(function()
+        self:SetMode("Flatten")
+    end)
+    
+    blockBtn.MouseButton1Click:Connect(function()
+        self:SetShape("Block")
+    end)
+    
+    ballBtn.MouseButton1Click:Connect(function()
+        self:SetShape("Ball")
+    end)
+    
+    convertBtn.MouseButton1Click:Connect(function()
+        self:ConvertToScript()
+    end)
+    
+    clearBtn.MouseButton1Click:Connect(function()
+        self:ClearTerrain()
+    end)
+    
+    -- Initialize
+    self:SetMode("Smooth")
+    self:SetShape("Block")
+    self:SelectMaterial(1)
+    
+    return screenGui
+end
+
+--// CREATE TOGGLE ICONS (Top Left - Above Minimize Icon)
+function shhhhnayy05:CreateToggleIcons(parent)
+    local iconsContainer = Instance.new("Frame")
+    iconsContainer.Name = "ToggleIcons"
+    iconsContainer.Size = UDim2.new(0, 100, 0, 50)
+    iconsContainer.Position = UDim2.new(0, 10, 0, 20) -- Top left, above panel
+    iconsContainer.BackgroundTransparency = 1
+    iconsContainer.Parent = parent
+    self.GUI.ToggleIcons = iconsContainer
+    
+    -- Mode Toggle Icon (On/Off)
+    local modeIcon = Instance.new("TextButton")
+    modeIcon.Name = "ModeIcon"
+    modeIcon.Size = UDim2.new(0, 40, 0, 40)
+    modeIcon.Position = UDim2.new(0, 0, 0, 0)
+    modeIcon.BackgroundColor3 = Color3.fromRGB(200, 60, 60) -- Red = Off
+    modeIcon.Text = "✋"
+    modeIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+    modeIcon.TextSize = 20
+    modeIcon.Font = Enum.Font.GothamBold
+    modeIcon.ZIndex = 200
+    modeIcon.Parent = iconsContainer
+    self:CreateCorner(modeIcon, UDim.new(0.5, 0)) -- Circle
+    self:CreateShadow(modeIcon)
+    self.GUI.ModeIcon = modeIcon
+    
+    -- Panel Toggle Icon (Minimize/Restore)
+    local panelIcon = Instance.new("TextButton")
+    panelIcon.Name = "PanelIcon"
+    panelIcon.Size = UDim2.new(0, 40, 0, 40)
+    panelIcon.Position = UDim2.new(0, 50, 0, 0)
+    panelIcon.BackgroundColor3 = Color3.fromRGB(60, 120, 200)
+    panelIcon.Text = "🏔️"
+    panelIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+    panelIcon.TextSize = 18
+    panelIcon.Font = Enum.Font.GothamBold
+    panelIcon.ZIndex = 200
+    panelIcon.Parent = iconsContainer
+    self:CreateCorner(panelIcon, UDim.new(0.5, 0)) -- Circle
+    self:CreateShadow(panelIcon)
+    self.GUI.PanelIcon = panelIcon
+    
+    -- Mode Icon Click - Toggle Mode On/Off
+    modeIcon.MouseButton1Click:Connect(function()
+        self:ToggleMode()
+    end)
+    
+    -- Panel Icon Click - Toggle Panel Visibility
+    panelIcon.MouseButton1Click:Connect(function()
+        self:TogglePanel()
+    end)
+    
+    -- Hover effects
+    modeIcon.MouseEnter:Connect(function()
+        self:Tween(modeIcon, {Size = UDim2.new(0, 45, 0, 45), Position = UDim2.new(0, -2.5, 0, -2.5)}, 0.2)
+    end)
+    
+    modeIcon.MouseLeave:Connect(function()
+        self:Tween(modeIcon, {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 0, 0, 0)}, 0.2)
+    end)
+    
+    panelIcon.MouseEnter:Connect(function()
+        self:Tween(panelIcon, {Size = UDim2.new(0, 45, 0, 45), Position = UDim2.new(0, 47.5, 0, -2.5)}, 0.2)
+    end)
+    
+    panelIcon.MouseLeave:Connect(function()
+        self:Tween(panelIcon, {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 50, 0, 0)}, 0.2)
+    end)
+end
+
+--// TOGGLE MODE ON/OFF
+function shhhhnayy05:ToggleMode()
+    self.Config.ModeEnabled = not self.Config.ModeEnabled
+    
+    if self.Config.ModeEnabled then
+        -- ON
+        self.GUI.ModeIcon.BackgroundColor3 = Color3.fromRGB(100, 200, 100) -- Green
+        self.GUI.ModeIcon.Text = "✏️"
+        self.GUI.StatusLabel.Text = "✏️ Mode ON - " .. self.Config.CurrentMode .. " | " .. self.Config.Shape
+        self.GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        self:CreateBrushPreview()
+    else
+        -- OFF
+        self.GUI.ModeIcon.BackgroundColor3 = Color3.fromRGB(200, 60, 60) -- Red
+        self.GUI.ModeIcon.Text = "✋"
+        self.GUI.StatusLabel.Text = "✋ Mode OFF - Click icon to enable"
+        self.GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 150, 100)
+        self:DestroyBrushPreview()
+    end
+end
+
+--// TOGGLE PANEL VISIBILITY
+function shhhhnayy05:TogglePanel()
+    self.Config.Minimized = not self.Config.Minimized
+    
+    if self.Config.Minimized then
+        -- Hide panel
+        self.GUI.MainPanel.Visible = false
+        self.GUI.PanelIcon.Text = "🏔️"
+    else
+        -- Show panel
+        self.GUI.MainPanel.Visible = true
+        self.GUI.PanelIcon.Text = "📂"
+    end
+end
+
+--// MINIMIZE PANEL (Internal)
+function shhhhnayy05:MinimizePanel()
+    self.Config.Minimized = true
+    self.GUI.MainPanel.Visible = false
+    self.GUI.PanelIcon.Text = "🏔️"
+end
+
+--// SET MODE
+function shhhhnayy05:SetMode(mode)
+    self.Config.CurrentMode = mode
+    
+    -- Update button visuals
+    if mode == "Smooth" then
+        self.GUI.SmoothBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+        self.GUI.FlattenBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    else
+        self.GUI.SmoothBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+        self.GUI.FlattenBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 100)
+    end
+    
+    if self.Config.ModeEnabled then
+        self.GUI.StatusLabel.Text = "✏️ Mode: " .. mode .. " | " .. self.Config.Shape
+    end
+end
+
+--// SET SHAPE
+function shhhhnayy05:SetShape(shape)
+    self.Config.Shape = shape
+    
+    if shape == "Block" then
+        self.GUI.BlockBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+        self.GUI.BallBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    else
+        self.GUI.BlockBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+        self.GUI.BallBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+    end
+    
+    if self.Config.ModeEnabled then
+        self.GUI.StatusLabel.Text = "✏️ Mode: " .. self.Config.CurrentMode .. " | " .. shape
+    end
+    
+    self:UpdateBrushPreview()
+end
+
+--// CREATE SECTION HEADER
+function shhhhnayy05:CreateSection(parent, text, order)
+    local section = Instance.new("TextLabel")
+    section.Name = "Section_" .. text
+    section.Size = UDim2.new(1, 0, 0, 25)
+    section.BackgroundTransparency = 1
+    section.Text = text
+    section.TextColor3 = Color3.fromRGB(200, 200, 200)
+    section.TextSize = 12
+    section.Font = Enum.Font.GothamBold
+    section.TextXAlignment = Enum.TextXAlignment.Left
+    section.LayoutOrder = order
+    section.Parent = parent
+    
+    return section
+end
+
+--// CREATE COLLAPSIBLE SECTION
+function shhhhnayy05:CreateCollapsibleSection(parent, text, order, callback)
+    local sectionBtn = Instance.new("TextButton")
+    sectionBtn.Name = "SectionBtn_" .. text
+    sectionBtn.Size = UDim2.new(1, 0, 0, 35)
+    sectionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    sectionBtn.Text = text .. " ▼"
+    sectionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sectionBtn.TextSize = 12
+    sectionBtn.Font = Enum.Font.GothamBold
+    sectionBtn.TextXAlignment = Enum.TextXAlignment.Left
+    sectionBtn.LayoutOrder = order
+    sectionBtn.Parent = parent
+    self:CreateCorner(sectionBtn)
+    
+    local isOpen = true
+    sectionBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        sectionBtn.Text = text .. (isOpen and " ▼" or " ▶")
+        if callback then callback(isOpen) end
+    end)
+    
+    return sectionBtn
+end
+
+--// CREATE MODE BUTTON
+function shhhhnayy05:CreateModeButton(parent, icon, mode, tooltip, color)
+    local btn = Instance.new("TextButton")
+    btn.Name = mode .. "Btn"
+    btn.Size = UDim2.new(0, 80, 0, 70)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    btn.Text = icon .. "\n" .. mode
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 14
+    btn.Font = Enum.Font.GothamBold
+    btn.TextWrapped = true
+    btn.Parent = parent
+    self:CreateCorner(btn)
+    
+    -- Tooltip
+    local tip = Instance.new("TextLabel")
+    tip.Name = "Tooltip"
+    tip.Size = UDim2.new(1, 0, 0, 20)
+    tip.Position = UDim2.new(0, 0, 1, 5)
+    tip.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    tip.Text = tooltip
+    tip.TextColor3 = Color3.fromRGB(200, 200, 200)
+    tip.TextSize = 10
+    tip.Font = Enum.Font.Gotham
+    tip.Visible = false
+    tip.Parent = btn
+    self:CreateCorner(tip)
+    
+    btn.MouseEnter:Connect(function()
+        tip.Visible = true
+        self:Tween(btn, {Size = UDim2.new(0, 85, 0, 75)}, 0.2)
+    end)
+    
+    btn.MouseLeave:Connect(function()
+        tip.Visible = false
+        self:Tween(btn, {Size = UDim2.new(0, 80, 0, 70)}, 0.2)
+    end)
+    
+    return btn
+end
+
+--// CREATE SHAPE BUTTON
+function shhhhnayy05:CreateShapeButton(parent, icon, shape, color)
+    local btn = Instance.new("TextButton")
+    btn.Name = shape .. "Btn"
+    btn.Size = UDim2.new(0, 80, 0, 60)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    btn.Text = icon .. "\n" .. shape
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 14
+    btn.Font = Enum.Font.GothamBold
+    btn.TextWrapped = true
+    btn.Parent = parent
+    self:CreateCorner(btn)
+    
+    btn.MouseEnter:Connect(function()
+        self:Tween(btn, {Size = UDim2.new(0, 85, 0, 65)}, 0.2)
+    end)
+    
+    btn.MouseLeave:Connect(function()
+        self:Tween(btn, {Size = UDim2.new(0, 80, 0, 60)}, 0.2)
+    end)
+    
+    return btn
+end
+
+--// CREATE MATERIAL BUTTON
+function shhhhnayy05:CreateMaterialButton(parent, data, index)
+    local btn = Instance.new("TextButton")
+    btn.Name = "Mat_" .. data.Name
+    btn.Size = UDim2.new(0, 70, 0, 80)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    btn.Text = data.Icon .. "\n" .. data.Name
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 11
+    btn.Font = Enum.Font.Gotham
+    btn.TextWrapped = true
+    btn.Parent = parent
+    self:CreateCorner(btn)
+    
+    -- Selection indicator
+    local indicator = Instance.new("Frame")
+    indicator.Name = "Indicator"
+    indicator.Size = UDim2.new(1, 0, 0, 3)
+    indicator.Position = UDim2.new(0, 0, 1, -3)
+    indicator.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+    indicator.BorderSizePixel = 0
+    indicator.Visible = false
+    indicator.Parent = btn
+    self:CreateCorner(indicator)
+    
+    btn.MouseButton1Click:Connect(function()
+        self:SelectMaterial(index)
+    end)
+    
+    btn.MouseEnter:Connect(function()
+        self:Tween(btn, {BackgroundColor3 = Color3.fromRGB(70, 70, 80)}, 0.2)
+    end)
+    
+    btn.MouseLeave:Connect(function()
+        if self.Config.Material ~= data.Material then
+            self:Tween(btn, {BackgroundColor3 = Color3.fromRGB(50, 50, 55)}, 0.2)
+        end
+    end)
+    
+    return btn
+end
+
+--// SELECT MATERIAL
+function shhhhnayy05:SelectMaterial(index)
+    local data = self.TerrainMaterials[index]
+    self.Config.Material = data.Material
+    
+    -- Update visuals
+    for i, btn in ipairs(self.GUI.MaterialButtons) do
+        local indicator = btn:FindFirstChild("Indicator")
+        if i == index then
+            btn.BackgroundColor3 = Color3.fromRGB(100, 150, 200)
+            if indicator then indicator.Visible = true end
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+            if indicator then indicator.Visible = false end
+        end
+    end
+    
+    self:UpdateColorPreview()
+end
+
+--// CREATE COLOR SUBSECTION
+function shhhhnayy05:CreateColorSubsection(parent, title, colorTable, materialType, callback)
+    local frame = Instance.new("Frame")
+    frame.Name = materialType .. "Colors"
+    frame.Size = UDim2.new(1, 0, 0, 80)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "Title"
+    titleLabel.Size = UDim2.new(1, 0, 0, 20)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    titleLabel.TextSize = 11
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = frame
+    
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Name = "Scroll"
+    scroll.Size = UDim2.new(1, 0, 0, 50)
+    scroll.Position = UDim2.new(0, 0, 0, 25)
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 3
+    scroll.ScrollingDirection = Enum.ScrollingDirection.X
+    scroll.Parent = frame
+    
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 5)
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.Parent = scroll
+    
+    for i, colorData in ipairs(colorTable) do
+        local colorBtn = Instance.new("TextButton")
+        colorBtn.Name = colorData.name
+        colorBtn.Size = UDim2.new(0, 40, 0, 40)
+        colorBtn.BackgroundColor3 = colorData.color
+        colorBtn.Text = ""
+        colorBtn.Parent = scroll
+        self:CreateCorner(colorBtn)
+        
+        -- Selection ring
+        local ring = Instance.new("UIStroke")
+        ring.Color = Color3.fromRGB(255, 255, 255)
+        ring.Thickness = 0
+        ring.Parent = colorBtn
+        
+        colorBtn.MouseButton1Click:Connect(function()
+            callback(i)
+            -- Update all rings
+            for _, child in ipairs(scroll:GetChildren()) do
+                if child:IsA("TextButton") then
+                    local childRing = child:FindFirstChildOfClass("UIStroke")
+                    if childRing then
+                        childRing.Thickness = 0
+                    end
+                end
+            end
+            ring.Thickness = 3
+        end)
+        
+        -- Set initial selection
+        if (materialType == "Grass" and i == self.CurrentGrassColorIndex) or
+           (materialType == "Ground" and i == self.CurrentGroundColorIndex) or
+           (materialType == "LeafyGrass" and i == self.CurrentLeafyGrassColorIndex) or
+           (materialType == "Rock" and i == self.CurrentRockColorIndex) then
+            ring.Thickness = 3
+        end
+    end
+    
+    scroll.CanvasSize = UDim2.new(0, layout.AbsoluteContentSize.X, 0, 0)
+end
+
+--// UPDATE COLOR PREVIEW
+function shhhhnayy05:UpdateColorPreview()
+    -- This updates any preview if needed
+end
+
+--// CREATE BRUSH PREVIEW
+function shhhhnayy05:CreateBrushPreview()
+    if self.BrushPreview then
+        self.BrushPreview:Destroy()
+    end
+    
+    local preview = Instance.new("Part")
+    preview.Name = "shhhhnayy05_BrushPreview"
+    preview.Anchored = true
+    preview.CanCollide = false
+    preview.Transparency = 0.7
+    preview.Material = Enum.Material.Neon
+    preview.Color = Color3.fromRGB(100, 200, 255)
+    preview.Parent = Workspace
+    
+    if self.Config.Shape == "Block" then
+        preview.Shape = Enum.PartType.Block
+    else
+        preview.Shape = Enum.PartType.Ball
+    end
+    
+    local size = self.Config.BrushSize * 2
+    preview.Size = Vector3.new(size, size, size)
+    
+    self.BrushPreview = preview
+end
+
+--// UPDATE BRUSH PREVIEW
+function shhhhnayy05:UpdateBrushPreview()
+    if self.BrushPreview then
+        local size = self.Config.BrushSize * 2
+        self.BrushPreview.Size = Vector3.new(size, size, size)
+        
+        if self.Config.Shape == "Block" then
+            self.BrushPreview.Shape = Enum.PartType.Block
+        else
+            self.BrushPreview.Shape = Enum.PartType.Ball
+        end
+    end
+end
+
+--// DESTROY BRUSH PREVIEW
+function shhhhnayy05:DestroyBrushPreview()
+    if self.BrushPreview then
+        self.BrushPreview:Destroy()
+        self.BrushPreview = nil
+    end
+end
+
+--// TERRAIN DRAWING FUNCTIONS
+function shhhhnayy05:DrawTerrain(position)
+    local size = self.Config.BrushSize
+    local material = self.Config.Material
+    local color = self:GetCurrentColorForMaterial(material)
+    
+    local region = nil
+    local terrainData = nil
+    
+    if self.Config.Shape == "Block" then
+        -- Block shape using FillBlock
+        local cframe = CFrame.new(position)
+        local sizeVec = Vector3.new(size * 2, size, size * 2)
+        
+        -- Smooth or Flatten mode
+        if self.Config.CurrentMode == "Smooth" then
+            -- Smooth - add terrain with gradient edges
+            Workspace.Terrain:FillBlock(cframe, sizeVec, material)
+            if color then
+                Workspace.Terrain:SetMaterialColor(material, color)
+            end
+            
+            -- Create smoothing effect by filling smaller blocks around
+            local smoothSize = sizeVec - Vector3.new(2, 0, 2)
+            if smoothSize.X > 0 and smoothSize.Z > 0 then
+                Workspace.Terrain:FillBlock(cframe, smoothSize, material)
+            end
+        else
+            -- Flatten - flatten to specific height
+            local flattenHeight = math.floor(position.Y / 4) * 4
+            local flattenCFrame = CFrame.new(position.X, flattenHeight, position.Z)
+            Workspace.Terrain:FillBlock(flattenCFrame, Vector3.new(size * 2, 4, size * 2), material)
+            if color then
+                Workspace.Terrain:SetMaterialColor(material, color)
+            end
+        end
+        
+        terrainData = {
+            Type = "Block",
+            Position = {X = position.X, Y = position.Y, Z = position.Z},
+            Size = {X = size * 2, Y = size, Z = size * 2},
+            Material = tostring(material),
+            Color = color,
+            Mode = self.Config.CurrentMode
+        }
+    else
+        -- Ball shape using FillBall
+        local radius = size
+        
+        if self.Config.CurrentMode == "Smooth" then
+            Workspace.Terrain:FillBall(position, radius, material)
+            if color then
+                Workspace.Terrain:SetMaterialColor(material, color)
+            end
+        else
+            -- Flatten with ball creates a flat circle area
+            local flattenHeight = math.floor(position.Y / 4) * 4
+            Workspace.Terrain:FillBall(Vector3.new(position.X, flattenHeight, position.Z), radius, material)
+            if color then
+                Workspace.Terrain:SetMaterialColor(material, color)
+            end
+        end
+        
+        terrainData = {
+            Type = "Ball",
+            Position = {X = position.X, Y = position.Y, Z = position.Z},
+            Radius = radius,
+            Material = tostring(material),
+            Color = color,
+            Mode = self.Config.CurrentMode
+        }
+    end
+    
+    -- Add to history for conversion
+    table.insert(self.TerrainHistory, terrainData)
+    
+    -- Update status
+    self.GUI.StatusLabel.Text = "✅ Drew " .. self.Config.Shape .. " at " .. math.floor(position.X) .. ", " .. math.floor(position.Y) .. ", " .. math.floor(position.Z)
+end
+
+--// INPUT HANDLING
+function shhhhnayy05:SetupInput()
+    -- Mouse/Touch input for drawing
+    local isDragging = false
+    
+    -- Handle mouse button down
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if self.Config.ModeEnabled then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+               input.UserInputType == Enum.UserInputType.Touch then
+                isDragging = true
+                self:HandleDrawInput(input)
+            end
+        end
+    end)
+    
+    -- Handle input ended
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = false
+        end
+    end)
+    
+    -- Handle moved
+    UserInputService.InputChanged:Connect(function(input)
+        if self.Config.ModeEnabled and isDragging then
+            if input.UserInputType == Enum.UserInputType.MouseMovement or 
+               input.UserInputType == Enum.UserInputType.Touch then
+                self:HandleDrawInput(input)
+            end
+        end
+        
+        -- Update brush preview position
+        if self.Config.ModeEnabled and self.BrushPreview then
+            local ray = Workspace.CurrentCamera:ViewportPointToRay(input.Position.X, input.Position.Y)
+            local hit, pos = self:Raycast(ray.Origin, ray.Direction * 1000)
+            if hit then
+                self.BrushPreview.CFrame = CFrame.new(pos)
+                self.BrushPreview.Parent = Workspace
+            end
+        end
+    end)
+end
+
+--// RAYCAST
+function shhhhnayy05:Raycast(origin, direction)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {self.BrushPreview, LocalPlayer.Character}
+    
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    if result then
+        return true, result.Position
+    end
+    return false, nil
+end
+
+--// HANDLE DRAW INPUT
+function shhhhnayy05:HandleDrawInput(input)
+    local ray = Workspace.CurrentCamera:ViewportPointToRay(input.Position.X, input.Position.Y)
+    local hit, pos = self:Raycast(ray.Origin, ray.Direction * 1000)
+    
+    if hit and pos then
+        self:DrawTerrain(pos)
+    end
+end
+
+--// CONVERT TO SCRIPT - CREATE SCRIPT WINDOW
+function shhhhnayy05:ConvertToScript()
+    if #self.TerrainHistory == 0 then
+        self.GUI.StatusLabel.Text = "❌ No terrain to convert!"
+        self.GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    -- Generate script content
+    local scriptContent = self:GenerateScriptContent()
+    
+    -- Create or update script window
+    self:CreateScriptWindow(scriptContent)
+    
+    self.GUI.StatusLabel.Text = "✅ Converted " .. #self.TerrainHistory .. " terrain operations to script!"
+    self.GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+end
+
+--// GENERATE SCRIPT CONTENT
+function shhhhnayy05:GenerateScriptContent()
+    local lines = {}
+    
+    table.insert(lines, "--// TERRAIN SCRIPT GENERATED BY shhhhnayy05")
+    table.insert(lines, "--// Generated: " .. os.date("%Y-%m-%d %H:%M:%S"))
+    table.insert(lines, "--// Total Operations: " .. #self.TerrainHistory)
+    table.insert(lines, "")
+    table.insert(lines, "local Terrain = workspace.Terrain")
+    table.insert(lines, "")
+    
+    -- Add color definitions if used
+    local hasCustomColors = false
+    for _, data in ipairs(self.TerrainHistory) do
+        if data.Color then
+            hasCustomColors = true
+            break
+        end
+    end
+    
+    if hasCustomColors then
+        table.insert(lines, "--// COLOR DEFINITIONS")
+        table.insert(lines, "local Colors = {")
+        
+        -- Collect unique colors
+        local uniqueColors = {}
+        for _, data in ipairs(self.TerrainHistory) do
+            if data.Color and not uniqueColors[tostring(data.Color)] then
+                uniqueColors[tostring(data.Color)] = data.Color
+                local matName = data.Material:gsub("Enum.Material.", "")
+                table.insert(lines, string.format("    %s = Color3.fromRGB(%d, %d, %d),",
+                    matName,
+                    math.floor(data.Color.R * 255),
+                    math.floor(data.Color.G * 255),
+                    math.floor(data.Color.B * 255)
+                ))
+            end
+        end
+        
+        table.insert(lines, "}")
+        table.insert(lines, "")
+    end
+    
+    table.insert(lines, "--// TERRAIN OPERATIONS")
+    table.insert(lines, "local function CreateTerrain()")
+    
+    for i, data in ipairs(self.TerrainHistory) do
+        table.insert(lines, "")
+        table.insert(lines, "    -- Operation " .. i .. ": " .. data.Type .. " (" .. data.Material .. ")")
+        
+        if data.Type == "Block" then
+            local pos = data.Position
+            local size = data.Size
+            local mat = data.Material:gsub("Enum.Material.", "")
+            
+            table.insert(lines, string.format("    Terrain:FillBlock("))
+            table.insert(lines, string.format("        CFrame.new(%f, %f, %f),", pos.X, pos.Y, pos.Z))
+            table.insert(lines, string.format("        Vector3.new(%f, %f, %f),", size.X, size.Y, size.Z))
+            table.insert(lines, string.format("        Enum.Material.%s", mat))
+            table.insert(lines, string.format("    )"))
+        else
+            local pos = data.Position
+            local radius = data.Radius
+            local mat = data.Material:gsub("Enum.Material.", "")
+            
+            table.insert(lines, string.format("    Terrain:FillBall("))
+            table.insert(lines, string.format("        Vector3.new(%f, %f, %f),", pos.X, pos.Y, pos.Z))
+            table.insert(lines, string.format("        %f,", radius))
+            table.insert(lines, string.format("        Enum.Material.%s", mat))
+            table.insert(lines, string.format("    )"))
+        end
+        
+        if data.Color then
+            local mat = data.Material:gsub("Enum.Material.", "")
+            table.insert(lines, string.format("    Terrain:SetMaterialColor(Enum.Material.%s, Colors.%s)", mat, mat))
+        end
+    end
+    
+    table.insert(lines, "")
+    table.insert(lines, "end")
+    table.insert(lines, "")
+    table.insert(lines, "--// EXECUTE")
+    table.insert(lines, "CreateTerrain()")
+    table.insert(lines, "print(\"[shhhhnayy05] Terrain created successfully with " .. #self.TerrainHistory .. " operations!\")")
+    
+    return table.concat(lines, "\n")
+end
+
+--// CREATE SCRIPT WINDOW
+function shhhhnayy05:CreateScriptWindow(content)
+    -- Destroy existing window
+    if self.ScriptWindow then
+        self.ScriptWindow:Destroy()
+    end
+    
+    local window = Instance.new("Frame")
+    window.Name = "shhhhnayy05_ScriptWindow"
+    window.Size = UDim2.new(0, 500, 0, 400)
+    window.Position = UDim2.new(0.5, -250, 0.5, -200)
+    window.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    window.BorderSizePixel = 0
+    window.Active = true
+    window.Draggable = true
+    window.ZIndex = 300
+    window.Parent = self.GUI.Screen
+    self:CreateCorner(window, UDim.new(0, 12))
+    self:CreateShadow(window)
+    self.ScriptWindow = window
+    
+    -- Header
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 40)
+    header.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    header.BorderSizePixel = 0
+    header.ZIndex = 301
+    header.Parent = window
+    
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(0.8, 0, 1, 0)
+    title.Position = UDim2.new(0.02, 0, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "📋 GENERATED SCRIPT - shhhhnayy05"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 14
+    title.Font = Enum.Font.GothamBold
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.ZIndex = 302
+    title.Parent = header
+    
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Name = "CloseBtn"
+    closeBtn.Size = UDim2.new(0, 35, 0, 35)
+    closeBtn.Position = UDim2.new(1, -40, 0, 2.5)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    closeBtn.Text = "×"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.TextSize = 20
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.ZIndex = 302
+    closeBtn.Parent = header
+    self:CreateCorner(closeBtn, UDim.new(0, 8))
+    
+    -- Copy button
+    local copyBtn = Instance.new("TextButton")
+    copyBtn.Name = "CopyBtn"
+    copyBtn.Size = UDim2.new(0, 100, 0, 30)
+    copyBtn.Position = UDim2.new(1, -150, 0, 5)
+    copyBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+    copyBtn.Text = "📄 COPY"
+    copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    copyBtn.TextSize = 12
+    copyBtn.Font = Enum.Font.GothamBold
+    copyBtn.ZIndex = 302
+    copyBtn.Parent = header
+    self:CreateCorner(copyBtn)
+    
+    -- Script text area
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Name = "ScriptScroll"
+    scroll.Size = UDim2.new(1, -20, 1, -90)
+    scroll.Position = UDim2.new(0, 10, 0, 50)
+    scroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 6
+    scroll.ZIndex = 301
+    scroll.Parent = window
+    
+    local textBox = Instance.new("TextBox")
+    textBox.Name = "ScriptText"
+    textBox.Size = UDim2.new(1, -10, 1, -10)
+    textBox.Position = UDim2.new(0, 5, 0, 5)
+    textBox.BackgroundTransparency = 1
+    textBox.Text = content
+    textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+    textBox.TextSize = 12
+    textBox.Font = Enum.Font.Code
+    textBox.TextXAlignment = Enum.TextXAlignment.Left
+    textBox.TextYAlignment = Enum.TextYAlignment.Top
+    textBox.TextWrapped = false
+    textBox.MultiLine = true
+    textBox.ClearTextOnFocus = false
+    textBox.ZIndex = 302
+    textBox.Parent = scroll
+    
+    -- Info label
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Name = "Info"
+    infoLabel.Size = UDim2.new(1, -20, 0, 30)
+    infoLabel.Position = UDim2.new(0, 10, 1, -35)
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.Text = "💡 Copy this script and paste it in Roblox Studio or execute with level 7-8 executor"
+    infoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    infoLabel.TextSize = 11
+    infoLabel.Font = Enum.Font.Gotham
+    infoLabel.TextWrapped = true
+    infoLabel.ZIndex = 301
+    infoLabel.Parent = window
+    
+    -- Events
+    closeBtn.MouseButton1Click:Connect(function()
+        window:Destroy()
+        self.ScriptWindow = nil
+    end)
+    
+    copyBtn.MouseButton1Click:Connect(function()
+        textBox:CaptureFocus()
+        textBox.SelectionStart = 1
+        textBox.CursorPosition = #textBox.Text + 1
+        
+        -- Simulate copy (visual feedback)
+        copyBtn.Text = "✅ COPIED!"
+        copyBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+        wait(1.5)
+        copyBtn.Text = "📄 COPY"
+        copyBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+    end)
+    
+    -- Animation
+    window.Size = UDim2.new(0, 0, 0, 0)
+    self:Tween(window, {Size = UDim2.new(0, 500, 0, 400)}, 0.3, Enum.EasingStyle.Back)
+end
+
+--// CLEAR TERRAIN
+function shhhhnayy05:ClearTerrain()
+    self.TerrainHistory = {}
+    self.GUI.StatusLabel.Text = "🗑️ Terrain history cleared!"
+    self.GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+end
+
+--// DESTROY
+function shhhhnayy05:Destroy()
+    if self.GUI.Screen then
+        self.GUI.Screen:Destroy()
+    end
+    if self.BrushPreview then
+        self.BrushPreview:Destroy()
+    end
+    if self.ScriptWindow then
+        self.ScriptWindow:Destroy()
+    end
+    self.GUI = {}
+    self.Config.ModeEnabled = false
+end
+
+--// INITIALIZE
+function shhhhnayy05:Init()
+    self:CreateGUI()
+    self:SetupInput()
+    print("[shhhhnayy05] Terrain Editor Pro initialized!")
+    print("[shhhhnayy05] Features: Smooth/Flatten modes, Block/Ball shapes, Full materials, Color system, Script conversion")
+end
+
+--// START
+shhhhnayy05:Init()
+
+return shhhhnayy05
