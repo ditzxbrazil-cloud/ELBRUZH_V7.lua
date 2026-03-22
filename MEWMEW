@@ -131,7 +131,6 @@ local terrainMaterials = {
 	Enum.Material.Concrete,
 	Enum.Material.Brick,
 	Enum.Material.WoodPlanks,
-	Enum.Material.WoodLog,
 	Enum.Material.Pavement,
 }
 
