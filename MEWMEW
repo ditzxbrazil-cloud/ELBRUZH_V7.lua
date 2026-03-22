@@ -1545,7 +1545,7 @@ function shhhhnayy05:CreateScriptWindow(content)
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.ZIndex = 302
     title.Parent = header
-    
+
     local closeBtn = Instance.new("TextButton")
     closeBtn.Name = "CloseBtn"
     closeBtn.Size = UDim2.new(0, 35, 0, 35)
@@ -1559,11 +1559,12 @@ function shhhhnayy05:CreateScriptWindow(content)
     closeBtn.Parent = header
     self:CreateCorner(closeBtn, UDim.new(0, 8))
     
+    -- Copy Button
     local copyBtn = Instance.new("TextButton")
     copyBtn.Name = "CopyBtn"
     copyBtn.Size = UDim2.new(0, 100, 0, 30)
     copyBtn.Position = UDim2.new(1, -150, 0, 5)
-    copyBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 200)
+    copyBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
     copyBtn.Text = "📋 COPY"
     copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     copyBtn.TextSize = 12
@@ -1571,73 +1572,99 @@ function shhhhnayy05:CreateScriptWindow(content)
     copyBtn.ZIndex = 302
     copyBtn.Parent = header
     self:CreateCorner(copyBtn)
-
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Name = "ScriptScroll"
-    scroll.Size = UDim2.new(1, -20, 1, -60)
-    scroll.Position = UDim2.new(0, 10, 0, 50)
-    scroll.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 4
-    scroll.ZIndex = 301
-    scroll.Parent = window
-    self:CreateCorner(scroll)
-
+    
+    -- Text Box for Script
     local textBox = Instance.new("TextBox")
     textBox.Name = "ScriptText"
-    textBox.Size = UDim2.new(1, -10, 1, 0)
-    textBox.Position = UDim2.new(0, 5, 0, 0)
-    textBox.BackgroundTransparency = 1
+    textBox.Size = UDim2.new(1, -20, 1, -60)
+    textBox.Position = UDim2.new(0, 10, 0, 50)
+    textBox.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
     textBox.Text = content
     textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
-    textBox.TextSize = 12
+    textBox.TextSize = 11
     textBox.Font = Enum.Font.Code
     textBox.TextXAlignment = Enum.TextXAlignment.Left
     textBox.TextYAlignment = Enum.TextYAlignment.Top
     textBox.ClearTextOnFocus = false
     textBox.MultiLine = true
-    textBox.ReadOnly = true
-    textBox.ZIndex = 302
-    textBox.Parent = scroll
-
-    scroll.CanvasSize = UDim2.new(0, 0, 0, textBox.TextBounds.Y + 20)
-
+    textBox.TextWrapped = false
+    textBox.ZIndex = 301
+    textBox.Parent = window
+    self:CreateCorner(textBox)
+    
+    -- Scrollbar for TextBox
+    textBox.ClipsDescendants = true
+    
     closeBtn.MouseButton1Click:Connect(function()
         window:Destroy()
         self.ScriptWindow = nil
     end)
-
+    
     copyBtn.MouseButton1Click:Connect(function()
-        setclipboard(content)
-        copyBtn.Text = "✅ COPIED!"
-        task.wait(2)
-        copyBtn.Text = "📋 COPY"
+        textBox:CaptureFocus()
+        textBox.SelectionStart = 1
+        textBox.CursorPosition = #textBox.Text + 1
+        self.GUI.StatusLabel.Text = "📋 Script selected! Copy manually (Ctrl+C)"
+        self.GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
     end)
+    
+    -- Animation
+    window.Size = UDim2.new(0, 0, 0, 0)
+    self:Tween(window, {Size = UDim2.new(0, 500, 0, 400)}, 0.3, Enum.EasingStyle.Back)
 end
 
---// CLEAR TERRAIN FUNCTION
+--// CLEAR TERRAIN
 function shhhhnayy05:ClearTerrain()
-    Workspace.Terrain:Clear()
+    -- Clear only terrain created by this tool
     self.TerrainHistory = {}
-    self.GUI.StatusLabel.Text = "🗑️ Terrain cleared and history reset"
-    self.GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 150, 150)
+    self.GUI.StatusLabel.Text = "🗑️ Terrain history cleared!"
+    self.GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
 end
 
---// DESTROY FUNCTION
+--// DESTROY GUI
 function shhhhnayy05:Destroy()
     if self.GUI.Screen then
         self.GUI.Screen:Destroy()
     end
-    self:DestroyBrushPreview()
-    if self.MaterialWindow then self.MaterialWindow:Destroy() end
-    if self.ColorWindow then self.ColorWindow:Destroy() end
-    if self.ScriptWindow then self.ScriptWindow:Destroy() end
-    shhhhnayy05 = nil
+    if self.BrushPreview then
+        self.BrushPreview:Destroy()
+    end
+    self.GUI = {}
+    self.TerrainHistory = {}
+    self.Config.ModeEnabled = false
 end
 
---// START SYSTEM
-shhhhnayy05:CreateGUI()
-shhhhnayy05:SetupInput()
+--// INITIALIZE
+function shhhhnayy05:Init()
+    self:CreateGUI()
+    self:SetupInput()
+    
+    -- Update brush preview position every frame when mode is enabled
+    RunService.RenderStepped:Connect(function()
+        if self.Config.ModeEnabled and self.BrushPreview then
+            local mousePos = UserInputService:GetMouseLocation()
+            local ray = Workspace.CurrentCamera:ViewportPointToRay(mousePos.X, mousePos.Y)
+            local hit, pos = self:Raycast(ray.Origin, ray.Direction * 1000)
+            
+            if hit then
+                if self.Config.CurrentMode == "Flatten" and self.Config.FlattenLevel then
+                    self.BrushPreview.CFrame = CFrame.new(pos.X, self.Config.FlattenLevel, pos.Z)
+                else
+                    self.BrushPreview.CFrame = CFrame.new(pos)
+                end
+                self.BrushPreview.Parent = Workspace
+            else
+                self.BrushPreview.Parent = nil
+            end
+        end
+    end)
+    
+    print("[shhhhnayy05] Terrain Editor Pro v3.0 Loaded Successfully!")
+    print("[shhhhnayy05] Features: Smooth Draw, Flatten Mode, Block & Ball Shapes")
+    print("[shhhhnayy05] Materials: " .. #self.TerrainMaterials .. " terrain materials available")
+end
 
-print("[shhhhnayy05] Terrain Editor Pro Loaded!")
+--// START
+shhhhnayy05:Init()
+
 return shhhhnayy05
