@@ -18,8 +18,8 @@ local GUI_WIDTH = 350
 local GUI_HEIGHT = 450
 
 --// STATE VARIABLES
-shhhhnayy05.Mode = "Smooth" -- "Smooth" or "Flatten"
-shhhhnayy05.Shape = "Block" -- "Block" or "Ball"
+shhhhnayy05.Mode = "Smooth"
+shhhhnayy05.Shape = "Block"
 shhhhnayy05.Enabled = false
 shhhhnayy05.Minimized = false
 shhhhnayy05.BrushSize = 10
@@ -28,7 +28,7 @@ shhhhnayy05.MaterialWindowOpen = false
 shhhhnayy05.ColorWindowOpen = false
 shhhhnayy05.ScriptWindowOpen = false
 
---// FLATTEN SYSTEM - SESUAI CONTOH
+--// FLATTEN SYSTEM
 shhhhnayy05.FlattenLevel = nil
 
 --// UNDO/REDO SYSTEM
@@ -107,10 +107,9 @@ local rockColors = {
 }
 local currentRockColorIndex = 2
 
---// CURRENT COLOR TRACKER
 shhhhnayy05.CurrentColor = grassColors[currentGrassColorIndex].color
 
---// MATERIALS LIST (REAL TERRAIN ONLY) - WOODLOG REMOVED
+--// MATERIALS LIST
 local terrainMaterials = {
 	Enum.Material.Grass,
 	Enum.Material.Ground,
@@ -139,7 +138,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
---// TOOLBAR (Top Left - Fixed Position)
+--// TOOLBAR
 local Toolbar = Instance.new("Frame")
 Toolbar.Name = "Toolbar"
 Toolbar.Size = UDim2.new(0, 120, 0, 50)
@@ -157,7 +156,6 @@ ToolbarStroke.Color = Color3.fromRGB(0, 170, 255)
 ToolbarStroke.Thickness = 2
 ToolbarStroke.Parent = Toolbar
 
---// ON/OFF BUTTON (Power Icon)
 local PowerButton = Instance.new("TextButton")
 PowerButton.Name = "PowerButton"
 PowerButton.Size = UDim2.new(0, 40, 0, 40)
@@ -173,7 +171,6 @@ local PowerCorner = Instance.new("UICorner")
 PowerCorner.CornerRadius = UDim.new(0, 8)
 PowerCorner.Parent = PowerButton
 
---// MINIMIZE BUTTON (Panel Icon)
 local MinimizeButton = Instance.new("TextButton")
 MinimizeButton.Name = "MinimizeButton"
 MinimizeButton.Size = UDim2.new(0, 40, 0, 40)
@@ -223,7 +220,6 @@ TitleCorner.CornerRadius = UDim.new(0, 15)
 TitleCorner.Parent = TitleBar
 
 local TitleFix = Instance.new("Frame")
-TitleFix.Name = "TitleFix"
 TitleFix.Size = UDim2.new(1, 0, 0, 10)
 TitleFix.Position = UDim2.new(0, 0, 1, -10)
 TitleFix.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
@@ -242,7 +238,6 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TitleBar
 
---// CLOSE BUTTON
 local CloseButton = Instance.new("TextButton")
 CloseButton.Name = "CloseButton"
 CloseButton.Size = UDim2.new(0, 30, 0, 30)
@@ -273,8 +268,6 @@ ContentFrame.Parent = MainPanel
 local ContentLayout = Instance.new("UIListLayout")
 ContentLayout.Padding = UDim.new(0, 10)
 ContentLayout.Parent = ContentFrame
-
---// ========== URUTAN BARU SESUAI PERMINTAAN ==========
 
 --// 1. MODE SELECTION (PALING ATAS)
 local ModeSection = Instance.new("Frame")
@@ -340,7 +333,6 @@ local FlattenCorner = Instance.new("UICorner")
 FlattenCorner.CornerRadius = UDim.new(0, 8)
 FlattenCorner.Parent = FlattenButton
 
---// FLATTEN STATUS LABEL
 local FlattenStatusLabel = Instance.new("TextLabel")
 FlattenStatusLabel.Name = "FlattenStatus"
 FlattenStatusLabel.Size = UDim2.new(1, -20, 0, 20)
@@ -353,7 +345,7 @@ FlattenStatusLabel.Font = Enum.Font.GothamBold
 FlattenStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 FlattenStatusLabel.Parent = ModeSection
 
---// 2. SHAPE SELECTION (DI BAWAH MODE)
+--// 2. SHAPE SELECTION
 local ShapeSection = Instance.new("Frame")
 ShapeSection.Name = "ShapeSection"
 ShapeSection.Size = UDim2.new(1, 0, 0, 80)
@@ -417,7 +409,7 @@ local BallCorner = Instance.new("UICorner")
 BallCorner.CornerRadius = UDim.new(0, 8)
 BallCorner.Parent = BallButton
 
---// 3. UNDO/REDO/CLEAR (DI BAWAH SHAPE)
+--// 3. UNDO/REDO/CLEAR
 local ActionSection = Instance.new("Frame")
 ActionSection.Name = "ActionSection"
 ActionSection.Size = UDim2.new(1, 0, 0, 60)
@@ -594,7 +586,6 @@ MaterialWindowFrameStroke.Color = Color3.fromRGB(50, 200, 50)
 MaterialWindowFrameStroke.Thickness = 2
 MaterialWindowFrameStroke.Parent = MaterialWindowFrame
 
---// MATERIAL WINDOW TITLE
 local MaterialWindowTitle = Instance.new("Frame")
 MaterialWindowTitle.Name = "TitleBar"
 MaterialWindowTitle.Size = UDim2.new(1, 0, 0, 40)
@@ -640,7 +631,6 @@ local MaterialWindowCloseCorner = Instance.new("UICorner")
 MaterialWindowCloseCorner.CornerRadius = UDim.new(0, 8)
 MaterialWindowCloseCorner.Parent = MaterialWindowClose
 
---// MATERIAL SCROLL
 local MaterialWindowScroll = Instance.new("ScrollingFrame")
 MaterialWindowScroll.Name = "MaterialScroll"
 MaterialWindowScroll.Size = UDim2.new(1, -20, 1, -60)
@@ -678,7 +668,6 @@ ColorWindowFrameStroke.Color = Color3.fromRGB(200, 50, 200)
 ColorWindowFrameStroke.Thickness = 2
 ColorWindowFrameStroke.Parent = ColorWindowFrame
 
---// COLOR WINDOW TITLE
 local ColorWindowTitle = Instance.new("Frame")
 ColorWindowTitle.Name = "TitleBar"
 ColorWindowTitle.Size = UDim2.new(1, 0, 0, 40)
@@ -724,7 +713,6 @@ local ColorWindowCloseCorner = Instance.new("UICorner")
 ColorWindowCloseCorner.CornerRadius = UDim.new(0, 8)
 ColorWindowCloseCorner.Parent = ColorWindowClose
 
---// COLOR SCROLL
 local ColorWindowScroll = Instance.new("ScrollingFrame")
 ColorWindowScroll.Name = "ColorScroll"
 ColorWindowScroll.Size = UDim2.new(1, -20, 1, -60)
@@ -761,7 +749,6 @@ ScriptWindowStroke.Color = Color3.fromRGB(0, 255, 100)
 ScriptWindowStroke.Thickness = 2
 ScriptWindowStroke.Parent = ScriptWindow
 
---// SCRIPT TITLE BAR
 local ScriptTitleBar = Instance.new("Frame")
 ScriptTitleBar.Name = "ScriptTitleBar"
 ScriptTitleBar.Size = UDim2.new(1, 0, 0, 40)
@@ -807,7 +794,6 @@ local ScriptCloseCorner = Instance.new("UICorner")
 ScriptCloseCorner.CornerRadius = UDim.new(0, 8)
 ScriptCloseCorner.Parent = ScriptCloseButton
 
---// SCRIPT TEXT BOX
 local ScriptBox = Instance.new("TextBox")
 ScriptBox.Name = "ScriptBox"
 ScriptBox.Size = UDim2.new(1, -20, 1, -90)
@@ -832,7 +818,6 @@ ScriptBoxStroke.Color = Color3.fromRGB(0, 200, 100)
 ScriptBoxStroke.Thickness = 1
 ScriptBoxStroke.Parent = ScriptBox
 
---// COPY BUTTON
 local CopyButton = Instance.new("TextButton")
 CopyButton.Name = "CopyButton"
 CopyButton.Size = UDim2.new(0, 150, 0, 30)
@@ -862,7 +847,6 @@ BrushPreview.Shape = Enum.PartType.Block
 
 --// FUNCTIONS
 
---// Get Current Color Based on Material
 local function GetCurrentColorForMaterial(material)
 	if material == Enum.Material.Grass then
 		return grassColors[currentGrassColorIndex].color
@@ -877,7 +861,6 @@ local function GetCurrentColorForMaterial(material)
 	end
 end
 
---// Create Material Buttons in Separate Window
 local function CreateMaterialButtons()
 	for i, material in ipairs(terrainMaterials) do
 		local btn = Instance.new("TextButton")
@@ -898,7 +881,6 @@ local function CreateMaterialButtons()
 			shhhhnayy05.CurrentMaterial = material
 			shhhhnayy05.CurrentColor = GetCurrentColorForMaterial(material)
 			
-			-- Update all button colors
 			for _, child in ipairs(MaterialWindowScroll:GetChildren()) do
 				if child:IsA("TextButton") then
 					child.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -912,7 +894,6 @@ local function CreateMaterialButtons()
 	end
 end
 
---// Create Color Section in Separate Window
 local function CreateColorSectionWindow(title, colors, currentIndex, colorType)
 	local section = Instance.new("Frame")
 	section.Name = colorType .. "Section"
@@ -988,7 +969,6 @@ local function CreateColorSectionWindow(title, colors, currentIndex, colorType)
 				end
 			end
 			
-			-- Update all strokes in this section
 			for _, child in ipairs(colorFrame:GetChildren()) do
 				if child:IsA("TextButton") then
 					local stroke = child:FindFirstChild("UIStroke")
@@ -1007,36 +987,25 @@ local function CreateColorSectionWindow(title, colors, currentIndex, colorType)
 	end
 end
 
---// Initialize Color Sections in Window
 CreateColorSectionWindow("🌿 GRASS COLORS", grassColors, currentGrassColorIndex, "Grass")
 CreateColorSectionWindow("🟫 GROUND COLORS", groundColors, currentGroundColorIndex, "Ground")
 CreateColorSectionWindow("🍃 LEAVYGRASS COLORS", leavygrassColors, currentLeavygrassColorIndex, "Leavygrass")
 CreateColorSectionWindow("🪨 ROCK COLORS", rockColors, currentRockColorIndex, "Rock")
 
---// Position Key Function
 local function GetPositionKey(position)
 	return math.floor(position.X / 4) .. "," .. math.floor(position.Y / 4) .. "," .. math.floor(position.Z / 4)
 end
 
---// Check if Position Exists
 local function PositionExists(position)
 	local key = GetPositionKey(position)
 	return shhhhnayy05.ExistingPositions[key] ~= nil
 end
 
---// Mark Position
 local function MarkPosition(position, data)
 	local key = GetPositionKey(position)
 	shhhhnayy05.ExistingPositions[key] = data
 end
 
---// Unmark Position
-local function UnmarkPosition(position)
-	local key = GetPositionKey(position)
-	shhhhnayy05.ExistingPositions[key] = nil
-end
-
---// Save Undo State
 local function SaveUndoState()
 	local state = {
 		TerrainHistory = {},
@@ -1067,7 +1036,6 @@ local function SaveUndoState()
 	shhhhnayy05.RedoStack = {}
 end
 
---// Restore State
 local function RestoreState(state)
 	Terrain:Clear()
 	
@@ -1088,7 +1056,7 @@ local function RestoreState(state)
 	end
 end
 
---// Place Terrain Function - SESUAI CONTOH USER
+--// PLACE TERRAIN - SESUAI CONTOH USER
 local function PlaceTerrain(position)
 	local isNewPosition = not PositionExists(position)
 	local currentColor = GetCurrentColorForMaterial(shhhhnayy05.CurrentMaterial)
@@ -1100,20 +1068,18 @@ local function PlaceTerrain(position)
 	if shhhhnayy05.Mode == "Flatten" then
 		-- SISTEM FLATTEN SESUAI CONTOH USER
 		if not shhhhnayy05.FlattenLevel then
-			shhhhnayy05.FlattenLevel = position.Y -- Mengambil titik awal tinggi tanah
+			shhhhnayy05.FlattenLevel = position.Y
 		end
 		
 		local radius = shhhhnayy05.BrushSize / 2
 		local flattenPos = Vector3.new(position.X, shhhhnayy05.FlattenLevel, position.Z)
 		local flattenSize = Vector3.new(radius * 2, 4, radius * 2)
 		
-		-- Bagian inilah yang "memunculkan" terrain rata (persegi/block)
 		Terrain:FillBlock(CFrame.new(flattenPos), flattenSize, shhhhnayy05.CurrentMaterial)
 		
 		position = flattenPos
 		size = flattenSize
 	else
-		-- SMOOTH MODE (normal)
 		if shhhhnayy05.Shape == "Block" then
 			Terrain:FillBlock(CFrame.new(position), size, shhhhnayy05.CurrentMaterial)
 		else
@@ -1138,7 +1104,6 @@ local function PlaceTerrain(position)
 	return isNewPosition
 end
 
---// Raycast Function
 local function RaycastFromMouse()
 	local mousePos = UserInputService:GetMouseLocation()
 	local ray = Workspace.CurrentCamera:ViewportPointToRay(mousePos.X, mousePos.Y)
@@ -1150,7 +1115,6 @@ local function RaycastFromMouse()
 	return result
 end
 
---// Update Brush Preview
 local function UpdateBrushPreview()
 	if not shhhhnayy05.Enabled then
 		BrushPreview.Transparency = 1
@@ -1167,13 +1131,16 @@ local function UpdateBrushPreview()
 		end
 		
 		BrushPreview.Position = pos
-		BrushPreview.Size = Vector3.new(shhhhnayy05.BrushSize, 4, shhhhnayy05.BrushSize)
 		
 		if shhhhnayy05.Mode == "Flatten" then
+			local radius = shhhhnayy05.BrushSize / 2
+			BrushPreview.Size = Vector3.new(radius * 2, 4, radius * 2)
 			BrushPreview.Shape = Enum.PartType.Block
 		elseif shhhhnayy05.Shape == "Block" then
+			BrushPreview.Size = Vector3.new(shhhhnayy05.BrushSize, shhhhnayy05.BrushSize, shhhhnayy05.BrushSize)
 			BrushPreview.Shape = Enum.PartType.Block
 		else
+			BrushPreview.Size = Vector3.new(shhhhnayy05.BrushSize, shhhhnayy05.BrushSize, shhhhnayy05.BrushSize)
 			BrushPreview.Shape = Enum.PartType.Ball
 		end
 		
@@ -1183,10 +1150,8 @@ local function UpdateBrushPreview()
 	end
 end
 
---// Drawing Variables
 local isDrawing = false
 
---// Convert to Script Function
 local function ConvertToScript()
 	if #shhhhnayy05.TerrainHistory == 0 then
 		StatusLabel.Text = "⚠️ No terrain to convert!"
@@ -1258,7 +1223,6 @@ end
 
 --// BUTTON EVENTS
 
---// Power Button (On/Off)
 PowerButton.MouseButton1Click:Connect(function()
 	shhhhnayy05.Enabled = not shhhhnayy05.Enabled
 	
@@ -1274,11 +1238,10 @@ PowerButton.MouseButton1Click:Connect(function()
 		StatusLabel.Text = "⭕ EDITOR OFF"
 		StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 		BrushPreview.Transparency = 1
-		shhhhnayy05.FlattenLevel = nil -- Reset flatten level when turned off
+		shhhhnayy05.FlattenLevel = nil
 	end
 end)
 
---// Minimize Button
 MinimizeButton.MouseButton1Click:Connect(function()
 	shhhhnayy05.Minimized = not shhhhnayy05.Minimized
 	
@@ -1293,7 +1256,6 @@ MinimizeButton.MouseButton1Click:Connect(function()
 	end
 end)
 
---// Close Button
 CloseButton.MouseButton1Click:Connect(function()
 	MainPanel.Visible = false
 	shhhhnayy05.Minimized = true
@@ -1301,7 +1263,6 @@ CloseButton.MouseButton1Click:Connect(function()
 	MinimizeButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 end)
 
---// Mode Buttons
 SmoothButton.MouseButton1Click:Connect(function()
 	shhhhnayy05.Mode = "Smooth"
 	SmoothButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
@@ -1328,7 +1289,6 @@ FlattenButton.MouseButton1Click:Connect(function()
 	end
 end)
 
---// Shape Buttons
 BlockButton.MouseButton1Click:Connect(function()
 	shhhhnayy05.Shape = "Block"
 	BlockButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
@@ -1345,7 +1305,6 @@ BallButton.MouseButton1Click:Connect(function()
 	BlockButton.Text = "FULL BLOCK"
 end)
 
---// Size Slider
 SizeSlider.MouseButton1Click:Connect(function()
 	shhhhnayy05.BrushSize = shhhhnayy05.BrushSize + 5
 	if shhhhnayy05.BrushSize > 50 then
@@ -1353,30 +1312,24 @@ SizeSlider.MouseButton1Click:Connect(function()
 	end
 	SizeTitle.Text = "📏 BRUSH SIZE: " .. shhhhnayy05.BrushSize
 	SizeSlider.Text = "◄ " .. shhhhnayy05.BrushSize .. " ►"
-	BrushPreview.Size = Vector3.new(shhhhnayy05.BrushSize, 4, shhhhnayy05.BrushSize)
 end)
 
---// Open Material Window
 OpenMaterialButton.MouseButton1Click:Connect(function()
 	MaterialWindowFrame.Visible = true
 end)
 
---// Close Material Window
 MaterialWindowClose.MouseButton1Click:Connect(function()
 	MaterialWindowFrame.Visible = false
 end)
 
---// Open Color Window
 OpenColorButton.MouseButton1Click:Connect(function()
 	ColorWindowFrame.Visible = true
 end)
 
---// Close Color Window
 ColorWindowClose.MouseButton1Click:Connect(function()
 	ColorWindowFrame.Visible = false
 end)
 
---// Undo Button
 UndoButton.MouseButton1Click:Connect(function()
 	if #shhhhnayy05.UndoStack > 0 then
 		local currentState = {
@@ -1402,7 +1355,6 @@ UndoButton.MouseButton1Click:Connect(function()
 	end
 end)
 
---// Redo Button
 RedoButton.MouseButton1Click:Connect(function()
 	if #shhhhnayy05.RedoStack > 0 then
 		local currentState = {
@@ -1428,7 +1380,6 @@ RedoButton.MouseButton1Click:Connect(function()
 	end
 end)
 
---// Clear Button
 ClearButton.MouseButton1Click:Connect(function()
 	SaveUndoState()
 	
@@ -1441,18 +1392,15 @@ ClearButton.MouseButton1Click:Connect(function()
 	StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 end)
 
---// Convert Button
 ConvertButton.MouseButton1Click:Connect(function()
 	ConvertToScript()
 end)
 
---// Script Window Close
 ScriptCloseButton.MouseButton1Click:Connect(function()
 	ScriptWindow.Visible = false
 	shhhhnayy05.ScriptWindowOpen = false
 end)
 
---// Copy Button
 CopyButton.MouseButton1Click:Connect(function()
 	ScriptBox:CaptureFocus()
 	ScriptBox.SelectionStart = 1
@@ -1490,7 +1438,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if result then
 			local placePos = result.Position + result.Normal * (shhhhnayy05.BrushSize / 2)
 			
-			-- Jika mode flatten dan FlattenLevel belum ada, set dari posisi pertama
 			if shhhhnayy05.Mode == "Flatten" and not shhhhnayy05.FlattenLevel then
 				shhhhnayy05.FlattenLevel = placePos.Y
 				FlattenStatusLabel.Text = "Height locked: Y=" .. math.floor(shhhhnayy05.FlattenLevel)
@@ -1522,7 +1469,6 @@ end)
 --// Initialize Material Buttons
 CreateMaterialButtons()
 
---// Select first material by default
 if #terrainMaterials > 0 then
 	shhhhnayy05.CurrentMaterial = terrainMaterials[1]
 	shhhhnayy05.CurrentColor = GetCurrentColorForMaterial(terrainMaterials[1])
@@ -1539,16 +1485,9 @@ if #terrainMaterials > 0 then
 	end
 end
 
---// Initial Status
 StatusLabel.Text = "⭕ EDITOR OFF - Click ⏻ to start"
 StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 
 print("✅ shhhhnayy05 Terrain Editor Pro Loaded!")
-print("🎨 Modes: Smooth & Flatten")
-print("🔷 Shapes: Full Block & Ball")
-print("🎨 Colors: Grass, Ground, Leavygrass, Rock")
-print("💾 Convert to Script feature ready!")
-print("📦 Materials: Full terrain
-print("--------------------------------------------------")
 
 return shhhhnayy05
