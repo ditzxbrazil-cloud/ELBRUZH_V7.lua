@@ -1,1613 +1,2366 @@
---// shhhhnayy05 Real-Time Game Copier
---// Auto-detect current game & copy all services
---// Support: Executor Level 7-8
+--// shhhhnayy05 COMPLETE GAME COPIER
+--// Menyalin 100% struktur game termasuk admin, anti-cheat, semua sistem
+--// Format: Folder terstruktur dengan script loader per service
+--// Support Executor Level 7-8
 
 local shhhhnayy05 = {}
-shhhhnayy05.CopiedData = {}
-shhhhnayy05.SavedFiles = {}
-shhhhnayy05.IsCopying = false
-
--- Services
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
-local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerStorage = game:GetService("ServerStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
+local StarterPack = game:GetService("StarterPack")
+local Teams = game:GetService("Teams")
+local SoundService = game:GetService("SoundService")
+local Chat = game:GetService("Chat")
+local LocalizationService = game:GetService("LocalizationService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
---// GUI Creation
-function shhhhnayy05.CreateGUI()
-    -- ScreenGui
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "shhhhnayy05_RealTimeCopier"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.Parent = PlayerGui
-    
-    -- Main Frame
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 450, 0, 550)
-    MainFrame.Position = UDim2.new(0.5, -225, 0.5, -275)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.ClipsDescendants = true
-    MainFrame.Parent = ScreenGui
-    
-    -- Corner
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 16)
-    Corner.Parent = MainFrame
-    
-    -- Gradient Background
-    local Gradient = Instance.new("UIGradient")
-    Gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 30)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 50))
-    })
-    Gradient.Rotation = 45
-    Gradient.Parent = MainFrame
-    
-    -- Stroke Glow
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Color3.fromRGB(0, 200, 255)
-    Stroke.Thickness = 2
-    Stroke.Transparency = 0.3
-    Stroke.Parent = MainFrame
-    
-    -- Animated Glow
-    spawn(function()
-        while MainFrame and MainFrame.Parent do
-            for i = 0, 1, 0.02 do
-                if not MainFrame or not MainFrame.Parent then break end
-                Stroke.Transparency = 0.3 + (math.sin(i * math.pi * 2) * 0.2)
-                RunService.Heartbeat:Wait()
-            end
-        end
-    end)
-    
-    -- Title Bar
-    local TitleBar = Instance.new("Frame")
-    TitleBar.Name = "TitleBar"
-    TitleBar.Size = UDim2.new(1, 0, 0, 50)
-    TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    TitleBar.BorderSizePixel = 0
-    TitleBar.Parent = MainFrame
-    
-    local TitleCorner = Instance.new("UICorner")
-    TitleCorner.CornerRadius = UDim.new(0, 16)
-    TitleCorner.Parent = TitleBar
-    
-    -- Title Text
-    local TitleText = Instance.new("TextLabel")
-    TitleText.Name = "TitleText"
-    TitleText.Size = UDim2.new(1, -120, 1, 0)
-    TitleText.Position = UDim2.new(0, 20, 0, 0)
-    TitleText.BackgroundTransparency = 1
-    TitleText.Text = "🎮 shhhhnayy05 REAL-TIME COPIER"
-    TitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
-    TitleText.TextSize = 18
-    TitleText.Font = Enum.Font.GothamBlack
-    TitleText.TextXAlignment = Enum.TextXAlignment.Left
-    TitleText.Parent = TitleBar
-    
-    -- Current Game Info
-    local GameInfo = Instance.new("TextLabel")
-    GameInfo.Name = "GameInfo"
-    GameInfo.Size = UDim2.new(1, -40, 0, 20)
-    GameInfo.Position = UDim2.new(0, 20, 0, 30)
-    GameInfo.BackgroundTransparency = 1
-    GameInfo.Text = "Current: " .. game.PlaceId .. " | " .. game.Name
-    GameInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
-    GameInfo.TextSize = 11
-    GameInfo.Font = Enum.Font.Gotham
-    GameInfo.TextXAlignment = Enum.TextXAlignment.Left
-    GameInfo.Parent = TitleBar
-    
-    -- Minimize Button
-    local MinimizeBtn = Instance.new("TextButton")
-    MinimizeBtn.Name = "MinimizeBtn"
-    MinimizeBtn.Size = UDim2.new(0, 40, 0, 40)
-    MinimizeBtn.Position = UDim2.new(1, -90, 0.5, -20)
-    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    MinimizeBtn.Text = "−"
-    MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    MinimizeBtn.TextSize = 28
-    MinimizeBtn.Font = Enum.Font.GothamBold
-    MinimizeBtn.Parent = TitleBar
-    
-    local MinimizeCorner = Instance.new("UICorner")
-    MinimizeCorner.CornerRadius = UDim.new(0, 10)
-    MinimizeCorner.Parent = MinimizeBtn
-    
-    -- Close Button
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Name = "CloseBtn"
-    CloseBtn.Size = UDim2.new(0, 40, 0, 40)
-    CloseBtn.Position = UDim2.new(1, -45, 0.5, -20)
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-    CloseBtn.Text = "×"
-    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseBtn.TextSize = 28
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Parent = TitleBar
-    
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 10)
-    CloseCorner.Parent = CloseBtn
-    
-    -- Content Frame
-    local ContentFrame = Instance.new("Frame")
-    ContentFrame.Name = "ContentFrame"
-    ContentFrame.Size = UDim2.new(1, -20, 1, -120)
-    ContentFrame.Position = UDim2.new(0, 10, 0, 60)
-    ContentFrame.BackgroundTransparency = 1
-    ContentFrame.Parent = MainFrame
-    
-    --// CURRENT GAME DETECTION SECTION
-    local DetectionSection = shhhhnayy05.CreateSection(ContentFrame, "🔍 CURRENT GAME DETECTED", UDim2.new(0, 0))
-    
-    -- Game Details Frame
-    local GameDetails = Instance.new("Frame")
-    GameDetails.Size = UDim2.new(1, -20, 0, 120)
-    GameDetails.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    GameDetails.BorderSizePixel = 0
-    GameDetails.Parent = DetectionSection
-    
-    local DetailsCorner = Instance.new("UICorner")
-    DetailsCorner.CornerRadius = UDim.new(0, 12)
-    DetailsCorner.Parent = GameDetails
-    
-    -- Game Icon/Preview
-    local GameIcon = Instance.new("TextLabel")
-    GameIcon.Size = UDim2.new(0, 80, 0, 80)
-    GameIcon.Position = UDim2.new(0, 15, 0, 20)
-    GameIcon.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    GameIcon.Text = "🎮"
-    GameIcon.TextSize = 40
-    GameIcon.Parent = GameDetails
-    
-    local IconCorner = Instance.new("UICorner")
-    IconCorner.CornerRadius = UDim.new(0, 12)
-    IconCorner.Parent = GameIcon
-    
-    -- Game Name
-    local GameNameLabel = Instance.new("TextLabel")
-    GameNameLabel.Size = UDim2.new(1, -120, 0, 25)
-    GameNameLabel.Position = UDim2.new(0, 110, 0, 15)
-    GameNameLabel.BackgroundTransparency = 1
-    GameNameLabel.Text = game.Name
-    GameNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    GameNameLabel.TextSize = 16
-    GameNameLabel.Font = Enum.Font.GothamBold
-    GameNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    GameNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
-    GameNameLabel.Parent = GameDetails
-    
-    -- Game ID
-    local GameIdLabel = Instance.new("TextLabel")
-    GameIdLabel.Size = UDim2.new(1, -120, 0, 20)
-    GameIdLabel.Position = UDim2.new(0, 110, 0, 40)
-    GameIdLabel.BackgroundTransparency = 1
-    GameIdLabel.Text = "Place ID: " .. game.PlaceId
-    GameIdLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
-    GameIdLabel.TextSize = 12
-    GameIdLabel.Font = Enum.Font.Gotham
-    GameIdLabel.TextXAlignment = Enum.TextXAlignment.Left
-    GameIdLabel.Parent = GameDetails
-    
-    -- Game Version
-    local GameVersion = Instance.new("TextLabel")
-    GameVersion.Size = UDim2.new(1, -120, 0, 20)
-    GameVersion.Position = UDim2.new(0, 110, 0, 60)
-    GameVersion.BackgroundTransparency = 1
-    GameVersion.Text = "Game Version: " .. game.PlaceVersion
-    GameVersion.TextColor3 = Color3.fromRGB(180, 180, 180)
-    GameVersion.TextSize = 11
-    GameVersion.Font = Enum.Font.Gotham
-    GameVersion.TextXAlignment = Enum.TextXAlignment.Left
-    GameVersion.Parent = GameDetails
-    
-    -- Player Count
-    local PlayerCount = Instance.new("TextLabel")
-    PlayerCount.Size = UDim2.new(1, -120, 0, 20)
-    PlayerCount.Position = UDim2.new(0, 110, 0, 80)
-    PlayerCount.BackgroundTransparency = 1
-    PlayerCount.Text = "Players: " .. #Players:GetPlayers() .. " | You: " .. LocalPlayer.Name
-    PlayerCount.TextColor3 = Color3.fromRGB(180, 180, 180)
-    PlayerCount.TextSize = 11
-    PlayerCount.Font = Enum.Font.Gotham
-    PlayerCount.TextXAlignment = Enum.TextXAlignment.Left
-    PlayerCount.Parent = GameDetails
-    
-    --// SERVICES TO COPY SECTION
-    local ServicesSection = shhhhnayy05.CreateSection(ContentFrame, "📦 SERVICES TO COPY", UDim2.new(0, 140))
-    
-    -- Services Grid
-    local ServicesGrid = Instance.new("Frame")
-    ServicesGrid.Size = UDim2.new(1, -20, 0, 200)
-    ServicesGrid.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    ServicesGrid.BorderSizePixel = 0
-    ServicesGrid.Parent = ServicesSection
-    
-    local GridCorner = Instance.new("UICorner")
-    GridCorner.CornerRadius = UDim.new(0, 12)
-    GridCorner.Parent = ServicesGrid
-    
-    local GridLayout = Instance.new("UIGridLayout")
-    GridLayout.CellSize = UDim2.new(0.5, -10, 0, 35)
-    GridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
-    GridLayout.Parent = ServicesGrid
-    
-    local GridPadding = Instance.new("UIPadding")
-    GridPadding.PaddingTop = UDim.new(0, 10)
-    GridPadding.PaddingLeft = UDim.new(0, 10)
-    GridPadding.PaddingRight = UDim.new(0, 10)
-    GridPadding.PaddingBottom = UDim.new(0, 10)
-    GridPadding.Parent = ServicesGrid
-    
-    -- Service Checkboxes
-    local ServicesToCopy = {
-        {Name = "ReplicatedStorage", Icon = "📡", Default = true},
-        {Name = "StarterPlayerScripts", Icon = "👤", Default = true},
-        {Name = "ServerScriptService", Icon = "⚙️", Default = true},
-        {Name = "ServerStorage", Icon = "💾", Default = true},
-        {Name = "StarterGui", Icon = "🖼️", Default = true},
-        {Name = "Lighting", Icon = "💡", Default = false},
-        {Name = "Workspace", Icon = "🌍", Default = false},
-        {Name = "SoundService", Icon = "🔊", Default = false},
-    }
-    
-    shhhhnayy05.ServiceCheckboxes = {}
-    
-    for _, service in ipairs(ServicesToCopy) do
-        local CheckFrame = Instance.new("Frame")
-        CheckFrame.Size = UDim2.new(1, 0, 1, 0)
-        CheckFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-        CheckFrame.BorderSizePixel = 0
-        CheckFrame.Parent = ServicesGrid
-        
-        local CheckCorner = Instance.new("UICorner")
-        CheckCorner.CornerRadius = UDim.new(0, 8)
-        CheckCorner.Parent = CheckFrame
-        
-        local Checkbox = Instance.new("TextButton")
-        Checkbox.Name = "Checkbox"
-        Checkbox.Size = UDim2.new(0, 25, 0, 25)
-        Checkbox.Position = UDim2.new(0, 8, 0.5, -12.5)
-        Checkbox.BackgroundColor3 = service.Default and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 80)
-        Checkbox.Text = service.Default and "✓" or ""
-        Checkbox.TextColor3 = Color3.fromRGB(255, 255, 255)
-        Checkbox.TextSize = 16
-        Checkbox.Font = Enum.Font.GothamBold
-        Checkbox.Parent = CheckFrame
-        
-        local CheckBoxCorner = Instance.new("UICorner")
-        CheckBoxCorner.CornerRadius = UDim.new(0, 6)
-        CheckBoxCorner.Parent = Checkbox
-        
-        local Label = Instance.new("TextLabel")
-        Label.Size = UDim2.new(1, -45, 1, 0)
-        Label.Position = UDim2.new(0, 40, 0, 0)
-        Label.BackgroundTransparency = 1
-        Label.Text = service.Icon .. " " .. service.Name
-        Label.TextColor3 = Color3.fromRGB(220, 220, 220)
-        Label.TextSize = 12
-        Label.Font = Enum.Font.Gotham
-        Label.TextXAlignment = Enum.TextXAlignment.Left
-        Label.Parent = CheckFrame
-        
-        local checked = service.Default
-        
-        Checkbox.MouseButton1Click:Connect(function()
-            checked = not checked
-            Checkbox.BackgroundColor3 = checked and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 80)
-            Checkbox.Text = checked and "✓" or ""
-        end)
-        
-        shhhhnayy05.ServiceCheckboxes[service.Name] = function() return checked end
-    end
-    
-    --// PROGRESS SECTION
-    local ProgressSection = shhhhnayy05.CreateSection(ContentFrame, "⏳ COPY PROGRESS", UDim2.new(0, 360))
-    ProgressSection.Visible = false
-    
-    -- Progress Container
-    local ProgressContainer = Instance.new("Frame")
-    ProgressContainer.Size = UDim2.new(1, -20, 0, 180)
-    ProgressContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    ProgressContainer.BorderSizePixel = 0
-    ProgressContainer.Parent = ProgressSection
-    
-    local ContainerCorner = Instance.new("UICorner")
-    ContainerCorner.CornerRadius = UDim.new(0, 12)
-    ContainerCorner.Parent = ProgressContainer
-    
-    -- Progress Bar Background
-    local ProgressBg = Instance.new("Frame")
-    ProgressBg.Name = "ProgressBg"
-    ProgressBg.Size = UDim2.new(1, -20, 0, 35)
-    ProgressBg.Position = UDim2.new(0, 10, 0, 10)
-    ProgressBg.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    ProgressBg.BorderSizePixel = 0
-    ProgressBg.Parent = ProgressContainer
-    
-    local ProgressBgCorner = Instance.new("UICorner")
-    ProgressBgCorner.CornerRadius = UDim.new(0, 18)
-    ProgressBgCorner.Parent = ProgressBg
-    
-    -- Progress Bar Fill
-    local ProgressFill = Instance.new("Frame")
-    ProgressFill.Name = "ProgressFill"
-    ProgressFill.Size = UDim2.new(0, 0, 1, 0)
-    ProgressFill.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-    ProgressFill.BorderSizePixel = 0
-    ProgressFill.Parent = ProgressBg
-    
-    local ProgressFillCorner = Instance.new("UICorner")
-    ProgressFillCorner.CornerRadius = UDim.new(0, 18)
-    ProgressFillCorner.Parent = ProgressFill
-    
-    -- Progress Gradient Animation
-    local ProgressGradient = Instance.new("UIGradient")
-    ProgressGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 100)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 150)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 200, 100))
-    })
-    ProgressGradient.Rotation = 0
-    ProgressGradient.Parent = ProgressFill
-    
-    -- Animate gradient
-    spawn(function()
-        while ProgressFill and ProgressFill.Parent do
-            for i = 0, 360, 2 do
-                if not ProgressFill or not ProgressFill.Parent then break end
-                ProgressGradient.Rotation = i
-                RunService.Heartbeat:Wait()
-            end
-        end
-    end)
-    
-    -- Progress Text
-    local ProgressText = Instance.new("TextLabel")
-    ProgressText.Name = "ProgressText"
-    ProgressText.Size = UDim2.new(1, 0, 1, 0)
-    ProgressText.BackgroundTransparency = 1
-    ProgressText.Text = "0% - Ready to copy..."
-    ProgressText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ProgressText.TextSize = 14
-    ProgressText.Font = Enum.Font.GothamBold
-    ProgressText.Parent = ProgressBg
-    
-    -- Stats Frame
-    local StatsFrame = Instance.new("Frame")
-    StatsFrame.Size = UDim2.new(1, -20, 0, 50)
-    StatsFrame.Position = UDim2.new(0, 10, 0, 55)
-    StatsFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    StatsFrame.BorderSizePixel = 0
-    StatsFrame.Parent = ProgressContainer
-    
-    local StatsCorner = Instance.new("UICorner")
-    StatsCorner.CornerRadius = UDim.new(0, 10)
-    StatsCorner.Parent = StatsFrame
-    
-    local StatsLayout = Instance.new("UIListLayout")
-    StatsLayout.FillDirection = Enum.FillDirection.Horizontal
-    StatsLayout.Padding = UDim.new(0, 10)
-    StatsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    StatsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    StatsLayout.Parent = StatsFrame
-    
-    -- Stat Items
-    local function CreateStat(name)
-        local StatFrame = Instance.new("Frame")
-        StatFrame.Size = UDim2.new(0, 100, 0, 40)
-        StatFrame.BackgroundTransparency = 1
-        
-        local StatValue = Instance.new("TextLabel")
-        StatValue.Name = "Value"
-        StatValue.Size = UDim2.new(1, 0, 0, 20)
-        StatValue.BackgroundTransparency = 1
-        StatValue.Text = "0"
-        StatValue.TextColor3 = Color3.fromRGB(0, 200, 255)
-        StatValue.TextSize = 18
-        StatValue.Font = Enum.Font.GothamBold
-        StatValue.Parent = StatFrame
-        
-        local StatLabel = Instance.new("TextLabel")
-        StatLabel.Size = UDim2.new(1, 0, 0, 15)
-        StatLabel.Position = UDim2.new(0, 0, 0, 22)
-        StatLabel.BackgroundTransparency = 1
-        StatLabel.Text = name
-        StatLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-        StatLabel.TextSize = 10
-        StatLabel.Font = Enum.Font.Gotham
-        StatLabel.Parent = StatFrame
-        
-        return StatFrame, StatValue
-    end
-    
-    local ServicesStat, ServicesValue = CreateStat("SERVICES")
-    local ItemsStat, ItemsValue = CreateStat("ITEMS")
-    local ScriptsStat, ScriptsValue = CreateStat("SCRIPTS")
-    
-    ServicesStat.Parent = StatsFrame
-    ItemsStat.Parent = StatsFrame
-    ScriptsStat.Parent = StatsFrame
-    
-    -- Log Frame
-    local LogFrame = Instance.new("ScrollingFrame")
-    LogFrame.Name = "LogFrame"
-    LogFrame.Size = UDim2.new(1, -20, 0, 70)
-    LogFrame.Position = UDim2.new(0, 10, 0, 110)
-    LogFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    LogFrame.BorderSizePixel = 0
-    LogFrame.ScrollBarThickness = 4
-    LogFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
-    LogFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    LogFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    LogFrame.Parent = ProgressContainer
-    
-    local LogCorner = Instance.new("UICorner")
-    LogCorner.CornerRadius = UDim.new(0, 8)
-    LogCorner.Parent = LogFrame
-    
-    local LogLayout = Instance.new("UIListLayout")
-    LogLayout.Padding = UDim.new(0, 2)
-    LogLayout.Parent = LogFrame
-    
-    local LogPadding = Instance.new("UIPadding")
-    LogPadding.Padding = UDim.new(0, 8)
-    LogPadding.Parent = LogFrame
-    
-    --// ACTION BUTTONS
-    local ActionFrame = Instance.new("Frame")
-    ActionFrame.Name = "ActionFrame"
-    ActionFrame.Size = UDim2.new(1, -20, 0, 60)
-    ActionFrame.Position = UDim2.new(0, 10, 1, -70)
-    ActionFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    ActionFrame.BorderSizePixel = 0
-    ActionFrame.Parent = MainFrame
-    
-    local ActionCorner = Instance.new("UICorner")
-    ActionCorner.CornerRadius = UDim.new(0, 12)
-    ActionCorner.Parent = ActionFrame
-    
-    local ActionLayout = Instance.new("UIListLayout")
-    ActionLayout.FillDirection = Enum.FillDirection.Horizontal
-    ActionLayout.Padding = UDim.new(0, 10)
-    ActionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    ActionLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    ActionLayout.Parent = ActionFrame
-    
-    -- START COPY BUTTON
-    local StartCopyBtn = shhhhnayy05.CreateActionButton(ActionFrame, "🚀 START COPY", Color3.fromRGB(0, 150, 255), Color3.fromRGB(0, 200, 255))
-    
-    -- SAVE BUTTON
-    local SaveBtn = shhhhnayy05.CreateActionButton(ActionFrame, "💾 SAVE FILE", Color3.fromRGB(0, 180, 100), Color3.fromRGB(0, 230, 130))
-    
-    -- EXPORT BUTTON
-    local ExportBtn = shhhhnayy05.CreateActionButton(ActionFrame, "📜 EXPORT", Color3.fromRGB(150, 100, 255), Color3.fromRGB(180, 130, 255))
-    
-    -- FILES BUTTON
-    local FilesBtn = shhhhnayy05.CreateActionButton(ActionFrame, "📁 FILES", Color3.fromRGB(255, 150, 0), Color3.fromRGB(255, 180, 50))
-    
-    --// MINIMIZED ICON
-    local MinimizedIcon = Instance.new("TextButton")
-    MinimizedIcon.Name = "MinimizedIcon"
-    MinimizedIcon.Size = UDim2.new(0, 70, 0, 70)
-    MinimizedIcon.Position = UDim2.new(0, 30, 0.5, -35)
-    MinimizedIcon.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    MinimizedIcon.Text = "📋"
-    MinimizedIcon.TextSize = 35
-    MinimizedIcon.Visible = false
-    MinimizedIcon.Parent = ScreenGui
-    
-    local IconCorner = Instance.new("UICorner")
-    IconCorner.CornerRadius = UDim.new(1, 0)
-    IconCorner.Parent = MinimizedIcon
-    
-    local IconStroke = Instance.new("UIStroke")
-    IconStroke.Color = Color3.fromRGB(255, 255, 255)
-    IconStroke.Thickness = 3
-    IconStroke.Parent = MinimizedIcon
-    
-    -- Pulse Animation
-    local IconPulse = Instance.new("Frame")
-    IconPulse.Name = "Pulse"
-    IconPulse.Size = UDim2.new(1, 0, 1, 0)
-    IconPulse.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    IconPulse.BackgroundTransparency = 0.5
-    IconPulse.BorderSizePixel = 0
-    IconPulse.ZIndex = -1
-    IconPulse.Parent = MinimizedIcon
-    
-    local PulseCorner = Instance.new("UICorner")
-    PulseCorner.CornerRadius = UDim.new(1, 0)
-    PulseCorner.Parent = IconPulse
-    
-    spawn(function()
-        while MinimizedIcon and MinimizedIcon.Parent do
-            TweenService:Create(IconPulse, TweenInfo.new(1), {Size = UDim2.new(1.5, 0, 1.5, 0), Position = UDim2.new(-0.25, 0, -0.25, 0), BackgroundTransparency = 1}):Play()
-            wait(1)
-            IconPulse.Size = UDim2.new(1, 0, 1, 0)
-            IconPulse.Position = UDim2.new(0, 0, 0, 0)
-            IconPulse.BackgroundTransparency = 0.5
-        end
-    end)
-    
-    --// PARTICLE BACKGROUND
-    shhhhnayy05.CreateAdvancedParticles(ScreenGui)
-    
-    --// STORE REFERENCES
-    shhhhnayy05.GUI = {
-        ScreenGui = ScreenGui,
-        MainFrame = MainFrame,
-        ContentFrame = ContentFrame,
-        MinimizedIcon = MinimizedIcon,
-        ProgressSection = ProgressSection,
-        ProgressFill = ProgressFill,
-        ProgressText = ProgressText,
-        LogFrame = LogFrame,
-        ServicesValue = ServicesValue,
-        ItemsValue = ItemsValue,
-        ScriptsValue = ScriptsValue,
-        StartCopyBtn = StartCopyBtn,
-        SaveBtn = SaveBtn,
-        ExportBtn = ExportBtn,
-        FilesBtn = FilesBtn
-    }
-    
-    --// BUTTON CONNECTIONS
-    local minimized = false
-    
-    MinimizeBtn.MouseButton1Click:Connect(function()
-        minimized = not minimized
-        if minimized then
-            TweenService:Create(MainFrame, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -225, 1.5, 0)}):Play()
-            wait(0.3)
-            MainFrame.Visible = false
-            MinimizedIcon.Visible = true
-            TweenService:Create(MinimizedIcon, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Size = UDim2.new(0, 70, 0, 70)}):Play()
-        end
-    end)
-    
-    MinimizedIcon.MouseButton1Click:Connect(function()
-        minimized = false
-        MinimizedIcon.Visible = false
-        MainFrame.Visible = true
-        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -225, 0.5, -275)}):Play()
-    end)
-    
-    CloseBtn.MouseButton1Click:Connect(function()
-        TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
-        wait(0.3)
-        ScreenGui:Destroy()
-    end)
-    
-    -- Dragging
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
-    
-    TitleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
-        end
-    end)
-    
-    TitleBar.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    
-    TitleBar.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-    
-    -- Action Buttons
-    StartCopyBtn.MouseButton1Click:Connect(function()
-        if not shhhhnayy05.IsCopying then
-            shhhhnayy05.StartRealTimeCopy()
-        end
-    end)
-    
-    SaveBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05.SaveToPermanentFile()
-    end)
-    
-    ExportBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05.ExportToLuaScript()
-    end)
-    
-    FilesBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05.ShowSavedFilesManager()
-    end)
-    
-    -- Initial Log
-    shhhhnayy05.AddLog("✅ System Ready - Detected: " .. game.Name)
-    shhhhnayy05.AddLog("💡 Click 'START COPY' to copy current game")
-    
-    -- Load existing files
-    shhhhnayy05.LoadSavedFiles()
-    
-    return shhhhnayy05.GUI
-end
+--// CONFIG
+shhhhnayy05.Config = {
+    BaseFolder = "shhhhnayy05_Copies",
+    IndexFile = "_index.json",
+    MaxDepth = 200, -- Maximum recursion depth
+    MaxItems = 10000 -- Maximum items to copy
+}
 
---// Helper Functions
-function shhhhnayy05.CreateSection(parent, title, position)
-    local Section = Instance.new("Frame")
-    Section.Name = "Section"
-    Section.Size = UDim2.new(1, 0, 0, 50)
-    Section.Position = position
-    Section.BackgroundTransparency = 1
-    Section.AutomaticSize = Enum.AutomaticSize.Y
-    Section.Parent = parent
-    
-    local SectionTitle = Instance.new("TextLabel")
-    SectionTitle.Size = UDim2.new(1, -20, 0, 25)
-    SectionTitle.Position = UDim2.new(0, 10, 0, 0)
-    SectionTitle.BackgroundTransparency = 1
-    SectionTitle.Text = title
-    SectionTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-    SectionTitle.TextSize = 14
-    SectionTitle.Font = Enum.Font.GothamBold
-    SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-    SectionTitle.Parent = Section
-    
-    local Content = Instance.new("Frame")
-    Content.Name = "Content"
-    Content.Size = UDim2.new(1, 0, 0, 0)
-    Content.Position = UDim2.new(0, 0, 0, 25)
-    Content.BackgroundTransparency = 1
-    Content.AutomaticSize = Enum.AutomaticSize.Y
-    Content.Parent = Section
-    
-    return Content
-end
+--// Detect Methods
+shhhhnayy05.Methods = {
+    writefile = typeof(writefile) == "function",
+    readfile = typeof(readfile) == "function",
+    isfile = typeof(isfile) == "function",
+    isfolder = typeof(isfolder) == "function",
+    makefolder = typeof(makefolder) == "function",
+    delfile = typeof(delfile) == "function",
+    delfolder = typeof(delfolder) == "function",
+    listfiles = typeof(listfiles) == "function",
+    setclipboard = typeof(setclipboard) == "function",
+    getgenv = typeof(getgenv) == "function"
+}
 
-function shhhhnayy05.CreateActionButton(parent, text, color, hoverColor)
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0, 95, 0, 45)
-    Button.BackgroundColor3 = color
-    Button.Text = text
-    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.TextSize = 11
-    Button.Font = Enum.Font.GothamBold
-    Button.AutoButtonColor = false
-    Button.Parent = parent
-    
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 10)
-    Corner.Parent = Button
-    
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Color3.fromRGB(255, 255, 255)
-    Stroke.Thickness = 1
-    Stroke.Transparency = 0.5
-    Stroke.Parent = Button
-    
-    -- Hover effects
-    Button.MouseEnter:Connect(function()
-        TweenService:Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = hoverColor, Size = UDim2.new(0, 100, 0, 48)}):Play()
-    end)
-    
-    Button.MouseLeave:Connect(function()
-        TweenService:Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = color, Size = UDim2.new(0, 95, 0, 45)}):Play()
-    end)
-    
-    Button.MouseButton1Down:Connect(function()
-        TweenService:Create(Button, TweenInfo.new(0.1), {Size = UDim2.new(0, 90, 0, 42)}):Play()
-    end)
-    
-    Button.MouseButton1Up:Connect(function()
-        TweenService:Create(Button, TweenInfo.new(0.1), {Size = UDim2.new(0, 95, 0, 45)}):Play()
-    end)
-    
-    return Button
-end
+--// State
+shhhhnayy05.SavedGames = {}
+shhhhnayy05.CopyStats = {
+    TotalItems = 0,
+    Scripts = 0,
+    Parts = 0,
+    Remotes = 0,
+    GUIs = 0,
+    Others = 0
+}
 
-function shhhhnayy05.CreateAdvancedParticles(parent)
-    local ParticleFrame = Instance.new("Frame")
-    ParticleFrame.Size = UDim2.new(1, 0, 1, 0)
-    ParticleFrame.BackgroundTransparency = 1
-    ParticleFrame.ZIndex = -100
-    ParticleFrame.Parent = parent
+--// Initialize
+function shhhhnayy05:Init()
+    print("🔧 shhhhnayy05: Initializing COMPLETE Game Copier...")
     
-    for i = 1, 30 do
-        local Particle = Instance.new("Frame")
-        local size = math.random(2, 8)
-        Particle.Size = UDim2.new(0, size, 0, size)
-        Particle.Position = UDim2.new(math.random(), 0, math.random(), 0)
-        Particle.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-        Particle.BackgroundTransparency = math.random(0.6, 0.9)
-        Particle.BorderSizePixel = 0
-        Particle.Parent = ParticleFrame
-        
-        local Corner = Instance.new("UICorner")
-        Corner.CornerRadius = UDim.new(1, 0)
-        Corner.Parent = Particle
-        
-        -- Float animation
-        spawn(function()
-            while Particle and Particle.Parent do
-                local duration = math.random(5, 15)
-                local newX = math.random()
-                local newY = math.random()
-                
-                TweenService:Create(Particle, TweenInfo.new(duration, Enum.EasingStyle.Sine), {
-                    Position = UDim2.new(newX, 0, newY, 0),
-                    BackgroundTransparency = math.random(0.6, 0.9)
-                }):Play()
-                
-                wait(duration)
+    --// Create base folder
+    if self.Methods.makefolder then
+        pcall(function()
+            if not isfolder(self.Config.BaseFolder) then
+                makefolder(self.Config.BaseFolder)
+                print("✅ Created: " .. self.Config.BaseFolder)
             end
         end)
     end
+    
+    --// Load saved games
+    self:LoadSavedGames()
+    
+    print("✅ Ready! Use GUI to copy game.")
 end
 
-function shhhhnayy05.AddLog(message)
-    if not shhhhnayy05.GUI then return end
+--// Load Saved Games
+function shhhhnayy05:LoadSavedGames()
+    if not (self.Methods.isfile and self.Methods.readfile) then return end
     
-    local LogEntry = Instance.new("TextLabel")
-    LogEntry.Size = UDim2.new(1, -10, 0, 18)
-    LogEntry.BackgroundTransparency = 1
-    LogEntry.Text = "• " .. message
-    LogEntry.TextColor3 = Color3.fromRGB(180, 180, 180)
-    LogEntry.TextSize = 11
-    LogEntry.Font = Enum.Font.Gotham
-    LogEntry.TextXAlignment = Enum.TextXAlignment.Left
-    LogEntry.Parent = shhhhnayy05.GUI.LogFrame
-    
-    -- Auto scroll
-    shhhhnayy05.GUI.LogFrame.CanvasPosition = Vector2.new(0, shhhhnayy05.GUI.LogFrame.AbsoluteCanvasSize.Y)
-    
-    -- Limit entries
-    if #shhhhnayy05.GUI.LogFrame:GetChildren() > 20 then
-        shhhhnayy05.GUI.LogFrame:GetChildren()[1]:Destroy()
-    end
-end
-
-function shhhhnayy05.UpdateProgress(percent, status, services, items, scripts)
-    if not shhhhnayy05.GUI then return end
-    
-    TweenService:Create(shhhhnayy05.GUI.ProgressFill, TweenInfo.new(0.3), {Size = UDim2.new(percent / 100, 0, 1, 0)}):Play()
-    shhhhnayy05.GUI.ProgressText.Text = math.floor(percent) .. "% - " .. status
-    
-    if services then shhhhnayy05.GUI.ServicesValue.Text = tostring(services) end
-    if items then shhhhnayy05.GUI.ItemsValue.Text = tostring(items) end
-    if scripts then shhhhnayy05.GUI.ScriptsValue.Text = tostring(scripts) end
-    
-    shhhhnayy05.AddLog(status)
-end
-
---// REAL-TIME COPY FUNCTION
-function shhhhnayy05.StartRealTimeCopy()
-    if shhhhnayy05.IsCopying then return end
-    shhhhnayy05.IsCopying = true
-    
-    -- Reset data
-    shhhhnayy05.CopiedData = {}
-    
-    -- Show progress section
-    shhhhnayy05.GUI.ProgressSection.Visible = true
-    shhhhnayy05.GUI.StartCopyBtn.Text = "⏳ COPYING..."
-    shhhhnayy05.GUI.StartCopyBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    
-    spawn(function()
-        shhhhnayy05.UpdateProgress(0, "🔍 Scanning current game...", 0, 0, 0)
-        wait(0.5)
-        
-        -- Get selected services
-        local selectedServices = {}
-        for serviceName, getChecked in pairs(shhhhnayy05.ServiceCheckboxes) do
-            if getChecked() then
-                table.insert(selectedServices, serviceName)
-            end
+    pcall(function()
+        local indexPath = self.Config.BaseFolder .. "/" .. self.Config.IndexFile
+        if isfile(indexPath) then
+            local content = readfile(indexPath)
+            self.SavedGames = HttpService:JSONDecode(content)
+            print("📂 Loaded " .. self:GetSavedCount() .. " saved games")
         end
-        
-        if #selectedServices == 0 then
-            shhhhnayy05.UpdateProgress(0, "❌ No services selected!", 0, 0, 0)
-            shhhhnayy05.IsCopying = false
-            shhhhnayy05.GUI.StartCopyBtn.Text = "🚀 START COPY"
-            shhhhnayy05.GUI.StartCopyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-            return
-        end
-        
-        shhhhnayy05.UpdateProgress(5, "📦 Found " .. #selectedServices .. " services to copy", 0, 0, 0)
-        wait(0.3)
-        
-        local totalServices = #selectedServices
-        local currentService = 0
-        local totalItems = 0
-        local totalScripts = 0
-        
-        for _, serviceName in ipairs(selectedServices) do
-            currentService = currentService + 1
-            local baseProgress = (currentService - 1) / totalServices * 90
-            
-            shhhhnayy05.UpdateProgress(baseProgress + 5, "📂 Reading " .. serviceName .. "...", currentService, totalItems, totalScripts)
-            
-            local service = game:FindFirstChild(serviceName) or game:GetService(serviceName)
-            
-            if service then
-                shhhhnayy05.UpdateProgress(baseProgress + 10, "🔍 Scanning children of " .. serviceName .. "...", currentService, totalItems, totalScripts)
-                
-                local success, data = pcall(function()
-                    return shhhhnayy05.DeepScanService(service, function(progress, items, scripts)
-                        totalItems = items
-                        totalScripts = scripts
-                        local subProgress = progress * (80 / totalServices)
-                        shhhhnayy05.UpdateProgress(baseProgress + 10 + subProgress, 
-                            "📋 Copying from " .. serviceName .. "... (" .. items .. " items, " .. scripts .. " scripts)", 
-                            currentService, totalItems, totalScripts)
-                    end)
-                end)
-                
-                if success and data then
-                    shhhhnayy05.CopiedData[serviceName] = data
-                    totalItems = totalItems + shhhhnayy05.CountItemsInData(data)
-                    totalScripts = totalScripts + shhhhnayy05.CountScriptsInData(data)
-                    shhhhnayy05.UpdateProgress(baseProgress + 90, "✅ " .. serviceName .. " copied!", currentService, totalItems, totalScripts)
-                else
-                    shhhhnayy05.UpdateProgress(baseProgress + 90, "⚠️ " .. serviceName .. " failed: " .. tostring(data), currentService, totalItems, totalScripts)
+    end)
+    
+    --// Global backup
+    if self.Methods.getgenv then
+        local genv = getgenv()
+        if genv.shhhhnayy05_SavedGames then
+            for id, game in pairs(genv.shhhhnayy05_SavedGames) do
+                if not self.SavedGames[id] then
+                    self.SavedGames[id] = game
                 end
-            else
-                shhhhnayy05.UpdateProgress(baseProgress + 90, "⚠️ " .. serviceName .. " not found", currentService, totalItems, totalScripts)
             end
-            
-            wait(0.2)
         end
-        
-        shhhhnayy05.UpdateProgress(95, "🔄 Finalizing data structure...", totalServices, totalItems, totalScripts)
-        wait(0.5)
-        
-        shhhhnayy05.UpdateProgress(100, "🎉 COPY COMPLETE! Total: " .. totalItems .. " items, " .. totalScripts .. " scripts", totalServices, totalItems, totalScripts)
-        
-        shhhhnayy05.IsCopying = false
-        shhhhnayy05.GUI.StartCopyBtn.Text = "✅ COPIED!"
-        shhhhnayy05.GUI.StartCopyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        
-        wait(2)
-        shhhhnayy05.GUI.StartCopyBtn.Text = "🚀 START COPY"
-        shhhhnayy05.GUI.StartCopyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-        
-        -- Auto suggest save
-        shhhhnayy05.ShowNotification("Copy Complete!", "Click 'SAVE FILE' to store permanently")
-    end)
+        genv.shhhhnayy05_SavedGames = self.SavedGames
+    end
 end
 
-function shhhhnayy05.DeepScanService(service, progressCallback)
+--// Save Registry
+function shhhhnayy05:SaveRegistry()
+    if self.Methods.writefile then
+        pcall(function()
+            local indexPath = self.Config.BaseFolder .. "/" .. self.Config.IndexFile
+            writefile(indexPath, HttpService:JSONEncode(self.SavedGames))
+        end)
+    end
+    
+    if self.Methods.getgenv then
+        getgenv().shhhhnayy05_SavedGames = self.SavedGames
+    end
+end
+
+--// Get Saved Count
+function shhhhnayy05:GetSavedCount()
+    local count = 0
+    for _ in pairs(self.SavedGames) do count = count + 1 end
+    return count
+end
+
+--// Delete Game
+function shhhhnayy05:DeleteGame(gameId)
+    local game = self.SavedGames[gameId]
+    if not game then return false end
+    
+    --// Try delete files
+    if self.Methods.delfile and game.FolderPath then
+        pcall(function()
+            for _, service in ipairs(game.Services or {}) do
+                local filePath = game.FolderPath .. "/" .. service.Name .. "_Loader.lua"
+                if isfile(filePath) then
+                    delfile(filePath)
+                end
+            end
+            local mainFile = game.FolderPath .. "/_LOAD_ALL.lua"
+            local readmeFile = game.FolderPath .. "/README.txt"
+            if isfile(mainFile) then delfile(mainFile) end
+            if isfile(readmeFile) then delfile(readmeFile) end
+        end)
+    end
+    
+    self.SavedGames[gameId] = nil
+    self:SaveRegistry()
+    return true
+end
+
+--// GET ALL SERVICES IN GAME
+function shhhhnayy05:GetAllServices()
+    local services = {}
+    
+    --// Core Services (always try to copy)
+    local coreServices = {
+        {Name = "ReplicatedStorage", Object = ReplicatedStorage, Critical = true},
+        {Name = "ServerScriptService", Object = ServerScriptService, Critical = true},
+        {Name = "StarterPlayerScripts", Object = StarterPlayer:FindFirstChild("StarterPlayerScripts"), Critical = true},
+        {Name = "StarterCharacterScripts", Object = StarterPlayer:FindFirstChild("StarterCharacterScripts"), Critical = false},
+        {Name = "StarterGui", Object = StarterGui, Critical = false},
+        {Name = "StarterPack", Object = StarterPack, Critical = false},
+        {Name = "Lighting", Object = Lighting, Critical = false},
+        {Name = "Workspace", Object = Workspace, Critical = false},
+        {Name = "Teams", Object = Teams, Critical = false},
+        {Name = "SoundService", Object = SoundService, Critical = false},
+        {Name = "Chat", Object = Chat, Critical = false},
+        {Name = "LocalizationService", Object = LocalizationService, Critical = false},
+        {Name = "StarterPlayer", Object = StarterPlayer, Critical = false}
+    }
+    
+    for _, serv in ipairs(coreServices) do
+        if serv.Object and typeof(serv.Object) == "Instance" then
+            --// Check if has children
+            local childCount = #serv.Object:GetChildren()
+            table.insert(services, {
+                name = serv.Name,
+                obj = serv.Object,
+                count = childCount,
+                critical = serv.Critical
+            })
+        end
+    end
+    
+    return services
+end
+
+--// SERIALIZE INSTANCE (COMPLETE VERSION)
+function shhhhnayy05:SerializeInstance(instance, depth, stats)
+    depth = depth or 0
+    stats = stats or self.CopyStats
+    
+    if depth > self.Config.MaxDepth then return nil end
+    if self.CopyStats.TotalItems > self.Config.MaxItems then return nil end
+    
+    self.CopyStats.TotalItems = self.CopyStats.TotalItems + 1
+    
     local data = {
-        Name = service.Name,
-        ClassName = service.ClassName,
+        ClassName = instance.ClassName,
+        Name = instance.Name,
+        Properties = {},
         Children = {}
     }
     
-    local totalChildren = #service:GetChildren()
-    local processed = 0
-    local items = 0
-    local scripts = 0
-    
-    local function scanInstance(inst, parentTable)
-        processed = processed + 1
-        items = items + 1
-        
-        if inst:IsA("Script") or inst:IsA("LocalScript") or inst:IsA("ModuleScript") then
-            scripts = scripts + 1
-        end
-        
-        -- Update progress every 10 items
-        if processed % 10 == 0 and progressCallback then
-            progressCallback(processed / totalChildren * 100, items, scripts)
-        end
-        
-        local itemData = {
-            Name = inst.Name,
-            ClassName = inst.ClassName,
-            Properties = {},
-            Children = {}
-        }
-        
-        -- Safe property reading
-        pcall(function()
-            -- Common properties
-            if inst:IsA("BasePart") then
-                itemData.Properties.Size = {inst.Size.X, inst.Size.Y, inst.Size.Z}
-                itemData.Properties.Position = {inst.Position.X, inst.Position.Y, inst.Position.Z}
-                itemData.Properties.Rotation = {inst.Orientation.X, inst.Orientation.Y, inst.Orientation.Z}
-                itemData.Properties.Color = {inst.Color.R, inst.Color.G, inst.Color.B}
-                itemData.Properties.Material = tostring(inst.Material)
-                itemData.Properties.Transparency = inst.Transparency
-                itemData.Properties.Anchored = inst.Anchored
-                itemData.Properties.CanCollide = inst.CanCollide
+    --// Class-specific serialization
+    pcall(function()
+        --// SCRIPTS (Admin, Anti-cheat, etc.)
+        if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then
+            self.CopyStats.Scripts = self.CopyStats.Scripts + 1
+            
+            --// Get source safely
+            local source = ""
+            pcall(function()
+                source = instance.Source or ""
+            end)
+            data.Properties.Source = source
+            data.Properties.Disabled = instance.Disabled
+            
+            if instance:IsA("LocalScript") then
+                data.Properties.RunContext = tostring(instance.RunContext)
             end
             
-            -- Script source (if possible)
-            if (inst:IsA("Script") or inst:IsA("LocalScript") or inst:IsA("ModuleScript")) and inst.Source then
-                itemData.Properties.Source = inst.Source:sub(1, 5000) -- Limit source size
+        --// BASEPART (Parts, MeshParts, etc.)
+        elseif instance:IsA("BasePart") then
+            self.CopyStats.Parts = self.CopyStats.Parts + 1
+            
+            data.Properties.Size = {
+                X = math.floor(instance.Size.X * 1000) / 1000,
+                Y = math.floor(instance.Size.Y * 1000) / 1000,
+                Z = math.floor(instance.Size.Z * 1000) / 1000
+            }
+            data.Properties.Position = {
+                X = math.floor(instance.Position.X * 1000) / 1000,
+                Y = math.floor(instance.Position.Y * 1000) / 1000,
+                Z = math.floor(instance.Position.Z * 1000) / 1000
+            }
+            data.Properties.Rotation = {
+                X = math.floor(instance.Rotation.X * 1000) / 1000,
+                Y = math.floor(instance.Rotation.Y * 1000) / 1000,
+                Z = math.floor(instance.Rotation.Z * 1000) / 1000
+            }
+            data.Properties.Color = {
+                R = math.floor(instance.Color.R * 255),
+                G = math.floor(instance.Color.G * 255),
+                B = math.floor(instance.Color.B * 255)
+            }
+            data.Properties.Material = tostring(instance.Material)
+            data.Properties.Transparency = instance.Transparency
+            data.Properties.Reflectance = instance.Reflectance
+            data.Properties.Anchored = instance.Anchored
+            data.Properties.CanCollide = instance.CanCollide
+            data.Properties.CanTouch = instance.CanTouch
+            data.Properties.CanQuery = instance.CanQuery
+            data.Properties.CastShadow = instance.CastShadow
+            data.Properties.Shape = tostring(instance.Shape)
+            
+            --// MeshPart specific
+            if instance:IsA("MeshPart") then
+                data.Properties.MeshId = instance.MeshId
+                data.Properties.TextureID = instance.TextureID
             end
             
-            -- Value objects
-            if inst:IsA("ValueBase") then
-                itemData.Properties.Value = tostring(inst.Value)
+        --// MODEL
+        elseif instance:IsA("Model") then
+            data.Properties.PrimaryPart = instance.PrimaryPart and instance.PrimaryPart.Name or nil
+            
+        --// REMOTES (Admin systems use these)
+        elseif instance:IsA("RemoteEvent") or instance:IsA("RemoteFunction") then
+            self.CopyStats.Remotes = self.CopyStats.Remotes + 1
+            --// No special properties
+            
+        --// BINDABLES
+        elseif instance:IsA("BindableEvent") or instance:IsA("BindableFunction") then
+            --// No special properties
+            
+        --// FOLDER
+        elseif instance:IsA("Folder") then
+            --// No special properties
+            
+        --// VALUE OBJECTS
+        elseif instance:IsA("StringValue") then
+            data.Properties.Value = instance.Value
+        elseif instance:IsA("IntValue") then
+            data.Properties.Value = instance.Value
+        elseif instance:IsA("NumberValue") then
+            data.Properties.Value = instance.Value
+        elseif instance:IsA("BoolValue") then
+            data.Properties.Value = instance.Value
+        elseif instance:IsA("Color3Value") then
+            data.Properties.Value = {
+                R = instance.Value.R,
+                G = instance.Value.G,
+                B = instance.Value.B
+            }
+        elseif instance:IsA("Vector3Value") then
+            data.Properties.Value = {
+                X = instance.Value.X,
+                Y = instance.Value.Y,
+                Z = instance.Value.Z
+            }
+        elseif instance:IsA("CFrameValue") then
+            local x, y, z, r00, r01, r02, r10, r11, r12, r20, r21, r22 = instance.Value:GetComponents()
+            data.Properties.Value = {x, y, z, r00, r01, r02, r10, r11, r12, r20, r21, r22}
+        elseif instance:IsA("ObjectValue") then
+            data.Properties.Value = instance.Value and instance.Value.Name or nil
+            
+        --// SOUND
+        elseif instance:IsA("Sound") then
+            data.Properties.SoundId = instance.SoundId
+            data.Properties.Volume = instance.Volume
+            data.Properties.PlaybackSpeed = instance.PlaybackSpeed
+            data.Properties.Looped = instance.Looped
+            data.Properties.RollOffMode = tostring(instance.RollOffMode)
+            data.Properties.RollOffMaxDistance = instance.RollOffMaxDistance
+            data.Properties.RollOffMinDistance = instance.RollOffMinDistance
+            
+        --// DECAL/TEXTURE
+        elseif instance:IsA("Decal") or instance:IsA("Texture") then
+            data.Properties.Texture = instance.Texture
+            data.Properties.Face = tostring(instance.Face)
+            data.Properties.Transparency = instance.Transparency
+            
+        --// SPECIAL MESH
+        elseif instance:IsA("SpecialMesh") then
+            data.Properties.MeshId = instance.MeshId
+            data.Properties.TextureId = instance.TextureId
+            data.Properties.MeshType = tostring(instance.MeshType)
+            data.Properties.Scale = {
+                X = instance.Scale.X,
+                Y = instance.Scale.Y,
+                Z = instance.Scale.Z
+            }
+            
+        --// LIGHTS
+        elseif instance:IsA("PointLight") or instance:IsA("SpotLight") or instance:IsA("SurfaceLight") then
+            data.Properties.Color = {
+                R = instance.Color.R,
+                G = instance.Color.G,
+                B = instance.Color.B
+            }
+            data.Properties.Brightness = instance.Brightness
+            data.Properties.Range = instance.Range
+            
+        --// HUMANOID
+        elseif instance:IsA("Humanoid") then
+            data.Properties.Health = instance.Health
+            data.Properties.MaxHealth = instance.MaxHealth
+            data.Properties.WalkSpeed = instance.WalkSpeed
+            data.Properties.JumpPower = instance.JumpPower
+            data.Properties.AutoRotate = instance.AutoRotate
+            
+        --// GUI OBJECTS
+        elseif instance:IsA("ScreenGui") then
+            self.CopyStats.GUIs = self.CopyStats.GUIs + 1
+            data.Properties.ResetOnSpawn = instance.ResetOnSpawn
+            data.Properties.ZIndexBehavior = tostring(instance.ZIndexBehavior)
+            data.Properties.DisplayOrder = instance.DisplayOrder
+            data.Properties.Enabled = instance.Enabled
+            
+        elseif instance:IsA("BillboardGui") then
+            self.CopyStats.GUIs = self.CopyStats.GUIs + 1
+            data.Properties.Size = {
+                X = instance.Size.X.Scale,
+                Y = instance.Size.Y.Scale,
+                XO = instance.Size.X.Offset,
+                YO = instance.Size.Y.Offset
+            }
+            data.Properties.StudsOffset = {
+                X = instance.StudsOffset.X,
+                Y = instance.StudsOffset.Y,
+                Z = instance.StudsOffset.Z
+            }
+            data.Properties.AlwaysOnTop = instance.AlwaysOnTop
+            
+        elseif instance:IsA("SurfaceGui") then
+            self.CopyStats.GUIs = self.CopyStats.GUIs + 1
+            data.Properties.Face = tostring(instance.Face)
+            data.Properties.SizingMode = tostring(instance.SizingMode)
+            
+        elseif instance:IsA("Frame") then
+            self.CopyStats.GUIs = self.CopyStats.GUIs + 1
+            data.Properties.Size = {
+                X = instance.Size.X.Scale,
+                Y = instance.Size.Y.Scale,
+                XO = instance.Size.X.Offset,
+                YO = instance.Size.Y.Offset
+            }
+            data.Properties.Position = {
+                X = instance.Position.X.Scale,
+                Y = instance.Position.Y.Scale,
+                XO = instance.Position.X.Offset,
+                YO = instance.Position.Y.Offset
+            }
+            data.Properties.BackgroundColor3 = {
+                R = instance.BackgroundColor3.R,
+                G = instance.BackgroundColor3.G,
+                B = instance.BackgroundColor3.B
+            }
+            data.Properties.BackgroundTransparency = instance.BackgroundTransparency
+            data.Properties.BorderSizePixel = instance.BorderSizePixel
+            data.Properties.BorderColor3 = {
+                R = instance.BorderColor3.R,
+                G = instance.BorderColor3.G,
+                B = instance.BorderColor3.B
+            }
+            
+        elseif instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox") then
+            self.CopyStats.GUIs = self.CopyStats.GUIs + 1
+            data.Properties.Size = {
+                X = instance.Size.X.Scale,
+                Y = instance.Size.Y.Scale,
+                XO = instance.Size.X.Offset,
+                YO = instance.Size.Y.Offset
+            }
+            data.Properties.Position = {
+                X = instance.Position.X.Scale,
+                Y = instance.Position.Y.Scale,
+                XO = instance.Position.X.Offset,
+                YO = instance.Position.Y.Offset
+            }
+            data.Properties.BackgroundColor3 = {
+                R = instance.BackgroundColor3.R,
+                G = instance.BackgroundColor3.G,
+                B = instance.BackgroundColor3.B
+            }
+            data.Properties.BackgroundTransparency = instance.BackgroundTransparency
+            data.Properties.BorderSizePixel = instance.BorderSizePixel
+            data.Properties.Text = instance.Text
+            data.Properties.TextColor3 = {
+                R = instance.TextColor3.R,
+                G = instance.TextColor3.G,
+                B = instance.TextColor3.B
+            }
+            data.Properties.TextSize = instance.TextSize
+            data.Properties.Font = tostring(instance.Font)
+            data.Properties.TextWrapped = instance.TextWrapped
+            data.Properties.TextScaled = instance.TextScaled
+            data.Properties.TextXAlignment = tostring(instance.TextXAlignment)
+            data.Properties.TextYAlignment = tostring(instance.TextYAlignment)
+            
+            if instance:IsA("TextButton") then
+                data.Properties.AutoButtonColor = instance.AutoButtonColor
+                data.Properties.Modal = instance.Modal
             end
             
-            -- GUI properties
-            if inst:IsA("GuiObject") then
-                itemData.Properties.Size = {inst.Size.X.Scale, inst.Size.X.Offset, inst.Size.Y.Scale, inst.Size.Y.Offset}
-                itemData.Properties.Position = {inst.Position.X.Scale, inst.Position.X.Offset, inst.Position.Y.Scale, inst.Position.Y.Offset}
-                itemData.Properties.BackgroundColor3 = {inst.BackgroundColor3.R, inst.BackgroundColor3.G, inst.BackgroundColor3.B}
-                if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
-                    itemData.Properties.Text = inst.Text
-                    itemData.Properties.TextColor3 = {inst.TextColor3.R, inst.TextColor3.G, inst.TextColor3.B}
-                    itemData.Properties.TextSize = inst.TextSize
+        elseif instance:IsA("ImageLabel") or instance:IsA("ImageButton") then
+            self.CopyStats.GUIs = self.CopyStats.GUIs + 1
+            data.Properties.Size = {
+                X = instance.Size.X.Scale,
+                Y = instance.Size.Y.Scale,
+                XO = instance.Size.X.Offset,
+                YO = instance.Size.Y.Offset
+            }
+            data.Properties.Position = {
+                X = instance.Position.X.Scale,
+                Y = instance.Position.Y.Scale,
+                XO = instance.Position.X.Offset,
+                YO = instance.Position.Y.Offset
+            }
+            data.Properties.BackgroundColor3 = {
+                R = instance.BackgroundColor3.R,
+                G = instance.BackgroundColor3.G,
+                B = instance.BackgroundColor3.B
+            }
+            data.Properties.Image = instance.Image
+            data.Properties.ImageColor3 = {
+                R = instance.ImageColor3.R,
+                G = instance.ImageColor3.G,
+                B = instance.ImageColor3.B
+            }
+            data.Properties.ImageTransparency = instance.ImageTransparency
+            data.Properties.ScaleType = tostring(instance.ScaleType)
+            
+        elseif instance:IsA("ScrollingFrame") then
+            self.CopyStats.GUIs = self.CopyStats.GUIs + 1
+            data.Properties.Size = {
+                X = instance.Size.X.Scale,
+                Y = instance.Size.Y.Scale,
+                XO = instance.Size.X.Offset,
+                YO = instance.Size.Y.Offset
+            }
+            data.Properties.Position = {
+                X = instance.Position.X.Scale,
+                Y = instance.Position.Y.Scale,
+                XO = instance.Position.X.Offset,
+                YO = instance.Position.Y.Offset
+            }
+            data.Properties.CanvasSize = {
+                X = instance.CanvasSize.X.Scale,
+                Y = instance.CanvasSize.Y.Scale,
+                XO = instance.CanvasSize.X.Offset,
+                YO = instance.CanvasSize.Y.Offset
+            }
+            data.Properties.ScrollBarThickness = instance.ScrollBarThickness
+            data.Properties.ScrollingEnabled = instance.ScrollingEnabled
+            
+        --// ANIMATION
+        elseif instance:IsA("Animation") then
+            data.Properties.AnimationId = instance.AnimationId
+            
+        --// ANIMATOR
+        elseif instance:IsA("Animator") then
+            --// No special properties
+            
+        --// HUMANOID DESCRIPTION
+        elseif instance:IsA("HumanoidDescription") then
+            data.Properties.HatAccessory = instance.HatAccessory
+            data.Properties.HairAccessory = instance.HairAccessory
+            data.Properties.FaceAccessory = instance.FaceAccessory
+            data.Properties.ShirtAccessory = instance.ShirtAccessory
+            data.Properties.PantsAccessory = instance.PantsAccessory
+            
+        --// SKY
+        elseif instance:IsA("Sky") then
+            data.Properties.SkyboxBk = instance.SkyboxBk
+            data.Properties.SkyboxDn = instance.SkyboxDn
+            data.Properties.SkyboxFt = instance.SkyboxFt
+            data.Properties.SkyboxLf = instance.SkyboxLf
+            data.Properties.SkyboxRt = instance.SkyboxRt
+            data.Properties.SkyboxUp = instance.SkyboxUp
+            data.Properties.SunTextureId = instance.SunTextureId
+            data.Properties.MoonTextureId = instance.MoonTextureId
+            
+        --// ATMOSPHERE
+        elseif instance:IsA("Atmosphere") then
+            data.Properties.Density = instance.Density
+            data.Properties.Offset = instance.Offset
+            data.Properties.Color = {
+                R = instance.Color.R,
+                G = instance.Color.G,
+                B = instance.Color.B
+            }
+            data.Properties.Decay = {
+                R = instance.Decay.R,
+                G = instance.Decay.G,
+                B = instance.Decay.B
+            }
+            data.Properties.Glare = instance.Glare
+            data.Properties.Haze = instance.Haze
+            
+        --// POST PROCESSING EFFECTS
+        elseif instance:IsA("BloomEffect") then
+            data.Properties.Intensity = instance.Intensity
+            data.Properties.Size = instance.Size
+            data.Properties.Threshold = instance.Threshold
+            
+        elseif instance:IsA("BlurEffect") then
+            data.Properties.Size = instance.Size
+            
+        elseif instance:IsA("ColorCorrectionEffect") then
+            data.Properties.Brightness = instance.Brightness
+            data.Properties.Contrast = instance.Contrast
+            data.Properties.Saturation = instance.Saturation
+            data.Properties.TintColor = {
+                R = instance.TintColor.R,
+                G = instance.TintColor.G,
+                B = instance.TintColor.B
+            }
+            
+        elseif instance:IsA("DepthOfFieldEffect") then
+            data.Properties.FarIntensity = instance.FarIntensity
+            data.Properties.NearIntensity = instance.NearIntensity
+            data.Properties.FocusDistance = instance.FocusDistance
+            data.Properties.InFocusRadius = instance.InFocusRadius
+            
+        elseif instance:IsA("SunRaysEffect") then
+            data.Properties.Intensity = instance.Intensity
+            data.Properties.Spread = instance.Spread
+            
+        --// PARTICLE EMITTER
+        elseif instance:IsA("ParticleEmitter") then
+            data.Properties.Texture = instance.Texture
+            data.Properties.Color = tostring(instance.Color)
+            data.Properties.Size = tostring(instance.Size)
+            data.Properties.Transparency = tostring(instance.Transparency)
+            data.Properties.Lifetime = tostring(instance.Lifetime)
+            data.Properties.Rate = instance.Rate
+            data.Properties.Speed = tostring(instance.Speed)
+            data.Properties.Acceleration = {
+                X = instance.Acceleration.X,
+                Y = instance.Acceleration.Y,
+                Z = instance.Acceleration.Z
+            }
+            
+        --// FIRE/SMOKE/SPARKLES
+        elseif instance:IsA("Fire") then
+            data.Properties.Size = instance.Size
+            data.Properties.Heat = instance.Heat
+            data.Properties.Color = {
+                R = instance.Color.R,
+                G = instance.Color.G,
+                B = instance.Color.B
+            }
+            data.Properties.SecondaryColor = {
+                R = instance.SecondaryColor.R,
+                G = instance.SecondaryColor.G,
+                B = instance.SecondaryColor.B
+            }
+            
+        elseif instance:IsA("Smoke") then
+            data.Properties.Size = instance.Size
+            data.Properties.Opacity = instance.Opacity
+            data.Properties.RiseVelocity = instance.RiseVelocity
+            data.Properties.Color = {
+                R = instance.Color.R,
+                G = instance.Color.G,
+                B = instance.Color.B
+            }
+            
+        elseif instance:IsA("Sparkles") then
+            data.Properties.SparkleColor = {
+                R = instance.SparkleColor.R,
+                G = instance.SparkleColor.G,
+                B = instance.SparkleColor.B
+            }
+            
+        --// WELD/MOTOR6D
+        elseif instance:IsA("Weld") or instance:IsA("Motor6D") or instance:IsA("Snap") then
+            data.Properties.Part0 = instance.Part0 and instance.Part0.Name or nil
+            data.Properties.Part1 = instance.Part1 and instance.Part1.Name or nil
+            local c0x, c0y, c0z, c0r00, c0r01, c0r02, c0r10, c0r11, c0r12, c0r20, c0r21, c0r22 = instance.C0:GetComponents()
+            local c1x, c1y, c1z, c1r00, c1r01, c1r02, c1r10, c1r11, c1r12, c1r20, c1r21, c1r22 = instance.C1:GetComponents()
+            data.Properties.C0 = {c0x, c0y, c0z, c0r00, c0r01, c0r02, c0r10, c0r11, c0r12, c0r20, c0r21, c0r22}
+            data.Properties.C1 = {c1x, c1y, c1z, c1r00, c1r01, c1r02, c1r10, c1r11, c1r12, c1r20, c1r21, c1r22}
+            
+        --// BODY MOVERS
+        elseif instance:IsA("BodyVelocity") then
+            data.Properties.Velocity = {
+                X = instance.Velocity.X,
+                Y = instance.Velocity.Y,
+                Z = instance.Velocity.Z
+            }
+            data.Properties.MaxForce = {
+                X = instance.MaxForce.X,
+                Y = instance.MaxForce.Y,
+                Z = instance.MaxForce.Z
+            }
+            data.Properties.P = instance.P
+            
+        elseif instance:IsA("BodyGyro") then
+            data.Properties.CFrame = {instance.CFrame:GetComponents()}
+            data.Properties.MaxTorque = {
+                X = instance.MaxTorque.X,
+                Y = instance.MaxTorque.Y,
+                Z = instance.MaxTorque.Z
+            }
+            data.Properties.P = instance.P
+            
+        elseif instance:IsA("BodyPosition") then
+            data.Properties.Position = {
+                X = instance.Position.X,
+                Y = instance.Position.Y,
+                Z = instance.Position.Z
+            }
+            data.Properties.MaxForce = {
+                X = instance.MaxForce.X,
+                Y = instance.MaxForce.Y,
+                Z = instance.MaxForce.Z
+            }
+            
+        --// CLICK DETECTOR
+        elseif instance:IsA("ClickDetector") then
+            data.Properties.MaxActivationDistance = instance.MaxActivationDistance
+            
+        --// PROXIMITY PROMPT
+        elseif instance:IsA("ProximityPrompt") then
+            data.Properties.ActionText = instance.ActionText
+            data.Properties.ObjectText = instance.ObjectText
+            data.Properties.HoldDuration = instance.HoldDuration
+            data.Properties.MaxActivationDistance = instance.MaxActivationDistance
+            data.Properties.RequiresLineOfSight = instance.RequiresLineOfSight
+            data.Properties.KeyboardKeyCode = tostring(instance.KeyboardKeyCode)
+            
+        --// UI CONSTRAINTS
+        elseif instance:IsA("UIListLayout") then
+            data.Properties.Padding = {
+                X = instance.Padding.X.Scale,
+                Y = instance.Padding.Y.Scale,
+                XO = instance.Padding.X.Offset,
+                YO = instance.Padding.Y.Offset
+            }
+            data.Properties.FillDirection = tostring(instance.FillDirection)
+            data.Properties.HorizontalAlignment = tostring(instance.HorizontalAlignment)
+            data.Properties.VerticalAlignment = tostring(instance.VerticalAlignment)
+            data.Properties.SortOrder = tostring(instance.SortOrder)
+            
+        elseif instance:IsA("UIGridLayout") then
+            data.Properties.CellSize = {
+                X = instance.CellSize.X.Scale,
+                Y = instance.CellSize.Y.Scale,
+                XO = instance.CellSize.X.Offset,
+                YO = instance.CellSize.Y.Offset
+            }
+            data.Properties.CellPadding = {
+                X = instance.CellPadding.X.Scale,
+                Y = instance.CellPadding.Y.Scale,
+                XO = instance.CellPadding.X.Offset,
+                YO = instance.CellPadding.Y.Offset
+            }
+            data.Properties.FillDirection = tostring(instance.FillDirection)
+            data.Properties.HorizontalAlignment = tostring(instance.HorizontalAlignment)
+            data.Properties.VerticalAlignment = tostring(instance.VerticalAlignment)
+            data.Properties.SortOrder = tostring(instance.SortOrder)
+            
+        elseif instance:IsA("UIPadding") then
+            data.Properties.PaddingLeft = {
+                X = instance.PaddingLeft.X.Scale,
+                Y = instance.PaddingLeft.X.Offset
+            }
+            data.Properties.PaddingRight = {
+                X = instance.PaddingRight.X.Scale,
+                Y = instance.PaddingRight.X.Offset
+            }
+            data.Properties.PaddingTop = {
+                X = instance.PaddingTop.X.Scale,
+                Y = instance.PaddingTop.X.Offset
+            }
+            data.Properties.PaddingBottom = {
+                X = instance.PaddingBottom.X.Scale,
+                Y = instance.PaddingBottom.X.Offset
+            }
+            
+        elseif instance:IsA("UIScale") then
+            data.Properties.Scale = instance.Scale
+            
+        elseif instance:IsA("UICorner") then
+            data.Properties.CornerRadius = {
+                X = instance.CornerRadius.Scale,
+                Y = instance.CornerRadius.Offset
+            }
+            
+        elseif instance:IsA("UIStroke") then
+            data.Properties.Color = {
+                R = instance.Color.R,
+                G = instance.Color.G,
+                B = instance.Color.B
+            }
+            data.Properties.Thickness = instance.Thickness
+            data.Properties.Transparency = instance.Transparency
+            data.Properties.ApplyStrokeMode = tostring(instance.ApplyStrokeMode)
+            
+        --// NUMBER RANGE/RANGE
+        elseif instance:IsA("NumberRange") then
+            --// This is a value type, not an instance
+            
+        --// RAY VALUE
+        elseif instance:IsA("RayValue") then
+            local origin = instance.Value.Origin
+            local direction = instance.Value.Direction
+            data.Properties.Value = {
+                Origin = {X = origin.X, Y = origin.Y, Z = origin.Z},
+                Direction = {X = direction.X, Y = direction.Y, Z = direction.Z}
+            }
+            
+        --// PHYSICAL CONFIGURATION
+        elseif instance:IsA("PhysicalConfiguration") then
+            --// Rarely used
+            
+        --// TEAM
+        elseif instance:IsA("Team") then
+            data.Properties.TeamColor = tostring(instance.TeamColor)
+            data.Properties.AutoAssignable = instance.AutoAssignable
+            
+        --// SPAWN LOCATION
+        elseif instance:IsA("SpawnLocation") then
+            data.Properties.Neutral = instance.Neutral
+            data.Properties.AllowTeamChangeOnTouch = instance.AllowTeamChangeOnTouch
+            data.Properties.Duration = instance.Duration
+            data.Properties.Shape = tostring(instance.Shape)
+            
+        --// BACKPACK ITEM
+        elseif instance:IsA("Tool") or instance:IsA("HopperBin") then
+            data.Properties.RequiresHandle = instance.RequiresHandle
+            data.Properties.CanBeDropped = instance.CanBeDropped
+            data.Properties.ManualActivationOnly = instance.ManualActivationOnly
+            
+        --// CAMERA (in Workspace)
+        elseif instance:IsA("Camera") then
+            --// Skip cameras
+            
+        --// ACCOUTREMENT (Hats, etc.)
+        elseif instance:IsA("Accoutrement") then
+            data.Properties.AttachmentForward = {
+                X = instance.AttachmentForward.X,
+                Y = instance.AttachmentForward.Y,
+                Z = instance.AttachmentForward.Z
+            }
+            data.Properties.AttachmentPos = {
+                X = instance.AttachmentPos.X,
+                Y = instance.AttachmentPos.Y,
+                Z = instance.AttachmentPos.Z
+            }
+            data.Properties.AttachmentRight = {
+                X = instance.AttachmentRight.X,
+                Y = instance.AttachmentRight.Y,
+                Z = instance.AttachmentRight.Z
+            }
+            data.Properties.AttachmentUp = {
+                X = instance.AttachmentUp.X,
+                Y = instance.AttachmentUp.Y,
+                Z = instance.AttachmentUp.Z
+            }
+            
+        --// JOINTS
+        elseif instance:IsA("JointInstance") then
+            data.Properties.Part0 = instance.Part0 and instance.Part0.Name or nil
+            data.Properties.Part1 = instance.Part1 and instance.Part1.Name or nil
+            
+        --// BEAMS
+        elseif instance:IsA("Beam") then
+            data.Properties.Texture = instance.Texture
+            data.Properties.TextureLength = instance.TextureLength
+            data.Properties.TextureMode = tostring(instance.TextureMode)
+            data.Properties.TextureSpeed = instance.TextureSpeed
+            data.Properties.Color = tostring(instance.Color)
+            data.Properties.Transparency = tostring(instance.Transparency)
+            data.Properties.Width0 = instance.Width0
+            data.Properties.Width1 = instance.Width1
+            data.Properties.Segments = instance.Segments
+            data.Properties.Attachment0 = instance.Attachment0 and instance.Attachment0.Name or nil
+            data.Properties.Attachment1 = instance.Attachment1 and instance.Attachment1.Name or nil
+            
+        --// ATTACHMENT
+        elseif instance:IsA("Attachment") then
+            data.Properties.WorldPosition = {
+                X = instance.WorldPosition.X,
+                Y = instance.WorldPosition.Y,
+                Z = instance.WorldPosition.Z
+            }
+            data.Properties.WorldOrientation = {
+                X = instance.WorldOrientation.X,
+                Y = instance.WorldOrientation.Y,
+                Z = instance.WorldOrientation.Z
+            }
+            data.Properties.Axis = {
+                X = instance.Axis.X,
+                Y = instance.Axis.Y,
+                Z = instance.Axis.Z
+            }
+            data.Properties.SecondaryAxis = {
+                X = instance.SecondaryAxis.X,
+                Y = instance.SecondaryAxis.Y,
+                Z = instance.SecondaryAxis.Z
+            }
+            
+        --// TRAIL
+        elseif instance:IsA("Trail") then
+            data.Properties.Color = tostring(instance.Color)
+            data.Properties.Transparency = tostring(instance.Transparency)
+            data.Properties.Lifetime = instance.Lifetime
+            data.Properties.MinLength = instance.MinLength
+            data.Properties.WidthScale = tostring(instance.WidthScale)
+            data.Properties.Attachment0 = instance.Attachment0 and instance.Attachment0.Name or nil
+            data.Properties.Attachment1 = instance.Attachment1 and instance.Attachment1.Name or nil
+            
+        --// REGION3 VALUE
+        elseif instance:IsA("Region3Value") then
+            local min = instance.Value.CFrame.Position - (instance.Value.Size / 2)
+            local max = instance.Value.CFrame.Position + (instance.Value.Size / 2)
+            data.Properties.Value = {
+                Min = {X = min.X, Y = min.Y, Z = min.Z},
+                Max = {X = max.X, Y = max.Y, Z = max.Z}
+            }
+            
+        --// VECTOR3 RANGE VALUE
+        elseif instance:IsA("Vector3Range") then
+            --// Custom type handling
+            
+        --// ANYTHING ELSE - Store basic info
+        else
+            self.CopyStats.Others = self.CopyStats.Others + 1
+            --// Try to get common properties
+            pcall(function()
+                if instance:FindFirstChild("Value") then
+                    data.Properties.Value = instance.Value
                 end
-            end
-            
-            -- RemoteEvents/Functions
-            if inst:IsA("RemoteEvent") then
-                -- No special properties needed
-            end
-            if inst:IsA("RemoteFunction") then
-                -- No special properties needed
-            end
-            
-            -- Folders and Models
-            if inst:IsA("Folder") or inst:IsA("Model") then
-                -- Container only
-            end
-        end)
-        
-        -- Scan children recursively
-        for _, child in ipairs(inst:GetChildren()) do
-            if not child:IsA("Terrain") and not child:IsA("Camera") then
-                table.insert(itemData.Children, scanInstance(child, {}))
+            end)
+        end
+    end)
+    
+    --// Recursively serialize children
+    for _, child in ipairs(instance:GetChildren()) do
+        --// Skip Terrain and Cameras
+        if not child:IsA("Terrain") and not child:IsA("Camera") then
+            local childData = self:SerializeInstance(child, depth + 1, stats)
+            if childData then
+                table.insert(data.Children, childData)
             end
         end
-        
-        return itemData
-    end
-    
-    for _, child in ipairs(service:GetChildren()) do
-        table.insert(data.Children, scanInstance(child, {}))
     end
     
     return data
 end
 
-function shhhhnayy05.CountItemsInData(data)
-    local count = 1 -- Count self
-    for _, child in ipairs(data.Children or {}) do
-        count = count + shhhhnayy05.CountItemsInData(child)
-    end
-    return count
+--// GENERATE SERVICE LOADER SCRIPT
+function shhhhnayy05:GenerateServiceLoader(serviceData, serviceName)
+    local loader = '--// shhhhnayy05 Service Loader: ' .. serviceName .. '\n'
+    loader = loader .. '--// Generated: ' .. os.date("%Y-%m-%d %H:%M:%S") .. '\n\n'
+    
+    loader = loader .. 'local function CreateInstance(data, parent, createdParts)\n'
+    loader = loader .. '    createdParts = createdParts or {}\n'
+    loader = loader .. '    local success, instance = pcall(function()\n'
+    loader = loader .. '        return Instance.new(data.ClassName)\n'
+    loader = loader .. '    end)\n'
+    loader = loader .. '    if not success or not instance then return nil end\n'
+    loader = loader .. '    \n'
+    loader = loader .. '    instance.Name = data.Name\n'
+    loader = loader .. '    \n'
+    loader = loader .. '    --// Set Properties\n'
+    loader = loader .. '    if data.Properties then\n'
+    loader = loader .. '        for prop, value in pairs(data.Properties) do\n'
+    loader = loader .. '            pcall(function()\n'
+    loader = loader .. '                if prop == "Source" and (instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript")) then\n'
+    loader = loader .. '                    instance.Source = value\n'
+    loader = loader .. '                elseif prop == "Size" and typeof(instance.Size) == "Vector3" then\n'
+    loader = loader .. '                    instance.Size = Vector3.new(value.X, value.Y, value.Z)\n'
+    loader = loader .. '                elseif prop == "Position" and typeof(instance.Position) == "Vector3" then\n'
+    loader = loader .. '                    instance.Position = Vector3.new(value.X, value.Y, value.Z)\n'
+    loader = loader .. '                elseif prop == "Rotation" and typeof(instance.Rotation) == "Vector3" then\n'
+    loader = loader .. '                    instance.Rotation = Vector3.new(value.X, value.Y, value.Z)\n'
+    loader = loader .. '                elseif prop == "CFrame" and typeof(instance.CFrame) == "CFrame" then\n'
+    loader = loader .. '                    instance.CFrame = CFrame.new(unpack(value))\n'
+    loader = loader .. '                elseif prop == "Color" and typeof(instance.Color) == "Color3" then\n'
+    loader = loader .. '                    instance.Color = Color3.new(value.R, value.G, value.B)\n'
+    loader = loader .. '                elseif prop == "BrickColor" then\n'
+    loader = loader .. '                    instance.BrickColor = BrickColor.new(value)\n'
+    loader = loader .. '                elseif prop == "Material" then\n'
+    loader = loader .. '                    instance.Material = Enum.Material[value] or Enum.Material.Plastic\n'
+    loader = loader .. '                elseif prop == "Shape" then\n'
+    loader = loader .. '                    instance.Shape = Enum.PartType[value] or Enum.PartType.Block\n'
+    loader = loader .. '                elseif prop == "Transparency" then\n'
+    loader = loader .. '                    instance.Transparency = value\n'
+    loader = loader .. '                elseif prop == "Reflectance" then\n'
+    loader = loader .. '                    instance.Reflectance = value\n'
+    loader = loader .. '                elseif prop == "Anchored" then\n'
+    loader = loader .. '                    instance.Anchored = value\n'
+    loader = loader .. '                elseif prop == "CanCollide" then\n'
+    loader = loader .. '                    instance.CanCollide = value\n'
+    loader = loader .. '                elseif prop == "CanTouch" then\n'
+    loader = loader .. '                    instance.CanTouch = value\n'
+    loader = loader .. '                elseif prop == "CanQuery" then\n'
+    loader = loader .. '                    instance.CanQuery = value\n'
+    loader = loader .. '                elseif prop == "CastShadow" then\n'
+    loader = loader .. '                    instance.CastShadow = value\n'
+    loader = loader .. '                elseif prop == "Disabled" and (instance:IsA("Script") or instance:IsA("LocalScript")) then\n'
+    loader = loader .. '                    instance.Disabled = value\n'
+    loader = loader .. '                elseif prop == "RunContext" and instance:IsA("LocalScript") then\n'
+    loader = loader .. '                    instance.RunContext = Enum.RunContext[value] or Enum.RunContext.Legacy\n'
+    loader = loader .. '                elseif prop == "Text" and (instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox")) then\n'
+    loader = loader .. '                    instance.Text = value\n'
+    loader = loader .. '                elseif prop == "TextSize" then\n'
+    loader = loader .. '                    instance.TextSize = value\n'
+    loader = loader .. '                elseif prop == "Font" then\n'
+    loader = loader .. '                    instance.Font = Enum.Font[value] or Enum.Font.SourceSans\n'
+    loader = loader .. '                elseif prop == "TextColor3" and (instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox")) then\n'
+    loader = loader .. '                    instance.TextColor3 = Color3.new(value.R, value.G, value.B)\n'
+    loader = loader .. '                elseif prop == "BackgroundColor3" and (instance:IsA("GuiObject") or instance:IsA("Part")) then\n'
+    loader = loader .. '                    instance.BackgroundColor3 = Color3.new(value.R, value.G, value.B)\n'
+    loader = loader .. '                elseif prop == "BackgroundTransparency" then\n'
+    loader = loader .. '                    instance.BackgroundTransparency = value\n'
+    loader = loader .. '                elseif prop == "BorderSizePixel" then\n'
+    loader = loader .. '                    instance.BorderSizePixel = value\n'
+    loader = loader .. '                elseif prop == "Image" and (instance:IsA("ImageLabel") or instance:IsA("ImageButton")) then\n'
+    loader = loader .. '                    instance.Image = value\n'
+    loader = loader .. '                elseif prop == "ImageColor3" then\n'
+    loader = loader .. '                    instance.ImageColor3 = Color3.new(value.R, value.G, value.B)\n'
+    loader = loader .. '                elseif prop == "Value" and instance:IsA("ValueBase") then\n'
+    loader = loader .. '                    if typeof(value) == "table" and value.R and value.G and value.B then\n'
+    loader = loader .. '                        instance.Value = Color3.new(value.R, value.G, value.B)\n'
+    loader = loader .. '                    elseif typeof(value) == "table" and value.X and value.Y and value.Z then\n'
+    loader = loader .. '                        instance.Value = Vector3.new(value.X, value.Y, value.Z)\n'
+    loader = loader .. '                    else\n'
+    loader = loader .. '                        instance.Value = value\n'
+    loader = loader .. '                    end\n'
+    loader = loader .. '                elseif prop == "MeshId" and (instance:IsA("MeshPart") or instance:IsA("SpecialMesh")) then\n'
+    loader = loader .. '                    instance.MeshId = value\n'
+    loader = loader .. '                elseif prop == "TextureID" and instance:IsA("MeshPart") then\n'
+    loader = loader .. '                    instance.TextureID = value\n'
+    loader = loader .. '                elseif prop == "TextureId" and instance:IsA("SpecialMesh") then\n'
+    loader = loader .. '                    instance.TextureId = value\n'
+    loader = loader .. '                elseif prop == "MeshType" and instance:IsA("SpecialMesh") then\n'
+    loader = loader .. '                    instance.MeshType = Enum.MeshType[value] or Enum.MeshType.BlockMesh\n'
+    loader = loader .. '                elseif prop == "Scale" and instance:IsA("SpecialMesh") then\n'
+    loader = loader .. '                    instance.Scale = Vector3.new(value.X, value.Y, value.Z)\n'
+    loader = loader .. '                elseif prop == "SoundId" and instance:IsA("Sound") then\n'
+    loader = loader .. '                    instance.SoundId = value\n'
+    loader = loader .. '                elseif prop == "Volume" then\n'
+    loader = loader .. '                    instance.Volume = value\n'
+    loader = loader .. '                elseif prop == "PlaybackSpeed" and instance:IsA("Sound") then\n'
+    loader = loader .. '                    instance.PlaybackSpeed = value\n'
+    loader = loader .. '                elseif prop == "Looped" and instance:IsA("Sound") then\n'
+    loader = loader .. '                    instance.Looped = value\n'
+    loader = loader .. '                elseif prop == "Texture" and (instance:IsA("Decal") or instance:IsA("Texture") or instance:IsA("ParticleEmitter")) then\n'
+    loader = loader .. '                    instance.Texture = value\n'
+    loader = loader .. '                elseif prop == "Face" and (instance:IsA("Decal") or instance:IsA("Texture")) then\n'
+    loader = loader .. '                    instance.Face = Enum.NormalId[value] or Enum.NormalId.Front\n'
+    loader = loader .. '                elseif prop == "PrimaryPart" and instance:IsA("Model") then\n'
+    loader = loader .. '                    --// Set after children created\n'
+    loader = loader .. '                elseif prop == "Size" and instance:IsA("GuiObject") then\n'
+    loader = loader .. '                    instance.Size = UDim2.new(value.X, value.XO, value.Y, value.YO)\n'
+    loader = loader .. '                elseif prop == "Position" and instance:IsA("GuiObject") then\n'
+    loader = loader .. '                    instance.Position = UDim2.new(value.X, value.XO, value.Y, value.YO)\n'
+    loader = loader .. '                elseif prop == "ResetOnSpawn" and instance:IsA("ScreenGui") then\n'
+    loader = loader .. '                    instance.ResetOnSpawn = value\n'
+    loader = loader .. '                elseif prop == "ZIndexBehavior" and instance:IsA("ScreenGui") then\n'
+    loader = loader .. '                    instance.ZIndexBehavior = Enum.ZIndexBehavior[value] or Enum.ZIndexBehavior.Sibling\n'
+    loader = loader .. '                elseif prop == "DisplayOrder" and instance:IsA("ScreenGui") then\n'
+    loader = loader .. '                    instance.DisplayOrder = value\n'
+    loader = loader .. '                elseif prop == "Enabled" and instance:IsA("ScreenGui") then\n'
+    loader = loader .. '                    instance.Enabled = value\n'
+    loader = loader .. '                elseif prop == "Brightness" and (instance:IsA("Light") or instance:IsA("PostEffect")) then\n'
+    loader = loader .. '                    instance.Brightness = value\n'
+    loader = loader .. '                elseif prop == "Range" and instance:IsA("Light") then\n'
+    loader = loader .. '                    instance.Range = value\n'
+    loader = loader .. '                elseif prop == "Health" and instance:IsA("Humanoid") then\n'
+    loader = loader .. '                    instance.Health = value\n'
+    loader = loader .. '                elseif prop == "MaxHealth" and instance:IsA("Humanoid") then\n'
+    loader = loader .. '                    instance.MaxHealth = value\n'
+    loader = loader .. '                elseif prop == "WalkSpeed" and instance:IsA("Humanoid") then\n'
+    loader = loader .. '                    instance.WalkSpeed = value\n'
+    loader = loader .. '                elseif prop == "JumpPower" and instance:IsA("Humanoid") then\n'
+    loader = loader .. '                    instance.JumpPower = value\n'
+    loader = loader .. '                elseif prop == "AnimationId" and instance:IsA("Animation") then\n'
+    loader = loader .. '                    instance.AnimationId = value\n'
+    loader = loader .. '                elseif prop == "TeamColor" and instance:IsA("Team") then\n'
+    loader = loader .. '                    instance.TeamColor = BrickColor.new(value)\n'
+    loader = loader .. '                elseif prop == "AutoAssignable" and instance:IsA("Team") then\n'
+    loader = loader .. '                    instance.AutoAssignable = value\n'
+    loader = loader .. '                else\n'
+    loader = loader .. '                    --// Try generic assignment\n'
+    loader = loader .. '                    instance[prop] = value\n'
+    loader = loader .. '                end\n'
+    loader = loader .. '            end)\n'
+    loader = loader .. '        end\n'
+    loader = loader .. '    end\n'
+    loader = loader .. '    \n'
+    loader = loader .. '    instance.Parent = parent\n'
+    loader = loader .. '    \n'
+    loader = loader .. '    --// Track parts for weld fixing\n'
+    loader = loader .. '    if instance:IsA("BasePart") then\n'
+    loader = loader .. '        createdParts[instance.Name] = instance\n'
+    loader = loader .. '    end\n'
+    loader = loader .. '    \n'
+    loader = loader .. '    --// Create children\n'
+    loader = loader .. '    local children = {}\n'
+    loader = loader .. '    for _, childData in ipairs(data.Children) do\n'
+    loader = loader .. '        local child = CreateInstance(childData, instance, createdParts)\n'
+    loader = loader .. '        if child then\n'
+    loader = loader .. '            table.insert(children, child)\n'
+    loader = loader .. '        end\n'
+    loader = loader .. '    end\n'
+    loader = loader .. '    \n'
+    loader = loader .. '    --// Fix PrimaryPart reference\n'
+    loader = loader .. '    if data.Properties and data.Properties.PrimaryPart and instance:IsA("Model") then\n'
+    loader = loader .. '        for _, child in ipairs(children) do\n'
+    loader = loader .. '            if child.Name == data.Properties.PrimaryPart and child:IsA("BasePart") then\n'
+    loader = loader .. '                instance.PrimaryPart = child\n'
+    loader = loader .. '                break\n'
+    loader = loader .. '            end\n'
+    loader = loader .. '        end\n'
+    loader = loader .. '    end\n'
+    loader = loader .. '    \n'
+    loader = loader .. '    --// Fix Weld/Motor references\n'
+    loader = loader .. '    if instance:IsA("Weld") or instance:IsA("Motor6D") or instance:IsA("Snap") then\n'
+    loader = loader .. '        if data.Properties and data.Properties.Part0 and createdParts[data.Properties.Part0] then\n'
+    loader = loader .. '            instance.Part0 = createdParts[data.Properties.Part0]\n'
+    loader = loader .. '        end\n'
+    loader = loader .. '        if data.Properties and data.Properties.Part1 and createdParts[data.Properties.Part1] then\n'
+    loader = loader .. '            instance.Part1 = createdParts[data.Properties.Part1]\n'
+    loader = loader .. '        end\n'
+    loader = loader .. '        if data.Properties and data.Properties.C0 then\n'
+    loader = loader .. '            instance.C0 = CFrame.new(unpack(data.Properties.C0))\n'
+    loader = loader .. '        end\n'
+    loader = loader .. '        if data.Properties and data.Properties.C1 then\n'
+    loader = loader .. '            instance.C1 = CFrame.new(unpack(data.Properties.C1))\n'
+    loader = loader .. '        end\n'
+    loader = loader .. '    end\n'
+    loader = loader .. '    \n'
+    loader = loader .. '    return instance\n'
+    loader = loader .. 'end\n\n'
+    
+    loader = loader .. '--// Service Data\n'
+    loader = loader .. 'local serviceData = ' .. HttpService:JSONEncode(serviceData) .. '\n\n'
+    
+    loader = loader .. '--// Get Target Service\n'
+    loader = loader .. 'local targetService = game:GetService("' .. serviceName .. '") or game:FindFirstChild("' .. serviceName .. '")\n\n'
+    
+    loader = loader .. 'if targetService then\n'
+    loader = loader .. '    print("[shhhhnayy05] Loading ' .. serviceName .. '...")\n'
+    loader = loader .. '    local createdParts = {}\n'
+    loader = loader .. '    for _, childData in ipairs(serviceData.Children) do\n'
+    loader = loader .. '        CreateInstance(childData, targetService, createdParts)\n'
+    loader = loader .. '    end\n'
+    loader = loader .. '    print("[shhhhnayy05] ✅ ' .. serviceName .. ' loaded! Items: " .. #serviceData.Children)\n'
+    loader = loader .. 'else\n'
+    loader = loader .. '    warn("[shhhhnayy05] ❌ Service ' .. serviceName .. ' not found!")\n'
+    loader = loader .. 'end\n'
+    
+    return loader
 end
 
-function shhhhnayy05.CountScriptsInData(data)
-    local count = 0
-    if data.ClassName == "Script" or data.ClassName == "LocalScript" or data.ClassName == "ModuleScript" then
-        count = 1
+--// GENERATE MAIN LOADER
+function shhhhnayy05:GenerateMainLoader(services, folderPath, folderName)
+    local mainLoader = '--// shhhhnayy05 COMPLETE GAME LOADER\n'
+    mainLoader = mainLoader .. '--// Game: ' .. game.Name .. '\n'
+    mainLoader = mainLoader .. '--// Folder: ' .. folderName .. '\n'
+    mainLoader = mainLoader .. '--// Generated: ' .. os.date("%Y-%m-%d %H:%M:%S") .. '\n'
+    mainLoader = mainLoader .. '--// Total Services: ' .. #services .. '\n\n'
+    
+    mainLoader = mainLoader .. 'print("🎮 [shhhhnayy05] Loading copied game: ' .. game.Name .. '...")\n'
+    mainLoader = mainLoader .. 'print("📂 Folder: ' .. folderName .. '")\n\n'
+    
+    for _, serv in ipairs(services) do
+        mainLoader = mainLoader .. '--// Loading ' .. serv.name .. '\n'
+        mainLoader = mainLoader .. 'pcall(function()\n'
+        mainLoader = mainLoader .. '    loadstring(readfile("' .. folderPath .. '/' .. serv.name .. '_Loader.lua"))()\n'
+        mainLoader = mainLoader .. 'end)\n\n'
     end
-    for _, child in ipairs(data.Children or {}) do
-        count = count + shhhhnayy05.CountScriptsInData(child)
-    end
-    return count
+    
+    mainLoader = mainLoader .. 'print("✅ [shhhhnayy05] All services loaded!")\n'
+    mainLoader = mainLoader .. 'game:GetService("StarterGui"):SetCore("SendNotification", {\n'
+    mainLoader = mainLoader .. '    Title = "shhhhnayy05",\n'
+    mainLoader = mainLoader .. '    Text = "Game loaded successfully!",\n'
+    mainLoader = mainLoader .. '    Duration = 5\n'
+    mainLoader = mainLoader .. '})\n'
+    
+    return mainLoader
 end
 
---// FILE MANAGEMENT
-function shhhhnayy05.SaveToPermanentFile()
-    if not shhhhnayy05.CopiedData or not next(shhhhnayy05.CopiedData) then
-        shhhhnayy05.AddLog("❌ No data to save! Copy a game first.")
+--// GENERATE README
+function shhhhnayy05:GenerateReadme(folderName, services, stats)
+    local readme = '========================================\n'
+    readme = readme .. '  shhhhnayy05 COMPLETE GAME COPY\n'
+    readme = readme .. '========================================\n\n'
+    readme = readme .. '📁 FOLDER: ' .. folderName .. '\n'
+    readme = readme .. '🎮 GAME: ' .. game.Name .. '\n'
+    readme = readme .. '🆔 PLACE ID: ' .. game.PlaceId .. '\n'
+    readme = readme .. '📅 DATE: ' .. os.date("%Y-%m-%d %H:%M:%S") .. '\n\n'
+    
+    readme = readme .. '📊 COPY STATISTICS:\n'
+    readme = readme .. '  • Total Items: ' .. stats.TotalItems .. '\n'
+    readme = readme .. '  • Scripts: ' .. stats.Scripts .. '\n'
+    readme = readme .. '  • Parts/Models: ' .. stats.Parts .. '\n'
+    readme = readme .. '  • Remotes: ' .. stats.Remotes .. '\n'
+    readme = readme .. '  • GUIs: ' .. stats.GUIs .. '\n'
+    readme = readme .. '  • Others: ' .. stats.Others .. '\n\n'
+    
+    readme = readme .. '📦 SERVICES COPIED (' .. #services .. '):\n'
+    for _, serv in ipairs(services) do
+        readme = readme .. '  ✓ ' .. serv.name .. ' (' .. serv.count .. ' items)\n'
+    end
+    
+    readme = readme .. '\n========================================\n'
+    readme = readme .. '  CARA LOAD DI ROBLOX STUDIO LITE\n'
+    readme = readme .. '========================================\n\n'
+    
+    readme = readme .. 'METODE 1 - LOAD SEMUA (RECOMMENDED):\n'
+    readme = readme .. '  1. Buka Dex Explorer di Studio Lite\n'
+    readme = readme .. '  2. Execute file: _LOAD_ALL.lua\n'
+    readme = readme .. '  3. Tunggu semua service ter-load\n'
+    readme = readme .. '  4. ✅ Game siap digunakan!\n\n'
+    
+    readme = readme .. 'METODE 2 - LOAD PER SERVICE:\n'
+    readme = readme .. '  1. Execute file service yang diinginkan:\n'
+    for _, serv in ipairs(services) do
+        readme = readme .. '     • ' .. serv.name .. '_Loader.lua\n'
+    end
+    readme = readme .. '\n'
+    
+    readme = readme .. '========================================\n'
+    readme = readme .. '  YANG TERSALIN:\n'
+    readme = readme .. '========================================\n\n'
+    
+    readme = readme .. '✅ SCRIPTS:\n'
+    readme = readme .. '   • Admin Panel scripts\n'
+    readme = readme .. '   • Anti-cheat systems\n'
+    readme = readme .. '   • Game logic scripts\n'
+    readme = readme .. '   • LocalScripts & ModuleScripts\n\n'
+    
+    readme = readme .. '✅ GAME OBJECTS:\n'
+    readme = readme .. '   • Parts, MeshParts, Unions\n'
+    readme = readme .. '   • Models dengan hierarki\n'
+    readme = readme .. '   • RemoteEvents & RemoteFunctions\n'
+    readme = readme .. '   • BindableEvents & BindableFunctions\n\n'
+    
+    readme = readme .. '✅ GUI SYSTEMS:\n'
+    readme = readme .. '   • ScreenGuis (Admin UI, etc.)\n'
+    readme = readme .. '   • BillboardGuis\n'
+    readme = readme .. '   • SurfaceGuis\n'
+    readme = readme .. '   • All UI components\n\n'
+    
+    readme = readme .. '✅ GAME SYSTEMS:\n'
+    readme = readme .. '   • Carry systems\n'
+    readme = readme .. '   • Animation systems\n'
+    readme = readme .. '   • Sound systems\n'
+    readme = readme .. '   • Lighting & Atmosphere\n'
+    readme = readme .. '   • Post-processing effects\n\n'
+    
+    readme = readme .. '========================================\n'
+    readme = readme .. '  CATATAN PENTING:\n'
+    readme = readme .. '========================================\n\n'
+    
+    readme = readme .. '• Semua script source code tersalin\n'
+    readme = readme .. '• Struktur folder 100% sama\n'
+    readme = readme .. '• Properties lengkap (posisi, warna, ukuran)\n'
+    readme = readme .. '• Weld/Motor6D connections preserved\n'
+    readme = readme .. '• File PERMANEN sampai dihapus manual\n\n'
+    
+    readme = readme .. 'Generated by: shhhhnayy05 Complete Copier\n'
+    readme = readme .. '========================================\n'
+    
+    return readme
+end
+
+--// MAIN COPY FUNCTION
+function shhhhnayy05:StartCopy(selectedOnly)
+    --// Reset stats
+    self.CopyStats = {
+        TotalItems = 0,
+        Scripts = 0,
+        Parts = 0,
+        Remotes = 0,
+        GUIs = 0,
+        Others = 0
+    }
+    
+    --// Get services to copy
+    local services = {}
+    
+    if selectedOnly then
+        --// Get from checkboxes
+        for name, checkbox in pairs(checkboxes) do
+            if checkbox.data.checked and checkbox.data.obj then
+                table.insert(services, {
+                    name = name,
+                    obj = checkbox.data.obj,
+                    count = #checkbox.data.obj:GetChildren()
+                })
+            end
+        end
+    else
+        --// Copy ALL services automatically
+        services = self:GetAllServices()
+    end
+    
+    if #services == 0 then
+        updateStatus("❌ Tidak ada service yang dipilih!", true)
         return
     end
     
-    local fileName = game.Name:gsub("[^%w]", "_"):sub(1, 20) .. "_" .. os.date("%H%M%S")
+    --// Update UI
+    GenerateBtn.Active = false
+    GenerateBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    GenerateBtn.Text = "⏳ COPYING..."
     
-    local fileData = {
-        Name = fileName,
-        DisplayName = game.Name,
-        GameId = game.PlaceId,
+    --// Create folder
+    local gameName = game.Name:gsub("%W", "_"):sub(1, 25)
+    local timestamp = os.date("%Y%m%d_%H%M%S")
+    local folderName = "shhhhnayy05_" .. gameName .. "_" .. game.PlaceId .. "_" .. timestamp
+    local folderPath = self.Config.BaseFolder .. "/" .. folderName
+    
+    updateStatus("📁 Membuat folder: " .. folderName)
+    
+    if self.Methods.makefolder then
+        pcall(function()
+            makefolder(folderPath)
+        end)
+    end
+    
+    wait(0.5)
+    
+    --// Copy each service
+    local savedServices = {}
+    local totalServices = #services
+    
+    for i, serv in ipairs(services) do
+        local percent = (i - 1) / totalServices * 100
+        updateProgress(percent)
+        updateStatus("📦 Menyalin " .. serv.name .. "... (" .. i .. "/" .. totalServices .. ") - " .. serv.count .. " items")
+        
+        --// Serialize service
+        local serviceData = self:SerializeInstance(serv.obj)
+        
+        if serviceData then
+            --// Generate loader
+            local loaderScript = self:GenerateServiceLoader(serviceData, serv.name)
+            
+            --// Save to file
+            if self.Methods.writefile then
+                pcall(function()
+                    writefile(folderPath .. "/" .. serv.name .. "_Loader.lua", loaderScript)
+                end)
+            end
+            
+            table.insert(savedServices, {
+                Name = serv.name,
+                Count = #serv.obj:GetChildren()
+            })
+        end
+        
+        wait(0.2)
+    end
+    
+    --// Generate main files
+    updateProgress(95)
+    updateStatus("📝 Membuat file loader...")
+    
+    local mainLoader = self:GenerateMainLoader(services, folderPath, folderName)
+    local readme = self:GenerateReadme(folderName, services, self.CopyStats)
+    
+    if self.Methods.writefile then
+        pcall(function()
+            writefile(folderPath .. "/_LOAD_ALL.lua", mainLoader)
+            writefile(folderPath .. "/README.txt", readme)
+        end)
+    end
+    
+    --// Save to registry
+    local gameId = folderName
+    self.SavedGames[gameId] = {
+        GameName = game.Name,
+        PlaceId = game.PlaceId,
         Created = os.date("%Y-%m-%d %H:%M:%S"),
-        Data = shhhhnayy05.CopiedData,
-        Stats = {
-            Services = 0,
-            Items = 0,
-            Scripts = 0
-        },
-        Version = "2.0"
+        FolderPath = folderPath,
+        FolderName = folderName,
+        Services = savedServices,
+        Stats = self.CopyStats
+    }
+    self:SaveRegistry()
+    
+    --// Update UI
+    updateProgress(100)
+    updateStatus("✅ BERHASIL! Items: " .. self.CopyStats.TotalItems .. " | Scripts: " .. self.CopyStats.Scripts, false, true)
+    updateFileCount()
+    
+    GenerateBtn.Active = true
+    GenerateBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    GenerateBtn.Text = "📁 COPY GAME"
+    
+    --// Show result
+    self:ShowResult(gameId)
+    
+    print("✅ COPY COMPLETE!")
+    print("📊 Stats:", self.CopyStats)
+    print("📁 Folder:", folderPath)
+end
+
+--// GUI SETUP - 400x400 Scrollable
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "shhhhnayy05_GUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 400, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(0, 170, 255)
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
+
+--// Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 45)
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -100, 1, 0)
+TitleText.Position = UDim2.new(0, 15, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "💯 shhhhnayy05 COMPLETE"
+TitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
+TitleText.TextSize = 16
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Size = UDim2.new(0, 200, 0, 18)
+SubTitle.Position = UDim2.new(0, 15, 0, 28)
+SubTitle.BackgroundTransparency = 1
+SubTitle.Text = "COPY SEMUA STRUKTUR"
+SubTitle.TextColor3 = Color3.fromRGB(0, 255, 150)
+SubTitle.TextSize = 11
+SubTitle.Font = Enum.Font.GothamBold
+SubTitle.Parent = TitleBar
+
+--// Minimize & Close
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 35, 0, 35)
+MinimizeBtn.Position = UDim2.new(1, -80, 0.5, -17.5)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+MinimizeBtn.Text = "−"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 24
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Parent = TitleBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 8)
+MinCorner.Parent = MinimizeBtn
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 35, 0, 35)
+CloseBtn.Position = UDim2.new(1, -40, 0.5, -17.5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 24
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TitleBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 8)
+CloseCorner.Parent = CloseBtn
+
+--// Scrollable Content
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, -20, 1, -55)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 50)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 6
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 800)
+ScrollFrame.Parent = MainFrame
+
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -10, 0, 800)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = ScrollFrame
+
+--// Info Panel
+local InfoPanel = Instance.new("Frame")
+InfoPanel.Size = UDim2.new(1, 0, 0, 85)
+InfoPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+InfoPanel.BorderSizePixel = 0
+InfoPanel.Parent = ContentFrame
+
+local InfoCorner = Instance.new("UICorner")
+InfoCorner.CornerRadius = UDim.new(0, 10)
+InfoCorner.Parent = InfoPanel
+
+local GameNameLabel = Instance.new("TextLabel")
+GameNameLabel.Size = UDim2.new(1, -15, 0, 24)
+GameNameLabel.Position = UDim2.new(0, 8, 0, 8)
+GameNameLabel.BackgroundTransparency = 1
+GameNameLabel.Text = "🎮 " .. game.Name:sub(1, 28)
+GameNameLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
+GameNameLabel.TextSize = 14
+GameNameLabel.Font = Enum.Font.GothamBold
+GameNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+GameNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+GameNameLabel.Parent = InfoPanel
+
+local GameIdLabel = Instance.new("TextLabel")
+GameIdLabel.Size = UDim2.new(1, -15, 0, 20)
+GameIdLabel.Position = UDim2.new(0, 8, 0, 32)
+GameIdLabel.BackgroundTransparency = 1
+GameIdLabel.Text = "🆔 " .. game.PlaceId
+GameIdLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+GameIdLabel.TextSize = 12
+GameIdLabel.Font = Enum.Font.Gotham
+GameIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+GameIdLabel.Parent = InfoPanel
+
+local FileCountLabel = Instance.new("TextLabel")
+FileCountLabel.Name = "FileCount"
+FileCountLabel.Size = UDim2.new(1, -15, 0, 22)
+FileCountLabel.Position = UDim2.new(0, 8, 0, 56)
+FileCountLabel.BackgroundTransparency = 1
+FileCountLabel.Text = "📁 Games: 0 | 💯 Copy ALL"
+FileCountLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
+FileCountLabel.TextSize = 12
+FileCountLabel.Font = Enum.Font.GothamBold
+FileCountLabel.TextXAlignment = Enum.TextXAlignment.Left
+FileCountLabel.Parent = InfoPanel
+
+--// Auto Detect Panel
+local AutoPanel = Instance.new("Frame")
+AutoPanel.Size = UDim2.new(1, 0, 0, 110)
+AutoPanel.Position = UDim2.new(0, 0, 0, 95)
+AutoPanel.BackgroundColor3 = Color3.fromRGB(45, 35, 55)
+AutoPanel.BorderSizePixel = 0
+AutoPanel.Parent = ContentFrame
+
+local AutoCorner = Instance.new("UICorner")
+AutoCorner.CornerRadius = UDim.new(0, 10)
+AutoCorner.Parent = AutoPanel
+
+local AutoTitle = Instance.new("TextLabel")
+AutoTitle.Size = UDim2.new(1, -15, 0, 24)
+AutoTitle.Position = UDim2.new(0, 8, 0, 8)
+AutoTitle.BackgroundTransparency = 1
+AutoTitle.Text = "🔍 AUTO DETECT SERVICES"
+AutoTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
+AutoTitle.TextSize = 13
+AutoTitle.Font = Enum.Font.GothamBold
+AutoTitle.TextXAlignment = Enum.TextXAlignment.Left
+AutoTitle.Parent = AutoPanel
+
+local AutoDesc = Instance.new("TextLabel")
+AutoDesc.Size = UDim2.new(1, -15, 0, 70)
+AutoDesc.Position = UDim2.new(0, 8, 0, 32)
+AutoDesc.BackgroundTransparency = 1
+AutoDesc.Text = "✅ Script akan otomatis mendeteksi dan menyalin SEMUA service yang ada:\n• Admin Panel\n• Anti-Cheat\n• Carry System\n• Game Logic\n• Dan SEMUA struktur lainnya!"
+AutoDesc.TextColor3 = Color3.fromRGB(220, 220, 200)
+AutoDesc.TextSize = 11
+AutoDesc.Font = Enum.Font.Gotham
+AutoDesc.TextYAlignment = Enum.TextYAlignment.Top
+AutoDesc.TextWrapped = true
+AutoDesc.Parent = AutoPanel
+
+--// Services Panel (Optional Selection)
+local ServicesPanel = Instance.new("Frame")
+ServicesPanel.Size = UDim2.new(1, 0, 0, 180)
+ServicesPanel.Position = UDim2.new(0, 0, 0, 215)
+ServicesPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+ServicesPanel.BorderSizePixel = 0
+ServicesPanel.Parent = ContentFrame
+
+local ServCorner = Instance.new("UICorner")
+ServCorner.CornerRadius = UDim.new(0, 10)
+ServCorner.Parent = ServicesPanel
+
+local ServTitle = Instance.new("TextLabel")
+ServTitle.Size = UDim2.new(1, -15, 0, 24)
+ServTitle.Position = UDim2.new(0, 8, 0, 8)
+ServTitle.BackgroundTransparency = 1
+ServTitle.Text = "📦 ATAU Pilih Manual (Optional)"
+ServTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ServTitle.TextSize = 13
+ServTitle.Font = Enum.Font.GothamBold
+ServTitle.TextXAlignment = Enum.TextXAlignment.Left
+ServTitle.Parent = ServicesPanel
+
+local servicesList = {
+    {name = "ReplicatedStorage", obj = ReplicatedStorage, checked = true},
+    {name = "ServerScriptService", obj = ServerScriptService, checked = true},
+    {name = "StarterPlayerScripts", obj = StarterPlayer:FindFirstChild("StarterPlayerScripts"), checked = true},
+    {name = "StarterGui", obj = StarterGui, checked = true},
+    {name = "Workspace", obj = Workspace, checked = false},
+    {name = "Lighting", obj = Lighting, checked = false}
+}
+
+local checkboxes = {}
+local yPos = 35
+
+for _, serv in ipairs(servicesList) do
+    local CheckFrame = Instance.new("Frame")
+    CheckFrame.Size = UDim2.new(1, -15, 0, 22)
+    CheckFrame.Position = UDim2.new(0, 8, 0, yPos)
+    CheckFrame.BackgroundTransparency = 1
+    CheckFrame.Parent = ServicesPanel
+    
+    local CheckBox = Instance.new("TextButton")
+    CheckBox.Name = serv.name
+    CheckBox.Size = UDim2.new(0, 18, 0, 18)
+    CheckBox.Position = UDim2.new(0, 0, 0.5, -9)
+    CheckBox.BackgroundColor3 = serv.checked and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 80)
+    CheckBox.Text = serv.checked and "✓" or ""
+    CheckBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CheckBox.TextSize = 14
+    CheckBox.Font = Enum.Font.GothamBold
+    CheckBox.Parent = CheckFrame
+    
+    local CheckCorner = Instance.new("UICorner")
+    CheckCorner.CornerRadius = UDim.new(0, 4)
+    CheckCorner.Parent = CheckBox
+    
+    local CheckLabel = Instance.new("TextLabel")
+    CheckLabel.Size = UDim2.new(1, -30, 1, 0)
+    CheckLabel.Position = UDim2.new(0, 26, 0, 0)
+    CheckLabel.BackgroundTransparency = 1
+    CheckLabel.Text = serv.name
+    CheckLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    CheckLabel.TextSize = 12
+    CheckLabel.Font = Enum.Font.Gotham
+    CheckLabel.TextXAlignment = Enum.TextXAlignment.Left
+    CheckLabel.Parent = CheckFrame
+    
+    checkboxes[serv.name] = {btn = CheckBox, data = serv}
+    
+    CheckBox.MouseButton1Click:Connect(function()
+        serv.checked = not serv.checked
+        CheckBox.BackgroundColor3 = serv.checked and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 80)
+        CheckBox.Text = serv.checked and "✓" or ""
+    end)
+    
+    yPos = yPos + 24
+end
+
+--// Progress Panel
+local ProgressPanel = Instance.new("Frame")
+ProgressPanel.Size = UDim2.new(1, 0, 0, 90)
+ProgressPanel.Position = UDim2.new(0, 0, 0, 405)
+ProgressPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+ProgressPanel.BorderSizePixel = 0
+ProgressPanel.Parent = ContentFrame
+
+local ProgCorner = Instance.new("UICorner")
+ProgCorner.CornerRadius = UDim.new(0, 10)
+ProgCorner.Parent = ProgressPanel
+
+local ProgTitle = Instance.new("TextLabel")
+ProgTitle.Size = UDim2.new(1, -15, 0, 22)
+ProgTitle.Position = UDim2.new(0, 8, 0, 8)
+ProgTitle.BackgroundTransparency = 1
+ProgTitle.Text = "⏳ Progress"
+ProgTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ProgTitle.TextSize = 13
+ProgTitle.Font = Enum.Font.GothamBold
+ProgTitle.TextXAlignment = Enum.TextXAlignment.Left
+ProgTitle.Parent = ProgressPanel
+
+local ProgressBg = Instance.new("Frame")
+ProgressBg.Size = UDim2.new(1, -16, 0, 28)
+ProgressBg.Position = UDim2.new(0, 8, 0, 32)
+ProgressBg.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+ProgressBg.BorderSizePixel = 0
+ProgressBg.Parent = ProgressPanel
+
+local ProgBgCorner = Instance.new("UICorner")
+ProgBgCorner.CornerRadius = UDim.new(0, 8)
+ProgBgCorner.Parent = ProgressBg
+
+local ProgressFill = Instance.new("Frame")
+ProgressFill.Name = "ProgressFill"
+ProgressFill.Size = UDim2.new(0, 0, 1, 0)
+ProgressFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+ProgressFill.BorderSizePixel = 0
+ProgressFill.Parent = ProgressBg
+
+local ProgFillCorner = Instance.new("UICorner")
+ProgFillCorner.CornerRadius = UDim.new(0, 8)
+ProgFillCorner.Parent = ProgressFill
+
+local ProgGradient = Instance.new("UIGradient")
+ProgGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 220, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 130, 255))
+})
+ProgGradient.Parent = ProgressFill
+
+local PercentText = Instance.new("TextLabel")
+PercentText.Name = "PercentText"
+PercentText.Size = UDim2.new(1, 0, 0, 28)
+PercentText.Position = UDim2.new(0, 0, 0, 32)
+PercentText.BackgroundTransparency = 1
+PercentText.Text = "0%"
+PercentText.TextColor3 = Color3.fromRGB(255, 255, 255)
+PercentText.TextSize = 16
+PercentText.Font = Enum.Font.GothamBold
+PercentText.Parent = ProgressPanel
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Name = "StatusText"
+StatusText.Size = UDim2.new(1, -16, 0, 20)
+StatusText.Position = UDim2.new(0, 8, 0, 64)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "Ready..."
+StatusText.TextColor3 = Color3.fromRGB(150, 150, 150)
+StatusText.TextSize = 11
+StatusText.Font = Enum.Font.Gotham
+StatusText.TextXAlignment = Enum.TextXAlignment.Center
+StatusText.Parent = ProgressPanel
+
+--// Buttons Panel
+local ButtonsPanel = Instance.new("Frame")
+ButtonsPanel.Size = UDim2.new(1, 0, 0, 80)
+ButtonsPanel.Position = UDim2.new(0, 0, 0, 505)
+ButtonsPanel.BackgroundTransparency = 1
+ButtonsPanel.Parent = ContentFrame
+
+--// COPY ALL BUTTON (Main)
+local CopyAllBtn = Instance.new("TextButton")
+CopyAllBtn.Name = "CopyAllBtn"
+CopyAllBtn.Size = UDim2.new(1, 0, 0, 40)
+CopyAllBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+CopyAllBtn.Text = "💯 COPY SEMUA (AUTO DETECT)"
+CopyAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyAllBtn.TextSize = 14
+CopyAllBtn.Font = Enum.Font.GothamBold
+CopyAllBtn.Parent = ButtonsPanel
+
+local CopyAllCorner = Instance.new("UICorner")
+CopyAllCorner.CornerRadius = UDim.new(0, 10)
+CopyAllCorner.Parent = CopyAllBtn
+
+--// COPY SELECTED BUTTON
+local CopySelectedBtn = Instance.new("TextButton")
+CopySelectedBtn.Name = "CopySelectedBtn"
+CopySelectedBtn.Size = UDim2.new(0.48, -4, 0, 35)
+CopySelectedBtn.Position = UDim2.new(0, 0, 0, 45)
+CopySelectedBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+CopySelectedBtn.Text = "📦 Copy Pilihan"
+CopySelectedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopySelectedBtn.TextSize = 12
+CopySelectedBtn.Font = Enum.Font.GothamBold
+CopySelectedBtn.Parent = ButtonsPanel
+
+local CopySelCorner = Instance.new("UICorner")
+CopySelCorner.CornerRadius = UDim.new(0, 10)
+CopySelCorner.Parent = CopySelectedBtn
+
+--// FILES BUTTON
+local FilesBtn = Instance.new("TextButton")
+FilesBtn.Name = "FilesBtn"
+FilesBtn.Size = UDim2.new(0.52, -4, 0, 35)
+FilesBtn.Position = UDim2.new(0.48, 4, 0, 45)
+FilesBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+FilesBtn.Text = "📂 Lihat Files"
+FilesBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FilesBtn.TextSize = 12
+FilesBtn.Font = Enum.Font.GothamBold
+FilesBtn.Parent = ButtonsPanel
+
+local FilesCorner = Instance.new("UICorner")
+FilesCorner.CornerRadius = UDim.new(0, 10)
+FilesCorner.Parent = FilesBtn
+
+--// Instructions Panel
+local InstructPanel = Instance.new("Frame")
+InstructPanel.Size = UDim2.new(1, 0, 0, 100)
+InstructPanel.Position = UDim2.new(0, 0, 0, 595)
+InstructPanel.BackgroundColor3 = Color3.fromRGB(45, 40, 30)
+InstructPanel.BorderSizePixel = 0
+InstructPanel.Parent = ContentFrame
+
+local InstructCorner = Instance.new("UICorner")
+InstructCorner.CornerRadius = UDim.new(0, 10)
+InstructCorner.Parent = InstructPanel
+
+local InstructTitle = Instance.new("TextLabel")
+InstructTitle.Size = UDim2.new(1, -15, 0, 22)
+InstructTitle.Position = UDim2.new(0, 8, 0, 6)
+InstructTitle.BackgroundTransparency = 1
+InstructTitle.Text = "📖 HASIL COPY:"
+InstructTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
+InstructTitle.TextSize = 12
+InstructTitle.Font = Enum.Font.GothamBold
+InstructTitle.TextXAlignment = Enum.TextXAlignment.Left
+InstructTitle.Parent = InstructPanel
+
+local InstructText = Instance.new("TextLabel")
+InstructText.Size = UDim2.new(1, -15, 0, 70)
+InstructText.Position = UDim2.new(0, 8, 0, 26)
+InstructText.BackgroundTransparency = 1
+InstructText.Text = "shhhhnayy05_GameName/\n├── ReplicatedStorage_Loader.lua (Admin, Remotes)\n├── ServerScriptService_Loader.lua (Anti-cheat, Logic)\n├── StarterPlayerScripts_Loader.lua (LocalScripts)\n└── _LOAD_ALL.lua (Load semua sekaligus)"
+InstructText.TextColor3 = Color3.fromRGB(200, 200, 180)
+InstructText.TextSize = 10
+InstructText.Font = Enum.Font.Code
+InstructText.TextYAlignment = Enum.TextYAlignment.Top
+InstructText.Parent = InstructPanel
+
+--// Storage Info
+local StoragePanel = Instance.new("Frame")
+StoragePanel.Size = UDim2.new(1, 0, 0, 50)
+StoragePanel.Position = UDim2.new(0, 0, 0, 705)
+StoragePanel.BackgroundColor3 = Color3.fromRGB(25, 40, 25)
+StoragePanel.BorderSizePixel = 0
+StoragePanel.Parent = ContentFrame
+
+local StorageCorner = Instance.new("UICorner")
+StorageCorner.CornerRadius = UDim.new(0, 10)
+StorageCorner.Parent = StoragePanel
+
+local StorageLabel = Instance.new("TextLabel")
+StorageLabel.Size = UDim2.new(1, -15, 0, 20)
+StorageLabel.Position = UDim2.new(0, 8, 0, 6)
+StorageLabel.BackgroundTransparency = 1
+StorageLabel.Text = "💾 PERMANENT STORAGE"
+StorageLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+StorageLabel.TextSize = 12
+StorageLabel.Font = Enum.Font.GothamBold
+StorageLabel.TextXAlignment = Enum.TextXAlignment.Left
+StorageLabel.Parent = StoragePanel
+
+local StorageDetail = Instance.new("TextLabel")
+StorageDetail.Size = UDim2.new(1, -15, 0, 22)
+StorageDetail.Position = UDim2.new(0, 8, 0, 26)
+StorageDetail.BackgroundTransparency = 1
+StorageDetail.Text = "✅ Copy: Scripts, Parts, GUIs, Remotes, dll"
+StorageDetail.TextColor3 = Color3.fromRGB(150, 255, 150)
+StorageDetail.TextSize = 10
+StorageDetail.Font = Enum.Font.Gotham
+StorageDetail.TextXAlignment = Enum.TextXAlignment.Left
+StorageDetail.Parent = StoragePanel
+
+--// Minimized Icon
+local MinimizedIcon = Instance.new("TextButton")
+MinimizedIcon.Size = UDim2.new(0, 60, 0, 60)
+MinimizedIcon.Position = UDim2.new(0, 20, 1, -80)
+MinimizedIcon.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+MinimizedIcon.Text = "💯"
+MinimizedIcon.TextSize = 30
+MinimizedIcon.Visible = false
+MinimizedIcon.Parent = ScreenGui
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(1, 0)
+IconCorner.Parent = MinimizedIcon
+
+--// Functions
+function updateProgress(percent)
+    ProgressFill.Size = UDim2.new(math.clamp(percent / 100, 0, 1), 0, 1, 0)
+    PercentText.Text = math.floor(percent) .. "%"
+end
+
+function updateStatus(text, isError, isSuccess)
+    StatusText.Text = text
+    if isError then
+        StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+    elseif isSuccess then
+        StatusText.TextColor3 = Color3.fromRGB(0, 255, 100)
+    else
+        StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+end
+
+function updateFileCount()
+    local count = shhhhnayy05:GetSavedCount()
+    FileCountLabel.Text = "📁 Games: " .. count .. " | 💯 Copy ALL"
+end
+
+--// Drag
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+
+TitleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+--// Minimize
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    MinimizedIcon.Visible = true
+end)
+
+MinimizedIcon.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    MinimizedIcon.Visible = false
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    shhhhnayy05:SaveRegistry()
+    ScreenGui:Destroy()
+end)
+
+--// Show Result
+function shhhhnayy05:ShowResult(gameId)
+    local game = self.SavedGames[gameId]
+    if not game then return end
+    
+    local ResultFrame = Instance.new("Frame")
+    ResultFrame.Size = UDim2.new(0, 380, 0, 420)
+    ResultFrame.Position = UDim2.new(0.5, -190, 0.5, -210)
+    ResultFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+    ResultFrame.BorderSizePixel = 0
+    ResultFrame.ZIndex = 200
+    ResultFrame.Parent = ScreenGui
+    
+    local ResCorner = Instance.new("UICorner")
+    ResCorner.CornerRadius = UDim.new(0, 12)
+    ResCorner.Parent = ResultFrame
+    
+    local ResStroke = Instance.new("UIStroke")
+    ResStroke.Color = Color3.fromRGB(0, 255, 100)
+    ResStroke.Thickness = 2
+    ResStroke.Parent = ResultFrame
+    
+    local ResTitle = Instance.new("TextLabel")
+    ResTitle.Size = UDim2.new(1, -20, 0, 40)
+    ResTitle.Position = UDim2.new(0, 10, 0, 10)
+    ResTitle.BackgroundTransparency = 1
+    ResTitle.Text = "✅ COPY COMPLETE!"
+    ResTitle.TextColor3 = Color3.fromRGB(0, 255, 100)
+    ResTitle.TextSize = 20
+    ResTitle.Font = Enum.Font.GothamBold
+    ResTitle.Parent = ResultFrame
+    
+    local InfoFrame = Instance.new("Frame")
+    InfoFrame.Size = UDim2.new(1, -20, 0, 140)
+    InfoFrame.Position = UDim2.new(0, 10, 0, 55)
+    InfoFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+    InfoFrame.Parent = ResultFrame
+    
+    local InfoCorner2 = Instance.new("UICorner")
+    InfoCorner2.CornerRadius = UDim.new(0, 10)
+    InfoCorner2.Parent = InfoFrame
+    
+    local lines = {
+        "📁 " .. game.FolderName,
+        "🎮 " .. game.GameName:sub(1, 28),
+        "",
+        "📊 STATISTICS:",
+        "  • Total Items: " .. game.Stats.TotalItems,
+        "  • Scripts: " .. game.Stats.Scripts,
+        "  • Parts/Models: " .. game.Stats.Parts,
+        "  • Remotes: " .. game.Stats.Remotes,
+        "  • GUIs: " .. game.Stats.GUIs
     }
     
-    -- Calculate stats
-    for serviceName, serviceData in pairs(shhhhnayy05.CopiedData) do
-        fileData.Stats.Services = fileData.Stats.Services + 1
-        fileData.Stats.Items = fileData.Stats.Items + shhhhnayy05.CountItemsInData(serviceData)
-        fileData.Stats.Scripts = fileData.Stats.Scripts + shhhhnayy05.CountScriptsInData(serviceData)
+    for i, line in ipairs(lines) do
+        local Line = Instance.new("TextLabel")
+        Line.Size = UDim2.new(1, -15, 0, 18)
+        Line.Position = UDim2.new(0, 8, 0, 5 + (i-1) * 15)
+        Line.BackgroundTransparency = 1
+        Line.Text = line
+        Line.TextColor3 = line:find("STATISTICS") and Color3.fromRGB(255, 200, 100) or 
+                         (i <= 2 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 180))
+        Line.TextSize = 11
+        Line.Font = (i <= 2 or line:find("STATISTICS")) and Enum.Font.GothamBold or Enum.Font.Gotham
+        Line.TextXAlignment = Enum.TextXAlignment.Left
+        Line.Parent = InfoFrame
     end
     
-    -- Save to _G (persistent storage)
-    if not _G.shhhhnayy05_SavedFiles then
-        _G.shhhhnayy05_SavedFiles = {}
+    local ServicesFrame = Instance.new("Frame")
+    ServicesFrame.Size = UDim2.new(1, -20, 0, 100)
+    ServicesFrame.Position = UDim2.new(0, 10, 0, 205)
+    ServicesFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+    ServicesFrame.Parent = ResultFrame
+    
+    local ServFrameCorner = Instance.new("UICorner")
+    ServFrameCorner.CornerRadius = UDim.new(0, 10)
+    ServFrameCorner.Parent = ServicesFrame
+    
+    local ServTitle2 = Instance.new("TextLabel")
+    ServTitle2.Size = UDim2.new(1, -15, 0, 20)
+    ServTitle2.Position = UDim2.new(0, 8, 0, 5)
+    ServTitle2.BackgroundTransparency = 1
+    ServTitle2.Text = "📦 Services Tersimpan:"
+    ServTitle2.TextColor3 = Color3.fromRGB(255, 200, 100)
+    ServTitle2.TextSize = 12
+    ServTitle2.Font = Enum.Font.GothamBold
+    ServTitle2.TextXAlignment = Enum.TextXAlignment.Left
+    ServTitle2.Parent = ServicesFrame
+    
+    local servText = ""
+    for _, serv in ipairs(game.Services) do
+        servText = servText .. "• " .. serv.Name .. " (" .. serv.Count .. " items)\n"
     end
     
-    _G.shhhhnayy05_SavedFiles[fileName] = fileData
-    shhhhnayy05.SavedFiles[fileName] = fileData
+    local ServList = Instance.new("TextLabel")
+    ServList.Size = UDim2.new(1, -15, 0, 70)
+    ServList.Position = UDim2.new(0, 8, 0, 25)
+    ServList.BackgroundTransparency = 1
+    ServList.Text = servText
+    ServList.TextColor3 = Color3.fromRGB(180, 180, 180)
+    ServList.TextSize = 10
+    ServList.Font = Enum.Font.Gotham
+    ServList.TextYAlignment = Enum.TextYAlignment.Top
+    ServList.TextWrapped = true
+    ServList.Parent = ServicesFrame
     
-    shhhhnayy05.AddLog("💾 Saved: " .. fileName)
-    shhhhnayy05.AddLog("   Items: " .. fileData.Stats.Items .. " | Scripts: " .. fileData.Stats.Scripts)
-    shhhhnayy05.ShowNotification("File Saved!", fileName .. " stored permanently")
+    local CopyPathBtn = Instance.new("TextButton")
+    CopyPathBtn.Size = UDim2.new(0.48, -5, 0, 40)
+    CopyPathBtn.Position = UDim2.new(0.02, 0, 1, -55)
+    CopyPathBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    CopyPathBtn.Text = "📋 Copy Path"
+    CopyPathBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CopyPathBtn.TextSize = 13
+    CopyPathBtn.Font = Enum.Font.GothamBold
+    CopyPathBtn.Parent = ResultFrame
+    
+    local CopyPathCorner = Instance.new("UICorner")
+    CopyPathCorner.CornerRadius = UDim.new(0, 10)
+    CopyPathCorner.Parent = CopyPathBtn
+    
+    local CloseResBtn = Instance.new("TextButton")
+    CloseResBtn.Size = UDim2.new(0.48, -5, 0, 40)
+    CloseResBtn.Position = UDim2.new(0.5, 5, 1, -55)
+    CloseResBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    CloseResBtn.Text = "📂 Lihat Semua"
+    CloseResBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseResBtn.TextSize = 13
+    CloseResBtn.Font = Enum.Font.GothamBold
+    CloseResBtn.Parent = ResultFrame
+    
+    local CloseResCorner = Instance.new("UICorner")
+    CloseResCorner.CornerRadius = UDim.new(0, 10)
+    CloseResCorner.Parent = CloseResBtn
+    
+    CopyPathBtn.MouseButton1Click:Connect(function()
+        if self.Methods.setclipboard then
+            setclipboard(game.FolderPath)
+            CopyPathBtn.Text = "✅ Copied!"
+            wait(1)
+            CopyPathBtn.Text = "📋 Copy Path"
+        end
+    end)
+    
+    CloseResBtn.MouseButton1Click:Connect(function()
+        ResultFrame:Destroy()
+        self:ShowGamesManager()
+    end)
 end
 
-function shhhhnayy05.LoadSavedFiles()
-    if _G.shhhhnayy05_SavedFiles then
-        shhhhnayy05.SavedFiles = _G.shhhhnayy05_SavedFiles
+--// Show Games Manager
+function shhhhnayy05:ShowGamesManager()
+    local games = {}
+    for id, game in pairs(self.SavedGames) do
+        table.insert(games, {
+            ID = id,
+            GameName = game.GameName,
+            PlaceId = game.PlaceId,
+            Created = game.Created,
+            FolderPath = game.FolderPath,
+            FolderName = game.FolderName,
+            Stats = game.Stats
+        })
     end
-end
-
-function shhhhnayy05.ShowSavedFilesManager()
-    local Modal = Instance.new("Frame")
-    Modal.Name = "FilesManager"
-    Modal.Size = UDim2.new(0, 400, 0, 450)
-    Modal.Position = UDim2.new(0.5, -200, 0.5, -225)
-    Modal.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    Modal.BorderSizePixel = 0
-    Modal.ZIndex = 1000
-    Modal.Parent = shhhhnayy05.GUI.ScreenGui
+    table.sort(games, function(a, b) return a.Created > b.Created end)
     
-    local ModalCorner = Instance.new("UICorner")
-    ModalCorner.CornerRadius = UDim.new(0, 16)
-    ModalCorner.Parent = Modal
+    local ManagerFrame = Instance.new("Frame")
+    ManagerFrame.Size = UDim2.new(0, 400, 0, 450)
+    ManagerFrame.Position = UDim2.new(0.5, -200, 0.5, -225)
+    ManagerFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+    ManagerFrame.BorderSizePixel = 0
+    ManagerFrame.ZIndex = 200
+    ManagerFrame.Parent = ScreenGui
     
-    local ModalStroke = Instance.new("UIStroke")
-    ModalStroke.Color = Color3.fromRGB(0, 150, 255)
-    ModalStroke.Thickness = 2
-    ModalStroke.Parent = Modal
+    local ManCorner = Instance.new("UICorner")
+    ManCorner.CornerRadius = UDim.new(0, 12)
+    ManCorner.Parent = ManagerFrame
     
-    -- Title
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 50)
-    Title.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    Title.Text = "📁 SAVED FILES MANAGER"
-    Title.TextColor3 = Color3.fromRGB(0, 200, 255)
-    Title.TextSize = 18
-    Title.Font = Enum.Font.GothamBold
-    Title.Parent = Modal
+    local ManStroke = Instance.new("UIStroke")
+    ManStroke.Color = Color3.fromRGB(0, 200, 255)
+    ManStroke.Thickness = 2
+    ManStroke.Parent = ManagerFrame
     
-    local TitleCorner = Instance.new("UICorner")
-    TitleCorner.CornerRadius = UDim.new(0, 16)
-    TitleCorner.Parent = Title
+    local ManTitle = Instance.new("TextLabel")
+    ManTitle.Size = UDim2.new(1, -20, 0, 40)
+    ManTitle.Position = UDim2.new(0, 10, 0, 10)
+    ManTitle.BackgroundTransparency = 1
+    ManTitle.Text = "📂 SAVED GAMES"
+    ManTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+    ManTitle.TextSize = 20
+    ManTitle.Font = Enum.Font.GothamBold
+    ManTitle.Parent = ManagerFrame
     
-    -- Files List
-    local ListFrame = Instance.new("ScrollingFrame")
-    ListFrame.Size = UDim2.new(1, -20, 1, -110)
-    ListFrame.Position = UDim2.new(0, 10, 0, 60)
-    ListFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    ListFrame.BorderSizePixel = 0
-    ListFrame.ScrollBarThickness = 6
-    ListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    ListFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    ListFrame.Parent = Modal
+    local ManSub = Instance.new("TextLabel")
+    ManSub.Size = UDim2.new(1, -20, 0, 20)
+    ManSub.Position = UDim2.new(0, 10, 0, 48)
+    ManSub.BackgroundTransparency = 1
+    ManSub.Text = "💾 Klik untuk copy path | 🗑️ = Hapus permanen"
+    ManSub.TextColor3 = Color3.fromRGB(0, 255, 150)
+    ManSub.TextSize = 11
+    ManSub.Font = Enum.Font.Gotham
+    ManSub.Parent = ManagerFrame
     
-    local ListCorner = Instance.new("UICorner")
-    ListCorner.CornerRadius = UDim.new(0, 12)
-    ListCorner.Parent = ListFrame
+    local ManScroll = Instance.new("ScrollingFrame")
+    ManScroll.Size = UDim2.new(1, -20, 0, 320)
+    ManScroll.Position = UDim2.new(0, 10, 0, 75)
+    ManScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    ManScroll.BorderSizePixel = 0
+    ManScroll.ScrollBarThickness = 6
+    ManScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
+    ManScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(#games * 110, 320))
+    ManScroll.Parent = ManagerFrame
     
-    local ListLayout = Instance.new("UIListLayout")
-    ListLayout.Padding = UDim.new(0, 10)
-    ListLayout.Parent = ListFrame
+    local ManScrollCorner = Instance.new("UICorner")
+    ManScrollCorner.CornerRadius = UDim.new(0, 10)
+    ManScrollCorner.Parent = ManScroll
     
-    local ListPadding = Instance.new("UIPadding")
-    ListPadding.Padding = UDim.new(0, 10)
-    ListPadding.Parent = ListFrame
-    
-    -- Populate files
-    if not next(shhhhnayy05.SavedFiles) then
-        local Empty = Instance.new("TextLabel")
-        Empty.Size = UDim2.new(1, 0, 0, 100)
-        Empty.BackgroundTransparency = 1
-        Empty.Text = "No saved files yet...\nCopy a game and click 'SAVE FILE'"
-        Empty.TextColor3 = Color3.fromRGB(150, 150, 150)
-        Empty.TextSize = 14
-        Empty.Font = Enum.Font.Gotham
-        Empty.TextWrapped = true
-        Empty.Parent = ListFrame
+    if #games == 0 then
+        local NoGames = Instance.new("TextLabel")
+        NoGames.Size = UDim2.new(1, 0, 1, 0)
+        NoGames.BackgroundTransparency = 1
+        NoGames.Text = "📂 Belum ada game tersimpan\n\nCopy game dulu!"
+        NoGames.TextColor3 = Color3.fromRGB(150, 150, 150)
+        NoGames.TextSize = 16
+        NoGames.Font = Enum.Font.Gotham
+        NoGames.TextYAlignment = Enum.TextYAlignment.Center
+        NoGames.Parent = ManScroll
     else
-        for fileName, fileData in pairs(shhhhnayy05.SavedFiles) do
-            local FileCard = Instance.new("Frame")
-            FileCard.Size = UDim2.new(1, -20, 0, 100)
-            FileCard.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-            FileCard.BorderSizePixel = 0
-            FileCard.Parent = ListFrame
+        for i, game in ipairs(games) do
+            local GameCard = Instance.new("Frame")
+            GameCard.Name = game.ID
+            GameCard.Size = UDim2.new(1, -15, 0, 100)
+            GameCard.Position = UDim2.new(0, 8, 0, (i-1) * 110)
+            GameCard.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+            GameCard.BorderSizePixel = 0
+            GameCard.Parent = ManScroll
             
             local CardCorner = Instance.new("UICorner")
-            CardCorner.CornerRadius = UDim.new(0, 12)
-            CardCorner.Parent = FileCard
+            CardCorner.CornerRadius = UDim.new(0, 10)
+            CardCorner.Parent = GameCard
             
-            -- Icon
-            local Icon = Instance.new("TextLabel")
-            Icon.Size = UDim2.new(0, 60, 0, 60)
-            Icon.Position = UDim2.new(0, 15, 0, 20)
-            Icon.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-            Icon.Text = "🎮"
-            Icon.TextSize = 30
-            Icon.Parent = FileCard
+            local GameName = Instance.new("TextLabel")
+            GameName.Size = UDim2.new(1, -150, 0, 22)
+            GameName.Position = UDim2.new(0, 10, 0, 8)
+            GameName.BackgroundTransparency = 1
+            GameName.Text = game.GameName:sub(1, 25)
+            GameName.TextColor3 = Color3.fromRGB(255, 255, 255)
+            GameName.TextSize = 15
+            GameName.Font = Enum.Font.GothamBold
+            GameName.TextXAlignment = Enum.TextXAlignment.Left
+            GameName.TextTruncate = Enum.TextTruncate.AtEnd
+            GameName.Parent = GameCard
             
-            local IconCorner = Instance.new("UICorner")
-            IconCorner.CornerRadius = UDim.new(0, 10)
-            IconCorner.Parent = Icon
+            local GameDetails = Instance.new("TextLabel")
+            GameDetails.Size = UDim2.new(1, -150, 0, 18)
+            GameDetails.Position = UDim2.new(0, 10, 0, 30)
+            GameDetails.BackgroundTransparency = 1
+            GameDetails.Text = "🆔 " .. game.PlaceId .. " | 📅 " .. game.Created:sub(1, 16)
+            GameDetails.TextColor3 = Color3.fromRGB(180, 180, 180)
+            GameDetails.TextSize = 11
+            GameDetails.Font = Enum.Font.Gotham
+            GameDetails.TextXAlignment = Enum.TextXAlignment.Left
+            GameDetails.Parent = GameCard
             
-            -- Info
-            local NameLabel = Instance.new("TextLabel")
-            NameLabel.Size = UDim2.new(1, -180, 0, 25)
-            NameLabel.Position = UDim2.new(0, 90, 0, 15)
-            NameLabel.BackgroundTransparency = 1
-            NameLabel.Text = fileData.DisplayName or fileName
-            NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            NameLabel.TextSize = 16
-            NameLabel.Font = Enum.Font.GothamBold
-            NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-            NameLabel.TextTruncate = Enum.TextTruncate.AtEnd
-            NameLabel.Parent = FileCard
+            local StatsLabel = Instance.new("TextLabel")
+            StatsLabel.Size = UDim2.new(1, -150, 0, 18)
+            StatsLabel.Position = UDim2.new(0, 10, 0, 48)
+            StatsLabel.BackgroundTransparency = 1
+            StatsLabel.Text = "📊 " .. (game.Stats and game.Stats.TotalItems or "?") .. " items | " .. (game.Stats and game.Stats.Scripts or "?") .. " scripts"
+            StatsLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
+            StatsLabel.TextSize = 10
+            StatsLabel.Font = Enum.Font.GothamBold
+            StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+            StatsLabel.Parent = GameCard
             
-            local DetailsLabel = Instance.new("TextLabel")
-            DetailsLabel.Size = UDim2.new(1, -180, 0, 50)
-            DetailsLabel.Position = UDim2.new(0, 90, 0, 40)
-            DetailsLabel.BackgroundTransparency = 1
-            DetailsLabel.Text = string.format("📦 %d items | 📜 %d scripts\n🕐 %s", 
-                fileData.Stats.Items, fileData.Stats.Scripts, fileData.Created)
-            DetailsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-            DetailsLabel.TextSize = 11
-            DetailsLabel.Font = Enum.Font.Gotham
-            DetailsLabel.TextXAlignment = Enum.TextXAlignment.Left
-            DetailsLabel.TextYAlignment = Enum.TextYAlignment.Top
-            DetailsLabel.TextWrapped = true
-            DetailsLabel.Parent = FileCard
+            local FolderLabel = Instance.new("TextLabel")
+            FolderLabel.Size = UDim2.new(1, -150, 0, 18)
+            FolderLabel.Position = UDim2.new(0, 10, 0, 66)
+            FolderLabel.BackgroundTransparency = 1
+            FolderLabel.Text = game.FolderName:sub(1, 30)
+            FolderLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+            FolderLabel.TextSize = 9
+            FolderLabel.Font = Enum.Font.Gotham
+            FolderLabel.TextXAlignment = Enum.TextXAlignment.Left
+            FolderLabel.TextTruncate = Enum.TextTruncate.AtEnd
+            FolderLabel.Parent = GameCard
             
-            -- Load Button
-            local LoadBtn = Instance.new("TextButton")
-            LoadBtn.Size = UDim2.new(0, 70, 0, 35)
-            LoadBtn.Position = UDim2.new(1, -160, 0.5, -17.5)
-            LoadBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-            LoadBtn.Text = "LOAD"
-            LoadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            LoadBtn.TextSize = 12
-            LoadBtn.Font = Enum.Font.GothamBold
-            LoadBtn.Parent = FileCard
+            local CopyBtn2 = Instance.new("TextButton")
+            CopyBtn2.Size = UDim2.new(0, 70, 0, 35)
+            CopyBtn2.Position = UDim2.new(1, -155, 0.5, -17.5)
+            CopyBtn2.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+            CopyBtn2.Text = "📋 Path"
+            CopyBtn2.TextColor3 = Color3.fromRGB(255, 255, 255)
+            CopyBtn2.TextSize = 12
+            CopyBtn2.Font = Enum.Font.GothamBold
+            CopyBtn2.Parent = GameCard
             
-            local LoadCorner = Instance.new("UICorner")
-            LoadCorner.CornerRadius = UDim.new(0, 8)
-            LoadCorner.Parent = LoadBtn
+            local CopyCorner2 = Instance.new("UICorner")
+            CopyCorner2.CornerRadius = UDim.new(0, 8)
+            CopyCorner2.Parent = CopyBtn2
             
-            -- Delete Button
             local DelBtn = Instance.new("TextButton")
             DelBtn.Size = UDim2.new(0, 70, 0, 35)
-            DelBtn.Position = UDim2.new(1, -85, 0.5, -17.5)
-            DelBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-            DelBtn.Text = "DEL"
+            DelBtn.Position = UDim2.new(1, -80, 0.5, -17.5)
+            DelBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+            DelBtn.Text = "🗑️ DEL"
             DelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             DelBtn.TextSize = 12
             DelBtn.Font = Enum.Font.GothamBold
-            DelBtn.Parent = FileCard
+            DelBtn.Parent = GameCard
             
             local DelCorner = Instance.new("UICorner")
             DelCorner.CornerRadius = UDim.new(0, 8)
             DelCorner.Parent = DelBtn
             
-            -- Actions
-            LoadBtn.MouseButton1Click:Connect(function()
-                shhhhnayy05.CopiedData = fileData.Data
-                shhhhnayy05.AddLog("📂 Loaded: " .. fileName)
-                shhhhnayy05.AddLog("   Items: " .. fileData.Stats.Items)
-                Modal:Destroy()
-                shhhhnayy05.ShowNotification("File Loaded!", "Loaded " .. fileData.Stats.Items .. " items")
+            CopyBtn2.MouseButton1Click:Connect(function()
+                if self.Methods.setclipboard then
+                    setclipboard(game.FolderPath)
+                    CopyBtn2.Text = "✅"
+                    wait(1)
+                    CopyBtn2.Text = "📋 Path"
+                end
             end)
             
             DelBtn.MouseButton1Click:Connect(function()
-                shhhhnayy05.SavedFiles[fileName] = nil
-                if _G.shhhhnayy05_SavedFiles then
-                    _G.shhhhnayy05_SavedFiles[fileName] = nil
-                end
-                FileCard:Destroy()
-                shhhhnayy05.AddLog("🗑️ Deleted: " .. fileName)
+                local ConfirmFrame = Instance.new("Frame")
+                ConfirmFrame.Size = UDim2.new(0, 350, 0, 200)
+                ConfirmFrame.Position = UDim2.new(0.5, -175, 0.5, -100)
+                ConfirmFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+                ConfirmFrame.BorderSizePixel = 0
+                ConfirmFrame.ZIndex = 500
+                ConfirmFrame.Parent = ScreenGui
+                
+                local ConfCorner = Instance.new("UICorner")
+                ConfCorner.CornerRadius = UDim.new(0, 12)
+                ConfCorner.Parent = ConfirmFrame
+                
+                local ConfStroke = Instance.new("UIStroke")
+                ConfStroke.Color = Color3.fromRGB(255, 60, 60)
+                ConfStroke.Thickness = 3
+                ConfStroke.Parent = ConfirmFrame
+                
+                local WarnIcon = Instance.new("TextLabel")
+                WarnIcon.Size = UDim2.new(1, 0, 0, 50)
+                WarnIcon.Position = UDim2.new(0, 0, 0, 10)
+                WarnIcon.BackgroundTransparency = 1
+                WarnIcon.Text = "⚠️"
+                WarnIcon.TextSize = 40
+                WarnIcon.Parent = ConfirmFrame
+                
+                local WarnText = Instance.new("TextLabel")
+                WarnText.Size = UDim2.new(1, -30, 0, 70)
+                WarnText.Position = UDim2.new(0, 15, 0, 60)
+                WarnText.BackgroundTransparency = 1
+                WarnText.Text = "HAPUS GAME PERMANEN?\n\n" .. game.GameName:sub(1, 30) .. "\nFolder: " .. game.FolderName:sub(1, 25)
+                WarnText.TextColor3 = Color3.fromRGB(255, 100, 100)
+                WarnText.TextSize = 13
+                WarnText.Font = Enum.Font.GothamBold
+                WarnText.TextYAlignment = Enum.TextYAlignment.Center
+                WarnText.Parent = ConfirmFrame
+                
+                local YesBtn = Instance.new("TextButton")
+                YesBtn.Size = UDim2.new(0.45, -10, 0, 40)
+                YesBtn.Position = UDim2.new(0.05, 0, 1, -55)
+                YesBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+                YesBtn.Text = "✅ YA, HAPUS"
+                YesBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                YesBtn.TextSize = 14
+                YesBtn.Font = Enum.Font.GothamBold
+                YesBtn.Parent = ConfirmFrame
+                
+                local YesCorner = Instance.new("UICorner")
+                YesCorner.CornerRadius = UDim.new(0, 10)
+                YesCorner.Parent = YesBtn
+                
+                local NoBtn = Instance.new("TextButton")
+                NoBtn.Size = UDim2.new(0.45, -10, 0, 40)
+                NoBtn.Position = UDim2.new(0.5, 5, 1, -55)
+                NoBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+                NoBtn.Text = "❌ BATAL"
+                NoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                NoBtn.TextSize = 14
+                NoBtn.Font = Enum.Font.GothamBold
+                NoBtn.Parent = ConfirmFrame
+                
+                local NoCorner = Instance.new("UICorner")
+                NoCorner.CornerRadius = UDim.new(0, 10)
+                NoCorner.Parent = NoBtn
+                
+                YesBtn.MouseButton1Click:Connect(function()
+                    local success = self:DeleteGame(game.ID)
+                    ConfirmFrame:Destroy()
+                    
+                    if success then
+                        TweenService:Create(GameCard, TweenInfo.new(0.3), 
+                            {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, GameCard.Position.Y.Scale, GameCard.Position.Y.Offset)}):Play()
+                        wait(0.3)
+                        GameCard:Destroy()
+                        
+                        ManScroll.CanvasSize = UDim2.new(0, 0, 0, math.max((#self:GetSavedGames()) * 110, 320))
+                        updateFileCount()
+                        
+                        local Notif = Instance.new("TextLabel")
+                        Notif.Size = UDim2.new(0, 300, 0, 50)
+                        Notif.Position = UDim2.new(0.5, -150, 0, -100)
+                        Notif.BackgroundColor3 = Color3.fromRGB(0, 150, 50)
+                        Notif.Text = "✅ Game dihapus!"
+                        Notif.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        Notif.TextSize = 16
+                        Notif.Font = Enum.Font.GothamBold
+                        Notif.ZIndex = 600
+                        Notif.Parent = ScreenGui
+                        
+                        local NotifCorner = Instance.new("UICorner")
+                        NotifCorner.CornerRadius = UDim.new(0, 12)
+                        NotifCorner.Parent = Notif
+                        
+                        TweenService:Create(Notif, TweenInfo.new(0.5), {Position = UDim2.new(0.5, -150, 0, 80)}):Play()
+                        wait(2)
+                        TweenService:Create(Notif, TweenInfo.new(0.5), {Position = UDim2.new(0.5, -150, 0, -100)}):Play()
+                        wait(0.5)
+                        Notif:Destroy()
+                    end
+                end)
+                
+                NoBtn.MouseButton1Click:Connect(function()
+                    ConfirmFrame:Destroy()
+                end)
+            end)
+            
+            GameCard.MouseEnter:Connect(function()
+                TweenService:Create(GameCard, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 70)}):Play()
+            end)
+            
+            GameCard.MouseLeave:Connect(function()
+                TweenService:Create(GameCard, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 55)}):Play()
             end)
         end
     end
     
-    -- Close Button
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Size = UDim2.new(0, 120, 0, 40)
-    CloseBtn.Position = UDim2.new(0.5, -60, 1, -55)
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-    CloseBtn.Text = "CLOSE"
-    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseBtn.TextSize = 14
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Parent = Modal
+    local CloseManBtn = Instance.new("TextButton")
+    CloseManBtn.Size = UDim2.new(0, 150, 0, 40)
+    CloseManBtn.Position = UDim2.new(0.5, -75, 1, -55)
+    CloseManBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    CloseManBtn.Text = "❌ Tutup"
+    CloseManBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseManBtn.TextSize = 14
+    CloseManBtn.Font = Enum.Font.GothamBold
+    CloseManBtn.Parent = ManagerFrame
     
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 10)
-    CloseCorner.Parent = CloseBtn
+    local CloseManCorner = Instance.new("UICorner")
+    CloseManCorner.CornerRadius = UDim.new(0, 10)
+    CloseManCorner.Parent = CloseManBtn
     
-    CloseBtn.MouseButton1Click:Connect(function()
-        TweenService:Create(Modal, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
-        wait(0.3)
-        Modal:Destroy()
+    CloseManBtn.MouseButton1Click:Connect(function()
+        ManagerFrame:Destroy()
     end)
 end
 
---// EXPORT TO SCRIPT
-function shhhhnayy05.ExportToLuaScript()
-    if not shhhhnayy05.CopiedData or not next(shhhhnayy05.CopiedData) then
-        shhhhnayy05.AddLog("❌ No data to export!")
-        return
-    end
-    
-    -- Create export window
-    local ExportModal = Instance.new("Frame")
-    ExportModal.Size = UDim2.new(0, 550, 0, 450)
-    ExportModal.Position = UDim2.new(0.5, -275, 0.5, -225)
-    ExportModal.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    ExportModal.BorderSizePixel = 0
-    ExportModal.ZIndex = 2000
-    ExportModal.Parent = shhhhnayy05.GUI.ScreenGui
-    
-    local ExportCorner = Instance.new("UICorner")
-    ExportCorner.CornerRadius = UDim.new(0, 16)
-    ExportCorner.Parent = ExportModal
-    
-    local ExportStroke = Instance.new("UIStroke")
-    ExportStroke.Color = Color3.fromRGB(0, 200, 100)
-    ExportStroke.Thickness = 2
-    ExportStroke.Parent = ExportModal
-    
-    -- Title
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 50)
-    Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    Title.Text = "📜 EXPORTED LUA SCRIPT"
-    Title.TextColor3 = Color3.fromRGB(0, 200, 100)
-    Title.TextSize = 18
-    Title.Font = Enum.Font.GothamBold
-    Title.Parent = ExportModal
-    
-    local TitleCorner = Instance.new("UICorner")
-    TitleCorner.CornerRadius = UDim.new(0, 16)
-    TitleCorner.Parent = Title
-    
-    -- Script Box
-    local ScriptBox = Instance.new("TextBox")
-    ScriptBox.Size = UDim2.new(1, -20, 1, -120)
-    ScriptBox.Position = UDim2.new(0, 10, 0, 60)
-    ScriptBox.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    ScriptBox.TextColor3 = Color3.fromRGB(0, 255, 100)
-    ScriptBox.TextSize = 10
-    ScriptBox.Font = Enum.Font.Code
-    ScriptBox.TextXAlignment = Enum.TextXAlignment.Left
-    ScriptBox.TextYAlignment = Enum.TextYAlignment.Top
-    ScriptBox.ClearTextOnFocus = false
-    ScriptBox.MultiLine = true
-    ScriptBox.TextWrapped = false
-    ScriptBox.Parent = ExportModal
-    
-    local ScriptCorner = Instance.new("UICorner")
-    ScriptCorner.CornerRadius = UDim.new(0, 12)
-    ScriptCorner.Parent = ScriptBox
-    
-    -- Generate
-    local scriptContent = shhhhnayy05.GenerateFullScript()
-    ScriptBox.Text = scriptContent
-    
-    -- Info Label
-    local InfoLabel = Instance.new("TextLabel")
-    InfoLabel.Size = UDim2.new(1, -20, 0, 20)
-    InfoLabel.Position = UDim2.new(0, 10, 1, -55)
-    InfoLabel.BackgroundTransparency = 1
-    InfoLabel.Text = "📋 Script copied to _G.shhhhnayy05_ExportedScript for easy access"
-    InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-    InfoLabel.TextSize = 11
-    InfoLabel.Font = Enum.Font.Gotham
-    InfoLabel.Parent = ExportModal
-    
-    -- Buttons Frame
-    local BtnFrame = Instance.new("Frame")
-    BtnFrame.Size = UDim2.new(1, -20, 0, 40)
-    BtnFrame.Position = UDim2.new(0, 10, 1, -50)
-    BtnFrame.BackgroundTransparency = 1
-    BtnFrame.Parent = ExportModal
-    
-    local BtnLayout = Instance.new("UIListLayout")
-    BtnLayout.FillDirection = Enum.FillDirection.Horizontal
-    BtnLayout.Padding = UDim.new(0, 15)
-    BtnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    BtnLayout.Parent = BtnFrame
-    
-    -- Copy Button
-    local CopyBtn = Instance.new("TextButton")
-    CopyBtn.Size = UDim2.new(0, 130, 0, 35)
-    CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    CopyBtn.Text = "📋 COPY SCRIPT"
-    CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CopyBtn.TextSize = 12
-    CopyBtn.Font = Enum.Font.GothamBold
-    CopyBtn.Parent = BtnFrame
-    
-    local CopyCorner = Instance.new("UICorner")
-    CopyCorner.CornerRadius = UDim.new(0, 10)
-    CopyCorner.Parent = CopyBtn
-    
-    -- Close Button
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Size = UDim2.new(0, 130, 0, 35)
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-    CloseBtn.Text = "CLOSE"
-    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseBtn.TextSize = 12
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Parent = BtnFrame
-    
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 10)
-    CloseCorner.Parent = CloseBtn
-    
-    -- Store in _G for clipboard simulation
-    _G.shhhhnayy05_ExportedScript = scriptContent
-    
-    -- Actions
-    CopyBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05.AddLog("📋 Script exported and ready to copy!")
-        shhhhnayy05.ShowNotification("Success!", "Script ready in _G.shhhhnayy05_ExportedScript")
-        
-        -- Visual feedback
-        CopyBtn.Text = "✅ COPIED!"
-        CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        wait(1.5)
-        CopyBtn.Text = "📋 COPY SCRIPT"
-        CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    end)
-    
-    CloseBtn.MouseButton1Click:Connect(function()
-        TweenService:Create(ExportModal, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
-        wait(0.3)
-        ExportModal:Destroy()
-    end)
-end
+--// Button Connections
+CopyAllBtn.MouseButton1Click:Connect(function()
+    shhhhnayy05:StartCopy(false) -- false = auto detect all
+end)
 
-function shhhhnayy05.GenerateFullScript()
-    local lines = {
-        "--// ========================================== ",
-        "--// GENERATED BY shhhhnayy05 Real-Time Copier",
-        "--// Game: " .. game.Name,
-        "--// Place ID: " .. game.PlaceId,
-        "--// Created: " .. os.date("%Y-%m-%d %H:%M:%S"),
-        "--// ========================================== ",
-        "",
-        "local shhhhnayy05_Loader = {}",
-        "",
-        "--// Utility Functions",
-        "function shhhhnayy05_Loader.CreateInstance(className, parent, name)",
-        "    local success, inst = pcall(function()",
-        "        local obj = Instance.new(className)",
-        "        obj.Name = name",
-        "        obj.Parent = parent",
-        "        return obj",
-        "    end)",
-        "    if success then return inst end",
-        "    return nil",
-        "end",
-        "",
-        "function shhhhnayy05_Loader.SetProperties(inst, props)",
-        "    if not inst or not props then return end",
-        "    for prop, value in pairs(props) do",
-        "        pcall(function()",
-        "            if type(value) == 'table' then",
-        "                if prop == 'Size' and #value == 3 then",
-        "                    inst.Size = Vector3.new(value[1], value[2], value[3])",
-        "                elseif prop == 'Position' and #value == 3 then",
-        "                    inst.Position = Vector3.new(value[1], value[2], value[3])",
-        "                elseif prop == 'Rotation' and #value == 3 then",
-        "                    inst.Orientation = Vector3.new(value[1], value[2], value[3])",
-        "                elseif prop == 'Color' and #value == 3 then",
-        "                    inst.Color = Color3.new(value[1], value[2], value[3])",
-        "                elseif prop == 'BackgroundColor3' and #value == 3 then",
-        "                    inst.BackgroundColor3 = Color3.new(value[1], value[2], value[3])",
-        "                elseif prop == 'TextColor3' and #value == 3 then",
-        "                    inst.TextColor3 = Color3.new(value[1], value[2], value[3])",
-        "                elseif prop == 'Size' and #value == 4 then -- UDim2",
-        "                    inst.Size = UDim2.new(value[1], value[2], value[3], value[4])",
-        "                elseif prop == 'Position' and #value == 4 then -- UDim2",
-        "                    inst.Position = UDim2.new(value[1], value[2], value[3], value[4])",
-        "                end",
-        "            else",
-        "                inst[prop] = value",
-        "            end",
-        "        end)",
-        "    end",
-        "end",
-        "",
-        "function shhhhnayy05_Loader.BuildHierarchy(data, parent)",
-        "    if not data then return end",
-        "    ",
-        "    local inst = shhhhnayy05_Loader.CreateInstance(data.ClassName, parent, data.Name)",
-        "    if not inst then return end",
-        "    ",
-        "    -- Set properties",
-        "    if data.Properties then",
-        "        shhhhnayy05_Loader.SetProperties(inst, data.Properties)",
-        "    end",
-        "    ",
-        "    -- Build children",
-        "    if data.Children then",
-        "        for _, childData in ipairs(data.Children) do",
-        "            shhhhnayy05_Loader.BuildHierarchy(childData, inst)",
-        "        end",
-        "    end",
-        "    ",
-        "    return inst",
-        "end",
-        "",
-        "--// Main Load Function",
-        "function shhhhnayy05_Loader.LoadGame()",
-        "    print('🎮 shhhhnayy05 Loader: Starting...')",
-        "",
-    }
-    
-    -- Add service data
-    for serviceName, serviceData in pairs(shhhhnayy05.CopiedData) do
-        table.insert(lines, "    --// Loading " .. serviceName)
-        table.insert(lines, "    print('📂 Loading " .. serviceName .. "...')")
-        table.insert(lines, "    local " .. serviceName .. " = game:GetService('" .. serviceName .. "')")
-        table.insert(lines, "    if " .. serviceName .. " then")
-        
-        if serviceData.Children then
-            for _, child in ipairs(serviceData.Children) do
-                table.insert(lines, "        shhhhnayy05_Loader.BuildHierarchy(" .. shhhhnayy05.TableToString(child) .. ", " .. serviceName .. ")")
-            end
-        end
-        
-        table.insert(lines, "    end")
-        table.insert(lines, "")
-    end
-    
-    -- Footer
-    table.insert(lines, "    print('✅ shhhhnayy05 Loader: Complete!')")
-    table.insert(lines, "    print('🎮 All services loaded successfully!')")
-    table.insert(lines, "end")
-    table.insert(lines, "")
-    table.insert(lines, "--// Execute")
-    table.insert(lines, "shhhhnayy05_Loader.LoadGame()")
-    
-    return table.concat(lines, "\n")
-end
+CopySelectedBtn.MouseButton1Click:Connect(function()
+    shhhhnayy05:StartCopy(true) -- true = use selected only
+end)
 
-function shhhhnayy05.TableToString(tbl, indent)
-    indent = indent or 0
-    local indentStr = string.rep("    ", indent)
-    local lines = {"{"}
-    
-    for k, v in pairs(tbl) do
-        local key = type(k) == "string
+FilesBtn.MouseButton1Click:Connect(function()
+    shhhhnayy05:ShowGamesManager()
+end)
 
-function shhhhnayy05.TableToString(tbl, indent)
-    indent = indent or 0
-    local indentStr = string.rep("    ", indent)
-    local lines = {"{"}
-    
-    for k, v in pairs(tbl) do
-        local key = type(k) == "string" and '["' .. k .. '"]' or "[" .. k .. "]"
-        local value
-        
-        if type(v) == "table" then
-            value = shhhhnayy05.TableToString(v, indent + 1)
-        elseif type(v) == "string" then
-            value = '"' .. v:gsub('"', '\\"'):gsub("\n", "\\n") .. '"'
-        elseif type(v) == "number" or type(v) == "boolean" then
-            value = tostring(v)
-        else
-            value = "nil"
-        end
-        
-        table.insert(lines, indentStr .. "    " .. key .. " = " .. value .. ",")
-    end
-    
-    table.insert(lines, indentStr .. "}")
-    return table.concat(lines, "\n")
-end
+--// Initialize
+shhhhnayy05:Init()
+updateFileCount()
+updateStatus("Ready - Klik 💯 COPY SEMUA")
 
---// NOTIFICATION SYSTEM
-function shhhhnayy05.ShowNotification(title, message)
-    local NotifyFrame = Instance.new("Frame")
-    NotifyFrame.Size = UDim2.new(0, 300, 0, 80)
-    NotifyFrame.Position = UDim2.new(1, 20, 1, -100)
-    NotifyFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    NotifyFrame.BorderSizePixel = 0
-    NotifyFrame.ZIndex = 3000
-    NotifyFrame.Parent = shhhhnayy05.GUI.ScreenGui
-    
-    local NotifyCorner = Instance.new("UICorner")
-    NotifyCorner.CornerRadius = UDim.new(0, 12)
-    NotifyCorner.Parent = NotifyFrame
-    
-    local NotifyStroke = Instance.new("UIStroke")
-    NotifyStroke.Color = Color3.fromRGB(0, 200, 100)
-    NotifyStroke.Thickness = 2
-    NotifyStroke.Parent = NotifyFrame
-    
-    -- Icon
-    local Icon = Instance.new("TextLabel")
-    Icon.Size = UDim2.new(0, 50, 0, 50)
-    Icon.Position = UDim2.new(0, 15, 0.5, -25)
-    Icon.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-    Icon.Text = "✓"
-    Icon.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Icon.TextSize = 28
-    Icon.Font = Enum.Font.GothamBold
-    Icon.Parent = NotifyFrame
-    
-    local IconCorner = Instance.new("UICorner")
-    IconCorner.CornerRadius = UDim.new(1, 0)
-    IconCorner.Parent = Icon
-    
-    -- Title
-    local TitleLabel = Instance.new("TextLabel")
-    TitleLabel.Size = UDim2.new(1, -85, 0, 25)
-    TitleLabel.Position = UDim2.new(0, 75, 0, 15)
-    TitleLabel.BackgroundTransparency = 1
-    TitleLabel.Text = title
-    TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TitleLabel.TextSize = 16
-    TitleLabel.Font = Enum.Font.GothamBold
-    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TitleLabel.Parent = NotifyFrame
-    
-    -- Message
-    local MsgLabel = Instance.new("TextLabel")
-    MsgLabel.Size = UDim2.new(1, -85, 0, 35)
-    MsgLabel.Position = UDim2.new(0, 75, 0, 40)
-    MsgLabel.BackgroundTransparency = 1
-    MsgLabel.Text = message
-    MsgLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-    MsgLabel.TextSize = 12
-    MsgLabel.Font = Enum.Font.Gotham
-    MsgLabel.TextXAlignment = Enum.TextXAlignment.Left
-    MsgLabel.TextWrapped = true
-    MsgLabel.Parent = NotifyFrame
-    
-    -- Slide in animation
-    TweenService:Create(NotifyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-        Position = UDim2.new(1, -320, 1, -100)
-    }):Play()
-    
-    -- Auto remove
-    spawn(function()
-        wait(4)
-        TweenService:Create(NotifyFrame, TweenInfo.new(0.3), {
-            Position = UDim2.new(1, 20, 1, -100)
-        }):Play()
-        wait(0.3)
-        NotifyFrame:Destroy()
-    end)
-end
-
---// INITIALIZE
-shhhhnayy05.CreateGUI()
-
-print("✅ shhhhnayy05 Real-Time Game Copier loaded!")
-print("🎮 Current Game: " .. game.Name)
-print("📍 Place ID: " .. game.PlaceId)
+print("✅ shhhhnayy05 COMPLETE COPIER READY")
+print("💯 Fitur: Copy SEMUA struktur (Admin, Anti-cheat, Carry, dll)")
+print("📁 Format: Folder dengan loader per service")
 
 return shhhhnayy05
