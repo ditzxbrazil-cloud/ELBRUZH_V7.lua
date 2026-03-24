@@ -1,1633 +1,1613 @@
--- Script Path: game:GetService("StarterPlayer").StarterPlayerScripts["shhhhnayy05"]["shhhhnayy05 x1"]
--- Took 0.22s to decompile.
--- Executor: Delta (1.1.711.876)
+--// shhhhnayy05 Real-Time Game Copier
+--// Auto-detect current game & copy all services
+--// Support: Executor Level 7-8
 
-local shhhhnayy05_1 = game:GetService("Players")
-local shhhhnayy05_2 = game:GetService("ReplicatedStorage")
-local shhhhnayy05_3 = game:GetService("RunService")
-local shhhhnayy05_4 = game:GetService("UserInputService")
-local shhhhnayy05_5 = game:GetService("TweenService")
-local shhhhnayy05_6 = game:GetService("StarterGui")
-local shhhhnayy05_7 = game:GetService("Debris")
-local shhhhnayy05_8 = game:GetService("Lighting")
-local shhhhnayy05_9 = game:GetService("TextChatService")
-local shhhhnayy05_10 = game:GetService("MarketplaceService")
-local shhhhnayy05_11 = shhhhnayy05_1.LocalPlayer
-local shhhhnayy05_12 = shhhhnayy05_11:WaitForChild("PlayerGui")
-local shhhhnayy05_13 = shhhhnayy05_2:WaitForChild("AdminSystem", 10)
-if not shhhhnayy05_13 then
-    return
-end
-local shhhhnayy05_14 = require(shhhhnayy05_13:WaitForChild("Config"))
-local shhhhnayy05_15 = require(shhhhnayy05_13:WaitForChild("FeatureLoader"))
-local shhhhnayy05_16 = shhhhnayy05_13:WaitForChild("Remotes")
-local shhhhnayy05_17 = shhhhnayy05_16:WaitForChild("AdminEvent")
-local shhhhnayy05_18 = shhhhnayy05_16:WaitForChild("AdminFunction")
-local shhhhnayy05_19 = require(shhhhnayy05_13:WaitForChild("Extras"):WaitForChild("SettingsModule"))
-local function shhhhnayy05_21(p20)
-    -- upvalues: (copy) shhhhnayy05_19
-    return shhhhnayy05_19.T(p20)
-end
-local shhhhnayy05_22 = require(shhhhnayy05_13:WaitForChild("Extras"):WaitForChild("FeatureListModule"))
-local shhhhnayy05_23 = nil
-local shhhhnayy05_24 = require(shhhhnayy05_13:WaitForChild("Extras"):WaitForChild("InfoPanelModule"))
-local shhhhnayy05_25 = require(shhhhnayy05_13:WaitForChild("Extras"):WaitForChild("InitUIModule"))
-local shhhhnayy05_26 = false
-local shhhhnayy05_27 = shhhhnayy05_14.GamepassAdmin
-if shhhhnayy05_27 then
-    if shhhhnayy05_14.GamepassAdmin.Enabled == true then
-        shhhhnayy05_27 = shhhhnayy05_14.GamepassAdmin.GamepassId ~= 0
-    else
-        shhhhnayy05_27 = false
-    end
-end
-local shhhhnayy05_28 = shhhhnayy05_14.GamepassAdmin and (shhhhnayy05_14.GamepassAdmin.GamepassId or 0) or 0
-local shhhhnayy05_29 = shhhhnayy05_14.IsAdmin(shhhhnayy05_11)
-if not (shhhhnayy05_29 or shhhhnayy05_27) then
-    return
-end
-local shhhhnayy05_30 = false
-if not shhhhnayy05_29 and shhhhnayy05_27 then
-    task.spawn(function()
-        -- upvalues: (copy) shhhhnayy05_16, (ref) shhhhnayy05_30, (ref) shhhhnayy05_29
-        local shhhhnayy05_31 = shhhhnayy05_16:FindFirstChild("PublicFunction") or shhhhnayy05_16:WaitForChild("PublicFunction", 10)
-        if shhhhnayy05_31 then
-            local shhhhnayy05_32, shhhhnayy05_33 = pcall(function()
-                -- upvalues: (ref) shhhhnayy05_31
-                return shhhhnayy05_31:InvokeServer("check_gamepass", {})
-            end)
-            if shhhhnayy05_32 and (shhhhnayy05_33 and shhhhnayy05_33.owns) then
-                shhhhnayy05_29 = true
+local shhhhnayy05 = {}
+shhhhnayy05.CopiedData = {}
+shhhhnayy05.SavedFiles = {}
+shhhhnayy05.IsCopying = false
+
+-- Services
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
+local ServerScriptService = game:GetService("ServerScriptService")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+--// GUI Creation
+function shhhhnayy05.CreateGUI()
+    -- ScreenGui
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "shhhhnayy05_RealTimeCopier"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = PlayerGui
+    
+    -- Main Frame
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 450, 0, 550)
+    MainFrame.Position = UDim2.new(0.5, -225, 0.5, -275)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = ScreenGui
+    
+    -- Corner
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 16)
+    Corner.Parent = MainFrame
+    
+    -- Gradient Background
+    local Gradient = Instance.new("UIGradient")
+    Gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 30)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 50))
+    })
+    Gradient.Rotation = 45
+    Gradient.Parent = MainFrame
+    
+    -- Stroke Glow
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(0, 200, 255)
+    Stroke.Thickness = 2
+    Stroke.Transparency = 0.3
+    Stroke.Parent = MainFrame
+    
+    -- Animated Glow
+    spawn(function()
+        while MainFrame and MainFrame.Parent do
+            for i = 0, 1, 0.02 do
+                if not MainFrame or not MainFrame.Parent then break end
+                Stroke.Transparency = 0.3 + (math.sin(i * math.pi * 2) * 0.2)
+                RunService.Heartbeat:Wait()
             end
-            shhhhnayy05_30 = true
-        else
-            shhhhnayy05_30 = true
         end
     end)
-end
-local shhhhnayy05_34 = shhhhnayy05_4.TouchEnabled
-if shhhhnayy05_34 then
-    shhhhnayy05_34 = not shhhhnayy05_4.KeyboardEnabled
-end
-local shhhhnayy05_35 = Enum.Font.GothamBold
-local shhhhnayy05_36 = Enum.Font.Gotham
-local shhhhnayy05_37, shhhhnayy05_38 = pcall(function()
-    -- upvalues: (copy) shhhhnayy05_14
-    return shhhhnayy05_14.GetCreator()
-end)
-local shhhhnayy05_39 = not (shhhhnayy05_37 and shhhhnayy05_38) and 8920811616 or shhhhnayy05_38.UserId
-local shhhhnayy05_40 = ""
-local shhhhnayy05_41 = ""
-task.spawn(function()
-    -- upvalues: (copy) shhhhnayy05_18, (ref) shhhhnayy05_40, (ref) shhhhnayy05_41
-    local shhhhnayy05_42, shhhhnayy05_43 = pcall(function()
-        -- upvalues: (ref) shhhhnayy05_18
-        return shhhhnayy05_18:InvokeServer("get_creator_info", {})
+    
+    -- Title Bar
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Name = "TitleBar"
+    TitleBar.Size = UDim2.new(1, 0, 0, 50)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Parent = MainFrame
+    
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 16)
+    TitleCorner.Parent = TitleBar
+    
+    -- Title Text
+    local TitleText = Instance.new("TextLabel")
+    TitleText.Name = "TitleText"
+    TitleText.Size = UDim2.new(1, -120, 1, 0)
+    TitleText.Position = UDim2.new(0, 20, 0, 0)
+    TitleText.BackgroundTransparency = 1
+    TitleText.Text = "🎮 shhhhnayy05 REAL-TIME COPIER"
+    TitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
+    TitleText.TextSize = 18
+    TitleText.Font = Enum.Font.GothamBlack
+    TitleText.TextXAlignment = Enum.TextXAlignment.Left
+    TitleText.Parent = TitleBar
+    
+    -- Current Game Info
+    local GameInfo = Instance.new("TextLabel")
+    GameInfo.Name = "GameInfo"
+    GameInfo.Size = UDim2.new(1, -40, 0, 20)
+    GameInfo.Position = UDim2.new(0, 20, 0, 30)
+    GameInfo.BackgroundTransparency = 1
+    GameInfo.Text = "Current: " .. game.PlaceId .. " | " .. game.Name
+    GameInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
+    GameInfo.TextSize = 11
+    GameInfo.Font = Enum.Font.Gotham
+    GameInfo.TextXAlignment = Enum.TextXAlignment.Left
+    GameInfo.Parent = TitleBar
+    
+    -- Minimize Button
+    local MinimizeBtn = Instance.new("TextButton")
+    MinimizeBtn.Name = "MinimizeBtn"
+    MinimizeBtn.Size = UDim2.new(0, 40, 0, 40)
+    MinimizeBtn.Position = UDim2.new(1, -90, 0.5, -20)
+    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    MinimizeBtn.Text = "−"
+    MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MinimizeBtn.TextSize = 28
+    MinimizeBtn.Font = Enum.Font.GothamBold
+    MinimizeBtn.Parent = TitleBar
+    
+    local MinimizeCorner = Instance.new("UICorner")
+    MinimizeCorner.CornerRadius = UDim.new(0, 10)
+    MinimizeCorner.Parent = MinimizeBtn
+    
+    -- Close Button
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Name = "CloseBtn"
+    CloseBtn.Size = UDim2.new(0, 40, 0, 40)
+    CloseBtn.Position = UDim2.new(1, -45, 0.5, -20)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    CloseBtn.Text = "×"
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.TextSize = 28
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Parent = TitleBar
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 10)
+    CloseCorner.Parent = CloseBtn
+    
+    -- Content Frame
+    local ContentFrame = Instance.new("Frame")
+    ContentFrame.Name = "ContentFrame"
+    ContentFrame.Size = UDim2.new(1, -20, 1, -120)
+    ContentFrame.Position = UDim2.new(0, 10, 0, 60)
+    ContentFrame.BackgroundTransparency = 1
+    ContentFrame.Parent = MainFrame
+    
+    --// CURRENT GAME DETECTION SECTION
+    local DetectionSection = shhhhnayy05.CreateSection(ContentFrame, "🔍 CURRENT GAME DETECTED", UDim2.new(0, 0))
+    
+    -- Game Details Frame
+    local GameDetails = Instance.new("Frame")
+    GameDetails.Size = UDim2.new(1, -20, 0, 120)
+    GameDetails.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    GameDetails.BorderSizePixel = 0
+    GameDetails.Parent = DetectionSection
+    
+    local DetailsCorner = Instance.new("UICorner")
+    DetailsCorner.CornerRadius = UDim.new(0, 12)
+    DetailsCorner.Parent = GameDetails
+    
+    -- Game Icon/Preview
+    local GameIcon = Instance.new("TextLabel")
+    GameIcon.Size = UDim2.new(0, 80, 0, 80)
+    GameIcon.Position = UDim2.new(0, 15, 0, 20)
+    GameIcon.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    GameIcon.Text = "🎮"
+    GameIcon.TextSize = 40
+    GameIcon.Parent = GameDetails
+    
+    local IconCorner = Instance.new("UICorner")
+    IconCorner.CornerRadius = UDim.new(0, 12)
+    IconCorner.Parent = GameIcon
+    
+    -- Game Name
+    local GameNameLabel = Instance.new("TextLabel")
+    GameNameLabel.Size = UDim2.new(1, -120, 0, 25)
+    GameNameLabel.Position = UDim2.new(0, 110, 0, 15)
+    GameNameLabel.BackgroundTransparency = 1
+    GameNameLabel.Text = game.Name
+    GameNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    GameNameLabel.TextSize = 16
+    GameNameLabel.Font = Enum.Font.GothamBold
+    GameNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    GameNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    GameNameLabel.Parent = GameDetails
+    
+    -- Game ID
+    local GameIdLabel = Instance.new("TextLabel")
+    GameIdLabel.Size = UDim2.new(1, -120, 0, 20)
+    GameIdLabel.Position = UDim2.new(0, 110, 0, 40)
+    GameIdLabel.BackgroundTransparency = 1
+    GameIdLabel.Text = "Place ID: " .. game.PlaceId
+    GameIdLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
+    GameIdLabel.TextSize = 12
+    GameIdLabel.Font = Enum.Font.Gotham
+    GameIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+    GameIdLabel.Parent = GameDetails
+    
+    -- Game Version
+    local GameVersion = Instance.new("TextLabel")
+    GameVersion.Size = UDim2.new(1, -120, 0, 20)
+    GameVersion.Position = UDim2.new(0, 110, 0, 60)
+    GameVersion.BackgroundTransparency = 1
+    GameVersion.Text = "Game Version: " .. game.PlaceVersion
+    GameVersion.TextColor3 = Color3.fromRGB(180, 180, 180)
+    GameVersion.TextSize = 11
+    GameVersion.Font = Enum.Font.Gotham
+    GameVersion.TextXAlignment = Enum.TextXAlignment.Left
+    GameVersion.Parent = GameDetails
+    
+    -- Player Count
+    local PlayerCount = Instance.new("TextLabel")
+    PlayerCount.Size = UDim2.new(1, -120, 0, 20)
+    PlayerCount.Position = UDim2.new(0, 110, 0, 80)
+    PlayerCount.BackgroundTransparency = 1
+    PlayerCount.Text = "Players: " .. #Players:GetPlayers() .. " | You: " .. LocalPlayer.Name
+    PlayerCount.TextColor3 = Color3.fromRGB(180, 180, 180)
+    PlayerCount.TextSize = 11
+    PlayerCount.Font = Enum.Font.Gotham
+    PlayerCount.TextXAlignment = Enum.TextXAlignment.Left
+    PlayerCount.Parent = GameDetails
+    
+    --// SERVICES TO COPY SECTION
+    local ServicesSection = shhhhnayy05.CreateSection(ContentFrame, "📦 SERVICES TO COPY", UDim2.new(0, 140))
+    
+    -- Services Grid
+    local ServicesGrid = Instance.new("Frame")
+    ServicesGrid.Size = UDim2.new(1, -20, 0, 200)
+    ServicesGrid.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    ServicesGrid.BorderSizePixel = 0
+    ServicesGrid.Parent = ServicesSection
+    
+    local GridCorner = Instance.new("UICorner")
+    GridCorner.CornerRadius = UDim.new(0, 12)
+    GridCorner.Parent = ServicesGrid
+    
+    local GridLayout = Instance.new("UIGridLayout")
+    GridLayout.CellSize = UDim2.new(0.5, -10, 0, 35)
+    GridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+    GridLayout.Parent = ServicesGrid
+    
+    local GridPadding = Instance.new("UIPadding")
+    GridPadding.PaddingTop = UDim.new(0, 10)
+    GridPadding.PaddingLeft = UDim.new(0, 10)
+    GridPadding.PaddingRight = UDim.new(0, 10)
+    GridPadding.PaddingBottom = UDim.new(0, 10)
+    GridPadding.Parent = ServicesGrid
+    
+    -- Service Checkboxes
+    local ServicesToCopy = {
+        {Name = "ReplicatedStorage", Icon = "📡", Default = true},
+        {Name = "StarterPlayerScripts", Icon = "👤", Default = true},
+        {Name = "ServerScriptService", Icon = "⚙️", Default = true},
+        {Name = "ServerStorage", Icon = "💾", Default = true},
+        {Name = "StarterGui", Icon = "🖼️", Default = true},
+        {Name = "Lighting", Icon = "💡", Default = false},
+        {Name = "Workspace", Icon = "🌍", Default = false},
+        {Name = "SoundService", Icon = "🔊", Default = false},
+    }
+    
+    shhhhnayy05.ServiceCheckboxes = {}
+    
+    for _, service in ipairs(ServicesToCopy) do
+        local CheckFrame = Instance.new("Frame")
+        CheckFrame.Size = UDim2.new(1, 0, 1, 0)
+        CheckFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+        CheckFrame.BorderSizePixel = 0
+        CheckFrame.Parent = ServicesGrid
+        
+        local CheckCorner = Instance.new("UICorner")
+        CheckCorner.CornerRadius = UDim.new(0, 8)
+        CheckCorner.Parent = CheckFrame
+        
+        local Checkbox = Instance.new("TextButton")
+        Checkbox.Name = "Checkbox"
+        Checkbox.Size = UDim2.new(0, 25, 0, 25)
+        Checkbox.Position = UDim2.new(0, 8, 0.5, -12.5)
+        Checkbox.BackgroundColor3 = service.Default and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 80)
+        Checkbox.Text = service.Default and "✓" or ""
+        Checkbox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Checkbox.TextSize = 16
+        Checkbox.Font = Enum.Font.GothamBold
+        Checkbox.Parent = CheckFrame
+        
+        local CheckBoxCorner = Instance.new("UICorner")
+        CheckBoxCorner.CornerRadius = UDim.new(0, 6)
+        CheckBoxCorner.Parent = Checkbox
+        
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(1, -45, 1, 0)
+        Label.Position = UDim2.new(0, 40, 0, 0)
+        Label.BackgroundTransparency = 1
+        Label.Text = service.Icon .. " " .. service.Name
+        Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+        Label.TextSize = 12
+        Label.Font = Enum.Font.Gotham
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = CheckFrame
+        
+        local checked = service.Default
+        
+        Checkbox.MouseButton1Click:Connect(function()
+            checked = not checked
+            Checkbox.BackgroundColor3 = checked and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 80)
+            Checkbox.Text = checked and "✓" or ""
+        end)
+        
+        shhhhnayy05.ServiceCheckboxes[service.Name] = function() return checked end
+    end
+    
+    --// PROGRESS SECTION
+    local ProgressSection = shhhhnayy05.CreateSection(ContentFrame, "⏳ COPY PROGRESS", UDim2.new(0, 360))
+    ProgressSection.Visible = false
+    
+    -- Progress Container
+    local ProgressContainer = Instance.new("Frame")
+    ProgressContainer.Size = UDim2.new(1, -20, 0, 180)
+    ProgressContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    ProgressContainer.BorderSizePixel = 0
+    ProgressContainer.Parent = ProgressSection
+    
+    local ContainerCorner = Instance.new("UICorner")
+    ContainerCorner.CornerRadius = UDim.new(0, 12)
+    ContainerCorner.Parent = ProgressContainer
+    
+    -- Progress Bar Background
+    local ProgressBg = Instance.new("Frame")
+    ProgressBg.Name = "ProgressBg"
+    ProgressBg.Size = UDim2.new(1, -20, 0, 35)
+    ProgressBg.Position = UDim2.new(0, 10, 0, 10)
+    ProgressBg.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    ProgressBg.BorderSizePixel = 0
+    ProgressBg.Parent = ProgressContainer
+    
+    local ProgressBgCorner = Instance.new("UICorner")
+    ProgressBgCorner.CornerRadius = UDim.new(0, 18)
+    ProgressBgCorner.Parent = ProgressBg
+    
+    -- Progress Bar Fill
+    local ProgressFill = Instance.new("Frame")
+    ProgressFill.Name = "ProgressFill"
+    ProgressFill.Size = UDim2.new(0, 0, 1, 0)
+    ProgressFill.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    ProgressFill.BorderSizePixel = 0
+    ProgressFill.Parent = ProgressBg
+    
+    local ProgressFillCorner = Instance.new("UICorner")
+    ProgressFillCorner.CornerRadius = UDim.new(0, 18)
+    ProgressFillCorner.Parent = ProgressFill
+    
+    -- Progress Gradient Animation
+    local ProgressGradient = Instance.new("UIGradient")
+    ProgressGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 100)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 150)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 200, 100))
+    })
+    ProgressGradient.Rotation = 0
+    ProgressGradient.Parent = ProgressFill
+    
+    -- Animate gradient
+    spawn(function()
+        while ProgressFill and ProgressFill.Parent do
+            for i = 0, 360, 2 do
+                if not ProgressFill or not ProgressFill.Parent then break end
+                ProgressGradient.Rotation = i
+                RunService.Heartbeat:Wait()
+            end
+        end
     end)
-    if shhhhnayy05_42 and shhhhnayy05_43 then
-        shhhhnayy05_40 = shhhhnayy05_43.displayName or ""
-        shhhhnayy05_41 = shhhhnayy05_43.username or ""
+    
+    -- Progress Text
+    local ProgressText = Instance.new("TextLabel")
+    ProgressText.Name = "ProgressText"
+    ProgressText.Size = UDim2.new(1, 0, 1, 0)
+    ProgressText.BackgroundTransparency = 1
+    ProgressText.Text = "0% - Ready to copy..."
+    ProgressText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ProgressText.TextSize = 14
+    ProgressText.Font = Enum.Font.GothamBold
+    ProgressText.Parent = ProgressBg
+    
+    -- Stats Frame
+    local StatsFrame = Instance.new("Frame")
+    StatsFrame.Size = UDim2.new(1, -20, 0, 50)
+    StatsFrame.Position = UDim2.new(0, 10, 0, 55)
+    StatsFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+    StatsFrame.BorderSizePixel = 0
+    StatsFrame.Parent = ProgressContainer
+    
+    local StatsCorner = Instance.new("UICorner")
+    StatsCorner.CornerRadius = UDim.new(0, 10)
+    StatsCorner.Parent = StatsFrame
+    
+    local StatsLayout = Instance.new("UIListLayout")
+    StatsLayout.FillDirection = Enum.FillDirection.Horizontal
+    StatsLayout.Padding = UDim.new(0, 10)
+    StatsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    StatsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    StatsLayout.Parent = StatsFrame
+    
+    -- Stat Items
+    local function CreateStat(name)
+        local StatFrame = Instance.new("Frame")
+        StatFrame.Size = UDim2.new(0, 100, 0, 40)
+        StatFrame.BackgroundTransparency = 1
+        
+        local StatValue = Instance.new("TextLabel")
+        StatValue.Name = "Value"
+        StatValue.Size = UDim2.new(1, 0, 0, 20)
+        StatValue.BackgroundTransparency = 1
+        StatValue.Text = "0"
+        StatValue.TextColor3 = Color3.fromRGB(0, 200, 255)
+        StatValue.TextSize = 18
+        StatValue.Font = Enum.Font.GothamBold
+        StatValue.Parent = StatFrame
+        
+        local StatLabel = Instance.new("TextLabel")
+        StatLabel.Size = UDim2.new(1, 0, 0, 15)
+        StatLabel.Position = UDim2.new(0, 0, 0, 22)
+        StatLabel.BackgroundTransparency = 1
+        StatLabel.Text = name
+        StatLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        StatLabel.TextSize = 10
+        StatLabel.Font = Enum.Font.Gotham
+        StatLabel.Parent = StatFrame
+        
+        return StatFrame, StatValue
     end
-end)
-local shhhhnayy05_44 = {
-    ["BG"] = Color3.fromRGB(10, 10, 14),
-    ["PANEL"] = Color3.fromRGB(16, 16, 22),
-    ["SURF"] = Color3.fromRGB(22, 22, 30),
-    ["CARD"] = Color3.fromRGB(26, 26, 36),
-    ["INP"] = Color3.fromRGB(18, 18, 26),
-    ["DIV"] = Color3.fromRGB(38, 38, 52),
-    ["ACC"] = Color3.fromRGB(220, 48, 78),
-    ["ACCDK"] = Color3.fromRGB(170, 32, 56),
-    ["TXT"] = Color3.fromRGB(235, 230, 245),
-    ["TXT2"] = Color3.fromRGB(185, 178, 210),
-    ["TXT3"] = Color3.fromRGB(140, 130, 170),
-    ["OK"] = Color3.fromRGB(40, 200, 110),
-    ["WARN"] = Color3.fromRGB(220, 48, 78),
-    ["BTNN"] = Color3.fromRGB(32, 32, 44),
-    ["SEL"] = Color3.fromRGB(55, 22, 34),
-    ["TOGON"] = Color3.fromRGB(220, 48, 78),
-    ["TOGOF"] = Color3.fromRGB(38, 38, 52),
-    ["MULTI"] = Color3.fromRGB(80, 40, 110)
-}
-local shhhhnayy05_45 = shhhhnayy05_34 and 240 or 480
-local shhhhnayy05_46 = shhhhnayy05_34 and 32 or 44
-local shhhhnayy05_47 = shhhhnayy05_34 and 17 or 24
-local shhhhnayy05_48 = shhhhnayy05_34 and 17 or 24
-local shhhhnayy05_49 = shhhhnayy05_34 and 58 or 80
-local shhhhnayy05_50 = shhhhnayy05_46 + shhhhnayy05_47 + 6
-local shhhhnayy05_51 = {}
-local shhhhnayy05_52 = (shhhhnayy05_34 and 250 or 360) * 1.2
-shhhhnayy05_51.PW = math.floor(shhhhnayy05_52)
-local shhhhnayy05_53 = shhhhnayy05_45 * 1.2
-shhhhnayy05_51.PH = math.floor(shhhhnayy05_53)
-local shhhhnayy05_54 = (shhhhnayy05_34 and 7 or 10) * 1.2
-shhhhnayy05_51.FS = math.floor(shhhhnayy05_54)
-local shhhhnayy05_55 = (shhhhnayy05_34 and 6 or 9) * 1.2
-shhhhnayy05_51.FSS = math.floor(shhhhnayy05_55)
-local shhhhnayy05_56 = (shhhhnayy05_34 and 9 or 13) * 1.2
-shhhhnayy05_51.FST = math.floor(shhhhnayy05_56)
-local shhhhnayy05_57 = shhhhnayy05_46 * 1.2
-shhhhnayy05_51.HDR_H = math.floor(shhhhnayy05_57)
-local shhhhnayy05_58 = shhhhnayy05_47 * 1.2
-shhhhnayy05_51.SRCH_H = math.floor(shhhhnayy05_58)
-local shhhhnayy05_59 = (shhhhnayy05_34 and 22 or 30) * 1.2
-shhhhnayy05_51.TAB_H = math.floor(shhhhnayy05_59)
-local shhhhnayy05_60 = (shhhhnayy05_34 and 54 or 72) * 1.2
-shhhhnayy05_51.TABW = math.floor(shhhhnayy05_60)
-local shhhhnayy05_61 = shhhhnayy05_50 * 1.2
-shhhhnayy05_51.CONT_Y = math.floor(shhhhnayy05_61)
-local shhhhnayy05_62 = shhhhnayy05_48 * 1.2
-shhhhnayy05_51.TGT_H = math.floor(shhhhnayy05_62)
-local shhhhnayy05_63 = (shhhhnayy05_45 - shhhhnayy05_50 - shhhhnayy05_48 - 5) * 1.2
-shhhhnayy05_51.CONT_H = math.floor(shhhhnayy05_63)
-local shhhhnayy05_64 = (shhhhnayy05_45 - shhhhnayy05_48 - 2) * 1.2
-shhhhnayy05_51.TGT_Y = math.floor(shhhhnayy05_64)
-local shhhhnayy05_65 = shhhhnayy05_49 * 1.2
-shhhhnayy05_51.PLW = math.floor(shhhhnayy05_65)
-local shhhhnayy05_66 = (shhhhnayy05_49 + 4) * 1.2
-shhhhnayy05_51.FAX = math.floor(shhhhnayy05_66)
-local shhhhnayy05_67 = (shhhhnayy05_34 and 20 or 28) * 1.2
-shhhhnayy05_51.BH = math.floor(shhhhnayy05_67)
-local shhhhnayy05_68 = (shhhhnayy05_34 and 20 or 27) * 1.2
-shhhhnayy05_51.ROW = math.floor(shhhhnayy05_68)
-local shhhhnayy05_69 = (shhhhnayy05_34 and 34 or 44) * 1.2
-shhhhnayy05_51.SLH = math.floor(shhhhnayy05_69)
-local shhhhnayy05_70 = (shhhhnayy05_34 and 4 or 8) * 1.2
-shhhhnayy05_51.GAP = math.floor(shhhhnayy05_70)
-local shhhhnayy05_71 = shhhhnayy05_51
-local function shhhhnayy05_78(p72, p73, p74, p75, p76)
-    local shhhhnayy05_77 = Instance.new("UIPadding")
-    shhhhnayy05_77.PaddingTop = UDim.new(0, p73 or 3)
-    shhhhnayy05_77.PaddingRight = UDim.new(0, p74 or 3)
-    shhhhnayy05_77.PaddingBottom = UDim.new(0, p75 or 3)
-    shhhhnayy05_77.PaddingLeft = UDim.new(0, p76 or 3)
-    shhhhnayy05_77.Parent = p72
+    
+    local ServicesStat, ServicesValue = CreateStat("SERVICES")
+    local ItemsStat, ItemsValue = CreateStat("ITEMS")
+    local ScriptsStat, ScriptsValue = CreateStat("SCRIPTS")
+    
+    ServicesStat.Parent = StatsFrame
+    ItemsStat.Parent = StatsFrame
+    ScriptsStat.Parent = StatsFrame
+    
+    -- Log Frame
+    local LogFrame = Instance.new("ScrollingFrame")
+    LogFrame.Name = "LogFrame"
+    LogFrame.Size = UDim2.new(1, -20, 0, 70)
+    LogFrame.Position = UDim2.new(0, 10, 0, 110)
+    LogFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    LogFrame.BorderSizePixel = 0
+    LogFrame.ScrollBarThickness = 4
+    LogFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
+    LogFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    LogFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    LogFrame.Parent = ProgressContainer
+    
+    local LogCorner = Instance.new("UICorner")
+    LogCorner.CornerRadius = UDim.new(0, 8)
+    LogCorner.Parent = LogFrame
+    
+    local LogLayout = Instance.new("UIListLayout")
+    LogLayout.Padding = UDim.new(0, 2)
+    LogLayout.Parent = LogFrame
+    
+    local LogPadding = Instance.new("UIPadding")
+    LogPadding.Padding = UDim.new(0, 8)
+    LogPadding.Parent = LogFrame
+    
+    --// ACTION BUTTONS
+    local ActionFrame = Instance.new("Frame")
+    ActionFrame.Name = "ActionFrame"
+    ActionFrame.Size = UDim2.new(1, -20, 0, 60)
+    ActionFrame.Position = UDim2.new(0, 10, 1, -70)
+    ActionFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    ActionFrame.BorderSizePixel = 0
+    ActionFrame.Parent = MainFrame
+    
+    local ActionCorner = Instance.new("UICorner")
+    ActionCorner.CornerRadius = UDim.new(0, 12)
+    ActionCorner.Parent = ActionFrame
+    
+    local ActionLayout = Instance.new("UIListLayout")
+    ActionLayout.FillDirection = Enum.FillDirection.Horizontal
+    ActionLayout.Padding = UDim.new(0, 10)
+    ActionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    ActionLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    ActionLayout.Parent = ActionFrame
+    
+    -- START COPY BUTTON
+    local StartCopyBtn = shhhhnayy05.CreateActionButton(ActionFrame, "🚀 START COPY", Color3.fromRGB(0, 150, 255), Color3.fromRGB(0, 200, 255))
+    
+    -- SAVE BUTTON
+    local SaveBtn = shhhhnayy05.CreateActionButton(ActionFrame, "💾 SAVE FILE", Color3.fromRGB(0, 180, 100), Color3.fromRGB(0, 230, 130))
+    
+    -- EXPORT BUTTON
+    local ExportBtn = shhhhnayy05.CreateActionButton(ActionFrame, "📜 EXPORT", Color3.fromRGB(150, 100, 255), Color3.fromRGB(180, 130, 255))
+    
+    -- FILES BUTTON
+    local FilesBtn = shhhhnayy05.CreateActionButton(ActionFrame, "📁 FILES", Color3.fromRGB(255, 150, 0), Color3.fromRGB(255, 180, 50))
+    
+    --// MINIMIZED ICON
+    local MinimizedIcon = Instance.new("TextButton")
+    MinimizedIcon.Name = "MinimizedIcon"
+    MinimizedIcon.Size = UDim2.new(0, 70, 0, 70)
+    MinimizedIcon.Position = UDim2.new(0, 30, 0.5, -35)
+    MinimizedIcon.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    MinimizedIcon.Text = "📋"
+    MinimizedIcon.TextSize = 35
+    MinimizedIcon.Visible = false
+    MinimizedIcon.Parent = ScreenGui
+    
+    local IconCorner = Instance.new("UICorner")
+    IconCorner.CornerRadius = UDim.new(1, 0)
+    IconCorner.Parent = MinimizedIcon
+    
+    local IconStroke = Instance.new("UIStroke")
+    IconStroke.Color = Color3.fromRGB(255, 255, 255)
+    IconStroke.Thickness = 3
+    IconStroke.Parent = MinimizedIcon
+    
+    -- Pulse Animation
+    local IconPulse = Instance.new("Frame")
+    IconPulse.Name = "Pulse"
+    IconPulse.Size = UDim2.new(1, 0, 1, 0)
+    IconPulse.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    IconPulse.BackgroundTransparency = 0.5
+    IconPulse.BorderSizePixel = 0
+    IconPulse.ZIndex = -1
+    IconPulse.Parent = MinimizedIcon
+    
+    local PulseCorner = Instance.new("UICorner")
+    PulseCorner.CornerRadius = UDim.new(1, 0)
+    PulseCorner.Parent = IconPulse
+    
+    spawn(function()
+        while MinimizedIcon and MinimizedIcon.Parent do
+            TweenService:Create(IconPulse, TweenInfo.new(1), {Size = UDim2.new(1.5, 0, 1.5, 0), Position = UDim2.new(-0.25, 0, -0.25, 0), BackgroundTransparency = 1}):Play()
+            wait(1)
+            IconPulse.Size = UDim2.new(1, 0, 1, 0)
+            IconPulse.Position = UDim2.new(0, 0, 0, 0)
+            IconPulse.BackgroundTransparency = 0.5
+        end
+    end)
+    
+    --// PARTICLE BACKGROUND
+    shhhhnayy05.CreateAdvancedParticles(ScreenGui)
+    
+    --// STORE REFERENCES
+    shhhhnayy05.GUI = {
+        ScreenGui = ScreenGui,
+        MainFrame = MainFrame,
+        ContentFrame = ContentFrame,
+        MinimizedIcon = MinimizedIcon,
+        ProgressSection = ProgressSection,
+        ProgressFill = ProgressFill,
+        ProgressText = ProgressText,
+        LogFrame = LogFrame,
+        ServicesValue = ServicesValue,
+        ItemsValue = ItemsValue,
+        ScriptsValue = ScriptsValue,
+        StartCopyBtn = StartCopyBtn,
+        SaveBtn = SaveBtn,
+        ExportBtn = ExportBtn,
+        FilesBtn = FilesBtn
+    }
+    
+    --// BUTTON CONNECTIONS
+    local minimized = false
+    
+    MinimizeBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        if minimized then
+            TweenService:Create(MainFrame, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -225, 1.5, 0)}):Play()
+            wait(0.3)
+            MainFrame.Visible = false
+            MinimizedIcon.Visible = true
+            TweenService:Create(MinimizedIcon, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Size = UDim2.new(0, 70, 0, 70)}):Play()
+        end
+    end)
+    
+    MinimizedIcon.MouseButton1Click:Connect(function()
+        minimized = false
+        MinimizedIcon.Visible = false
+        MainFrame.Visible = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -225, 0.5, -275)}):Play()
+    end)
+    
+    CloseBtn.MouseButton1Click:Connect(function()
+        TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+        wait(0.3)
+        ScreenGui:Destroy()
+    end)
+    
+    -- Dragging
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+    
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+        end
+    end)
+    
+    TitleBar.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    TitleBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    -- Action Buttons
+    StartCopyBtn.MouseButton1Click:Connect(function()
+        if not shhhhnayy05.IsCopying then
+            shhhhnayy05.StartRealTimeCopy()
+        end
+    end)
+    
+    SaveBtn.MouseButton1Click:Connect(function()
+        shhhhnayy05.SaveToPermanentFile()
+    end)
+    
+    ExportBtn.MouseButton1Click:Connect(function()
+        shhhhnayy05.ExportToLuaScript()
+    end)
+    
+    FilesBtn.MouseButton1Click:Connect(function()
+        shhhhnayy05.ShowSavedFilesManager()
+    end)
+    
+    -- Initial Log
+    shhhhnayy05.AddLog("✅ System Ready - Detected: " .. game.Name)
+    shhhhnayy05.AddLog("💡 Click 'START COPY' to copy current game")
+    
+    -- Load existing files
+    shhhhnayy05.LoadSavedFiles()
+    
+    return shhhhnayy05.GUI
 end
-local function shhhhnayy05_89(p79, p80, p81, p82, p83, p84, p85)
-    -- upvalues: (copy) shhhhnayy05_44, (ref) shhhhnayy05_71, (copy) shhhhnayy05_36, (copy) shhhhnayy05_78
-    local shhhhnayy05_86 = Instance.new("Frame")
-    shhhhnayy05_86.Size = p80
-    shhhhnayy05_86.Position = p81
-    shhhhnayy05_86.BackgroundColor3 = shhhhnayy05_44.INP
-    shhhhnayy05_86.BorderSizePixel = 0
-    shhhhnayy05_86.ClipsDescendants = true
-    shhhhnayy05_86.ZIndex = p85 or 9
-    shhhhnayy05_86.Parent = p79
-    local shhhhnayy05_87 = Instance.new("UICorner")
-    shhhhnayy05_87.CornerRadius = UDim.new(0, 5)
-    shhhhnayy05_87.Parent = shhhhnayy05_86
-    local shhhhnayy05_88 = Instance.new("TextBox")
-    shhhhnayy05_88.Size = UDim2.new(1, 0, 1, 0)
-    shhhhnayy05_88.Position = UDim2.new(0, 0, 0, 0)
-    shhhhnayy05_88.BackgroundTransparency = 1
-    shhhhnayy05_88.BorderSizePixel = 0
-    shhhhnayy05_88.Text = ""
-    shhhhnayy05_88.PlaceholderText = p82 or "..."
-    shhhhnayy05_88.PlaceholderColor3 = shhhhnayy05_44.TXT3
-    shhhhnayy05_88.TextColor3 = shhhhnayy05_44.TXT
-    shhhhnayy05_88.TextSize = p83 or shhhhnayy05_71.FSS
-    shhhhnayy05_88.Font = p84 or shhhhnayy05_36
-    shhhhnayy05_88.ClearTextOnFocus = false
-    shhhhnayy05_88.TextTruncate = Enum.TextTruncate.AtEnd
-    shhhhnayy05_88.TextXAlignment = Enum.TextXAlignment.Left
-    shhhhnayy05_88.ClipsDescendants = true
-    shhhhnayy05_88.ZIndex = p85 or 9
-    shhhhnayy05_88.Parent = shhhhnayy05_86
-    shhhhnayy05_78(shhhhnayy05_88, 0, 5, 0, 5)
-    return shhhhnayy05_88, shhhhnayy05_86
+
+--// Helper Functions
+function shhhhnayy05.CreateSection(parent, title, position)
+    local Section = Instance.new("Frame")
+    Section.Name = "Section"
+    Section.Size = UDim2.new(1, 0, 0, 50)
+    Section.Position = position
+    Section.BackgroundTransparency = 1
+    Section.AutomaticSize = Enum.AutomaticSize.Y
+    Section.Parent = parent
+    
+    local SectionTitle = Instance.new("TextLabel")
+    SectionTitle.Size = UDim2.new(1, -20, 0, 25)
+    SectionTitle.Position = UDim2.new(0, 10, 0, 0)
+    SectionTitle.BackgroundTransparency = 1
+    SectionTitle.Text = title
+    SectionTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+    SectionTitle.TextSize = 14
+    SectionTitle.Font = Enum.Font.GothamBold
+    SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    SectionTitle.Parent = Section
+    
+    local Content = Instance.new("Frame")
+    Content.Name = "Content"
+    Content.Size = UDim2.new(1, 0, 0, 0)
+    Content.Position = UDim2.new(0, 0, 0, 25)
+    Content.BackgroundTransparency = 1
+    Content.AutomaticSize = Enum.AutomaticSize.Y
+    Content.Parent = Section
+    
+    return Content
 end
-local shhhhnayy05_90 = shhhhnayy05_15.GetTabMetadata()
-local shhhhnayy05_91 = {
-    ["open"] = false,
-    ["tab"] = shhhhnayy05_90[1] and (shhhhnayy05_90[1].id or "personal") or "personal",
-    ["target"] = nil,
-    ["targets"] = {},
-    ["toggles"] = {},
-    ["sq"] = "",
-    ["flyOn"] = false,
-    ["flyBV"] = nil,
-    ["flyBG"] = nil,
-    ["ncOn"] = false,
-    ["displayNameOrig"] = shhhhnayy05_11.DisplayName
-}
-local shhhhnayy05_92 = shhhhnayy05_40
-local shhhhnayy05_93 = shhhhnayy05_71
-local shhhhnayy05_94 = shhhhnayy05_41
-local shhhhnayy05_95 = {}
-local function shhhhnayy05_99(p96, p97)
-    local shhhhnayy05_98 = Instance.new("UIListLayout")
-    shhhhnayy05_98.Padding = UDim.new(0, p97 or 3)
-    shhhhnayy05_98.FillDirection = Enum.FillDirection.Vertical
-    shhhhnayy05_98.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    shhhhnayy05_98.VerticalAlignment = Enum.VerticalAlignment.Top
-    shhhhnayy05_98.SortOrder = Enum.SortOrder.LayoutOrder
-    shhhhnayy05_98.Parent = p96
-    return shhhhnayy05_98
+
+function shhhhnayy05.CreateActionButton(parent, text, color, hoverColor)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0, 95, 0, 45)
+    Button.BackgroundColor3 = color
+    Button.Text = text
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 11
+    Button.Font = Enum.Font.GothamBold
+    Button.AutoButtonColor = false
+    Button.Parent = parent
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 10)
+    Corner.Parent = Button
+    
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(255, 255, 255)
+    Stroke.Thickness = 1
+    Stroke.Transparency = 0.5
+    Stroke.Parent = Button
+    
+    -- Hover effects
+    Button.MouseEnter:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = hoverColor, Size = UDim2.new(0, 100, 0, 48)}):Play()
+    end)
+    
+    Button.MouseLeave:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = color, Size = UDim2.new(0, 95, 0, 45)}):Play()
+    end)
+    
+    Button.MouseButton1Down:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.1), {Size = UDim2.new(0, 90, 0, 42)}):Play()
+    end)
+    
+    Button.MouseButton1Up:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.1), {Size = UDim2.new(0, 95, 0, 45)}):Play()
+    end)
+    
+    return Button
 end
-local function shhhhnayy05_103(p100, p101)
-    -- upvalues: (copy) shhhhnayy05_44
-    local shhhhnayy05_102 = Instance.new("ScrollingFrame")
-    shhhhnayy05_102.BackgroundTransparency = 1
-    shhhhnayy05_102.BorderSizePixel = 0
-    shhhhnayy05_102.ScrollBarThickness = p101 or 2
-    shhhhnayy05_102.ScrollBarImageColor3 = shhhhnayy05_44.ACC
-    shhhhnayy05_102.CanvasSize = UDim2.new(0, 0, 0, 0)
-    shhhhnayy05_102.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    shhhhnayy05_102.ElasticBehavior = Enum.ElasticBehavior.Never
-    shhhhnayy05_102.ScrollingDirection = Enum.ScrollingDirection.Y
-    shhhhnayy05_102.Parent = p100
-    return shhhhnayy05_102
-end
-local function shhhhnayy05_107(p104, p105)
-    local shhhhnayy05_106 = Instance.new("UIListLayout")
-    shhhhnayy05_106.Padding = UDim.new(0, p105 or 3)
-    shhhhnayy05_106.FillDirection = Enum.FillDirection.Horizontal
-    shhhhnayy05_106.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    shhhhnayy05_106.VerticalAlignment = Enum.VerticalAlignment.Center
-    shhhhnayy05_106.SortOrder = Enum.SortOrder.LayoutOrder
-    shhhhnayy05_106.Parent = p104
-    return shhhhnayy05_106
-end
-local function shhhhnayy05_111(p108, p109)
-    local shhhhnayy05_110 = Instance.new("UICorner")
-    shhhhnayy05_110.CornerRadius = UDim.new(0, p109 or 6)
-    shhhhnayy05_110.Parent = p108
-end
-local function shhhhnayy05_112(_, _, _, _) end
-local function shhhhnayy05_116(p113, p114, p115)
-    -- upvalues: (copy) shhhhnayy05_5
-    shhhhnayy05_5:Create(p113, TweenInfo.new(p115 or 0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), p114):Play()
-end
-local function shhhhnayy05_118()
-    -- upvalues: (copy) shhhhnayy05_7
-    local shhhhnayy05_117 = Instance.new("Sound")
-    shhhhnayy05_117.SoundId = "rbxassetid://104563790094781"
-    shhhhnayy05_117.Volume = 0.5
-    shhhhnayy05_117.Parent = workspace
-    shhhhnayy05_117:Play()
-    shhhhnayy05_7:AddItem(shhhhnayy05_117, 3)
-end
-for _, shhhhnayy05_119 in ipairs(shhhhnayy05_90) do
-    for _, shhhhnayy05_120 in ipairs(shhhhnayy05_119.features) do
-        local shhhhnayy05_121 = {
-            ["feat"] = shhhhnayy05_120,
-            ["tabId"] = shhhhnayy05_119.id,
-            ["tabLbl"] = shhhhnayy05_119.label
-        }
-        table.insert(shhhhnayy05_95, shhhhnayy05_121)
-    end
-end
-local function shhhhnayy05_122()
-    -- upvalues: (copy) shhhhnayy05_91
-    if shhhhnayy05_91.target then
-        return shhhhnayy05_91.target.Name
-    elseif #shhhhnayy05_91.targets > 0 then
-        return shhhhnayy05_91.targets[1].Name
-    else
-        return nil
-    end
-end
-local shhhhnayy05_123 = {}
-local function shhhhnayy05_127(p_u_124, p_u_125)
-    -- upvalues: (copy) shhhhnayy05_123
-    for _, shhhhnayy05_126 in ipairs(shhhhnayy05_123) do
-        pcall(function()
-            -- upvalues: (copy) shhhhnayy05_126, (copy) p_u_124, (copy) p_u_125
-            shhhhnayy05_126.setJoin(p_u_124)
-            shhhhnayy05_126.setLeave(p_u_125)
+
+function shhhhnayy05.CreateAdvancedParticles(parent)
+    local ParticleFrame = Instance.new("Frame")
+    ParticleFrame.Size = UDim2.new(1, 0, 1, 0)
+    ParticleFrame.BackgroundTransparency = 1
+    ParticleFrame.ZIndex = -100
+    ParticleFrame.Parent = parent
+    
+    for i = 1, 30 do
+        local Particle = Instance.new("Frame")
+        local size = math.random(2, 8)
+        Particle.Size = UDim2.new(0, size, 0, size)
+        Particle.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        Particle.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        Particle.BackgroundTransparency = math.random(0.6, 0.9)
+        Particle.BorderSizePixel = 0
+        Particle.Parent = ParticleFrame
+        
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(1, 0)
+        Corner.Parent = Particle
+        
+        -- Float animation
+        spawn(function()
+            while Particle and Particle.Parent do
+                local duration = math.random(5, 15)
+                local newX = math.random()
+                local newY = math.random()
+                
+                TweenService:Create(Particle, TweenInfo.new(duration, Enum.EasingStyle.Sine), {
+                    Position = UDim2.new(newX, 0, newY, 0),
+                    BackgroundTransparency = math.random(0.6, 0.9)
+                }):Play()
+                
+                wait(duration)
+            end
         end)
     end
 end
-local shhhhnayy05_128 = nil
-local function shhhhnayy05_163(p_u_129, p130)
-    -- upvalues: (copy) shhhhnayy05_91, (copy) shhhhnayy05_18, (copy) shhhhnayy05_19, (copy) shhhhnayy05_6, (copy) shhhhnayy05_1, (ref) shhhhnayy05_128, (copy) shhhhnayy05_12, (copy) shhhhnayy05_34, (copy) shhhhnayy05_44, (copy) shhhhnayy05_35, (copy) shhhhnayy05_11
-    local shhhhnayy05_131 = p130 or {}
-    if #shhhhnayy05_91.targets > 1 then
-        local shhhhnayy05_132 = {}
-        for _, shhhhnayy05_133 in ipairs(shhhhnayy05_91.targets) do
-            local shhhhnayy05_134 = {}
-            for shhhhnayy05_135, shhhhnayy05_136 in pairs(shhhhnayy05_131) do
-                shhhhnayy05_134[shhhhnayy05_135] = shhhhnayy05_136
-            end
-            shhhhnayy05_134.targetName = shhhhnayy05_133.Name
-            local shhhhnayy05_137, shhhhnayy05_138 = pcall(function()
-                -- upvalues: (ref) shhhhnayy05_18, (copy) p_u_129, (copy) shhhhnayy05_134
-                return shhhhnayy05_18:InvokeServer(p_u_129, shhhhnayy05_134)
-            end)
-            if shhhhnayy05_137 and (shhhhnayy05_138 and shhhhnayy05_138.msg) then
-                local shhhhnayy05_139 = shhhhnayy05_138.msg
-                table.insert(shhhhnayy05_132, shhhhnayy05_139)
-            end
-        end
-        if #shhhhnayy05_132 > 0 then
-            local shhhhnayy05_140 = table.concat(shhhhnayy05_132, "|"):sub(1, 80)
-            if not shhhhnayy05_19.isSilent() then
-                pcall(function()
-                    -- upvalues: (ref) shhhhnayy05_6, (copy) shhhhnayy05_140
-                    local shhhhnayy05_141 = shhhhnayy05_6
-                    local shhhhnayy05_142 = {
-                        ["Title"] = "Admin"
-                    }
-                    local shhhhnayy05_143 = shhhhnayy05_140
-                    shhhhnayy05_142.Text = tostring(shhhhnayy05_143)
-                    shhhhnayy05_142.Duration = 3
-                    shhhhnayy05_141:SetCore("SendNotification", shhhhnayy05_142)
-                end)
-            end
-        end
-        return {
-            ["success"] = true
-        }
-    end
-    if not shhhhnayy05_131.targetName then
-        local shhhhnayy05_144
-        if shhhhnayy05_91.target then
-            shhhhnayy05_144 = shhhhnayy05_91.target.Name
-        elseif #shhhhnayy05_91.targets > 0 then
-            shhhhnayy05_144 = shhhhnayy05_91.targets[1].Name
-        else
-            shhhhnayy05_144 = nil
-        end
-        shhhhnayy05_131.targetName = shhhhnayy05_144
-    end
-    local shhhhnayy05_145, shhhhnayy05_146 = pcall(function()
-        -- upvalues: (ref) shhhhnayy05_18, (copy) p_u_129, (copy) shhhhnayy05_131
-        return shhhhnayy05_18:InvokeServer(p_u_129, shhhhnayy05_131)
-    end)
-    if not shhhhnayy05_145 then
-        if not shhhhnayy05_19.isSilent() then
-            local shhhhnayy05_147 = "Koneksi error"
-            pcall(function()
-                -- upvalues: (ref) shhhhnayy05_6, (copy) shhhhnayy05_147
-                local shhhhnayy05_148 = shhhhnayy05_6
-                local shhhhnayy05_149 = {
-                    ["Title"] = "Admin"
-                }
-                local shhhhnayy05_150 = shhhhnayy05_147
-                shhhhnayy05_149.Text = tostring(shhhhnayy05_150)
-                shhhhnayy05_149.Duration = 3
-                shhhhnayy05_148:SetCore("SendNotification", shhhhnayy05_149)
-            end)
-        end
-        return nil
-    end
-    if shhhhnayy05_146 and shhhhnayy05_146.msg then
-        local shhhhnayy05_151 = shhhhnayy05_146.msg
-        if not shhhhnayy05_19.isSilent() then
-            pcall(function()
-                -- upvalues: (ref) shhhhnayy05_6, (copy) shhhhnayy05_151
-                local shhhhnayy05_152 = shhhhnayy05_6
-                local shhhhnayy05_153 = {
-                    ["Title"] = "Admin"
-                }
-                local shhhhnayy05_154 = shhhhnayy05_151
-                shhhhnayy05_153.Text = tostring(shhhhnayy05_154)
-                shhhhnayy05_153.Duration = 3
-                shhhhnayy05_152:SetCore("SendNotification", shhhhnayy05_153)
-            end)
-        end
-    end
-    if shhhhnayy05_146 and (shhhhnayy05_146.spectate and shhhhnayy05_146.targetName) then
-        local shhhhnayy05_155 = shhhhnayy05_1:FindFirstChild(shhhhnayy05_146.targetName)
-        if shhhhnayy05_155 and shhhhnayy05_155.Character then
-            workspace.CurrentCamera.CameraSubject = shhhhnayy05_155.Character:FindFirstChildOfClass("Humanoid")
-            if shhhhnayy05_128 then
-                shhhhnayy05_128:Destroy()
-                shhhhnayy05_128 = nil
-            end
-            local shhhhnayy05_156 = Instance.new("ScreenGui")
-            shhhhnayy05_156.Name = "SpectateOverlay"
-            shhhhnayy05_156.ResetOnSpawn = false
-            shhhhnayy05_156.DisplayOrder = 500
-            shhhhnayy05_156.IgnoreGuiInset = true
-            shhhhnayy05_156.Parent = shhhhnayy05_12
-            shhhhnayy05_128 = shhhhnayy05_156
-            local shhhhnayy05_157 = shhhhnayy05_34 and 42 or 54
-            local shhhhnayy05_158 = Instance.new("TextButton")
-            shhhhnayy05_158.Size = UDim2.new(0, shhhhnayy05_157 * 3, 0, shhhhnayy05_157)
-            shhhhnayy05_158.Position = UDim2.new(0.5, -(shhhhnayy05_157 * 1.5), 0, shhhhnayy05_34 and 12 or 18)
-            shhhhnayy05_158.BackgroundColor3 = shhhhnayy05_44.ACCDK
-            shhhhnayy05_158.BorderSizePixel = 0
-            shhhhnayy05_158.Text = "Stop Spectate"
-            shhhhnayy05_158.TextColor3 = Color3.new(1, 1, 1)
-            shhhhnayy05_158.TextSize = shhhhnayy05_34 and 9 or 12
-            shhhhnayy05_158.Font = shhhhnayy05_35
-            shhhhnayy05_158.AutoButtonColor = false
-            shhhhnayy05_158.ZIndex = 501
-            shhhhnayy05_158.Parent = shhhhnayy05_156
-            local shhhhnayy05_159 = Instance.new("UICorner")
-            shhhhnayy05_159.CornerRadius = UDim.new(0, 10)
-            shhhhnayy05_159.Parent = shhhhnayy05_158
-            local shhhhnayy05_160 = Instance.new("TextLabel")
-            shhhhnayy05_160.Size = UDim2.new(0, shhhhnayy05_157 * 3, 0, shhhhnayy05_34 and 14 or 18)
-            shhhhnayy05_160.Position = UDim2.new(0.5, -(shhhhnayy05_157 * 1.5), 0, shhhhnayy05_34 and 56 or 74)
-            shhhhnayy05_160.BackgroundTransparency = 1
-            shhhhnayy05_160.Text = "Spectating: " .. shhhhnayy05_146.targetName
-            shhhhnayy05_160.TextColor3 = shhhhnayy05_44.TXT2
-            shhhhnayy05_160.TextSize = shhhhnayy05_34 and 7 or 9
-            shhhhnayy05_160.Font = shhhhnayy05_35
-            shhhhnayy05_160.ZIndex = 501
-            shhhhnayy05_160.Parent = shhhhnayy05_156
-            shhhhnayy05_158.MouseButton1Click:Connect(function()
-                -- upvalues: (ref) shhhhnayy05_11, (copy) shhhhnayy05_156, (ref) shhhhnayy05_128
-                local shhhhnayy05_161 = shhhhnayy05_11.Character
-                local shhhhnayy05_162 = shhhhnayy05_161 and shhhhnayy05_161:FindFirstChildOfClass("Humanoid")
-                if shhhhnayy05_162 then
-                    workspace.CurrentCamera.CameraSubject = shhhhnayy05_162
-                end
-                shhhhnayy05_156:Destroy()
-                shhhhnayy05_128 = nil
-            end)
-        end
-    end
-    return shhhhnayy05_146
-end
-local shhhhnayy05_164 = Vector3.new(0, 0, 0)
-local shhhhnayy05_165 = 0
-local shhhhnayy05_166 = {
-    ["val"] = nil
-}
-local function shhhhnayy05_172()
-    -- upvalues: (copy) shhhhnayy05_11, (copy) shhhhnayy05_91
-    local shhhhnayy05_167 = shhhhnayy05_11.Character
-    if shhhhnayy05_167 then
-        local shhhhnayy05_168 = shhhhnayy05_167:FindFirstChild("HumanoidRootPart")
-        local shhhhnayy05_169 = shhhhnayy05_167:FindFirstChildOfClass("Humanoid")
-        if shhhhnayy05_168 and shhhhnayy05_169 then
-            shhhhnayy05_169.PlatformStand = true
-            local shhhhnayy05_170 = Instance.new("BodyVelocity")
-            shhhhnayy05_170.Velocity = Vector3.new(0, 0, 0)
-            shhhhnayy05_170.MaxForce = Vector3.new(100000, 100000, 100000)
-            shhhhnayy05_170.Parent = shhhhnayy05_168
-            local shhhhnayy05_171 = Instance.new("BodyGyro")
-            shhhhnayy05_171.MaxTorque = Vector3.new(100000, 100000, 100000)
-            shhhhnayy05_171.D = 100
-            shhhhnayy05_171.P = 10000
-            shhhhnayy05_171.CFrame = shhhhnayy05_168.CFrame
-            shhhhnayy05_171.Parent = shhhhnayy05_168
-            shhhhnayy05_91.flyBV = shhhhnayy05_170
-            shhhhnayy05_91.flyBG = shhhhnayy05_171
-            shhhhnayy05_91.flyOn = true
-        end
-    else
-        return
+
+function shhhhnayy05.AddLog(message)
+    if not shhhhnayy05.GUI then return end
+    
+    local LogEntry = Instance.new("TextLabel")
+    LogEntry.Size = UDim2.new(1, -10, 0, 18)
+    LogEntry.BackgroundTransparency = 1
+    LogEntry.Text = "• " .. message
+    LogEntry.TextColor3 = Color3.fromRGB(180, 180, 180)
+    LogEntry.TextSize = 11
+    LogEntry.Font = Enum.Font.Gotham
+    LogEntry.TextXAlignment = Enum.TextXAlignment.Left
+    LogEntry.Parent = shhhhnayy05.GUI.LogFrame
+    
+    -- Auto scroll
+    shhhhnayy05.GUI.LogFrame.CanvasPosition = Vector2.new(0, shhhhnayy05.GUI.LogFrame.AbsoluteCanvasSize.Y)
+    
+    -- Limit entries
+    if #shhhhnayy05.GUI.LogFrame:GetChildren() > 20 then
+        shhhhnayy05.GUI.LogFrame:GetChildren()[1]:Destroy()
     end
 end
-local function shhhhnayy05_175()
-    -- upvalues: (copy) shhhhnayy05_11, (copy) shhhhnayy05_91, (ref) shhhhnayy05_164, (ref) shhhhnayy05_165
-    local shhhhnayy05_173 = shhhhnayy05_11.Character
-    local shhhhnayy05_174 = shhhhnayy05_173 and shhhhnayy05_173:FindFirstChildOfClass("Humanoid")
-    if shhhhnayy05_174 then
-        shhhhnayy05_174.PlatformStand = false
-    end
-    if shhhhnayy05_91.flyBV then
-        shhhhnayy05_91.flyBV:Destroy()
-    end
-    if shhhhnayy05_91.flyBG then
-        shhhhnayy05_91.flyBG:Destroy()
-    end
-    shhhhnayy05_91.flyBV = nil
-    shhhhnayy05_91.flyBG = nil
-    shhhhnayy05_91.flyOn = false
-    shhhhnayy05_164 = Vector3.new(0, 0, 0)
-    shhhhnayy05_165 = 0
+
+function shhhhnayy05.UpdateProgress(percent, status, services, items, scripts)
+    if not shhhhnayy05.GUI then return end
+    
+    TweenService:Create(shhhhnayy05.GUI.ProgressFill, TweenInfo.new(0.3), {Size = UDim2.new(percent / 100, 0, 1, 0)}):Play()
+    shhhhnayy05.GUI.ProgressText.Text = math.floor(percent) .. "% - " .. status
+    
+    if services then shhhhnayy05.GUI.ServicesValue.Text = tostring(services) end
+    if items then shhhhnayy05.GUI.ItemsValue.Text = tostring(items) end
+    if scripts then shhhhnayy05.GUI.ScriptsValue.Text = tostring(scripts) end
+    
+    shhhhnayy05.AddLog(status)
 end
-shhhhnayy05_3.Heartbeat:Connect(function()
-    -- upvalues: (copy) shhhhnayy05_91, (copy) shhhhnayy05_11, (copy) shhhhnayy05_175, (copy) shhhhnayy05_14, (copy) shhhhnayy05_34, (ref) shhhhnayy05_164, (ref) shhhhnayy05_165, (copy) shhhhnayy05_4
-    if shhhhnayy05_91.flyOn and (shhhhnayy05_91.flyBV and shhhhnayy05_91.flyBG) then
-        local shhhhnayy05_176 = shhhhnayy05_11.Character
-        if shhhhnayy05_176 then
-            if shhhhnayy05_176:FindFirstChild("HumanoidRootPart") then
-                local shhhhnayy05_177 = workspace.CurrentCamera
-                local shhhhnayy05_178 = shhhhnayy05_14.Features.FlySpeed
-                local shhhhnayy05_179 = Vector3.new(0, 0, 0)
-                if shhhhnayy05_34 then
-                    local shhhhnayy05_180 = shhhhnayy05_165
-                    shhhhnayy05_179 = shhhhnayy05_164 + Vector3.new(0, shhhhnayy05_180, 0)
-                else
-                    if shhhhnayy05_4:IsKeyDown(Enum.KeyCode.W) then
-                        shhhhnayy05_179 = shhhhnayy05_179 + shhhhnayy05_177.CFrame.LookVector
-                    end
-                    if shhhhnayy05_4:IsKeyDown(Enum.KeyCode.S) then
-                        shhhhnayy05_179 = shhhhnayy05_179 - shhhhnayy05_177.CFrame.LookVector
-                    end
-                    if shhhhnayy05_4:IsKeyDown(Enum.KeyCode.A) then
-                        shhhhnayy05_179 = shhhhnayy05_179 - shhhhnayy05_177.CFrame.RightVector
-                    end
-                    if shhhhnayy05_4:IsKeyDown(Enum.KeyCode.D) then
-                        shhhhnayy05_179 = shhhhnayy05_179 + shhhhnayy05_177.CFrame.RightVector
-                    end
-                    if shhhhnayy05_4:IsKeyDown(Enum.KeyCode.Space) then
-                        shhhhnayy05_179 = shhhhnayy05_179 + Vector3.new(0, 1, 0)
-                    end
-                    if shhhhnayy05_4:IsKeyDown(Enum.KeyCode.LeftControl) then
-                        shhhhnayy05_179 = shhhhnayy05_179 - Vector3.new(0, 1, 0)
-                    end
-                end
-                shhhhnayy05_91.flyBV.Velocity = shhhhnayy05_179.Magnitude > 0 and shhhhnayy05_179.Unit * shhhhnayy05_178 or Vector3.new(0, 0, 0)
-                shhhhnayy05_91.flyBG.CFrame = shhhhnayy05_177.CFrame
-            else
-                shhhhnayy05_175()
+
+--// REAL-TIME COPY FUNCTION
+function shhhhnayy05.StartRealTimeCopy()
+    if shhhhnayy05.IsCopying then return end
+    shhhhnayy05.IsCopying = true
+    
+    -- Reset data
+    shhhhnayy05.CopiedData = {}
+    
+    -- Show progress section
+    shhhhnayy05.GUI.ProgressSection.Visible = true
+    shhhhnayy05.GUI.StartCopyBtn.Text = "⏳ COPYING..."
+    shhhhnayy05.GUI.StartCopyBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    
+    spawn(function()
+        shhhhnayy05.UpdateProgress(0, "🔍 Scanning current game...", 0, 0, 0)
+        wait(0.5)
+        
+        -- Get selected services
+        local selectedServices = {}
+        for serviceName, getChecked in pairs(shhhhnayy05.ServiceCheckboxes) do
+            if getChecked() then
+                table.insert(selectedServices, serviceName)
             end
-        else
-            shhhhnayy05_175()
+        end
+        
+        if #selectedServices == 0 then
+            shhhhnayy05.UpdateProgress(0, "❌ No services selected!", 0, 0, 0)
+            shhhhnayy05.IsCopying = false
+            shhhhnayy05.GUI.StartCopyBtn.Text = "🚀 START COPY"
+            shhhhnayy05.GUI.StartCopyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
             return
         end
-    else
+        
+        shhhhnayy05.UpdateProgress(5, "📦 Found " .. #selectedServices .. " services to copy", 0, 0, 0)
+        wait(0.3)
+        
+        local totalServices = #selectedServices
+        local currentService = 0
+        local totalItems = 0
+        local totalScripts = 0
+        
+        for _, serviceName in ipairs(selectedServices) do
+            currentService = currentService + 1
+            local baseProgress = (currentService - 1) / totalServices * 90
+            
+            shhhhnayy05.UpdateProgress(baseProgress + 5, "📂 Reading " .. serviceName .. "...", currentService, totalItems, totalScripts)
+            
+            local service = game:FindFirstChild(serviceName) or game:GetService(serviceName)
+            
+            if service then
+                shhhhnayy05.UpdateProgress(baseProgress + 10, "🔍 Scanning children of " .. serviceName .. "...", currentService, totalItems, totalScripts)
+                
+                local success, data = pcall(function()
+                    return shhhhnayy05.DeepScanService(service, function(progress, items, scripts)
+                        totalItems = items
+                        totalScripts = scripts
+                        local subProgress = progress * (80 / totalServices)
+                        shhhhnayy05.UpdateProgress(baseProgress + 10 + subProgress, 
+                            "📋 Copying from " .. serviceName .. "... (" .. items .. " items, " .. scripts .. " scripts)", 
+                            currentService, totalItems, totalScripts)
+                    end)
+                end)
+                
+                if success and data then
+                    shhhhnayy05.CopiedData[serviceName] = data
+                    totalItems = totalItems + shhhhnayy05.CountItemsInData(data)
+                    totalScripts = totalScripts + shhhhnayy05.CountScriptsInData(data)
+                    shhhhnayy05.UpdateProgress(baseProgress + 90, "✅ " .. serviceName .. " copied!", currentService, totalItems, totalScripts)
+                else
+                    shhhhnayy05.UpdateProgress(baseProgress + 90, "⚠️ " .. serviceName .. " failed: " .. tostring(data), currentService, totalItems, totalScripts)
+                end
+            else
+                shhhhnayy05.UpdateProgress(baseProgress + 90, "⚠️ " .. serviceName .. " not found", currentService, totalItems, totalScripts)
+            end
+            
+            wait(0.2)
+        end
+        
+        shhhhnayy05.UpdateProgress(95, "🔄 Finalizing data structure...", totalServices, totalItems, totalScripts)
+        wait(0.5)
+        
+        shhhhnayy05.UpdateProgress(100, "🎉 COPY COMPLETE! Total: " .. totalItems .. " items, " .. totalScripts .. " scripts", totalServices, totalItems, totalScripts)
+        
+        shhhhnayy05.IsCopying = false
+        shhhhnayy05.GUI.StartCopyBtn.Text = "✅ COPIED!"
+        shhhhnayy05.GUI.StartCopyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        
+        wait(2)
+        shhhhnayy05.GUI.StartCopyBtn.Text = "🚀 START COPY"
+        shhhhnayy05.GUI.StartCopyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        
+        -- Auto suggest save
+        shhhhnayy05.ShowNotification("Copy Complete!", "Click 'SAVE FILE' to store permanently")
+    end)
+end
+
+function shhhhnayy05.DeepScanService(service, progressCallback)
+    local data = {
+        Name = service.Name,
+        ClassName = service.ClassName,
+        Children = {}
+    }
+    
+    local totalChildren = #service:GetChildren()
+    local processed = 0
+    local items = 0
+    local scripts = 0
+    
+    local function scanInstance(inst, parentTable)
+        processed = processed + 1
+        items = items + 1
+        
+        if inst:IsA("Script") or inst:IsA("LocalScript") or inst:IsA("ModuleScript") then
+            scripts = scripts + 1
+        end
+        
+        -- Update progress every 10 items
+        if processed % 10 == 0 and progressCallback then
+            progressCallback(processed / totalChildren * 100, items, scripts)
+        end
+        
+        local itemData = {
+            Name = inst.Name,
+            ClassName = inst.ClassName,
+            Properties = {},
+            Children = {}
+        }
+        
+        -- Safe property reading
+        pcall(function()
+            -- Common properties
+            if inst:IsA("BasePart") then
+                itemData.Properties.Size = {inst.Size.X, inst.Size.Y, inst.Size.Z}
+                itemData.Properties.Position = {inst.Position.X, inst.Position.Y, inst.Position.Z}
+                itemData.Properties.Rotation = {inst.Orientation.X, inst.Orientation.Y, inst.Orientation.Z}
+                itemData.Properties.Color = {inst.Color.R, inst.Color.G, inst.Color.B}
+                itemData.Properties.Material = tostring(inst.Material)
+                itemData.Properties.Transparency = inst.Transparency
+                itemData.Properties.Anchored = inst.Anchored
+                itemData.Properties.CanCollide = inst.CanCollide
+            end
+            
+            -- Script source (if possible)
+            if (inst:IsA("Script") or inst:IsA("LocalScript") or inst:IsA("ModuleScript")) and inst.Source then
+                itemData.Properties.Source = inst.Source:sub(1, 5000) -- Limit source size
+            end
+            
+            -- Value objects
+            if inst:IsA("ValueBase") then
+                itemData.Properties.Value = tostring(inst.Value)
+            end
+            
+            -- GUI properties
+            if inst:IsA("GuiObject") then
+                itemData.Properties.Size = {inst.Size.X.Scale, inst.Size.X.Offset, inst.Size.Y.Scale, inst.Size.Y.Offset}
+                itemData.Properties.Position = {inst.Position.X.Scale, inst.Position.X.Offset, inst.Position.Y.Scale, inst.Position.Y.Offset}
+                itemData.Properties.BackgroundColor3 = {inst.BackgroundColor3.R, inst.BackgroundColor3.G, inst.BackgroundColor3.B}
+                if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
+                    itemData.Properties.Text = inst.Text
+                    itemData.Properties.TextColor3 = {inst.TextColor3.R, inst.TextColor3.G, inst.TextColor3.B}
+                    itemData.Properties.TextSize = inst.TextSize
+                end
+            end
+            
+            -- RemoteEvents/Functions
+            if inst:IsA("RemoteEvent") then
+                -- No special properties needed
+            end
+            if inst:IsA("RemoteFunction") then
+                -- No special properties needed
+            end
+            
+            -- Folders and Models
+            if inst:IsA("Folder") or inst:IsA("Model") then
+                -- Container only
+            end
+        end)
+        
+        -- Scan children recursively
+        for _, child in ipairs(inst:GetChildren()) do
+            if not child:IsA("Terrain") and not child:IsA("Camera") then
+                table.insert(itemData.Children, scanInstance(child, {}))
+            end
+        end
+        
+        return itemData
+    end
+    
+    for _, child in ipairs(service:GetChildren()) do
+        table.insert(data.Children, scanInstance(child, {}))
+    end
+    
+    return data
+end
+
+function shhhhnayy05.CountItemsInData(data)
+    local count = 1 -- Count self
+    for _, child in ipairs(data.Children or {}) do
+        count = count + shhhhnayy05.CountItemsInData(child)
+    end
+    return count
+end
+
+function shhhhnayy05.CountScriptsInData(data)
+    local count = 0
+    if data.ClassName == "Script" or data.ClassName == "LocalScript" or data.ClassName == "ModuleScript" then
+        count = 1
+    end
+    for _, child in ipairs(data.Children or {}) do
+        count = count + shhhhnayy05.CountScriptsInData(child)
+    end
+    return count
+end
+
+--// FILE MANAGEMENT
+function shhhhnayy05.SaveToPermanentFile()
+    if not shhhhnayy05.CopiedData or not next(shhhhnayy05.CopiedData) then
+        shhhhnayy05.AddLog("❌ No data to save! Copy a game first.")
         return
     end
-end)
-local shhhhnayy05_181 = nil
-local function shhhhnayy05_184()
-    -- upvalues: (ref) shhhhnayy05_181, (copy) shhhhnayy05_91, (copy) shhhhnayy05_3, (copy) shhhhnayy05_11
-    if not shhhhnayy05_181 then
-        shhhhnayy05_91.ncOn = true
-        shhhhnayy05_181 = shhhhnayy05_3.Stepped:Connect(function()
-            -- upvalues: (ref) shhhhnayy05_11
-            local shhhhnayy05_182 = shhhhnayy05_11.Character
-            if shhhhnayy05_182 then
-                for _, shhhhnayy05_183 in ipairs(shhhhnayy05_182:GetDescendants()) do
-                    if shhhhnayy05_183:IsA("BasePart") then
-                        shhhhnayy05_183.CanCollide = false
-                    end
-                end
-            end
-        end)
+    
+    local fileName = game.Name:gsub("[^%w]", "_"):sub(1, 20) .. "_" .. os.date("%H%M%S")
+    
+    local fileData = {
+        Name = fileName,
+        DisplayName = game.Name,
+        GameId = game.PlaceId,
+        Created = os.date("%Y-%m-%d %H:%M:%S"),
+        Data = shhhhnayy05.CopiedData,
+        Stats = {
+            Services = 0,
+            Items = 0,
+            Scripts = 0
+        },
+        Version = "2.0"
+    }
+    
+    -- Calculate stats
+    for serviceName, serviceData in pairs(shhhhnayy05.CopiedData) do
+        fileData.Stats.Services = fileData.Stats.Services + 1
+        fileData.Stats.Items = fileData.Stats.Items + shhhhnayy05.CountItemsInData(serviceData)
+        fileData.Stats.Scripts = fileData.Stats.Scripts + shhhhnayy05.CountScriptsInData(serviceData)
+    end
+    
+    -- Save to _G (persistent storage)
+    if not _G.shhhhnayy05_SavedFiles then
+        _G.shhhhnayy05_SavedFiles = {}
+    end
+    
+    _G.shhhhnayy05_SavedFiles[fileName] = fileData
+    shhhhnayy05.SavedFiles[fileName] = fileData
+    
+    shhhhnayy05.AddLog("💾 Saved: " .. fileName)
+    shhhhnayy05.AddLog("   Items: " .. fileData.Stats.Items .. " | Scripts: " .. fileData.Stats.Scripts)
+    shhhhnayy05.ShowNotification("File Saved!", fileName .. " stored permanently")
+end
+
+function shhhhnayy05.LoadSavedFiles()
+    if _G.shhhhnayy05_SavedFiles then
+        shhhhnayy05.SavedFiles = _G.shhhhnayy05_SavedFiles
     end
 end
-local function shhhhnayy05_188()
-    -- upvalues: (copy) shhhhnayy05_91, (ref) shhhhnayy05_181, (copy) shhhhnayy05_11
-    shhhhnayy05_91.ncOn = false
-    if shhhhnayy05_181 then
-        shhhhnayy05_181:Disconnect()
-        shhhhnayy05_181 = nil
-    end
-    task.defer(function()
-        -- upvalues: (ref) shhhhnayy05_11
-        local shhhhnayy05_185 = shhhhnayy05_11.Character
-        if shhhhnayy05_185 then
-            for _, shhhhnayy05_186 in ipairs(shhhhnayy05_185:GetDescendants()) do
-                if shhhhnayy05_186:IsA("BasePart") then
-                    shhhhnayy05_186.CanCollide = true
+
+function shhhhnayy05.ShowSavedFilesManager()
+    local Modal = Instance.new("Frame")
+    Modal.Name = "FilesManager"
+    Modal.Size = UDim2.new(0, 400, 0, 450)
+    Modal.Position = UDim2.new(0.5, -200, 0.5, -225)
+    Modal.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    Modal.BorderSizePixel = 0
+    Modal.ZIndex = 1000
+    Modal.Parent = shhhhnayy05.GUI.ScreenGui
+    
+    local ModalCorner = Instance.new("UICorner")
+    ModalCorner.CornerRadius = UDim.new(0, 16)
+    ModalCorner.Parent = Modal
+    
+    local ModalStroke = Instance.new("UIStroke")
+    ModalStroke.Color = Color3.fromRGB(0, 150, 255)
+    ModalStroke.Thickness = 2
+    ModalStroke.Parent = Modal
+    
+    -- Title
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 50)
+    Title.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    Title.Text = "📁 SAVED FILES MANAGER"
+    Title.TextColor3 = Color3.fromRGB(0, 200, 255)
+    Title.TextSize = 18
+    Title.Font = Enum.Font.GothamBold
+    Title.Parent = Modal
+    
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 16)
+    TitleCorner.Parent = Title
+    
+    -- Files List
+    local ListFrame = Instance.new("ScrollingFrame")
+    ListFrame.Size = UDim2.new(1, -20, 1, -110)
+    ListFrame.Position = UDim2.new(0, 10, 0, 60)
+    ListFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    ListFrame.BorderSizePixel = 0
+    ListFrame.ScrollBarThickness = 6
+    ListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    ListFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ListFrame.Parent = Modal
+    
+    local ListCorner = Instance.new("UICorner")
+    ListCorner.CornerRadius = UDim.new(0, 12)
+    ListCorner.Parent = ListFrame
+    
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.Padding = UDim.new(0, 10)
+    ListLayout.Parent = ListFrame
+    
+    local ListPadding = Instance.new("UIPadding")
+    ListPadding.Padding = UDim.new(0, 10)
+    ListPadding.Parent = ListFrame
+    
+    -- Populate files
+    if not next(shhhhnayy05.SavedFiles) then
+        local Empty = Instance.new("TextLabel")
+        Empty.Size = UDim2.new(1, 0, 0, 100)
+        Empty.BackgroundTransparency = 1
+        Empty.Text = "No saved files yet...\nCopy a game and click 'SAVE FILE'"
+        Empty.TextColor3 = Color3.fromRGB(150, 150, 150)
+        Empty.TextSize = 14
+        Empty.Font = Enum.Font.Gotham
+        Empty.TextWrapped = true
+        Empty.Parent = ListFrame
+    else
+        for fileName, fileData in pairs(shhhhnayy05.SavedFiles) do
+            local FileCard = Instance.new("Frame")
+            FileCard.Size = UDim2.new(1, -20, 0, 100)
+            FileCard.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+            FileCard.BorderSizePixel = 0
+            FileCard.Parent = ListFrame
+            
+            local CardCorner = Instance.new("UICorner")
+            CardCorner.CornerRadius = UDim.new(0, 12)
+            CardCorner.Parent = FileCard
+            
+            -- Icon
+            local Icon = Instance.new("TextLabel")
+            Icon.Size = UDim2.new(0, 60, 0, 60)
+            Icon.Position = UDim2.new(0, 15, 0, 20)
+            Icon.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+            Icon.Text = "🎮"
+            Icon.TextSize = 30
+            Icon.Parent = FileCard
+            
+            local IconCorner = Instance.new("UICorner")
+            IconCorner.CornerRadius = UDim.new(0, 10)
+            IconCorner.Parent = Icon
+            
+            -- Info
+            local NameLabel = Instance.new("TextLabel")
+            NameLabel.Size = UDim2.new(1, -180, 0, 25)
+            NameLabel.Position = UDim2.new(0, 90, 0, 15)
+            NameLabel.BackgroundTransparency = 1
+            NameLabel.Text = fileData.DisplayName or fileName
+            NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            NameLabel.TextSize = 16
+            NameLabel.Font = Enum.Font.GothamBold
+            NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+            NameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+            NameLabel.Parent = FileCard
+            
+            local DetailsLabel = Instance.new("TextLabel")
+            DetailsLabel.Size = UDim2.new(1, -180, 0, 50)
+            DetailsLabel.Position = UDim2.new(0, 90, 0, 40)
+            DetailsLabel.BackgroundTransparency = 1
+            DetailsLabel.Text = string.format("📦 %d items | 📜 %d scripts\n🕐 %s", 
+                fileData.Stats.Items, fileData.Stats.Scripts, fileData.Created)
+            DetailsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+            DetailsLabel.TextSize = 11
+            DetailsLabel.Font = Enum.Font.Gotham
+            DetailsLabel.TextXAlignment = Enum.TextXAlignment.Left
+            DetailsLabel.TextYAlignment = Enum.TextYAlignment.Top
+            DetailsLabel.TextWrapped = true
+            DetailsLabel.Parent = FileCard
+            
+            -- Load Button
+            local LoadBtn = Instance.new("TextButton")
+            LoadBtn.Size = UDim2.new(0, 70, 0, 35)
+            LoadBtn.Position = UDim2.new(1, -160, 0.5, -17.5)
+            LoadBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+            LoadBtn.Text = "LOAD"
+            LoadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            LoadBtn.TextSize = 12
+            LoadBtn.Font = Enum.Font.GothamBold
+            LoadBtn.Parent = FileCard
+            
+            local LoadCorner = Instance.new("UICorner")
+            LoadCorner.CornerRadius = UDim.new(0, 8)
+            LoadCorner.Parent = LoadBtn
+            
+            -- Delete Button
+            local DelBtn = Instance.new("TextButton")
+            DelBtn.Size = UDim2.new(0, 70, 0, 35)
+            DelBtn.Position = UDim2.new(1, -85, 0.5, -17.5)
+            DelBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+            DelBtn.Text = "DEL"
+            DelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            DelBtn.TextSize = 12
+            DelBtn.Font = Enum.Font.GothamBold
+            DelBtn.Parent = FileCard
+            
+            local DelCorner = Instance.new("UICorner")
+            DelCorner.CornerRadius = UDim.new(0, 8)
+            DelCorner.Parent = DelBtn
+            
+            -- Actions
+            LoadBtn.MouseButton1Click:Connect(function()
+                shhhhnayy05.CopiedData = fileData.Data
+                shhhhnayy05.AddLog("📂 Loaded: " .. fileName)
+                shhhhnayy05.AddLog("   Items: " .. fileData.Stats.Items)
+                Modal:Destroy()
+                shhhhnayy05.ShowNotification("File Loaded!", "Loaded " .. fileData.Stats.Items .. " items")
+            end)
+            
+            DelBtn.MouseButton1Click:Connect(function()
+                shhhhnayy05.SavedFiles[fileName] = nil
+                if _G.shhhhnayy05_SavedFiles then
+                    _G.shhhhnayy05_SavedFiles[fileName] = nil
                 end
-            end
-            local shhhhnayy05_187 = shhhhnayy05_185:FindFirstChild("HumanoidRootPart")
-            if shhhhnayy05_187 then
-                shhhhnayy05_187.CanCollide = false
+                FileCard:Destroy()
+                shhhhnayy05.AddLog("🗑️ Deleted: " .. fileName)
+            end)
+        end
+    end
+    
+    -- Close Button
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 120, 0, 40)
+    CloseBtn.Position = UDim2.new(0.5, -60, 1, -55)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    CloseBtn.Text = "CLOSE"
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.TextSize = 14
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Parent = Modal
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 10)
+    CloseCorner.Parent = CloseBtn
+    
+    CloseBtn.MouseButton1Click:Connect(function()
+        TweenService:Create(Modal, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+        wait(0.3)
+        Modal:Destroy()
+    end)
+end
+
+--// EXPORT TO SCRIPT
+function shhhhnayy05.ExportToLuaScript()
+    if not shhhhnayy05.CopiedData or not next(shhhhnayy05.CopiedData) then
+        shhhhnayy05.AddLog("❌ No data to export!")
+        return
+    end
+    
+    -- Create export window
+    local ExportModal = Instance.new("Frame")
+    ExportModal.Size = UDim2.new(0, 550, 0, 450)
+    ExportModal.Position = UDim2.new(0.5, -275, 0.5, -225)
+    ExportModal.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    ExportModal.BorderSizePixel = 0
+    ExportModal.ZIndex = 2000
+    ExportModal.Parent = shhhhnayy05.GUI.ScreenGui
+    
+    local ExportCorner = Instance.new("UICorner")
+    ExportCorner.CornerRadius = UDim.new(0, 16)
+    ExportCorner.Parent = ExportModal
+    
+    local ExportStroke = Instance.new("UIStroke")
+    ExportStroke.Color = Color3.fromRGB(0, 200, 100)
+    ExportStroke.Thickness = 2
+    ExportStroke.Parent = ExportModal
+    
+    -- Title
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 50)
+    Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    Title.Text = "📜 EXPORTED LUA SCRIPT"
+    Title.TextColor3 = Color3.fromRGB(0, 200, 100)
+    Title.TextSize = 18
+    Title.Font = Enum.Font.GothamBold
+    Title.Parent = ExportModal
+    
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 16)
+    TitleCorner.Parent = Title
+    
+    -- Script Box
+    local ScriptBox = Instance.new("TextBox")
+    ScriptBox.Size = UDim2.new(1, -20, 1, -120)
+    ScriptBox.Position = UDim2.new(0, 10, 0, 60)
+    ScriptBox.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    ScriptBox.TextColor3 = Color3.fromRGB(0, 255, 100)
+    ScriptBox.TextSize = 10
+    ScriptBox.Font = Enum.Font.Code
+    ScriptBox.TextXAlignment = Enum.TextXAlignment.Left
+    ScriptBox.TextYAlignment = Enum.TextYAlignment.Top
+    ScriptBox.ClearTextOnFocus = false
+    ScriptBox.MultiLine = true
+    ScriptBox.TextWrapped = false
+    ScriptBox.Parent = ExportModal
+    
+    local ScriptCorner = Instance.new("UICorner")
+    ScriptCorner.CornerRadius = UDim.new(0, 12)
+    ScriptCorner.Parent = ScriptBox
+    
+    -- Generate
+    local scriptContent = shhhhnayy05.GenerateFullScript()
+    ScriptBox.Text = scriptContent
+    
+    -- Info Label
+    local InfoLabel = Instance.new("TextLabel")
+    InfoLabel.Size = UDim2.new(1, -20, 0, 20)
+    InfoLabel.Position = UDim2.new(0, 10, 1, -55)
+    InfoLabel.BackgroundTransparency = 1
+    InfoLabel.Text = "📋 Script copied to _G.shhhhnayy05_ExportedScript for easy access"
+    InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    InfoLabel.TextSize = 11
+    InfoLabel.Font = Enum.Font.Gotham
+    InfoLabel.Parent = ExportModal
+    
+    -- Buttons Frame
+    local BtnFrame = Instance.new("Frame")
+    BtnFrame.Size = UDim2.new(1, -20, 0, 40)
+    BtnFrame.Position = UDim2.new(0, 10, 1, -50)
+    BtnFrame.BackgroundTransparency = 1
+    BtnFrame.Parent = ExportModal
+    
+    local BtnLayout = Instance.new("UIListLayout")
+    BtnLayout.FillDirection = Enum.FillDirection.Horizontal
+    BtnLayout.Padding = UDim.new(0, 15)
+    BtnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    BtnLayout.Parent = BtnFrame
+    
+    -- Copy Button
+    local CopyBtn = Instance.new("TextButton")
+    CopyBtn.Size = UDim2.new(0, 130, 0, 35)
+    CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    CopyBtn.Text = "📋 COPY SCRIPT"
+    CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CopyBtn.TextSize = 12
+    CopyBtn.Font = Enum.Font.GothamBold
+    CopyBtn.Parent = BtnFrame
+    
+    local CopyCorner = Instance.new("UICorner")
+    CopyCorner.CornerRadius = UDim.new(0, 10)
+    CopyCorner.Parent = CopyBtn
+    
+    -- Close Button
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 130, 0, 35)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    CloseBtn.Text = "CLOSE"
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.TextSize = 12
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Parent = BtnFrame
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 10)
+    CloseCorner.Parent = CloseBtn
+    
+    -- Store in _G for clipboard simulation
+    _G.shhhhnayy05_ExportedScript = scriptContent
+    
+    -- Actions
+    CopyBtn.MouseButton1Click:Connect(function()
+        shhhhnayy05.AddLog("📋 Script exported and ready to copy!")
+        shhhhnayy05.ShowNotification("Success!", "Script ready in _G.shhhhnayy05_ExportedScript")
+        
+        -- Visual feedback
+        CopyBtn.Text = "✅ COPIED!"
+        CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        wait(1.5)
+        CopyBtn.Text = "📋 COPY SCRIPT"
+        CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    end)
+    
+    CloseBtn.MouseButton1Click:Connect(function()
+        TweenService:Create(ExportModal, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+        wait(0.3)
+        ExportModal:Destroy()
+    end)
+end
+
+function shhhhnayy05.GenerateFullScript()
+    local lines = {
+        "--// ========================================== ",
+        "--// GENERATED BY shhhhnayy05 Real-Time Copier",
+        "--// Game: " .. game.Name,
+        "--// Place ID: " .. game.PlaceId,
+        "--// Created: " .. os.date("%Y-%m-%d %H:%M:%S"),
+        "--// ========================================== ",
+        "",
+        "local shhhhnayy05_Loader = {}",
+        "",
+        "--// Utility Functions",
+        "function shhhhnayy05_Loader.CreateInstance(className, parent, name)",
+        "    local success, inst = pcall(function()",
+        "        local obj = Instance.new(className)",
+        "        obj.Name = name",
+        "        obj.Parent = parent",
+        "        return obj",
+        "    end)",
+        "    if success then return inst end",
+        "    return nil",
+        "end",
+        "",
+        "function shhhhnayy05_Loader.SetProperties(inst, props)",
+        "    if not inst or not props then return end",
+        "    for prop, value in pairs(props) do",
+        "        pcall(function()",
+        "            if type(value) == 'table' then",
+        "                if prop == 'Size' and #value == 3 then",
+        "                    inst.Size = Vector3.new(value[1], value[2], value[3])",
+        "                elseif prop == 'Position' and #value == 3 then",
+        "                    inst.Position = Vector3.new(value[1], value[2], value[3])",
+        "                elseif prop == 'Rotation' and #value == 3 then",
+        "                    inst.Orientation = Vector3.new(value[1], value[2], value[3])",
+        "                elseif prop == 'Color' and #value == 3 then",
+        "                    inst.Color = Color3.new(value[1], value[2], value[3])",
+        "                elseif prop == 'BackgroundColor3' and #value == 3 then",
+        "                    inst.BackgroundColor3 = Color3.new(value[1], value[2], value[3])",
+        "                elseif prop == 'TextColor3' and #value == 3 then",
+        "                    inst.TextColor3 = Color3.new(value[1], value[2], value[3])",
+        "                elseif prop == 'Size' and #value == 4 then -- UDim2",
+        "                    inst.Size = UDim2.new(value[1], value[2], value[3], value[4])",
+        "                elseif prop == 'Position' and #value == 4 then -- UDim2",
+        "                    inst.Position = UDim2.new(value[1], value[2], value[3], value[4])",
+        "                end",
+        "            else",
+        "                inst[prop] = value",
+        "            end",
+        "        end)",
+        "    end",
+        "end",
+        "",
+        "function shhhhnayy05_Loader.BuildHierarchy(data, parent)",
+        "    if not data then return end",
+        "    ",
+        "    local inst = shhhhnayy05_Loader.CreateInstance(data.ClassName, parent, data.Name)",
+        "    if not inst then return end",
+        "    ",
+        "    -- Set properties",
+        "    if data.Properties then",
+        "        shhhhnayy05_Loader.SetProperties(inst, data.Properties)",
+        "    end",
+        "    ",
+        "    -- Build children",
+        "    if data.Children then",
+        "        for _, childData in ipairs(data.Children) do",
+        "            shhhhnayy05_Loader.BuildHierarchy(childData, inst)",
+        "        end",
+        "    end",
+        "    ",
+        "    return inst",
+        "end",
+        "",
+        "--// Main Load Function",
+        "function shhhhnayy05_Loader.LoadGame()",
+        "    print('🎮 shhhhnayy05 Loader: Starting...')",
+        "",
+    }
+    
+    -- Add service data
+    for serviceName, serviceData in pairs(shhhhnayy05.CopiedData) do
+        table.insert(lines, "    --// Loading " .. serviceName)
+        table.insert(lines, "    print('📂 Loading " .. serviceName .. "...')")
+        table.insert(lines, "    local " .. serviceName .. " = game:GetService('" .. serviceName .. "')")
+        table.insert(lines, "    if " .. serviceName .. " then")
+        
+        if serviceData.Children then
+            for _, child in ipairs(serviceData.Children) do
+                table.insert(lines, "        shhhhnayy05_Loader.BuildHierarchy(" .. shhhhnayy05.TableToString(child) .. ", " .. serviceName .. ")")
             end
         end
-    end)
-end
-local shhhhnayy05_189 = false
-shhhhnayy05_3.RenderStepped:Connect(function()
-    -- upvalues: (ref) shhhhnayy05_189
-    if shhhhnayy05_189 then
-        local shhhhnayy05_190 = tick()
-        local shhhhnayy05_191 = shhhhnayy05_190 * 25 * 1.3
-        local shhhhnayy05_192 = math.sin(shhhhnayy05_191) * 0.18
-        local shhhhnayy05_193 = shhhhnayy05_190 * 25 * 2.1
-        local shhhhnayy05_194 = shhhhnayy05_192 + math.sin(shhhhnayy05_193) * 0.18 * 0.5
-        local shhhhnayy05_195 = shhhhnayy05_190 * 25 * 0.9
-        local shhhhnayy05_196 = math.cos(shhhhnayy05_195) * 0.18
-        local shhhhnayy05_197 = shhhhnayy05_190 * 25 * 1.7
-        local shhhhnayy05_198 = shhhhnayy05_196 + math.cos(shhhhnayy05_197) * 0.18 * 0.5
-        local shhhhnayy05_199 = shhhhnayy05_190 * 25 * 1.6
-        local shhhhnayy05_200 = math.sin(shhhhnayy05_199) * 0.18 * 0.3
-        local shhhhnayy05_201 = workspace.CurrentCamera
-        local shhhhnayy05_202 = workspace.CurrentCamera.CFrame * CFrame.new(shhhhnayy05_194, shhhhnayy05_198, shhhhnayy05_200)
-        local shhhhnayy05_203 = CFrame.Angles
-        local shhhhnayy05_204 = shhhhnayy05_190 * 25 * 0.8
-        local shhhhnayy05_205 = math.sin(shhhhnayy05_204) * 2.5
-        local shhhhnayy05_206 = math.rad(shhhhnayy05_205)
-        local shhhhnayy05_207 = shhhhnayy05_190 * 25 * 1.1
-        local shhhhnayy05_208 = math.cos(shhhhnayy05_207) * 1.8
-        local shhhhnayy05_209 = math.rad(shhhhnayy05_208)
-        local shhhhnayy05_210 = shhhhnayy05_190 * 25 * 1.4
-        local shhhhnayy05_211 = math.sin(shhhhnayy05_210) * 1.2
-        shhhhnayy05_201.CFrame = shhhhnayy05_202 * shhhhnayy05_203(shhhhnayy05_206, shhhhnayy05_209, (math.rad(shhhhnayy05_211)))
+        
+        table.insert(lines, "    end")
+        table.insert(lines, "")
     end
-end)
-local shhhhnayy05_212 = nil
-local function shhhhnayy05_215(p_u_213)
-    -- upvalues: (copy) shhhhnayy05_6
-    pcall(function()
-        -- upvalues: (ref) shhhhnayy05_6, (copy) p_u_213
-        shhhhnayy05_6:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, not p_u_213)
-    end)
-    pcall(function()
-        -- upvalues: (copy) p_u_213
-        local shhhhnayy05_214 = game:GetService("VoiceChatService")
-        if shhhhnayy05_214 then
-            shhhhnayy05_214:SetMuted(p_u_213)
-        end
-    end)
+    
+    -- Footer
+    table.insert(lines, "    print('✅ shhhhnayy05 Loader: Complete!')")
+    table.insert(lines, "    print('🎮 All services loaded successfully!')")
+    table.insert(lines, "end")
+    table.insert(lines, "")
+    table.insert(lines, "--// Execute")
+    table.insert(lines, "shhhhnayy05_Loader.LoadGame()")
+    
+    return table.concat(lines, "\n")
 end
-local shhhhnayy05_216 = nil
-local shhhhnayy05_217 = {
-    ["gui"] = Instance.new("ScreenGui")
-}
-shhhhnayy05_217.gui.Name = "AnnGUI"
-shhhhnayy05_217.gui.ResetOnSpawn = false
-shhhhnayy05_217.gui.DisplayOrder = 9999
-shhhhnayy05_217.gui.IgnoreGuiInset = true
-shhhhnayy05_217.gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-shhhhnayy05_217.gui.Parent = shhhhnayy05_12
-shhhhnayy05_217.bg = Instance.new("Frame")
-shhhhnayy05_217.bg.Size = UDim2.new(1, 0, 1, 0)
-shhhhnayy05_217.bg.BackgroundColor3 = Color3.new(0, 0, 0)
-shhhhnayy05_217.bg.BackgroundTransparency = 1
-shhhhnayy05_217.bg.BorderSizePixel = 0
-shhhhnayy05_217.bg.ZIndex = 9990
-shhhhnayy05_217.bg.Visible = false
-shhhhnayy05_217.bg.Parent = shhhhnayy05_217.gui
-local shhhhnayy05_218 = Instance.new("Frame")
-shhhhnayy05_218.AnchorPoint = Vector2.new(0.5, 0.5)
-shhhhnayy05_218.Position = UDim2.new(0.5, 0, 0.5, 0)
-shhhhnayy05_218.Size = UDim2.new(0, shhhhnayy05_34 and 300 or 480, 0, 0)
-shhhhnayy05_218.AutomaticSize = Enum.AutomaticSize.Y
-shhhhnayy05_218.BackgroundColor3 = shhhhnayy05_44.PANEL
-shhhhnayy05_218.BorderSizePixel = 0
-shhhhnayy05_218.ZIndex = 9991
-shhhhnayy05_218.Parent = shhhhnayy05_217.bg
-local shhhhnayy05_219 = Instance.new("UICorner")
-shhhhnayy05_219.CornerRadius = UDim.new(0, 14)
-shhhhnayy05_219.Parent = shhhhnayy05_218
-shhhhnayy05_78(shhhhnayy05_218, 18, 20, 20, 20)
-shhhhnayy05_217.card = shhhhnayy05_218
-local shhhhnayy05_220 = Instance.new("Frame")
-shhhhnayy05_220.Size = UDim2.new(1, 0, 0, 0)
-shhhhnayy05_220.AutomaticSize = Enum.AutomaticSize.Y
-shhhhnayy05_220.BackgroundTransparency = 1
-shhhhnayy05_220.ZIndex = 9992
-shhhhnayy05_220.Parent = shhhhnayy05_218
-shhhhnayy05_99(shhhhnayy05_220, 12)
-local shhhhnayy05_221 = shhhhnayy05_34 and 38 or 50
-local shhhhnayy05_222 = Instance.new("Frame")
-shhhhnayy05_222.Size = UDim2.new(1, 0, 0, shhhhnayy05_221)
-shhhhnayy05_222.BackgroundTransparency = 1
-shhhhnayy05_222.LayoutOrder = 1
-shhhhnayy05_222.ZIndex = 9992
-shhhhnayy05_222.Parent = shhhhnayy05_220
-shhhhnayy05_217.avatar = Instance.new("ImageLabel")
-shhhhnayy05_217.avatar.Size = UDim2.new(0, shhhhnayy05_221, 0, shhhhnayy05_221)
-shhhhnayy05_217.avatar.Position = UDim2.new(0, 0, 0, 0)
-shhhhnayy05_217.avatar.BackgroundColor3 = shhhhnayy05_44.CARD
-shhhhnayy05_217.avatar.BorderSizePixel = 0
-shhhhnayy05_217.avatar.ScaleType = Enum.ScaleType.Crop
-shhhhnayy05_217.avatar.ZIndex = 9993
-shhhhnayy05_217.avatar.Parent = shhhhnayy05_222
-local shhhhnayy05_223 = shhhhnayy05_217.avatar
-local shhhhnayy05_224 = shhhhnayy05_221 / 2
-local shhhhnayy05_225 = Instance.new("UICorner")
-shhhhnayy05_225.CornerRadius = UDim.new(0, shhhhnayy05_224 or 6)
-shhhhnayy05_225.Parent = shhhhnayy05_223
-local shhhhnayy05_226 = Instance.new("Frame")
-shhhhnayy05_226.Size = UDim2.new(1, -(shhhhnayy05_221 + 12), 1, 0)
-shhhhnayy05_226.Position = UDim2.new(0, shhhhnayy05_221 + 12, 0, 0)
-shhhhnayy05_226.BackgroundTransparency = 1
-shhhhnayy05_226.ZIndex = 9992
-shhhhnayy05_226.Parent = shhhhnayy05_222
-local shhhhnayy05_227 = Instance.new("Frame")
-shhhhnayy05_227.Size = UDim2.new(0, 0, 0, shhhhnayy05_34 and 9 or 12)
-shhhhnayy05_227.AutomaticSize = Enum.AutomaticSize.X
-shhhhnayy05_227.Position = UDim2.new(0, 0, 0, 0)
-shhhhnayy05_227.BackgroundColor3 = shhhhnayy05_44.ACC
-shhhhnayy05_227.BorderSizePixel = 0
-shhhhnayy05_227.ZIndex = 9993
-shhhhnayy05_227.Parent = shhhhnayy05_226
-local shhhhnayy05_228 = Instance.new("UICorner")
-shhhhnayy05_228.CornerRadius = UDim.new(0, 3)
-shhhhnayy05_228.Parent = shhhhnayy05_227
-shhhhnayy05_78(shhhhnayy05_227, 0, shhhhnayy05_34 and 4 or 6, 0, shhhhnayy05_34 and 4 or 6)
-local shhhhnayy05_229 = Instance.new("TextLabel")
-shhhhnayy05_229.Size = UDim2.new(1, 0, 1, 0)
-shhhhnayy05_229.BackgroundTransparency = 1
-shhhhnayy05_229.Text = "ADMIN"
-shhhhnayy05_229.TextColor3 = Color3.new(1, 1, 1)
-shhhhnayy05_229.TextSize = shhhhnayy05_34 and 5 or 7
-shhhhnayy05_229.Font = shhhhnayy05_35
-shhhhnayy05_229.ZIndex = 9994
-shhhhnayy05_229.Parent = shhhhnayy05_227
-shhhhnayy05_217.sender = Instance.new("TextLabel")
-shhhhnayy05_217.sender.Size = UDim2.new(1, 0, 0, shhhhnayy05_34 and 14 or 20)
-shhhhnayy05_217.sender.Position = UDim2.new(0, 0, 0, shhhhnayy05_34 and 11 or 15)
-shhhhnayy05_217.sender.BackgroundTransparency = 1
-shhhhnayy05_217.sender.Text = ""
-shhhhnayy05_217.sender.TextColor3 = shhhhnayy05_44.TXT
-shhhhnayy05_217.sender.TextSize = shhhhnayy05_34 and 11 or 15
-shhhhnayy05_217.sender.Font = shhhhnayy05_35
-shhhhnayy05_217.sender.TextXAlignment = Enum.TextXAlignment.Left
-shhhhnayy05_217.sender.ZIndex = 9993
-shhhhnayy05_217.sender.Parent = shhhhnayy05_226
-local shhhhnayy05_230 = Instance.new("Frame")
-shhhhnayy05_230.Size = UDim2.new(1, 0, 0, 1)
-shhhhnayy05_230.BackgroundColor3 = shhhhnayy05_44.DIV
-shhhhnayy05_230.BorderSizePixel = 0
-shhhhnayy05_230.LayoutOrder = 2
-shhhhnayy05_230.ZIndex = 9992
-shhhhnayy05_230.Parent = shhhhnayy05_220
-shhhhnayy05_217.text = Instance.new("TextLabel")
-shhhhnayy05_217.text.Size = UDim2.new(1, 0, 0, 0)
-shhhhnayy05_217.text.AutomaticSize = Enum.AutomaticSize.Y
-shhhhnayy05_217.text.BackgroundTransparency = 1
-shhhhnayy05_217.text.Text = ""
-shhhhnayy05_217.text.TextColor3 = Color3.new(1, 1, 1)
-shhhhnayy05_217.text.TextSize = shhhhnayy05_34 and 16 or 24
-shhhhnayy05_217.text.Font = shhhhnayy05_35
-shhhhnayy05_217.text.TextWrapped = true
-shhhhnayy05_217.text.TextXAlignment = Enum.TextXAlignment.Center
-shhhhnayy05_217.text.LineHeight = 1.3
-shhhhnayy05_217.text.TextStrokeColor3 = Color3.new(0, 0, 0)
-shhhhnayy05_217.text.TextStrokeTransparency = 0.6
-shhhhnayy05_217.text.LayoutOrder = 3
-shhhhnayy05_217.text.ZIndex = 9993
-shhhhnayy05_217.text.Parent = shhhhnayy05_220
-local function shhhhnayy05_239(p231, p232, p233, p234)
-    -- upvalues: (copy) shhhhnayy05_19, (copy) shhhhnayy05_217, (copy) shhhhnayy05_1, (copy) shhhhnayy05_5, (copy) shhhhnayy05_7
-    if not shhhhnayy05_19.isSilent() then
-        shhhhnayy05_217.text.Text = p231 or ""
-        shhhhnayy05_217.sender.Text = p233 or (p232 or "Admin")
-        if p234 and p234 > 0 then
-            shhhhnayy05_217.avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. p234 .. "&width=48&height=48&format=png"
+
+function shhhhnayy05.TableToString(tbl, indent)
+    indent = indent or 0
+    local indentStr = string.rep("    ", indent)
+    local lines = {"{"}
+    
+    for k, v in pairs(tbl) do
+        local key = type(k) == "string
+
+function shhhhnayy05.TableToString(tbl, indent)
+    indent = indent or 0
+    local indentStr = string.rep("    ", indent)
+    local lines = {"{"}
+    
+    for k, v in pairs(tbl) do
+        local key = type(k) == "string" and '["' .. k .. '"]' or "[" .. k .. "]"
+        local value
+        
+        if type(v) == "table" then
+            value = shhhhnayy05.TableToString(v, indent + 1)
+        elseif type(v) == "string" then
+            value = '"' .. v:gsub('"', '\\"'):gsub("\n", "\\n") .. '"'
+        elseif type(v) == "number" or type(v) == "boolean" then
+            value = tostring(v)
         else
-            local shhhhnayy05_235 = shhhhnayy05_1:FindFirstChild(p232 or "")
-            shhhhnayy05_217.avatar.Image = shhhhnayy05_235 and "https://www.roblox.com/headshot-thumbnail/image?userId=" .. shhhhnayy05_235.UserId .. "&width=48&height=48&format=png" or ""
+            value = "nil"
         end
-        shhhhnayy05_217.bg.Visible = true
-        shhhhnayy05_217.bg.BackgroundTransparency = 1
-        shhhhnayy05_217.text.TextTransparency = 1
-        shhhhnayy05_217.text.TextStrokeTransparency = 1
-        shhhhnayy05_217.sender.TextTransparency = 1
-        shhhhnayy05_217.avatar.ImageTransparency = 1
-        local shhhhnayy05_236 = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        shhhhnayy05_5:Create(shhhhnayy05_217.bg, shhhhnayy05_236, {
-            ["BackgroundTransparency"] = 0.55
-        }):Play()
-        shhhhnayy05_5:Create(shhhhnayy05_217.text, shhhhnayy05_236, {
-            ["TextTransparency"] = 0,
-            ["TextStrokeTransparency"] = 0.6
-        }):Play()
-        shhhhnayy05_5:Create(shhhhnayy05_217.sender, shhhhnayy05_236, {
-            ["TextTransparency"] = 0
-        }):Play()
-        shhhhnayy05_5:Create(shhhhnayy05_217.avatar, shhhhnayy05_236, {
-            ["ImageTransparency"] = 0
-        }):Play()
-        local shhhhnayy05_237 = Instance.new("Sound")
-        shhhhnayy05_237.SoundId = "rbxassetid://104563790094781"
-        shhhhnayy05_237.Volume = 0.5
-        shhhhnayy05_237.Parent = workspace
-        shhhhnayy05_237:Play()
-        shhhhnayy05_7:AddItem(shhhhnayy05_237, 3)
-        task.delay(6, function()
-            -- upvalues: (ref) shhhhnayy05_5, (ref) shhhhnayy05_217
-            local shhhhnayy05_238 = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-            shhhhnayy05_5:Create(shhhhnayy05_217.bg, shhhhnayy05_238, {
-                ["BackgroundTransparency"] = 1
-            }):Play()
-            shhhhnayy05_5:Create(shhhhnayy05_217.text, shhhhnayy05_238, {
-                ["TextTransparency"] = 1,
-                ["TextStrokeTransparency"] = 1
-            }):Play()
-            shhhhnayy05_5:Create(shhhhnayy05_217.sender, shhhhnayy05_238, {
-                ["TextTransparency"] = 1
-            }):Play()
-            shhhhnayy05_5:Create(shhhhnayy05_217.avatar, shhhhnayy05_238, {
-                ["ImageTransparency"] = 1
-            }):Play()
-            task.delay(0.55, function()
-                -- upvalues: (ref) shhhhnayy05_217
-                shhhhnayy05_217.bg.Visible = false
-            end)
-        end)
+        
+        table.insert(lines, indentStr .. "    " .. key .. " = " .. value .. ",")
     end
-end
-local shhhhnayy05_240 = {}
-local shhhhnayy05_241 = Instance.new("ScreenGui")
-shhhhnayy05_241.Name = "APop"
-shhhhnayy05_241.ResetOnSpawn = false
-shhhhnayy05_241.DisplayOrder = 200
-shhhhnayy05_241.IgnoreGuiInset = true
-shhhhnayy05_241.Parent = shhhhnayy05_12
-shhhhnayy05_240.out = Instance.new("Frame")
-shhhhnayy05_240.out.AnchorPoint = Vector2.new(0.5, 0)
-shhhhnayy05_240.out.Position = UDim2.new(0.5, 0, -0.3, 0)
-shhhhnayy05_240.out.Size = UDim2.new(0, shhhhnayy05_34 and 210 or 290, 0, 0)
-shhhhnayy05_240.out.AutomaticSize = Enum.AutomaticSize.Y
-shhhhnayy05_240.out.BackgroundColor3 = shhhhnayy05_44.PANEL
-shhhhnayy05_240.out.BorderSizePixel = 0
-shhhhnayy05_240.out.ZIndex = 201
-shhhhnayy05_240.out.Parent = shhhhnayy05_241
-local shhhhnayy05_242 = shhhhnayy05_240.out
-local shhhhnayy05_243 = Instance.new("UICorner")
-shhhhnayy05_243.CornerRadius = UDim.new(0, 10)
-shhhhnayy05_243.Parent = shhhhnayy05_242
-local shhhhnayy05_244 = Instance.new("Frame")
-shhhhnayy05_244.Size = UDim2.new(1, 0, 0, 0)
-shhhhnayy05_244.AutomaticSize = Enum.AutomaticSize.Y
-shhhhnayy05_244.BackgroundTransparency = 1
-shhhhnayy05_244.ZIndex = 202
-shhhhnayy05_244.Parent = shhhhnayy05_240.out
-shhhhnayy05_78(shhhhnayy05_244, 10, 12, 12, 12)
-shhhhnayy05_99(shhhhnayy05_244, 5)
-local shhhhnayy05_245 = Instance.new("Frame")
-shhhhnayy05_245.Size = UDim2.new(1, 0, 0, 20)
-shhhhnayy05_245.BackgroundTransparency = 1
-shhhhnayy05_245.LayoutOrder = 1
-shhhhnayy05_245.ZIndex = 202
-shhhhnayy05_245.Parent = shhhhnayy05_244
-shhhhnayy05_240.av = Instance.new("ImageLabel")
-shhhhnayy05_240.av.Size = UDim2.new(0, 18, 0, 18)
-shhhhnayy05_240.av.Position = UDim2.new(0, 0, 0, 1)
-shhhhnayy05_240.av.BackgroundColor3 = shhhhnayy05_44.CARD
-shhhhnayy05_240.av.BorderSizePixel = 0
-shhhhnayy05_240.av.Image = ""
-shhhhnayy05_240.av.ScaleType = Enum.ScaleType.Crop
-shhhhnayy05_240.av.ZIndex = 203
-shhhhnayy05_240.av.Parent = shhhhnayy05_245
-local shhhhnayy05_246 = shhhhnayy05_240.av
-local shhhhnayy05_247 = Instance.new("UICorner")
-shhhhnayy05_247.CornerRadius = UDim.new(0, 9)
-shhhhnayy05_247.Parent = shhhhnayy05_246
-shhhhnayy05_240.sender = Instance.new("TextLabel")
-shhhhnayy05_240.sender.Size = UDim2.new(1, -24, 1, 0)
-shhhhnayy05_240.sender.Position = UDim2.new(0, 22, 0, 0)
-shhhhnayy05_240.sender.BackgroundTransparency = 1
-shhhhnayy05_240.sender.Text = ""
-shhhhnayy05_240.sender.TextColor3 = shhhhnayy05_44.ACC
-shhhhnayy05_240.sender.TextSize = shhhhnayy05_34 and 8 or 10
-shhhhnayy05_240.sender.Font = shhhhnayy05_35
-shhhhnayy05_240.sender.TextXAlignment = Enum.TextXAlignment.Left
-shhhhnayy05_240.sender.ZIndex = 203
-shhhhnayy05_240.sender.Parent = shhhhnayy05_245
-local shhhhnayy05_248 = Instance.new("Frame")
-shhhhnayy05_248.Size = UDim2.new(1, 0, 0, 1)
-shhhhnayy05_248.BackgroundColor3 = shhhhnayy05_44.DIV
-shhhhnayy05_248.BorderSizePixel = 0
-shhhhnayy05_248.LayoutOrder = 2
-shhhhnayy05_248.ZIndex = 202
-shhhhnayy05_248.Parent = shhhhnayy05_244
-shhhhnayy05_240.msg = Instance.new("TextLabel")
-shhhhnayy05_240.msg.Size = UDim2.new(1, 0, 0, 0)
-shhhhnayy05_240.msg.AutomaticSize = Enum.AutomaticSize.Y
-shhhhnayy05_240.msg.BackgroundTransparency = 1
-shhhhnayy05_240.msg.Text = ""
-shhhhnayy05_240.msg.TextColor3 = shhhhnayy05_44.TXT
-shhhhnayy05_240.msg.TextSize = shhhhnayy05_34 and 9 or 12
-shhhhnayy05_240.msg.Font = shhhhnayy05_35
-shhhhnayy05_240.msg.TextWrapped = true
-shhhhnayy05_240.msg.TextXAlignment = Enum.TextXAlignment.Left
-shhhhnayy05_240.msg.LineHeight = 1.3
-shhhhnayy05_240.msg.LayoutOrder = 3
-shhhhnayy05_240.msg.ZIndex = 203
-shhhhnayy05_240.msg.Parent = shhhhnayy05_244
-
-local function shhhhnayy05_251(p249, p250, p251)
-    -- upvalues: (copy) shhhhnayy05_240, (copy) shhhhnayy05_5, (copy) shhhhnayy05_1
-    shhhhnayy05_240.msg.Text = p249 or ""
-    shhhhnayy05_240.sender.Text = p251 or "Admin"
-    local shhhhnayy05_252 = shhhhnayy05_1:FindFirstChild(p251 or "")
-    shhhhnayy05_240.av.Image = shhhhnayy05_252 and "https://www.roblox.com/headshot-thumbnail/image?userId=" .. shhhhnayy05_252.UserId .. "&width=48&height=48&format=png" or ""
     
-    shhhhnayy05_240.out:TweenPosition(UDim2.new(0.5, 0, 0, 10), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-    task.delay(p250 or 3, function()
-        -- upvalues: (ref) shhhhnayy05_240, (ref) shhhhnayy05_5
-        shhhhnayy05_240.out:TweenPosition(UDim2.new(0.5, 0, -0.3, 0), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.3, true)
+    table.insert(lines, indentStr .. "}")
+    return table.concat(lines, "\n")
+end
+
+--// NOTIFICATION SYSTEM
+function shhhhnayy05.ShowNotification(title, message)
+    local NotifyFrame = Instance.new("Frame")
+    NotifyFrame.Size = UDim2.new(0, 300, 0, 80)
+    NotifyFrame.Position = UDim2.new(1, 20, 1, -100)
+    NotifyFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    NotifyFrame.BorderSizePixel = 0
+    NotifyFrame.ZIndex = 3000
+    NotifyFrame.Parent = shhhhnayy05.GUI.ScreenGui
+    
+    local NotifyCorner = Instance.new("UICorner")
+    NotifyCorner.CornerRadius = UDim.new(0, 12)
+    NotifyCorner.Parent = NotifyFrame
+    
+    local NotifyStroke = Instance.new("UIStroke")
+    NotifyStroke.Color = Color3.fromRGB(0, 200, 100)
+    NotifyStroke.Thickness = 2
+    NotifyStroke.Parent = NotifyFrame
+    
+    -- Icon
+    local Icon = Instance.new("TextLabel")
+    Icon.Size = UDim2.new(0, 50, 0, 50)
+    Icon.Position = UDim2.new(0, 15, 0.5, -25)
+    Icon.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    Icon.Text = "✓"
+    Icon.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Icon.TextSize = 28
+    Icon.Font = Enum.Font.GothamBold
+    Icon.Parent = NotifyFrame
+    
+    local IconCorner = Instance.new("UICorner")
+    IconCorner.CornerRadius = UDim.new(1, 0)
+    IconCorner.Parent = Icon
+    
+    -- Title
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Size = UDim2.new(1, -85, 0, 25)
+    TitleLabel.Position = UDim2.new(0, 75, 0, 15)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = title
+    TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleLabel.TextSize = 16
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLabel.Parent = NotifyFrame
+    
+    -- Message
+    local MsgLabel = Instance.new("TextLabel")
+    MsgLabel.Size = UDim2.new(1, -85, 0, 35)
+    MsgLabel.Position = UDim2.new(0, 75, 0, 40)
+    MsgLabel.BackgroundTransparency = 1
+    MsgLabel.Text = message
+    MsgLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    MsgLabel.TextSize = 12
+    MsgLabel.Font = Enum.Font.Gotham
+    MsgLabel.TextXAlignment = Enum.TextXAlignment.Left
+    MsgLabel.TextWrapped = true
+    MsgLabel.Parent = NotifyFrame
+    
+    -- Slide in animation
+    TweenService:Create(NotifyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+        Position = UDim2.new(1, -320, 1, -100)
+    }):Play()
+    
+    -- Auto remove
+    spawn(function()
+        wait(4)
+        TweenService:Create(NotifyFrame, TweenInfo.new(0.3), {
+            Position = UDim2.new(1, 20, 1, -100)
+        }):Play()
+        wait(0.3)
+        NotifyFrame:Destroy()
     end)
 end
 
-local shhhhnayy05_253 = Instance.new("ScreenGui")
-shhhhnayy05_253.Name = "shhhhnayy05_MainGUI"
-shhhhnayy05_253.ResetOnSpawn = false
-shhhhnayy05_253.DisplayOrder = 100
-shhhhnayy05_253.IgnoreGuiInset = true
-shhhhnayy05_253.ZIndexBehavior = Enum.ZIndexBehavior.Global
-shhhhnayy05_253.Parent = shhhhnayy05_12
+--// INITIALIZE
+shhhhnayy05.CreateGUI()
 
-local shhhhnayy05_254 = Instance.new("Frame")
-shhhhnayy05_254.Name = "MainPanel"
-shhhhnayy05_254.Size = UDim2.new(0, shhhhnayy05_71.PW, 0, shhhhnayy05_71.PH)
-shhhhnayy05_254.Position = UDim2.new(0, 20, 0, 20)
-shhhhnayy05_254.BackgroundColor3 = shhhhnayy05_44.BG
-shhhhnayy05_254.BorderSizePixel = 0
-shhhhnayy05_254.Active = true
-shhhhnayy05_254.Draggable = true
-shhhhnayy05_254.ZIndex = 10
-shhhhnayy05_254.Parent = shhhhnayy05_253
+print("✅ shhhhnayy05 Real-Time Game Copier loaded!")
+print("🎮 Current Game: " .. game.Name)
+print("📍 Place ID: " .. game.PlaceId)
 
-local shhhhnayy05_255 = Instance.new("UICorner")
-shhhhnayy05_255.CornerRadius = UDim.new(0, 12)
-shhhhnayy05_255.Parent = shhhhnayy05_254
-
-local shhhhnayy05_256 = Instance.new("Frame")
-shhhhnayy05_256.Name = "Header"
-shhhhnayy05_256.Size = UDim2.new(1, 0, 0, shhhhnayy05_71.HDR_H)
-shhhhnayy05_256.BackgroundColor3 = shhhhnayy05_44.PANEL
-shhhhnayy05_256.BorderSizePixel = 0
-shhhhnayy05_256.ZIndex = 11
-shhhhnayy05_256.Parent = shhhhnayy05_254
-
-local shhhhnayy05_257 = Instance.new("UICorner")
-shhhhnayy05_257.CornerRadius = UDim.new(0, 12)
-shhhhnayy05_257.Parent = shhhhnayy05_256
-
-local shhhhnayy05_258 = Instance.new("Frame")
-shhhhnayy05_258.Size = UDim2.new(1, 0, 0, 4)
-shhhhnayy05_258.Position = UDim2.new(0, 0, 1, -4)
-shhhhnayy05_258.BackgroundColor3 = shhhhnayy05_44.PANEL
-shhhhnayy05_258.BorderSizePixel = 0
-shhhhnayy05_258.ZIndex = 11
-shhhhnayy05_258.Parent = shhhhnayy05_256
-
-local shhhhnayy05_259 = Instance.new("TextLabel")
-shhhhnayy05_259.Name = "Title"
-shhhhnayy05_259.Size = UDim2.new(1, -80, 1, 0)
-shhhhnayy05_259.Position = UDim2.new(0, 15, 0, 0)
-shhhhnayy05_259.BackgroundTransparency = 1
-shhhhnayy05_259.Text = "shhhhnayy05 Admin"
-shhhhnayy05_259.TextColor3 = shhhhnayy05_44.TXT
-shhhhnayy05_259.TextSize = shhhhnayy05_71.FST
-shhhhnayy05_259.Font = shhhhnayy05_35
-shhhhnayy05_259.TextXAlignment = Enum.TextXAlignment.Left
-shhhhnayy05_259.ZIndex = 12
-shhhhnayy05_259.Parent = shhhhnayy05_256
-
-local shhhhnayy05_260 = Instance.new("TextButton")
-shhhhnayy05_260.Name = "CloseBtn"
-shhhhnayy05_260.Size = UDim2.new(0, 28, 0, 28)
-shhhhnayy05_260.Position = UDim2.new(1, -36, 0, 8)
-shhhhnayy05_260.BackgroundColor3 = shhhhnayy05_44.ACC
-shhhhnayy05_260.BorderSizePixel = 0
-shhhhnayy05_260.Text = "X"
-shhhhnayy05_260.TextColor3 = Color3.new(1, 1, 1)
-shhhhnayy05_260.TextSize = 14
-shhhhnayy05_260.Font = shhhhnayy05_35
-shhhhnayy05_260.ZIndex = 12
-shhhhnayy05_260.Parent = shhhhnayy05_256
-
-shhhhnayy05_111(shhhhnayy05_260, 6)
-
-local shhhhnayy05_261 = Instance.new("TextButton")
-shhhhnayy05_261.Name = "MinimizeBtn"
-shhhhnayy05_261.Size = UDim2.new(0, 28, 0, 28)
-shhhhnayy05_261.Position = UDim2.new(1, -70, 0, 8)
-shhhhnayy05_261.BackgroundColor3 = shhhhnayy05_44.SURF
-shhhhnayy05_261.BorderSizePixel = 0
-shhhhnayy05_261.Text = "-"
-shhhhnayy05_261.TextColor3 = shhhhnayy05_44.TXT
-shhhhnayy05_261.TextSize = 16
-shhhhnayy05_261.Font = shhhhnayy05_35
-shhhhnayy05_261.ZIndex = 12
-shhhhnayy05_261.Parent = shhhhnayy05_256
-
-shhhhnayy05_111(shhhhnayy05_261, 6)
-
-local shhhhnayy05_262 = Instance.new("Frame")
-shhhhnayy05_262.Name = "SearchBar"
-shhhhnayy05_262.Size = UDim2.new(1, -20, 0, shhhhnayy05_71.SRCH_H)
-shhhhnayy05_262.Position = UDim2.new(0, 10, 0, shhhhnayy05_71.HDR_H + 5)
-shhhhnayy05_262.BackgroundColor3 = shhhhnayy05_44.INP
-shhhhnayy05_262.BorderSizePixel = 0
-shhhhnayy05_262.ZIndex = 11
-shhhhnayy05_262.Parent = shhhhnayy05_254
-
-shhhhnayy05_111(shhhhnayy05_262, 6)
-
-local shhhhnayy05_263, shhhhnayy05_264 = shhhhnayy05_89(shhhhnayy05_262, UDim2.new(1, -35, 1, 0), UDim2.new(0, 0, 0, 0), "Search commands...", shhhhnayy05_71.FSS, shhhhnayy05_36, 12)
-
-local shhhhnayy05_265 = Instance.new("ImageButton")
-shhhhnayy05_265.Name = "SearchIcon"
-shhhhnayy05_265.Size = UDim2.new(0, 20, 0, 20)
-shhhhnayy05_265.Position = UDim2.new(1, -28, 0, 4)
-shhhhnayy05_265.BackgroundTransparency = 1
-shhhhnayy05_265.Image = "rbxassetid://3926305904"
-shhhhnayy05_265.ImageRectOffset = Vector2.new(964, 324)
-shhhhnayy05_265.ImageRectSize = Vector2.new(36, 36)
-shhhhnayy05_265.ImageColor3 = shhhhnayy05_44.TXT3
-shhhhnayy05_265.ZIndex = 12
-shhhhnayy05_265.Parent = shhhhnayy05_262
-
-local shhhhnayy05_266 = Instance.new("Frame")
-shhhhnayy05_266.Name = "TabContainer"
-shhhhnayy05_266.Size = UDim2.new(1, -20, 0, shhhhnayy05_71.TAB_H)
-shhhhnayy05_266.Position = UDim2.new(0, 10, 0, shhhhnayy05_71.HDR_H + shhhhnayy05_71.SRCH_H + 10)
-shhhhnayy05_266.BackgroundTransparency = 1
-shhhhnayy05_266.BorderSizePixel = 0
-shhhhnayy05_266.ZIndex = 11
-shhhhnayy05_266.Parent = shhhhnayy05_254
-
-local shhhhnayy05_267 = shhhhnayy05_107(shhhhnayy05_266, 5)
-shhhhnayy05_267.Padding = UDim.new(0, 5)
-
-local shhhhnayy05_268 = {}
-local shhhhnayy05_269 = {}
-
-for shhhhnayy05_270, shhhhnayy05_271 in ipairs(shhhhnayy05_90) do
-    local shhhhnayy05_272 = Instance.new("TextButton")
-    shhhhnayy05_272.Name = "Tab_" .. shhhhnayy05_271.id
-    shhhhnayy05_272.Size = UDim2.new(0, shhhhnayy05_71.TABW, 0, shhhhnayy05_71.TAB_H - 4)
-    shhhhnayy05_272.BackgroundColor3 = shhhhnayy05_270 == 1 and shhhhnayy05_44.ACC or shhhhnayy05_44.SURF
-    shhhhnayy05_272.BorderSizePixel = 0
-    shhhhnayy05_272.Text = shhhhnayy05_271.label
-    shhhhnayy05_272.TextColor3 = shhhhnayy05_270 == 1 and Color3.new(1, 1, 1) or shhhhnayy05_44.TXT2
-    shhhhnayy05_272.TextSize = shhhhnayy05_71.FSS
-    shhhhnayy05_272.Font = shhhhnayy05_35
-    shhhhnayy05_272.LayoutOrder = shhhhnayy05_270
-    shhhhnayy05_272.ZIndex = 12
-    shhhhnayy05_272.Parent = shhhhnayy05_266
-    
-    shhhhnayy05_111(shhhhnayy05_272, 6)
-    
-    shhhhnayy05_268[shhhhnayy05_271.id] = shhhhnayy05_272
-    
-    shhhhnayy05_272.MouseButton1Click:Connect(function()
-        -- upvalues: (ref) shhhhnayy05_91, (ref) shhhhnayy05_268, (ref) shhhhnayy05_44, (ref) shhhhnayy05_269, (ref) shhhhnayy05_271
-        shhhhnayy05_91.tab = shhhhnayy05_271.id
-        for shhhhnayy05_273, shhhhnayy05_274 in pairs(shhhhnayy05_268) do
-            shhhhnayy05_274.BackgroundColor3 = shhhhnayy05_273 == shhhhnayy05_271.id and shhhhnayy05_44.ACC or shhhhnayy05_44.SURF
-            shhhhnayy05_274.TextColor3 = shhhhnayy05_273 == shhhhnayy05_271.id and Color3.new(1, 1, 1) or shhhhnayy05_44.TXT2
-        end
-        for shhhhnayy05_275, shhhhnayy05_276 in pairs(shhhhnayy05_269) do
-            shhhhnayy05_276.Visible = shhhhnayy05_275 == shhhhnayy05_271.id
-        end
-        shhhhnayy05_118()
-    end)
-end
-
-local shhhhnayy05_277 = Instance.new("Frame")
-shhhhnayy05_277.Name = "ContentContainer"
-shhhhnayy05_277.Size = UDim2.new(1, -20, 0, shhhhnayy05_71.CONT_H)
-shhhhnayy05_277.Position = UDim2.new(0, 10, 0, shhhhnayy05_71.CONT_Y)
-shhhhnayy05_277.BackgroundColor3 = shhhhnayy05_44.SURF
-shhhhnayy05_277.BorderSizePixel = 0
-shhhhnayy05_277.ZIndex = 11
-shhhhnayy05_277.Parent = shhhhnayy05_254
-
-shhhhnayy05_111(shhhhnayy05_277, 8)
-
-local shhhhnayy05_278 = Instance.new("Frame")
-shhhhnayy05_278.Name = "TargetBar"
-shhhhnayy05_278.Size = UDim2.new(1, -20, 0, shhhhnayy05_71.TGT_H)
-shhhhnayy05_278.Position = UDim2.new(0, 10, 0, shhhhnayy05_71.TGT_Y)
-shhhhnayy05_278.BackgroundColor3 = shhhhnayy05_44.CARD
-shhhhnayy05_278.BorderSizePixel = 0
-shhhhnayy05_278.ZIndex = 11
-shhhhnayy05_278.Parent = shhhhnayy05_254
-
-shhhhnayy05_111(shhhhnayy05_278, 6)
-
-local shhhhnayy05_279 = Instance.new("TextLabel")
-shhhhnayy05_279.Name = "TargetLabel"
-shhhhnayy05_279.Size = UDim2.new(1, -10, 1, 0)
-shhhhnayy05_279.Position = UDim2.new(0, 10, 0, 0)
-shhhhnayy05_279.BackgroundTransparency = 1
-shhhhnayy05_279.Text = "Target: None"
-shhhhnayy05_279.TextColor3 = shhhhnayy05_44.TXT2
-shhhhnayy05_279.TextSize = shhhhnayy05_71.FSS
-shhhhnayy05_279.Font = shhhhnayy05_36
-shhhhnayy05_279.TextXAlignment = Enum.TextXAlignment.Left
-shhhhnayy05_279.TextTruncate = Enum.TextTruncate.AtEnd
-shhhhnayy05_279.ZIndex = 12
-shhhhnayy05_279.Parent = shhhhnayy05_278
-
-for shhhhnayy05_280, shhhhnayy05_281 in ipairs(shhhhnayy05_90) do
-    local shhhhnayy05_282 = Instance.new("ScrollingFrame")
-    shhhhnayy05_282.Name = "Content_" .. shhhhnayy05_281.id
-    shhhhnayy05_282.Size = UDim2.new(1, -10, 1, -10)
-    shhhhnayy05_282.Position = UDim2.new(0, 5, 0, 5)
-    shhhhnayy05_282.BackgroundTransparency = 1
-    shhhhnayy05_282.BorderSizePixel = 0
-    shhhhnayy05_282.ScrollBarThickness = 4
-    shhhhnayy05_282.ScrollBarImageColor3 = shhhhnayy05_44.ACC
-    shhhhnayy05_282.CanvasSize = UDim2.new(0, 0, 0, 0)
-    shhhhnayy05_282.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    shhhhnayy05_282.Visible = shhhhnayy05_280 == 1
-    shhhhnayy05_282.ZIndex = 12
-    shhhhnayy05_282.Parent = shhhhnayy05_277
-    
-    local shhhhnayy05_283 = shhhhnayy05_99(shhhhnayy05_282, 6)
-    
-    shhhhnayy05_269[shhhhnayy05_281.id] = shhhhnayy05_282
-    
-    for shhhhnayy05_284, shhhhnayy05_285 in ipairs(shhhhnayy05_281.features) do
-        local shhhhnayy05_286 = Instance.new("Frame")
-        shhhhnayy05_286.Name = "Feature_" .. shhhhnayy05_285.id
-        shhhhnayy05_286.Size = UDim2.new(1, 0, 0, shhhhnayy05_71.ROW)
-        shhhhnayy05_286.BackgroundColor3 = shhhhnayy05_44.CARD
-        shhhhnayy05_286.BorderSizePixel = 0
-        shhhhnayy05_286.LayoutOrder = shhhhnayy05_284
-        shhhhnayy05_286.ZIndex = 13
-        shhhhnayy05_286.Parent = shhhhnayy05_282
-        
-        shhhhnayy05_111(shhhhnayy05_286, 6)
-        
-        local shhhhnayy05_287 = Instance.new("TextLabel")
-        shhhhnayy05_287.Name = "FeatureLabel"
-        shhhhnayy05_287.Size = UDim2.new(1, -shhhhnayy05_71.SLH - 10, 1, 0)
-        shhhhnayy05_287.Position = UDim2.new(0, 10, 0, 0)
-        shhhhnayy05_287.BackgroundTransparency = 1
-        shhhhnayy05_287.Text = shhhhnayy05_285.label
-        shhhhnayy05_287.TextColor3 = shhhhnayy05_44.TXT
-        shhhhnayy05_287.TextSize = shhhhnayy05_71.FS
-        shhhhnayy05_287.Font = shhhhnayy05_36
-        shhhhnayy05_287.TextXAlignment = Enum.TextXAlignment.Left
-        shhhhnayy05_287.TextTruncate = Enum.TextTruncate.AtEnd
-        shhhhnayy05_287.ZIndex = 14
-        shhhhnayy05_287.Parent = shhhhnayy05_286
-        
-        if shhhhnayy05_285.type == "toggle" then
-            local shhhhnayy05_288 = Instance.new("TextButton")
-            shhhhnayy05_288.Name = "ToggleBtn"
-            shhhhnayy05_288.Size = UDim2.new(0, shhhhnayy05_71.SLH, 0, shhhhnayy05_71.BH)
-            shhhhnayy05_288.Position = UDim2.new(1, -shhhhnayy05_71.SLH - 5, 0.5, -shhhhnayy05_71.BH/2)
-            shhhhnayy05_288.BackgroundColor3 = shhhhnayy05_44.TOGOF
-            shhhhnayy05_288.BorderSizePixel = 0
-            shhhhnayy05_288.Text = ""
-            shhhhnayy05_288.ZIndex = 14
-            shhhhnayy05_288.Parent = shhhhnayy05_286
-            
-            shhhhnayy05_111(shhhhnayy05_288, 10)
-            
-            local shhhhnayy05_289 = Instance.new("Frame")
-            shhhhnayy05_289.Name = "Knob"
-            shhhhnayy05_289.Size = UDim2.new(0, shhhhnayy05_71.BH - 4, 0, shhhhnayy05_71.BH - 4)
-            shhhhnayy05_289.Position = UDim2.new(0, 2, 0, 2)
-            shhhhnayy05_289.BackgroundColor3 = Color3.new(1, 1, 1)
-            shhhhnayy05_289.BorderSizePixel = 0
-            shhhhnayy05_289.ZIndex = 15
-            shhhhnayy05_289.Parent = shhhhnayy05_288
-            
-            shhhhnayy05_111(shhhhnayy05_289, 8)
-            
-            local shhhhnayy05_290 = false
-            
-            shhhhnayy05_288.MouseButton1Click:Connect(function()
-                -- upvalues: (ref) shhhhnayy05_290, (ref) shhhhnayy05_288, (ref) shhhhnayy05_44, (ref) shhhhnayy05_289, (ref) shhhhnayy05_285, (ref) shhhhnayy05_91
-                shhhhnayy05_290 = not shhhhnayy05_290
-                shhhhnayy05_91.toggles[shhhhnayy05_285.id] = shhhhnayy05_290
-                
-                shhhhnayy05_116(shhhhnayy05_288, {BackgroundColor3 = shhhhnayy05_290 and shhhhnayy05_44.TOGON or shhhhnayy05_44.TOGOF}, 0.2)
-                shhhhnayy05_116(shhhhnayy05_289, {Position = shhhhnayy05_290 and UDim2.new(1, -(shhhhnayy05_71.BH - 2), 0, 2) or UDim2.new(0, 2, 0, 2)}, 0.2)
-                
-                if shhhhnayy05_285.id == "fly" then
-                    if shhhhnayy05_290 then
-                        shhhhnayy05_172()
-                    else
-                        shhhhnayy05_175()
-                    end
-                elseif shhhhnayy05_285.id == "noclip" then
-                    if shhhhnayy05_290 then
-                        shhhhnayy05_184()
-                    else
-                        shhhhnayy05_188()
-                    end
-                elseif shhhhnayy05_285.id == "invisible" then
-                    shhhhnayy05_163("invisible", {enabled = shhhhnayy05_290})
-                elseif shhhhnayy05_285.id == "godmode" then
-                    shhhhnayy05_163("godmode", {enabled = shhhhnayy05_290})
-                elseif shhhhnayy05_285.id == "speed" then
-                    shhhhnayy05_163("speed", {enabled = shhhhnayy05_290})
-                elseif shhhhnayy05_285.id == "jump" then
-                    shhhhnayy05_163("jump", {enabled = shhhhnayy05_290})
-                elseif shhhhnayy05_285.id == "esp" then
-                    shhhhnayy05_163("esp", {enabled = shhhhnayy05_290})
-                elseif shhhhnayy05_285.id == "aimbot" then
-                    shhhhnayy05_163("aimbot", {enabled = shhhhnayy05_290})
-                elseif shhhhnayy05_285.id == "autoclick" then
-                    shhhhnayy05_163("autoclick", {enabled = shhhhnayy05_290})
-                end
-                
-                shhhhnayy05_118()
-            end)
-            
-        elseif shhhhnayy05_285.type == "button" then
-            local shhhhnayy05_291 = Instance.new("TextButton")
-            shhhhnayy05_291.Name = "ActionBtn"
-            shhhhnayy05_291.Size = UDim2.new(0, shhhhnayy05_71.SLH, 0, shhhhnayy05_71.BH)
-            shhhhnayy05_291.Position = UDim2.new(1, -shhhhnayy05_71.SLH - 5, 0.5, -shhhhnayy05_71.BH/2)
-            shhhhnayy05_291.BackgroundColor3 = shhhhnayy05_44.ACC
-            shhhhnayy05_291.BorderSizePixel = 0
-            shhhhnayy05_291.Text = "Run"
-            shhhhnayy05_291.TextColor3 = Color3.new(1, 1, 1)
-            shhhhnayy05_291.TextSize = shhhhnayy05_71.FSS
-            shhhhnayy05_291.Font = shhhhnayy05_35
-            shhhhnayy05_291.ZIndex = 14
-            shhhhnayy05_291.Parent = shhhhnayy05_286
-            
-            shhhhnayy05_111(shhhhnayy05_291, 6)
-            
-            shhhhnayy05_291.MouseButton1Click:Connect(function()
-                -- upvalues: (ref) shhhhnayy05_285, (ref) shhhhnayy05_163, (ref) shhhhnayy05_122
-                shhhhnayy05_163(shhhhnayy05_285.id, {targetName = shhhhnayy05_122()})
-                shhhhnayy05_118()
-            end)
-            
-        elseif shhhhnayy05_285.type == "input" then
-            local shhhhnayy05_292, shhhhnayy05_293 = shhhhnayy05_89(shhhhnayy05_286, UDim2.new(0, shhhhnayy05_71.SLH, 0, shhhhnayy05_71.BH), UDim2.new(1, -shhhhnayy05_71.SLH - 5, 0.5, -shhhhnayy05_71.BH/2), "Value...", shhhhnayy05_71.FSS, shhhhnayy05_36, 14)
-            
-            local shhhhnayy05_294 = Instance.new("TextButton")
-            shhhhnayy05_294.Name = "SetBtn"
-            shhhhnayy05_294.Size = UDim2.new(0, 30, 0, shhhhnayy05_71.BH)
-            shhhhnayy05_294.Position = UDim2.new(1, -35, 0.5, -shhhhnayy05_71.BH/2)
-            shhhhnayy05_294.BackgroundColor3 = shhhhnayy05_44.ACC
-            shhhhnayy05_294.BorderSizePixel = 0
-            shhhhnayy05_294.Text = ">"
-            shhhhnayy05_294.TextColor3 = Color3.new(1, 1, 1)
-            shhhhnayy05_294.TextSize = 14
-            shhhhnayy05_294.Font = shhhhnayy05_35
-            shhhhnayy05_294.ZIndex = 14
-            shhhhnayy05_294.Parent = shhhhnayy05_286
-            
-            shhhhnayy05_111(shhhhnayy05_294, 6)
-            
-            shhhhnayy05_294.MouseButton1Click:Connect(function()
-                -- upvalues: (ref) shhhhnayy05_285, (ref) shhhhnayy05_292, (ref) shhhhnayy05_163, (ref) shhhhnayy05_122
-                local shhhhnayy05_295 = shhhhnayy05_292.Text
-                shhhhnayy05_163(shhhhnayy05_285.id, {value = shhhhnayy05_295, targetName = shhhhnayy05_122()})
-                shhhhnayy05_118()
-            end)
-            
-        elseif shhhhnayy05_285.type == "dropdown" then
-            local shhhhnayy05_296 = Instance.new("TextButton")
-            shhhhnayy05_296.Name = "DropdownBtn"
-            shhhhnayy05_296.Size = UDim2.new(0, shhhhnayy05_71.SLH, 0, shhhhnayy05_71.BH)
-            shhhhnayy05_296.Position = UDim2.new(1, -shhhhnayy05_71.SLH - 5, 0.5, -shhhhnayy05_71.BH/2)
-            shhhhnayy05_296.BackgroundColor3 = shhhhnayy05_44.INP
-            shhhhnayy05_296.BorderSizePixel = 0
-            shhhhnayy05_296.Text = "Select"
-            shhhhnayy05_296.TextColor3 = shhhhnayy05_44.TXT2
-            shhhhnayy05_296.TextSize = shhhhnayy05_71.FSS
-            shhhhnayy05_296.Font = shhhhnayy05_36
-            shhhhnayy05_296.ZIndex = 14
-            shhhhnayy05_296.Parent = shhhhnayy05_286
-            
-            shhhhnayy05_111(shhhhnayy05_296, 6)
-            
-            local shhhhnayy05_297 = false
-            local shhhhnayy05_298 = nil
-            
-            shhhhnayy05_296.MouseButton1Click:Connect(function()
-                -- upvalues: (ref) shhhhnayy05_297, (ref) shhhhnayy05_298, (ref) shhhhnayy05_285, (ref) shhhhnayy05_296, (ref) shhhhnayy05_44
-                shhhhnayy05_297 = not shhhhnayy05_297
-                
-                if shhhhnayy05_297 then
-                    shhhhnayy05_298 = Instance.new("Frame")
-                    shhhhnayy05_298.Name = "DropdownMenu"
-                    shhhhnayy05_298.Size = UDim2.new(0, shhhhnayy05_71.SLH, 0, #shhhhnayy05_285.options * 22)
-                    shhhhnayy05_298.Position = UDim2.new(1, -shhhhnayy05_71.SLH - 5, 0, shhhhnayy05_71.ROW)
-                    shhhhnayy05_298.BackgroundColor3 = shhhhnayy05_44.PANEL
-                    shhhhnayy05_298.BorderSizePixel = 0
-                    shhhhnayy05_298.ZIndex = 20
-                    shhhhnayy05_298.Parent = shhhhnayy05_286
-                    
-                    shhhhnayy05_111(shhhhnayy05_298, 6)
-                    
-                    local shhhhnayy05_299 = shhhhnayy05_99(shhhhnayy05_298, 2)
-                    
-                    for shhhhnayy05_300, shhhhnayy05_301 in ipairs(shhhhnayy05_285.options or {}) do
-                        local shhhhnayy05_302 = Instance.new("TextButton")
-                        shhhhnayy05_302.Name = "Option_" .. shhhhnayy05_301
-                        shhhhnayy05_302.Size = UDim2.new(1, 0, 0, 20)
-                        shhhhnayy05_302.BackgroundColor3 = shhhhnayy05_44.SURF
-                        shhhhnayy05_302.BorderSizePixel = 0
-                        shhhhnayy05_302.Text = shhhhnayy05_301
-                        shhhhnayy05_302.TextColor3 = shhhhnayy05_44.TXT
-                        shhhhnayy05_302.TextSize = shhhhnayy05_71.FSS
-                        shhhhnayy05_302.Font = shhhhnayy05_36
-                        shhhhnayy05_302.ZIndex = 21
-                        shhhhnayy05_302.Parent = shhhhnayy05_298
-                        
-                        shhhhnayy05_111(shhhhnayy05_302, 4)
-                        
-                        shhhhnayy05_302.MouseButton1Click:Connect(function()
-                            -- upvalues: (ref) shhhhnayy05_296, (ref) shhhhnayy05_301, (ref) shhhhnayy05_298, (ref) shhhhnayy05_297, (ref) shhhhnayy05_285, (ref) shhhhnayy05_163, (ref) shhhhnayy05_122
-                            shhhhnayy05_296.Text = shhhhnayy05_301
-                            shhhhnayy05_298:Destroy()
-                            shhhhnayy05_297 = false
-                            shhhhnayy05_163(shhhhnayy05_285.id, {selection = shhhhnayy05_301, targetName = shhhhnayy05_122()})
-                        end)
-                    end
-                else
-                    if shhhhnayy05_298 then
-                        shhhhnayy05_298:Destroy()
-                        shhhhnayy05_298 = nil
-                    end
-                end
-            end)
-        end
-    end
-end
-
-local shhhhnayy05_303 = Instance.new("ScreenGui")
-shhhhnayy05_303.Name = "shhhhnayy05_MinimizeIcon"
-shhhhnayy05_303.ResetOnSpawn = false
-shhhhnayy05_303.DisplayOrder = 99
-shhhhnayy05_303.IgnoreGuiInset = true
-shhhhnayy05_303.Enabled = false
-shhhhnayy05_303.Parent = shhhhnayy05_12
-
-local shhhhnayy05_304 = Instance.new("Frame")
-shhhhnayy05_304.Name = "IconFrame"
-shhhhnayy05_304.Size = UDim2.new(0, 50, 0, 50)
-shhhhnayy05_304.Position = UDim2.new(0, 20, 0, 20)
-shhhhnayy05_304.BackgroundColor3 = shhhhnayy05_44.ACC
-shhhhnayy05_304.BorderSizePixel = 0
-shhhhnayy05_304.Active = true
-shhhhnayy05_304.Draggable = true
-shhhhnayy05_304.ZIndex = 100
-shhhhnayy05_304.Parent = shhhhnayy05_303
-
-local shhhhnayy05_305 = Instance.new("UICorner")
-shhhhnayy05_305.CornerRadius = UDim.new(1, 0)
-shhhhnayy05_305.Parent = shhhhnayy05_304
-
-local shhhhnayy05_306 = Instance.new("TextLabel")
-shhhhnayy05_306.Name = "IconLabel"
-shhhhnayy05_306.Size = UDim2.new(1, 0, 1, 0)
-shhhhnayy05_306.BackgroundTransparency = 1
-shhhhnayy05_306.Text = "S"
-shhhhnayy05_306.TextColor3 = Color3.new(1, 1, 1)
-shhhhnayy05_306.TextSize = 24
-shhhhnayy05_306.Font = shhhhnayy05_35
-shhhhnayy05_306.ZIndex = 101
-shhhhnayy05_306.Parent = shhhhnayy05_304
-
-shhhhnayy05_304.MouseButton1Click:Connect(function()
-    -- upvalues: (ref) shhhhnayy05_253, (ref) shhhhnayy05_303, (ref) shhhhnayy05_91
-    shhhhnayy05_253.Enabled = true
-    shhhhnayy05_303.Enabled = false
-    shhhhnayy05_91.open = true
-    shhhhnayy05_116(shhhhnayy05_254, {Position = UDim2.new(0, 20, 0, 20)}, 0.3)
-end)
-
-shhhhnayy05_260.MouseButton1Click:Connect(function()
-    -- upvalues: (ref) shhhhnayy05_253
-    shhhhnayy05_253.Enabled = false
-    shhhhnayy05_91.open = false
-end)
-
-shhhhnayy05_261.MouseButton1Click:Connect(function()
-    -- upvalues: (ref) shhhhnayy05_253, (ref) shhhhnayy05_303, (ref) shhhhnayy05_91, (ref) shhhhnayy05_254
-    shhhhnayy05_253.Enabled = false
-    shhhhnayy05_303.Enabled = true
-    shhhhnayy05_91.open = false
-    shhhhnayy05_116(shhhhnayy05_254, {Position = UDim2.new(0, 20, 0, -400)}, 0.3)
-end)
-
-shhhhnayy05_263.FocusLost:Connect(function(shhhhnayy05_307)
-    -- upvalues: (ref) shhhhnayy05_263, (ref) shhhhnayy05_269, (ref) shhhhnayy05_90, (ref) shhhhnayy05_71
-    if shhhhnayy05_307 then
-        local shhhhnayy05_308 = shhhhnayy05_263.Text:lower()
-        for shhhhnayy05_309, shhhhnayy05_310 in pairs(shhhhnayy05_269) do
-            for _, shhhhnayy05_311 in ipairs(shhhhnayy05_310:GetChildren()) do
-                if shhhhnayy05_311:IsA("Frame") then
-                    local shhhhnayy05_312 = shhhhnayy05_311:FindFirstChild("FeatureLabel")
-                    if shhhhnayy05_312 then
-                        local shhhhnayy05_313 = shhhhnayy05_312.Text:lower()
-                        shhhhnayy05_311.Visible = shhhhnayy05_313:find(shhhhnayy05_308, 1, true) ~= nil or shhhhnayy05_308 == ""
-                    end
-                end
-            end
-        end
-    end
-end)
-
-local function shhhhnayy05_314()
-    -- upvalues: (ref) shhhhnayy05_91, (ref) shhhhnayy05_279, (ref) shhhhnayy05_1
-    local shhhhnayy05_315 = shhhhnayy05_91.target
-    if shhhhnayy05_315 then
-        shhhhnayy05_279.Text = "Target: " .. shhhhnayy05_315.Name
-    elseif #shhhhnayy05_91.targets > 0 then
-        shhhhnayy05_279.Text = "Targets: " .. #shhhhnayy05_91.targets .. " players"
-    else
-        shhhhnayy05_279.Text = "Target: None"
-    end
-end
-
-local function shhhhnayy05_316(shhhhnayy05_317)
-    -- upvalues: (ref) shhhhnayy05_91, (ref) shhhhnayy05_314
-    if shhhhnayy05_317 then
-        shhhhnayy05_91.target = shhhhnayy05_317
-        table.insert(shhhhnayy05_91.targets, 1, shhhhnayy05_317)
-        if #shhhhnayy05_91.targets > 5 then
-            table.remove(shhhhnayy05_91.targets)
-        end
-    else
-        shhhhnayy05_91.target = nil
-        shhhhnayy05_91.targets = {}
-    end
-    shhhhnayy05_314()
-end
-
-local shhhhnayy05_318 = Instance.new("ScreenGui")
-shhhhnayy05_318.Name = "shhhhnayy05_PlayerList"
-shhhhnayy05_318.ResetOnSpawn = false
-shhhhnayy05_318.DisplayOrder = 101
-shhhhnayy05_318.IgnoreGuiInset = true
-shhhhnayy05_318.Enabled = false
-shhhhnayy05_318.Parent = shhhhnayy05_12
-
-local shhhhnayy05_319 = Instance.new("Frame")
-shhhhnayy05_319.Name = "ListPanel"
-shhhhnayy05_319.Size = UDim2.new(0, 200, 0, 300)
-shhhhnayy05_319.Position = UDim2.new(1, -220, 0, 20)
-shhhhnayy05_319.BackgroundColor3 = shhhhnayy05_44.BG
-shhhhnayy05_319.BorderSizePixel = 0
-shhhhnayy05_319.Active = true
-shhhhnayy05_319.Draggable = true
-shhhhnayy05_319.ZIndex = 50
-shhhhnayy05_319.Parent = shhhhnayy05_318
-
-shhhhnayy05_111(shhhhnayy05_319, 12)
-
-local shhhhnayy05_320 = Instance.new("Frame")
-shhhhnayy05_320.Name = "ListHeader"
-shhhhnayy05_320.Size = UDim2.new(1, 0, 0, 36)
-shhhhnayy05_320.BackgroundColor3 = shhhhnayy05_44.PANEL
-shhhhnayy05_320.BorderSizePixel = 0
-shhhhnayy05_320.ZIndex = 51
-shhhhnayy05_320.Parent = shhhhnayy05_319
-
-shhhhnayy05_111(shhhhnayy05_320, 12)
-
-local shhhhnayy05_321 = Instance.new("TextLabel")
-shhhhnayy05_321.Name = "ListTitle"
-shhhhnayy05_321.Size = UDim2.new(1, -40, 1, 0)
-shhhhnayy05_321.Position = UDim2.new(0, 12, 0, 0)
-shhhhnayy05_321.BackgroundTransparency = 1
-shhhhnayy05_321.Text = "Players"
-shhhhnayy05_321.TextColor3 = shhhhnayy05_44.TXT
-shhhhnayy05_321.TextSize = 16
-shhhhnayy05_321.Font = shhhhnayy05_35
-shhhhnayy05_321.TextXAlignment = Enum.TextXAlignment.Left
-shhhhnayy05_321.ZIndex = 52
-shhhhnayy05_321.Parent = shhhhnayy05_320
-
-local shhhhnayy05_322 = Instance.new("TextButton")
-shhhhnayy05_322.Name = "ListClose"
-shhhhnayy05_322.Size = UDim2.new(0, 28, 0, 28)
-shhhhnayy05_322.Position = UDim2.new(1, -34, 0, 4)
-shhhhnayy05_322.BackgroundColor3 = shhhhnayy05_44.ACC
-shhhhnayy05_322.BorderSizePixel = 0
-shhhhnayy05_322.Text = "X"
-shhhhnayy05_322.TextColor3 = Color3.new(1, 1, 1)
-shhhhnayy05_322.TextSize = 14
-shhhhnayy05_322.Font = shhhhnayy05_35
-shhhhnayy05_322.ZIndex = 52
-shhhhnayy05_322.Parent = shhhhnayy05_320
-
-shhhhnayy05_111(shhhhnayy05_322, 6)
-
-local shhhhnayy05_323 = Instance.new("ScrollingFrame")
-shhhhnayy05_323.Name = "PlayerList"
-shhhhnayy05_323.Size = UDim2.new(1, -10, 1, -46)
-shhhhnayy05_323.Position = UDim2.new(0, 5, 0, 41)
-shhhhnayy05_323.BackgroundTransparency = 1
-shhhhnayy05_323.BorderSizePixel = 0
-shhhhnayy05_323.ScrollBarThickness = 4
-shhhhnayy05_323.ScrollBarImageColor3 = shhhhnayy05_44.ACC
-shhhhnayy05_323.CanvasSize = UDim2.new(0, 0, 0, 0)
-shhhhnayy05_323.AutomaticCanvasSize = Enum.AutomaticSize.Y
-shhhhnayy05_323.ZIndex = 51
-shhhhnayy05_323.Parent = shhhhnayy05_319
-
-local shhhhnayy05_324 = shhhhnayy05_99(shhhhnayy05_323, 4)
-
-local function shhhhnayy05_325()
-    -- upvalues: (ref) shhhhnayy05_323, (ref) shhhhnayy05_44, (ref) shhhhnayy05_71, (ref) shhhhnayy05_316, (ref) shhhhnayy05_118
-    for _, shhhhnayy05_326 in ipairs(shhhhnayy05_323:GetChildren()) do
-        if shhhhnayy05_326:IsA("TextButton") then
-            shhhhnayy05_326:Destroy()
-        end
-    end
-    
-    for _, shhhhnayy05_327 in ipairs(shhhhnayy05_1:GetPlayers()) do
-        if shhhhnayy05_327 ~= shhhhnayy05_11 then
-            local shhhhnayy05_328 = Instance.new("TextButton")
-            shhhhnayy05_328.Name = "Player_" .. shhhhnayy05_327.Name
-            shhhhnayy05_328.Size = UDim2.new(1, 0, 0, 32)
-            shhhhnayy05_328.BackgroundColor3 = shhhhnayy05_44.CARD
-            shhhhnayy05_328.BorderSizePixel = 0
-            shhhhnayy05_328.Text = shhhhnayy05_327.Name
-            shhhhnayy05_328.TextColor3 = shhhhnayy05_44.TXT
-            shhhhnayy05_328.TextSize = shhhhnayy05_71.FS
-            shhhhnayy05_328.Font = shhhhnayy05_36
-            shhhhnayy05_328.ZIndex = 52
-            shhhhnayy05_328.Parent = shhhhnayy05_323
-            
-            shhhhnayy05_111(shhhhnayy05_328, 6)
-            
-            shhhhnayy05_328.MouseButton1Click:Connect(function()
-                -- upvalues: (ref) shhhhnayy05_327, (ref) shhhhnayy05_316, (ref) shhhhnayy05_118
-                shhhhnayy05_316(shhhhnayy05_327)
-                shhhhnayy05_118()
-            end)
-        end
-    end
-end
-
-shhhhnayy05_322.MouseButton1Click:Connect(function()
-    -- upvalues: (ref) shhhhnayy05_318
-    shhhhnayy05_318.Enabled = false
-end)
-
-shhhhnayy05_1.PlayerAdded:Connect(shhhhnayy05_325)
-shhhhnayy05_1.PlayerRemoving:Connect(shhhhnayy05_325)
-
-local shhhhnayy05_329 = Instance.new("TextButton")
-shhhhnayy05_329.Name = "PlayerListBtn"
-shhhhnayy05_329.Size = UDim2.new(0, 80, 0, 28)
-shhhhnayy05_329.Position = UDim2.new(0, 10, 0, 8)
-shhhhnayy05_329.BackgroundColor3 = shhhhnayy05_44.SURF
-shhhhnayy05_329.BorderSizePixel = 0
-shhhhnayy05_329.Text = "Players"
-shhhhnayy05_329.TextColor3 = shhhhnayy05_44.TXT
-shhhhnayy05_329.TextSize = 12
-shhhhnayy05_329.Font = shhhhnayy05_35
-shhhhnayy05_329.ZIndex = 12
-shhhhnayy05_329.Parent = shhhhnayy05_256
-
-shhhhnayy05_111(shhhhnayy05_329, 6)
-
-shhhhnayy05_329.MouseButton1Click:Connect(function()
-    -- upvalues: (ref) shhhhnayy05_318, (ref) shhhhnayy05_325
-    shhhhnayy05_318.Enabled = not shhhhnayy05_318.Enabled
-    if shhhhnayy05_318.Enabled then
-        shhhhnayy05_325()
-    end
-end)
-
-shhhhnayy05_325()
-
-local shhhhnayy05_330 = Instance.new("BindableFunction")
-shhhhnayy05_330.Name = "shhhhnayy05_Toggle"
-shhhhnayy05_330.Parent = shhhhnayy05_12
-
-shhhhnayy05_330.OnInvoke = function()
-    -- upvalues: (ref) shhhhnayy05_253, (ref) shhhhnayy05_303, (ref) shhhhnayy05_91, (ref) shhhhnayy05_254
-    if shhhhnayy05_253.Enabled then
-        shhhhnayy05_253.Enabled = false
-        shhhhnayy05_303.Enabled = true
-        shhhhnayy05_91.open = false
-    else
-        shhhhnayy05_253.Enabled = true
-        shhhhnayy05_303.Enabled = false
-        shhhhnayy05_91.open = true
-        shhhhnayy05_116(shhhhnayy05_254, {Position = UDim2.new(0, 20, 0, 20)}, 0.3)
-    end
-    return shhhhnayy05_91.open
-end
-
-shhhhnayy05_17.OnClientEvent:Connect(function(shhhhnayy05_331, shhhhnayy05_332)
-    -- upvalues: (ref) shhhhnayy05_239, (ref) shhhhnayy05_251, (ref) shhhhnayy05_11
-    if shhhhnayy05_331 == "announce" then
-        shhhhnayy05_239(shhhhnayy05_332.text, shhhhnayy05_332.sender, shhhhnayy05_332.senderName, shhhhnayy05_332.userId)
-    elseif shhhhnayy05_331 == "popup" then
-        shhhhnayy05_251(shhhhnayy05_332.text, shhhhnayy05_332.duration, shhhhnayy05_332.sender)
-    elseif shhhhnayy05_331 == "notify" then
-        pcall(function()
-            -- upvalues: (ref) shhhhnayy05_6, (ref) shhhhnayy05_332
-            shhhhnayy05_6:SetCore("SendNotification", {
-                Title = shhhhnayy05_332.title or "Admin",
-                Text = shhhhnayy05_332.text or "",
-                Duration = shhhhnayy05_332.duration or 3
-            })
-        end)
-    elseif shhhhnayy05_331 == "kick" then
-        shhhhnayy05_11:Kick(shhhhnayy05_332.reason or "Kicked by admin")
-    elseif shhhhnayy05_331 == "ban" then
-        shhhhnayy05_11:Kick(shhhhnayy05_332.reason or "Banned by admin")
-    end
-end)
-
-task.spawn(function()
-    -- upvalues: (ref) shhhhnayy05_30, (ref) shhhhnayy05_29, (ref) shhhhnayy05_25, (ref) shhhhnayy05_24, (ref) shhhhnayy05_22, (ref) shhhhnayy05_23
-    if not shhhhnayy05_29 and not shhhhnayy05_30 then
-        repeat
-            task.wait(0.1)
-        until shhhhnayy05_30
-    end
-    
-    if shhhhnayy05_29 then
-        shhhhnayy05_25.init()
-        shhhhnayy05_24.init()
-        
-        if shhhhnayy05_22 then
-            for shhhhnayy05_333, shhhhnayy05_334 in pairs(shhhhnayy05_22) do
-                if typeof(shhhhnayy05_334) == "function" then
-                    pcall(shhhhnayy05_334)
-                end
-            end
-        end
-        
-        if shhhhnayy05_23 then
-            shhhhnayy05_23.init()
-        end
-    end
-end)
-
-shhhhnayy05_91.open = true
-shhhhnayy05_253.Enabled = true
-
-return shhhhnayy05_330
-
+return shhhhnayy05
