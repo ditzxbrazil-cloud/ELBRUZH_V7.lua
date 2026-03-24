@@ -1,1186 +1,703 @@
---// TERRAIN BY shhhhnayy05 
---// Terrain Editor v15.0 - Flatten Mode + Custom XYZ Size + Grass/Ground Colors
---// PASTE KE EXECUTOR
+-- // TERRAIN EDITOR PRO - FINAL FIXED (NO CORAL)
+-- Diperbaiki: Syntax error, Coral dihapus, Proteksi Mobile
+
+task.wait(3) -- Tunggu game load
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
-local Terrain = Workspace:WaitForChild("Terrain")
+local Terrain = Workspace:FindFirstChildOfClass("Terrain")
+local Player = Players.LocalPlayer
 
-local LocalPlayer = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
+if not Player then
+    warn("Player belum dimuat.")
+    return
+end
 
---// MODES
-local CurrentMode = "Smooth" -- "Smooth" or "Flatten"
-local FlattenLevel = nil -- Stores Y position when flatten mode starts
+local Mouse = nil
+local success, result = pcall(function()
+    return Player:GetMouse()
+end)
 
---// GRASS COLORS
+if success then
+    Mouse = result
+else
+    warn("Gagal mengambil Mouse object.")
+end
+
+if not Terrain then
+    warn("Terrain tidak ditemukan!")
+end
+
+-- --- KONFIGURASI GLOBAL ---
+local isActive = false
+local currentTool = "Draw"
+local currentMaterial = Enum.Material.Grass
+local brushSize = Vector3.new(10, 10, 10)
+local flattenLevel = nil
+local isDrawing = false
+local GuiName = "TerrainEditorPro_Final_v1"
+
+-- --- DATA WARNA ---
 local grassColors = {
-	{name="Hijau Muda",   color=Color3.fromRGB(150,220,120)},
-	{name="Hijau Cerah",  color=Color3.fromRGB(120,200,100)},
-	{name="Hijau Normal", color=Color3.fromRGB(75,151,75)},
-	{name="Hijau Sedang", color=Color3.fromRGB(60,140,70)},
-	{name="Hijau Tua",    color=Color3.fromRGB(45,120,55)},
-	{name="Hijau Gelap",  color=Color3.fromRGB(30,100,40)},
-	{name="Hijau Lumut",  color=Color3.fromRGB(80,120,60)},
-	{name="Hijau Zamrud", color=Color3.fromRGB(50,180,100)},
-	{name="Hijau Mint",   color=Color3.fromRGB(170,230,150)},
-	{name="Hijau Daun",   color=Color3.fromRGB(70,160,80)},
-	{name="Hijau Hutan",  color=Color3.fromRGB(40,90,50)},
-	{name="Hijau Zaitun", color=Color3.fromRGB(85,107,47)},
-	{name="Hijau Pinus",  color=Color3.fromRGB(50,100,60)},
-	{name="Hijau Tropis", color=Color3.fromRGB(90,180,110)},
-	{name="Hijau Pastel", color=Color3.fromRGB(140,210,130)},
-	{name="Hijau Neon",   color=Color3.fromRGB(100,255,150)},
-	{name="Hijau Apel",   color=Color3.fromRGB(140,200,100)},
-	{name="Hijau Toska",  color=Color3.fromRGB(100,180,140)},
-	{name="Hijau Army",   color=Color3.fromRGB(70,85,50)},
-	{name="Hijau Botol",  color=Color3.fromRGB(40,70,45)}
+    {name="Hijau Muda",   color=Color3.fromRGB(150,220,120)},
+    {name="Hijau Cerah",  color=Color3.fromRGB(120,200,100)},
+    {name="Hijau Normal", color=Color3.fromRGB(75,151,75)},
+    {name="Hijau Sedang", color=Color3.fromRGB(60,140,70)},
+    {name="Hijau Tua",    color=Color3.fromRGB(45,120,55)},
+    {name="Hijau Gelap",  color=Color3.fromRGB(30,100,40)},
+    {name="Hijau Lumut",  color=Color3.fromRGB(80,120,60)},
+    {name="Hijau Zamrud", color=Color3.fromRGB(50,180,100)},
+    {name="Hijau Mint",   color=Color3.fromRGB(170,230,150)},
+    {name="Hijau Daun",   color=Color3.fromRGB(70,160,80)},
+    {name="Hijau Hutan",  color=Color3.fromRGB(40,90,50)},
+    {name="Hijau Zaitun", color=Color3.fromRGB(85,107,47)},
+    {name="Hijau Pinus",  color=Color3.fromRGB(50,100,60)},
+    {name="Hijau Tropis", color=Color3.fromRGB(90,180,110)},
+    {name="Hijau Pastel", color=Color3.fromRGB(140,210,130)},
+    {name="Hijau Neon",   color=Color3.fromRGB(100,255,150)},
+    {name="Hijau Apel",   color=Color3.fromRGB(140,200,100)},
+    {name="Hijau Toska",  color=Color3.fromRGB(100,180,140)},
+    {name="Hijau Army",   color=Color3.fromRGB(70,85,50)},
+    {name="Hijau Botol",  color=Color3.fromRGB(40,70,45)}
 }
 local currentGrassColorIndex = 3
 
---// GROUND COLORS
 local groundColors = {
-	{name="Coklat Muda",   color=Color3.fromRGB(160,120,80)},
-	{name="Coklat Normal", color=Color3.fromRGB(120,85,50)},
-	{name="Coklat Tanah",  color=Color3.fromRGB(102,92,59)},
-	{name="Coklat Tua",    color=Color3.fromRGB(75,55,30)},
-	{name="Coklat Gelap",  color=Color3.fromRGB(50,35,15)},
+    {name="Coklat Muda",   color=Color3.fromRGB(160,120,80)},
+    {name="Coklat Normal", color=Color3.fromRGB(120,85,50)},
+    {name="Coklat Tanah",  color=Color3.fromRGB(102,92,59)},
+    {name="Coklat Tua",    color=Color3.fromRGB(75,55,30)},
+    {name="Coklat Gelap",  color=Color3.fromRGB(50,35,15)},
 }
 local currentGroundColorIndex = 2
 
---// Materials
-local Materials = {
-    {Name = "Grass", Color = Color3.fromRGB(86, 125, 70), Mat = Enum.Material.Grass},
-    {Name = "Rock", Color = Color3.fromRGB(102, 102, 102), Mat = Enum.Material.Rock},
-    {Name = "Sand", Color = Color3.fromRGB(234, 203, 154), Mat = Enum.Material.Sand},
-    {Name = "Water", Color = Color3.fromRGB(15, 82, 186), Mat = Enum.Material.Water},
-    {Name = "Snow", Color = Color3.fromRGB(255, 255, 255), Mat = Enum.Material.Snow},
-    {Name = "Mud", Color = Color3.fromRGB(86, 66, 54), Mat = Enum.Material.Mud},
-    {Name = "Ground", Color = Color3.fromRGB(112, 85, 63), Mat = Enum.Material.Ground},
-    {Name = "Asphalt", Color = Color3.fromRGB(80, 80, 80), Mat = Enum.Material.Asphalt},
-    {Name = "Brick", Color = Color3.fromRGB(150, 75, 60), Mat = Enum.Material.Brick},
-    {Name = "Wood", Color = Color3.fromRGB(139, 109, 79), Mat = Enum.Material.WoodPlanks},
-    {Name = "Concrete", Color = Color3.fromRGB(127, 127, 127), Mat = Enum.Material.Concrete},
-    {Name = "Ice", Color = Color3.fromRGB(200, 230, 255), Mat = Enum.Material.Ice}
+local leafyGrassColors = {
+    {name="Daun Cerah", color=Color3.fromRGB(100,180,80)},
+    {name="Daun Normal", color=Color3.fromRGB(60,130,60)},
+    {name="Daun Tua", color=Color3.fromRGB(30,80,30)},
+    {name="Daun Kuning", color=Color3.fromRGB(180,160,50)},
+    {name="Daun Musim Gugur", color=Color3.fromRGB(150,70,30)},
 }
+local currentLeafyColorIndex = 2
 
---// State
-local CurrentMaterial = Materials[1]
-local CurrentShape = "Ball"
-local SizeX, SizeY, SizeZ = 6, 6, 6
-local PreviewPos = nil
-local PreviewPart = nil
-local SpawnedData = {}
-local UndoHistory = {}
-local RedoHistory = {}
+local rockColors = {
+    {name="Abu Batu", color=Color3.fromRGB(100,100,100)},
+    {name="Hitam Arang", color=Color3.fromRGB(40,40,40)},
+    {name="Putih Kapur", color=Color3.fromRGB(200,200,200)},
+    {name="Merah Bata", color=Color3.fromRGB(120,60,50)},
+    {name="Coklat Batu", color=Color3.fromRGB(80,60,40)},
+}
+local currentRockColorIndex = 1
 
---// Raycast
-local function GetRaycast()
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    local ray = Camera:ViewportPointToRay(center.X, center.Y)
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Blacklist
-    if PreviewPart then params.FilterDescendantsInstances = {PreviewPart} end
-    return Workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+-- --- DAFTAR MATERIAL TERRAIN (CORAL DIHAPUS) ---
+local materialList = {
+    {Enum.Material.Grass, "Grass"},
+    {Enum.Material.Ground, "Ground"},
+    {Enum.Material.LeafyGrass, "LeafyGrass"},
+    {Enum.Material.Rock, "Rock"},
+    {Enum.Material.Sand, "Sand"},
+    {Enum.Material.Concrete, "Concrete"},
+    {Enum.Material.Ice, "Ice"},
+    {Enum.Material.Mud, "Mud"},
+    {Enum.Material.Basalt, "Basalt"},
+    {Enum.Material.CrackedLava, "CrackedLava"},
+    {Enum.Material.Glacier, "Glacier"},
+    {Enum.Material.Slate, "Slate"},
+    {Enum.Material.Cobblestone, "Cobblestone"},
+    {Enum.Material.Asphalt, "Asphalt"},
+    {Enum.Material.Limestone, "Limestone"},
+    {Enum.Material.Granite, "Granite"},
+    {Enum.Material.Marble, "Marble"},
+    {Enum.Material.Sandstone, "Sandstone"},
+    {Enum.Material.Brick, "Brick"},
+    -- {Enum.Material.Coral, "Coral"},  <-- DIHAPUS KARENA TIDAK VALID
+    {Enum.Material.WoodPlanks, "WoodPlanks"},
+    {Enum.Material.Pavement, "Pavement"},
+    {Enum.Material.Water, "Water"},
+    {Enum.Material.Air, "Air"},
+}
+local currentMaterialIndex = 1
+
+-- --- CLEANUP GUI LAMA ---
+local oldGui = Player:FindFirstChild(GuiName)
+if oldGui then
+    oldGui:Destroy()
 end
 
---// Create Preview
-local function CreatePreview()
-    if PreviewPart then PreviewPart:Destroy() end
-    PreviewPart = Instance.new("Part")
-    PreviewPart.Shape = CurrentShape == "Ball" and Enum.PartType.Ball or Enum.PartType.Block
-    PreviewPart.Material = Enum.Material.ForceField
-    PreviewPart.Color = Color3.fromRGB(255, 255, 255)
-    PreviewPart.Transparency = 0.7
-    PreviewPart.CanCollide = false
-    PreviewPart.Anchored = true
-    PreviewPart.CastShadow = false
-    PreviewPart.Parent = Workspace
-end
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = GuiName
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 
---// Update Preview
-local function UpdatePreview()
-    if not PreviewPart then CreatePreview() end
-    local result = GetRaycast()
-    if result then
-        PreviewPos = result.Position
-        if CurrentShape == "Ball" then
-            PreviewPart.Shape = Enum.PartType.Ball
-            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
-        else
-            PreviewPart.Shape = Enum.PartType.Block
-            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
-        end
-        
-        -- Show flatten level if in flatten mode
-        if CurrentMode == "Flatten" and FlattenLevel then
-            PreviewPart.Position = Vector3.new(PreviewPos.X, FlattenLevel, PreviewPos.Z)
-            PreviewPart.Color = Color3.fromRGB(255, 200, 100) -- Orange tint for flatten mode
-        else
-            PreviewPart.Position = PreviewPos
-            PreviewPart.Color = Color3.fromRGB(255, 255, 255)
-        end
-        PreviewPart.Transparency = 0.65
-    else
-        PreviewPart.Transparency = 1
-    end
-end
+-- --- 1. TOMBOL ON/OFF ---
+local toggleButton = Instance.new("TextButton")
+toggleButton.Text = "ON"
+toggleButton.Size = UDim2.new(0, 70, 0, 70)
+toggleButton.Position = UDim2.new(1, -80, 1, -80)
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+toggleButton.Font = Enum.Font.GothamBlack
+toggleButton.TextSize = 20
+toggleButton.TextColor3 = Color3.white
+toggleButton.BorderSizePixel = 0
+toggleButton.Parent = ScreenGui
 
---// Apply Material Colors
-local function ApplyMaterialColors()
-    pcall(function()
-        Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[currentGrassColorIndex].color)
-    end)
-    pcall(function()
-        Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[currentGroundColorIndex].color)
-    end)
-end
-
---// BL Function
-local function BL(d)
-    local pos = Vector3.new(d[1], d[2], d[3])
-    local sx, sy, sz = d[4], d[5], d[6]
-    local matName = d[7]
-    local shape = d[8] or "Ball"
-    local mode = d[9] or "Smooth"
-    local flattenY = d[10]
-    
-    local mat = Enum.Material.Grass
-    for _, m in ipairs(Materials) do
-        if m.Name == matName then mat = m.Mat break end
-    end
-    
-    ApplyMaterialColors()
-    
-    if mode == "Flatten" and flattenY then
-        -- Flatten mode: FillBlock at locked Y level
-        local sizeVec = Vector3.new(sx, 4, sz)
-        Terrain:FillBlock(CFrame.new(pos.X, flattenY, pos.Z), sizeVec, mat)
-    elseif shape == "Block" then
-        local sizeVec = Vector3.new(sx, sy, sz)
-        Terrain:FillBlock(CFrame.new(pos), sizeVec, mat)
-    else
-        Terrain:FillBall(pos, math.max(sx, sy, sz)/2, mat)
-    end
-    
-    return d
-end
-
---// Spawn Terrain
-local function SpawnTerrain()
-    if not PreviewPos then return false end
-    
-    local data
-    if CurrentMode == "Flatten" then
-        -- Initialize FlattenLevel if not set
-        if not FlattenLevel then
-            FlattenLevel = PreviewPos.Y
-        end
-        
-        data = {
-            math.floor(PreviewPos.X),
-            math.floor(FlattenLevel),
-            math.floor(PreviewPos.Z),
-            SizeX, 4, SizeZ, -- Y is fixed to 4 for flatten
-            CurrentMaterial.Name,
-            "Block", -- Flatten always uses Block
-            "Flatten",
-            FlattenLevel
-        }
-    else
-        -- Smooth mode (normal)
-        data = {
-            math.floor(PreviewPos.X),
-            math.floor(PreviewPos.Y),
-            math.floor(PreviewPos.Z),
-            SizeX, SizeY, SizeZ,
-            CurrentMaterial.Name,
-            CurrentShape,
-            "Smooth"
-        }
-    end
-    
-    BL(data)
-    table.insert(UndoHistory, data)
-    RedoHistory = {}
-    table.insert(SpawnedData, data)
-    return true
-end
-
---// Reset Flatten Level
-local function ResetFlattenLevel()
-    FlattenLevel = nil
-end
-
---// UNDO
-local function Undo()
-    if #UndoHistory == 0 then return false, "Nothing to undo" end
-    local lastData = table.remove(UndoHistory)
-    table.insert(RedoHistory, lastData)
-    for i = #SpawnedData, 1, -1 do
-        local d = SpawnedData[i]
-        if d[1] == lastData[1] and d[2] == lastData[2] and d[3] == lastData[3] then
-            table.remove(SpawnedData, i)
-            break
-        end
-    end
-    Terrain:Clear()
-    for _, d in ipairs(SpawnedData) do BL(d) end
-    return true, "Undone 1 terrain"
-end
-
---// REDO
-local function Redo()
-    if #RedoHistory == 0 then return false, "Nothing to redo" end
-    local data = table.remove(RedoHistory)
-    table.insert(UndoHistory, data)
-    table.insert(SpawnedData, data)
-    BL(data)
-    return true, "Redone 1 terrain"
-end
-
---// Generate Script
-local function GenerateScript()
-    if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
-    local code = "--// Terrain Spawn Script by shhhhnayy05\n--// Total: " .. #SpawnedData .. " terrains\n\n"
-    code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
-    code = code .. "local function BL(d)\n"
-    code = code .. "    local pos = Vector3.new(d[1], d[2], d[3])\n"
-    code = code .. "    local mats = {Grass=Enum.Material.Grass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Brick=Enum.Material.Brick,Wood=Enum.Material.WoodPlanks,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice}\n"
-    code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
-    code = code .. "    local mode = d[9] or 'Smooth'\n"
-    code = code .. "    local flattenY = d[10]\n"
-    code = code .. "    if mode == 'Flatten' and flattenY then\n"
-    code = code .. "        Terrain:FillBlock(CFrame.new(pos.X, flattenY, pos.Z), Vector3.new(d[4], 4, d[6]), mat)\n"
-    code = code .. "    elseif d[8] == 'Block' then\n"
-    code = code .. "        Terrain:FillBlock(CFrame.new(pos), Vector3.new(d[4], d[5], d[6]), mat)\n"
-    code = code .. "    else\n"
-    code = code .. "        Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat)\n"
-    code = code .. "    end\n"
-    code = code .. "end\n\n"
-    
-    local batchSize = 20
-    local numBatches = math.ceil(#SpawnedData / batchSize)
-    for b = 1, numBatches do
-        code = code .. "for _,d in ipairs({"
-        local startIdx = (b-1) * batchSize + 1
-        local endIdx = math.min(b * batchSize, #SpawnedData)
-        for i = startIdx, endIdx do
-            local d = SpawnedData[i]
-            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "','" .. (d[9] or "Smooth") .. "'"
-            if d[10] then
-                code = code .. "," .. tostring(d[10])
-            else
-                code = code .. ",nil"
-            end
-            code = code .. "}"
-            if i < endIdx then code = code .. "," end
-        end
-        code = code .. "})do BL(d)end\n"
-    end
-    code = code .. "\nprint('[Terrain by shhhhnayy05] " .. #SpawnedData .. " blocks spawned!')"
-    return code
-end
-
---// GUI
-local gui = Instance.new("ScreenGui")
-gui.Name = "shhhhnayy05TerrainEditor"
-gui.ResetOnSpawn = false
-gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
---// Crosshair
-local ch = Instance.new("Frame")
-ch.Size = UDim2.new(0, 20, 0, 20)
-ch.Position = UDim2.new(0.5, -10, 0.5, -10)
-ch.BackgroundTransparency = 1
-ch.Parent = gui
-
-local dot = Instance.new("Frame")
-dot.Size = UDim2.new(0, 4, 0, 4)
-dot.Position = UDim2.new(0.5, -2, 0.5, -2)
-dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-dot.BorderSizePixel = 0
-dot.Parent = ch
-Instance.new("UICorner").Parent = dot
-
---// ===== MODE TOGGLE BUTTON (TOP LEFT) =====
-local modeBtn = Instance.new("TextButton")
-modeBtn.Name = "ModeBtn"
-modeBtn.Size = UDim2.new(0, 50, 0, 50)
-modeBtn.Position = UDim2.new(0, 4, 0, 50)
-modeBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-modeBtn.Text = "🟢\nSMOOTH"
-modeBtn.TextSize = 10
-modeBtn.Font = Enum.Font.GothamBlack
-modeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-modeBtn.Parent = gui
-Instance.new("UICorner", modeBtn).CornerRadius = UDim.new(1, 0)
-
-local modeStroke = Instance.new("UIStroke", modeBtn)
-modeStroke.Color = Color3.fromRGB(255, 255, 255)
-modeStroke.Thickness = 3
-
---// Spawn Button (Below Mode)
-local spawnBtn = Instance.new("TextButton")
-spawnBtn.Name = "SpawnBtn"
-spawnBtn.Size = UDim2.new(0, 50, 0, 50)
-spawnBtn.Position = UDim2.new(0, 4, 0, 105)
-spawnBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-spawnBtn.Text = "🎯"
-spawnBtn.TextSize = 30
-spawnBtn.Font = Enum.Font.GothamBlack
-spawnBtn.Parent = gui
-Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(1, 0)
-
-local spawnStroke = Instance.new("UIStroke", spawnBtn)
-spawnStroke.Color = Color3.fromRGB(255, 255, 255)
-spawnStroke.Thickness = 3
-
---// Minimize Icon
-local minIcon = Instance.new("TextButton")
-minIcon.Name = "MinIcon"
-minIcon.Size = UDim2.new(0, 45, 0, 45)
-minIcon.Position = UDim2.new(0, 6, 0, 160)
-minIcon.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-minIcon.Text = "⚙️"
-minIcon.TextSize = 22
-minIcon.Font = Enum.Font.GothamBold
-minIcon.Visible = false
-minIcon.Active = true
-minIcon.Parent = gui
-Instance.new("UICorner", minIcon).CornerRadius = UDim.new(1, 0)
-
-local minIconStroke = Instance.new("UIStroke", minIcon)
-minIconStroke.Color = Color3.fromRGB(255, 255, 255)
-minIconStroke.Thickness = 2
-
---// ===== KANAN: MAIN PANEL =====
+-- --- 2. PANEL UTAMA ---
 local panel = Instance.new("Frame")
 panel.Name = "MainPanel"
-panel.Size = UDim2.new(0, 280, 0, 450)
-panel.Position = UDim2.new(1, -285, 1, -480)
-panel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+panel.Size = UDim2.new(0, 280, 0, 420)
+panel.Position = UDim2.new(1, -285, 1, -420)
+panel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 panel.BorderSizePixel = 0
-panel.Parent = gui
-Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
+panel.Visible = false
+panel.Parent = ScreenGui
 
-local panelStroke = Instance.new("UIStroke", panel)
-panelStroke.Color = Color3.fromRGB(0, 150, 255)
-panelStroke.Thickness = 2
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 45)
+header.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+header.Parent = panel
 
---// Title Bar
-local titleBar = Instance.new("Frame")
-titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 35)
-titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-titleBar.BorderSizePixel = 0
-titleBar.Parent = panel
-Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
+local title = Instance.new("TextLabel")
+title.Text = "Terrain Editor"
+title.Size = UDim2.new(1, -50, 1, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.white
+title.Parent = header
 
-local titleText = Instance.new("TextLabel")
-titleText.Size = UDim2.new(1, -80, 1, 0)
-titleText.Position = UDim2.new(0, 10, 0, 0)
-titleText.BackgroundTransparency = 1
-titleText.Text = "⚙️ Terrain Editor shhhhnayy05"
-titleText.TextColor3 = Color3.fromRGB(0, 200, 255)
-titleText.TextSize = 14
-titleText.Font = Enum.Font.GothamBold
-titleText.TextXAlignment = Enum.TextXAlignment.Left
-titleText.Parent = titleBar
-
---// Minimize Button
-local minBtn = Instance.new("TextButton")
-minBtn.Name = "MinBtn"
-minBtn.Size = UDim2.new(0, 28, 0, 28)
-minBtn.Position = UDim2.new(1, -65, 0.5, -14)
-minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-minBtn.Text = "−"
-minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minBtn.TextSize = 18
-minBtn.Font = Enum.Font.GothamBold
-minBtn.Parent = titleBar
-Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
-
---// Close Button
 local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "CloseBtn"
-closeBtn.Size = UDim2.new(0, 28, 0, 28)
-closeBtn.Position = UDim2.new(1, -33, 0.5, -14)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextSize = 14
+closeBtn.Size = UDim2.new(0, 50, 1, 0)
+closeBtn.Position = UDim2.new(1, -50, 0, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 closeBtn.Font = Enum.Font.GothamBold
-closeBtn.Parent = titleBar
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+closeBtn.TextSize = 20
+closeBtn.TextColor3 = Color3.white
+closeBtn.Parent = header
 
---// Scroll Frame
-local scroll = Instance.new("ScrollingFrame")
-scroll.Name = "Scroll"
-scroll.Size = UDim2.new(1, -8, 1, -42)
-scroll.Position = UDim2.new(0, 4, 0, 38)
-scroll.BackgroundTransparency = 1
-scroll.ScrollBarThickness = 3
-scroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
-scroll.Parent = panel
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(1, -10, 1, -55)
+scrollFrame.Position = UDim2.new(0, 5, 0, 50)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+scrollFrame.ScrollBarThickness = 6
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollFrame.Parent = panel
 
-local layout = Instance.new("UIListLayout", scroll)
+local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 8)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = scrollFrame
 
---// Status
-local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -8, 0, 20)
-status.BackgroundTransparency = 1
-status.Text = "Mode: Smooth | Aim & tap 🎯 to spawn"
-status.TextColor3 = Color3.fromRGB(0, 255, 150)
-status.TextSize = 11
-status.Font = Enum.Font.Gotham
-status.Parent = scroll
+local padding = Instance.new("UIPadding")
+padding.PaddingTop = UDim.new(0, 10)
+padding.PaddingBottom = UDim.new(0, 10)
+padding.Parent = scrollFrame
 
---// MODE SECTION (NEW - AT TOP)
-local modeSec = Instance.new("Frame")
-modeSec.Size = UDim2.new(1, -8, 0, 60)
-modeSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-modeSec.BorderSizePixel = 0
-modeSec.Parent = scroll
-Instance.new("UICorner", modeSec).CornerRadius = UDim.new(0, 8)
+-- --- FUNGSI HELPER UI ---
+local function createLabel(text, order, parent)
+    local lbl = Instance.new("TextLabel")
+    lbl.Text = text
+    lbl.Size = UDim2.new(1, -20, 0, 20)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 14
+    lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = order
+    lbl.Parent = parent
+    return lbl
+end
 
-local modeTitle = Instance.new("TextLabel")
-modeTitle.Size = UDim2.new(1, 0, 0, 20)
-modeTitle.Position = UDim2.new(0, 0, 0, 3)
-modeTitle.BackgroundTransparency = 1
-modeTitle.Text = "🔧 Mode"
-modeTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-modeTitle.TextSize = 12
-modeTitle.Font = Enum.Font.GothamBold
-modeTitle.Parent = modeSec
-
-local smoothBtn = Instance.new("TextButton")
-smoothBtn.Size = UDim2.new(0.48, 0, 0, 30)
-smoothBtn.Position = UDim2.new(0.01, 0, 0, 28)
-smoothBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-smoothBtn.Text = "🟢 Smooth"
-smoothBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-smoothBtn.TextSize = 12
-smoothBtn.Font = Enum.Font.GothamBold
-smoothBtn.Parent = modeSec
-Instance.new("UICorner", smoothBtn).CornerRadius = UDim.new(0, 6)
-
-local flattenBtn = Instance.new("TextButton")
-flattenBtn.Size = UDim2.new(0.48, 0, 0, 30)
-flattenBtn.Position = UDim2.new(0.51, 0, 0, 28)
-flattenBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-flattenBtn.Text = "🟠 Flatten"
-flattenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-flattenBtn.TextSize = 12
-flattenBtn.Font = Enum.Font.GothamBold
-flattenBtn.Parent = modeSec
-Instance.new("UICorner", flattenBtn).CornerRadius = UDim.new(0, 6)
-
---// SHAPE SECTION
-local shapeSec = Instance.new("Frame")
-shapeSec.Size = UDim2.new(1, -8, 0, 60)
-shapeSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-shapeSec.BorderSizePixel = 0
-shapeSec.Parent = scroll
-Instance.new("UICorner", shapeSec).CornerRadius = UDim.new(0, 8)
-
-local shapeTitle = Instance.new("TextLabel")
-shapeTitle.Size = UDim2.new(1, 0, 0, 20)
-shapeTitle.Position = UDim2.new(0, 0, 0, 3)
-shapeTitle.BackgroundTransparency = 1
-shapeTitle.Text = "🔷 Shape"
-shapeTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-shapeTitle.TextSize = 12
-shapeTitle.Font = Enum.Font.GothamBold
-shapeTitle.Parent = shapeSec
-
-local ballBtn = Instance.new("TextButton")
-ballBtn.Size = UDim2.new(0.48, 0, 0, 30)
-ballBtn.Position = UDim2.new(0.01, 0, 0, 28)
-ballBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-ballBtn.Text = "Ball"
-ballBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ballBtn.TextSize = 12
-ballBtn.Font = Enum.Font.GothamBold
-ballBtn.Parent = shapeSec
-Instance.new("UICorner", ballBtn).CornerRadius = UDim.new(0, 6)
-
-local blockBtn = Instance.new("TextButton")
-blockBtn.Size = UDim2.new(0.48, 0, 0, 30)
-blockBtn.Position = UDim2.new(0.51, 0, 0, 28)
-blockBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-blockBtn.Text = "Block"
-blockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-blockBtn.TextSize = 12
-blockBtn.Font = Enum.Font.GothamBold
-blockBtn.Parent = shapeSec
-Instance.new("UICorner", blockBtn).CornerRadius = UDim.new(0, 6)
-
---// SIZE XYZ SECTION
-local sizeSec = Instance.new("Frame")
-sizeSec.Size = UDim2.new(1, -8, 0, 110)
-sizeSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-sizeSec.BorderSizePixel = 0
-sizeSec.Parent = scroll
-Instance.new("UICorner", sizeSec).CornerRadius = UDim.new(0, 8)
-
-local sizeTitle = Instance.new("TextLabel")
-sizeTitle.Size = UDim2.new(1, 0, 0, 20)
-sizeTitle.Position = UDim2.new(0, 0, 0, 3)
-sizeTitle.BackgroundTransparency = 1
-sizeTitle.Text = "📐 Size (X-Y-Z)"
-sizeTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-sizeTitle.TextSize = 12
-sizeTitle.Font = Enum.Font.GothamBold
-sizeTitle.Parent = sizeSec
-
---// X Size
-local xLabel = Instance.new("TextLabel")
-xLabel.Size = UDim2.new(0, 20, 0, 22)
-xLabel.Position = UDim2.new(0, 8, 0, 28)
-xLabel.BackgroundTransparency = 1
-xLabel.Text = "X:"
-xLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-xLabel.TextSize = 12
-xLabel.Font = Enum.Font.GothamBold
-xLabel.Parent = sizeSec
-
-local xMinus = Instance.new("TextButton")
-xMinus.Size = UDim2.new(0, 35, 0, 22)
-xMinus.Position = UDim2.new(0, 28, 0, 28)
-xMinus.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-xMinus.Text = "-"
-xMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
-xMinus.TextSize = 16
-xMinus.Font = Enum.Font.GothamBold
-xMinus.Parent = sizeSec
-Instance.new("UICorner", xMinus).CornerRadius = UDim.new(0, 4)
-
-local xValue = Instance.new("TextLabel")
-xValue.Size = UDim2.new(0, 40, 0, 22)
-xValue.Position = UDim2.new(0, 67, 0, 28)
-xValue.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-xValue.Text = tostring(SizeX)
-xValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-xValue.TextSize = 12
-xValue.Font = Enum.Font.GothamBold
-xValue.Parent = sizeSec
-Instance.new("UICorner", xValue).CornerRadius = UDim.new(0, 4)
-
-local xPlus = Instance.new("TextButton")
-xPlus.Size = UDim2.new(0, 35, 0, 22)
-xPlus.Position = UDim2.new(0, 110, 0, 28)
-xPlus.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-xPlus.Text = "+"
-xPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
-xPlus.TextSize = 16
-xPlus.Font = Enum.Font.GothamBold
-xPlus.Parent = sizeSec
-Instance.new("UICorner", xPlus).CornerRadius = UDim.new(0, 4)
-
---// Y Size
-local yLabel = Instance.new("TextLabel")
-yLabel.Size = UDim2.new(0, 20, 0, 22)
-yLabel.Position = UDim2.new(0, 8, 0, 54)
-yLabel.BackgroundTransparency = 1
-yLabel.Text = "Y:"
-yLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-yLabel.TextSize = 12
-yLabel.Font = Enum.Font.GothamBold
-yLabel.Parent = sizeSec
-
-local yMinus = Instance.new("TextButton")
-yMinus.Size = UDim2.new(0, 35, 0, 22)
-yMinus.Position = UDim2.new(0, 28, 0, 54)
-yMinus.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-yMinus.Text = "-"
-yMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
-yMinus.TextSize = 16
-yMinus.Font = Enum.Font.GothamBold
-yMinus.Parent = sizeSec
-Instance.new("UICorner", yMinus).CornerRadius = UDim.new(0, 4)
-
-local yValue = Instance.new("TextLabel")
-yValue.Size = UDim2.new(0, 40, 0, 22)
-yValue.Position = UDim2.new(0, 67, 0, 54)
-yValue.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-yValue.Text = tostring(SizeY)
-yValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-yValue.TextSize = 12
-yValue.Font = Enum.Font.GothamBold
-yValue.Parent = sizeSec
-Instance.new("UICorner", yValue).CornerRadius = UDim.new(0, 4)
-
-local yPlus = Instance.new("TextButton")
-yPlus.Size = UDim2.new(0, 35, 0, 22)
-yPlus.Position = UDim2.new(0, 110, 0, 54)
-yPlus.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-yPlus.Text = "+"
-yPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
-yPlus.TextSize = 16
-yPlus.Font = Enum.Font.GothamBold
-yPlus.Parent = sizeSec
-Instance.new("UICorner", yPlus).CornerRadius = UDim.new(0, 4)
-
---// Z Size
-local zLabel = Instance.new("TextLabel")
-zLabel.Size = UDim2.new(0, 20, 0, 22)
-zLabel.Position = UDim2.new(0, 8, 0, 80)
-zLabel.BackgroundTransparency = 1
-zLabel.Text = "Z:"
-zLabel.TextColor3 = Color3.fromRGB(100, 100, 255)
-zLabel.TextSize = 12
-zLabel.Font = Enum.Font.GothamBold
-zLabel.Parent = sizeSec
-
-local zMinus = Instance.new("TextButton")
-zMinus.Size = UDim2.new(0, 35, 0, 22)
-zMinus.Position = UDim2.new(0, 28, 0, 80)
-zMinus.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-zMinus.Text = "-"
-zMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
-zMinus.TextSize = 16
-zMinus.Font = Enum.Font.GothamBold
-zMinus.Parent = sizeSec
-Instance.new("UICorner", zMinus).CornerRadius = UDim.new(0, 4)
-
-local zValue = Instance.new("TextLabel")
-zValue.Size = UDim2.new(0, 40, 0, 22)
-zValue.Position = UDim2.new(0, 67, 0, 80)
-zValue.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-zValue.Text = tostring(SizeZ)
-zValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-zValue.TextSize = 12
-zValue.Font = Enum.Font.GothamBold
-zValue.Parent = sizeSec
-Instance.new("UICorner", zValue).CornerRadius = UDim.new(0, 4)
-
-local zPlus = Instance.new("TextButton")
-zPlus.Size = UDim2.new(0, 35, 0, 22)
-zPlus.Position = UDim2.new(0, 110, 0, 80)
-zPlus.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-zPlus.Text = "+"
-zPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
-zPlus.TextSize = 16
-zPlus.Font = Enum.Font.GothamBold
-zPlus.Parent = sizeSec
-Instance.new("UICorner", zPlus).CornerRadius = UDim.new(0, 4)
-
---// Preset Size Buttons
-local presetLabel = Instance.new("TextLabel")
-presetLabel.Size = UDim2.new(0, 50, 0, 20)
-presetLabel.Position = UDim2.new(0, 155, 0, 28)
-presetLabel.BackgroundTransparency = 1
-presetLabel.Text = "Preset:"
-presetLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-presetLabel.TextSize = 10
-presetLabel.Font = Enum.Font.Gotham
-presetLabel.Parent = sizeSec
-
-local preset4 = Instance.new("TextButton")
-preset4.Size = UDim2.new(0, 35, 0, 22)
-preset4.Position = UDim2.new(0, 155, 0, 48)
-preset4.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-preset4.Text = "4"
-preset4.TextColor3 = Color3.fromRGB(255, 255, 255)
-preset4.TextSize = 12
-preset4.Font = Enum.Font.GothamBold
-preset4.Parent = sizeSec
-Instance.new("UICorner", preset4).CornerRadius = UDim.new(0, 4)
-
-local preset6 = Instance.new("TextButton")
-preset6.Size = UDim2.new(0, 35, 0, 22)
-preset6.Position = UDim2.new(0, 193, 0, 48)
-preset6.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
-preset6.Text = "6"
-preset6.TextColor3 = Color3.fromRGB(255, 255, 255)
-preset6.TextSize = 12
-preset6.Font = Enum.Font.GothamBold
-preset6.Parent = sizeSec
-Instance.new("UICorner", preset6).CornerRadius = UDim.new(0, 4)
-
-local preset8 = Instance.new("TextButton")
-preset8.Size = UDim2.new(0, 35, 0, 22)
-preset8.Position = UDim2.new(0, 231, 0, 48)
-preset8.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-preset8.Text = "8"
-preset8.TextColor3 = Color3.fromRGB(255, 255, 255)
-preset8.TextSize = 12
-preset8.Font = Enum.Font.GothamBold
-preset8.Parent = sizeSec
-Instance.new("UICorner", preset8).CornerRadius = UDim.new(0, 4)
-
-local preset10 = Instance.new("TextButton")
-preset10.Size = UDim2.new(0, 35, 0, 22)
-preset10.Position = UDim2.new(0, 155, 0, 73)
-preset10.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-preset10.Text = "10"
-preset10.TextColor3 = Color3.fromRGB(255, 255, 255)
-preset10.TextSize = 11
-preset10.Font = Enum.Font.GothamBold
-preset10.Parent = sizeSec
-Instance.new("UICorner", preset10).CornerRadius = UDim.new(0, 4)
-
-local preset12 = Instance.new("TextButton")
-preset12.Size = UDim2.new(0, 35, 0, 22)
-preset12.Position = UDim2.new(0, 193, 0, 73)
-preset12.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-preset12.Text = "12"
-preset12.TextColor3 = Color3.fromRGB(255, 255, 255)
-preset12.TextSize = 11
-preset12.Font = Enum.Font.GothamBold
-preset12.Parent = sizeSec
-Instance.new("UICorner", preset12).CornerRadius = UDim.new(0, 4)
-
-local preset16 = Instance.new("TextButton")
-preset16.Size = UDim2.new(0, 35, 0, 22)
-preset16.Position = UDim2.new(0, 231, 0, 73)
-preset16.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-preset16.Text = "16"
-preset16.TextColor3 = Color3.fromRGB(255, 255, 255)
-preset16.TextSize = 11
-preset16.Font = Enum.Font.GothamBold
-preset16.Parent = sizeSec
-Instance.new("UICorner", preset16).CornerRadius = UDim.new(0, 4)
-
---// UNDO/REDO SECTION
-local undoSec = Instance.new("Frame")
-undoSec.Size = UDim2.new(1, -8, 0, 45)
-undoSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-undoSec.BorderSizePixel = 0
-undoSec.Parent = scroll
-Instance.new("UICorner", undoSec).CornerRadius = UDim.new(0, 8)
-
-local undoBtn = Instance.new("TextButton")
-undoBtn.Size = UDim2.new(0.48, 0, 0, 32)
-undoBtn.Position = UDim2.new(0.01, 0, 0.5, -16)
-undoBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-undoBtn.Text = "↩️ Undo"
-undoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-undoBtn.TextSize = 12
-undoBtn.Font = Enum.Font.GothamBold
-undoBtn.Parent = undoSec
-Instance.new("UICorner", undoBtn).CornerRadius = UDim.new(0, 6)
-
-local redoBtn = Instance.new("TextButton")
-redoBtn.Size = UDim2.new(0.48, 0, 0, 32)
-redoBtn.Position = UDim2.new(0.51, 0, 0.5, -16)
-redoBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
-redoBtn.Text = "↪️ Redo"
-redoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-redoBtn.TextSize = 12
-redoBtn.Font = Enum.Font.GothamBold
-redoBtn.Parent = undoSec
-Instance.new("UICorner", redoBtn).CornerRadius = UDim.new(0, 6)
-
---// MATERIALS SECTION
-local matSec = Instance.new("Frame")
-matSec.Size = UDim2.new(1, -8, 0, 85)
-matSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-matSec.BorderSizePixel = 0
-matSec.Parent = scroll
-Instance.new("UICorner", matSec).CornerRadius = UDim.new(0, 8)
-
-local matTitle = Instance.new("TextLabel")
-matTitle.Size = UDim2.new(1, 0, 0, 20)
-matTitle.Position = UDim2.new(0, 0, 0, 3)
-matTitle.BackgroundTransparency = 1
-matTitle.Text = "🎨 Materials"
-matTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-matTitle.TextSize = 12
-matTitle.Font = Enum.Font.GothamBold
-matTitle.Parent = matSec
-
-local matScroll = Instance.new("ScrollingFrame")
-matScroll.Size = UDim2.new(1, -10, 0, 50)
-matScroll.Position = UDim2.new(0, 5, 0, 30)
-matScroll.BackgroundTransparency = 1
-matScroll.ScrollBarThickness = 3
-matScroll.CanvasSize = UDim2.new(0, #Materials * 60, 0, 0)
-matScroll.ScrollingDirection = Enum.ScrollingDirection.X
-matScroll.Parent = matSec
-
-for i, m in ipairs(Materials) do
+local function createButton(text, callback, order, parent, colorBase)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 50, 0, 42)
-    btn.Position = UDim2.new(0, 5 + (i-1) * 55, 0, 0)
-    btn.BackgroundColor3 = m.Color
-    btn.Text = m.Name
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 9
+    btn.Text = text
+    btn.Size = UDim2.new(1, -20, 0, 35)
+    btn.BackgroundColor3 = colorBase or Color3.fromRGB(70, 70, 70)
     btn.Font = Enum.Font.GothamBold
-    btn.TextStrokeTransparency = 0.5
-    btn.Parent = matScroll
+    btn.TextSize = 14
+    btn.TextColor3 = Color3.white
+    btn.LayoutOrder = order
+    btn.Parent = parent
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+local function createSlider(labelText, min, max, default, callback, order, parent)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 0, 50)
+    container.BackgroundTransparency = 1
+    container.LayoutOrder = order
+    container.Parent = parent
     
-    btn.MouseButton1Click:Connect(function()
-        CurrentMaterial = m
-        status.Text = "Material: " .. m.Name .. " | Mode: " .. CurrentMode
+    local lbl = Instance.new("TextLabel")
+    lbl.Text = labelText .. ": " .. tostring(default)
+    lbl.Size = UDim2.new(1, 0, 0, 20)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 13
+    lbl.TextColor3 = Color3.white
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = container
+    
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(1, 0, 0, 8)
+    track.Position = UDim2.new(0, 0, 1, -10)
+    track.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+    track.Parent = container
+    
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 20, 1, 0)
+    knob.BackgroundColor3 = Color3.white
+    knob.Parent = track
+    
+    local val = default
+    local dragging = false
+    
+    knob.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+    
+    knob.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    container.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            local pos = input.Position.X
+            local trackAbsPos = track.AbsolutePosition.X
+            local trackAbsSize = track.AbsoluteSize.X
+            
+            local ratio = math.clamp((pos - trackAbsPos) / trackAbsSize, 0, 1)
+            val = math.floor(min + (max - min) * ratio)
+            
+            knob.Position = UDim2.new(ratio, -knob.AbsoluteSize.X/2, 0.5, 0)
+            lbl.Text = labelText .. ": " .. tostring(val)
+            callback(val)
+        end
+    end)
+    
+    local initRatio = (val - min) / (max - min)
+    knob.Position = UDim2.new(initRatio, -knob.AbsoluteSize.X/2, 0.5, 0)
+    
+    return container
+end
+
+-- --- MEMBANGUN KONTEN PANEL ---
+
+-- 1. Pilihan Alat
+createLabel("Pilih Alat:", 1, scrollFrame)
+local toolContainer = Instance.new("Frame")
+toolContainer.Size = UDim2.new(1, -20, 0, 40)
+toolContainer.BackgroundTransparency = 1
+toolContainer.LayoutOrder = 2
+toolContainer.Parent = scrollFrame
+
+local drawBtn = createButton("Draw", function() currentTool = "Draw"; flattenLevel = nil end, 1, toolContainer, Color3.fromRGB(50, 150, 50))
+drawBtn.Size = UDim2.new(0.48, 0, 1, 0)
+drawBtn.Position = UDim2.new(0, 0, 0, 0)
+
+local flattenBtn = createButton("Flatten", function() currentTool = "Flatten"; flattenLevel = nil end, 2, toolContainer, Color3.fromRGB(150, 50, 50))
+flattenBtn.Size = UDim2.new(0.48, 0, 1, 0)
+flattenBtn.Position = UDim2.new(0.52, 0, 0, 0)
+
+-- 2. Pilihan Material
+createLabel("Material Terrain:", 3, scrollFrame)
+local matContainer = Instance.new("Frame")
+matContainer.Size = UDim2.new(1, -20, 0, 40)
+matContainer.BackgroundTransparency = 1
+matContainer.LayoutOrder = 4
+matContainer.Parent = scrollFrame
+
+local matLabel = Instance.new("TextLabel")
+matLabel.Text = materialList[currentMaterialIndex][2]
+matLabel.Size = UDim2.new(0.4, 0, 1, 0)
+matLabel.BackgroundTransparency = 1
+matLabel.Font = Enum.Font.GothamBold
+matLabel.TextSize = 14
+matLabel.TextColor3 = Color3.white
+matLabel.Parent = matContainer
+
+local prevMatBtn = Instance.new("TextButton")
+prevMatBtn.Text = "<"
+prevMatBtn.Size = UDim2.new(0.25, 0, 1, 0)
+prevMatBtn.Position = UDim2.new(0.4, 0, 0, 0)
+prevMatBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+prevMatBtn.TextColor3 = Color3.white
+prevMatBtn.Parent = matContainer
+prevMatBtn.MouseButton1Click:Connect(function()
+    currentMaterialIndex = currentMaterialIndex - 1
+    if currentMaterialIndex < 1 then currentMaterialIndex = #materialList end
+    currentMaterial = materialList[currentMaterialIndex][1]
+    matLabel.Text = materialList[currentMaterialIndex][2]
+end)
+
+local nextMatBtn = Instance.new("TextButton")
+nextMatBtn.Text = ">"
+nextMatBtn.Size = UDim2.new(0.25, 0, 1, 0)
+nextMatBtn.Position = UDim2.new(0.75, 0, 0, 0)
+nextMatBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+nextMatBtn.TextColor3 = Color3.white
+nextMatBtn.Parent = matContainer
+nextMatBtn.MouseButton1Click:Connect(function()
+    currentMaterialIndex = currentMaterialIndex + 1
+    if currentMaterialIndex > #materialList then currentMaterialIndex = 1 end
+    currentMaterial = materialList[currentMaterialIndex][1]
+    matLabel.Text = materialList[currentMaterialIndex][2]
+end)
+
+-- 3. Ukuran Brush
+createLabel("Ukuran Brush (XYZ):", 5, scrollFrame)
+createSlider("X Size", 1, 100, 10, function(v) brushSize = Vector3.new(v, brushSize.Y, brushSize.Z) end, 6, scrollFrame)
+createSlider("Y Size", 1, 100, 10, function(v) brushSize = Vector3.new(brushSize.X, v, brushSize.Z) end, 7, scrollFrame)
+createSlider("Z Size", 1, 100, 10, function(v) brushSize = Vector3.new(brushSize.X, brushSize.Y, v) end, 8, scrollFrame)
+
+-- 4. Preset Ukuran
+createLabel("Preset (Kelipatan 10):", 9, scrollFrame)
+local presetFrame = Instance.new("Frame")
+presetFrame.Size = UDim2.new(1, -20, 0, 100)
+presetFrame.BackgroundTransparency = 1
+presetFrame.LayoutOrder = 10
+presetFrame.Parent = scrollFrame
+
+local presets = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
+local gridLayout = Instance.new("UIGridLayout")
+gridLayout.CellSize = UDim2.new(0.3, -5, 0, 30)
+gridLayout.FillDirection = Enum.FillDirection.Horizontal
+gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+gridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+gridLayout.Parent = presetFrame
+
+for i, size in ipairs(presets) do
+    local pBtn = Instance.new("TextButton")
+    pBtn.Text = tostring(size)
+    pBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    pBtn.TextColor3 = Color3.white
+    pBtn.Font = Enum.Font.GothamBold
+    pBtn.Parent = presetFrame
+    pBtn.MouseButton1Click:Connect(function()
+        brushSize = Vector3.new(size, size, size)
     end)
 end
 
---// ACTION BUTTONS
-local scriptBtn = Instance.new("TextButton")
-scriptBtn.Size = UDim2.new(1, -8, 0, 35)
-scriptBtn.BackgroundColor3 = Color3.fromRGB(120, 80, 200)
-scriptBtn.Text = "📋 Get Script Code"
-scriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-scriptBtn.TextSize = 12
-scriptBtn.Font = Enum.Font.GothamBold
-scriptBtn.Parent = scroll
-Instance.new("UICorner", scriptBtn).CornerRadius = UDim.new(0, 8)
+-- 5. Tombol Warna
+local colorBtn = createButton("Ubah Warna Terrain", function()
+    colorWindow.Visible = not colorWindow.Visible
+end, 11, scrollFrame, Color3.fromRGB(50, 100, 150))
 
-local clearBtn = Instance.new("TextButton")
-clearBtn.Size = UDim2.new(1, -8, 0, 35)
-clearBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-clearBtn.Text = "🗑️ Clear All"
-clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-clearBtn.TextSize = 12
-clearBtn.Font = Enum.Font.GothamBold
-clearBtn.Parent = scroll
-Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 8)
+-- 6. Undo / Redo
+local historyFrame = Instance.new("Frame")
+historyFrame.Size = UDim2.new(1, -20, 0, 40)
+historyFrame.BackgroundTransparency = 1
+historyFrame.LayoutOrder = 12
+historyFrame.Parent = scrollFrame
 
---// SCRIPT WINDOW
-local scriptWin = Instance.new("Frame")
-scriptWin.Name = "ScriptWindow"
-scriptWin.Size = UDim2.new(0, 400, 0, 350)
-scriptWin.Position = UDim2.new(0.5, -200, 0.5, -175)
-scriptWin.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-scriptWin.BorderSizePixel = 0
-scriptWin.Visible = false
-scriptWin.Active = true
-scriptWin.Draggable = true
-scriptWin.Parent = gui
-Instance.new("UICorner", scriptWin).CornerRadius = UDim.new(0, 12)
+local undoBtn = createButton("Undo", function()
+    print("[Info] Undo tidak tersedia di versi client-side.")
+end, 1, historyFrame, Color3.fromRGB(100, 50, 50))
+undoBtn.Size = UDim2.new(0.48, 0, 1, 0)
 
-local scriptWinStroke = Instance.new("UIStroke", scriptWin)
-scriptWinStroke.Color = Color3.fromRGB(120, 80, 200)
-scriptWinStroke.Thickness = 2
+local redoBtn = createButton("Redo", function()
+    print("[Info] Redo tidak tersedia.")
+end, 2, historyFrame, Color3.fromRGB(100, 50, 50))
+redoBtn.Size = UDim2.new(0.48, 0, 1, 0)
+redoBtn.Position = UDim2.new(0.52, 0, 0, 0)
 
-local scriptTitle = Instance.new("Frame")
-scriptTitle.Size = UDim2.new(1, 0, 0, 40)
-scriptTitle.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-scriptTitle.BorderSizePixel = 0
-scriptTitle.Parent = scriptWin
-Instance.new("UICorner", scriptTitle).CornerRadius = UDim.new(0, 12)
+-- 7. Convert to Script
+local convertBtn = createButton("Convert to Script", function()
+    generateScriptWindow()
+    scriptWindow.Visible = true
+end, 13, scrollFrame, Color3.fromRGB(50, 150, 50))
 
-local scriptTitleText = Instance.new("TextLabel")
-scriptTitleText.Size = UDim2.new(1, -110, 1, 0)
-scriptTitleText.Position = UDim2.new(0, 12, 0, 0)
-scriptTitleText.BackgroundTransparency = 1
-scriptTitleText.Text = "📋 Generated Script"
-scriptTitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-scriptTitleText.TextSize = 14
-scriptTitleText.Font = Enum.Font.GothamBold
-scriptTitleText.TextXAlignment = Enum.TextXAlignment.Left
-scriptTitleText.Parent = scriptTitle
+-- --- LOGIKA TOGGLE ON/OFF ---
+toggleButton.MouseButton1Click:Connect(function()
+    isActive = not isActive
+    if isActive then
+        toggleButton.Text = "OFF"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+        panel.Visible = true
+        toggleButton.Visible = false
+    else
+        toggleButton.Text = "ON"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        panel.Visible = false
+        toggleButton.Visible = true
+    end
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    panel.Visible = false
+    isActive = false
+    toggleButton.Text = "ON"
+    toggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    toggleButton.Visible = true
+end)
+
+-- --- JENDELA WARNA ---
+local colorWindow = Instance.new("Frame")
+colorWindow.Name = "ColorWindow"
+colorWindow.Size = UDim2.new(0, 300, 0, 400)
+colorWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
+colorWindow.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+colorWindow.BorderSizePixel = 0
+colorWindow.Visible = false
+colorWindow.Parent = ScreenGui
+
+local cwHeader = Instance.new("Frame")
+cwHeader.Size = UDim2.new(1, 0, 0, 40)
+cwHeader.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+cwHeader.Parent = colorWindow
+
+local cwTitle = Instance.new("TextLabel")
+cwTitle.Text = "Pilih Warna"
+cwTitle.Size = UDim2.new(1, -40, 1, 0)
+cwTitle.BackgroundTransparency = 1
+cwTitle.Font = Enum.Font.GothamBold
+cwTitle.TextColor3 = Color3.white
+cwTitle.Parent = cwHeader
+
+local cwClose = Instance.new("TextButton")
+cwClose.Text = "X"
+cwClose.Size = UDim2.new(0, 40, 1, 0)
+cwClose.Position = UDim2.new(1, -40, 0, 0)
+cwClose.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+cwClose.TextColor3 = Color3.white
+cwClose.Parent = cwHeader
+cwClose.MouseButton1Click:Connect(function() colorWindow.Visible = false end)
+
+local cwScroll = Instance.new("ScrollingFrame")
+cwScroll.Size = UDim2.new(1, -10, 1, -50)
+cwScroll.Position = UDim2.new(0, 5, 0, 45)
+cwScroll.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+cwScroll.ScrollBarThickness = 6
+cwScroll.Parent = colorWindow
+
+local cwLayout = Instance.new("UIListLayout")
+cwLayout.Padding = UDim.new(0, 5)
+cwLayout.Parent = cwScroll
+
+local function createColorCategory(name, colorsTable, updateFunc)
+    local catFrame = Instance.new("Frame")
+    catFrame.Size = UDim2.new(1, -10, 0, 160)
+    catFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    catFrame.Parent = cwScroll
+    
+    local catTitle = Instance.new("TextLabel")
+    catTitle.Text = name
+    catTitle.Size = UDim2.new(1, 0, 0, 25)
+    catTitle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    catTitle.Font = Enum.Font.GothamBold
+    catTitle.TextColor3 = Color3.white
+    catTitle.Parent = catFrame
+    
+    local innerScroll = Instance.new("ScrollingFrame")
+    innerScroll.Size = UDim2.new(1, -5, 1, -30)
+    innerScroll.Position = UDim2.new(0, 2, 0, 28)
+    innerScroll.BackgroundTransparency = 1
+    innerScroll.ScrollBarThickness = 4
+    innerScroll.Parent = catFrame
+    
+    local innerLayout = Instance.new("UIListLayout")
+    innerLayout.Parent = innerScroll
+    
+    for i, cData in ipairs(colorsTable) do
+        local btn = Instance.new("TextButton")
+        btn.Text = cData.name
+        btn.Size = UDim2.new(1, 0, 0, 25)
+        btn.BackgroundColor3 = cData.color
+        btn.Font = Enum.Font.Gotham
+        btn.TextColor3 = Color3.white
+        
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.black
+        stroke.Thickness = 1
+        stroke.Transparency = 0.5
+        stroke.Parent = btn
+        
+        btn.Parent = innerScroll
+        btn.MouseButton1Click:Connect(function()
+            updateFunc(i, cData.color)
+        end)
+    end
+    
+    innerScroll.CanvasSize = UDim2.new(0, 0, innerLayout.AbsoluteContentSize.Y, 0)
+    catFrame.Size = UDim2.new(1, -10, 0, innerLayout.AbsoluteContentSize.Y + 35)
+end
+
+local function updateGrassColor(index, colorVal)
+    currentGrassColorIndex = index
+    if Terrain then Terrain:SetMaterialColor(Enum.Material.Grass, colorVal) end
+end
+
+local function updateGroundColor(index, colorVal)
+    currentGroundColorIndex = index
+    if Terrain then Terrain:SetMaterialColor(Enum.Material.Ground, colorVal) end
+end
+
+local function updateLeafyColor(index, colorVal)
+    currentLeafyColorIndex = index
+    if Terrain then Terrain:SetMaterialColor(Enum.Material.LeafyGrass, colorVal) end
+end
+
+local function updateRockColor(index, colorVal)
+    currentRockColorIndex = index
+    if Terrain then Terrain:SetMaterialColor(Enum.Material.Rock, colorVal) end
+end
+
+createColorCategory("Grass Colors", grassColors, updateGrassColor)
+createColorCategory("Ground Colors", groundColors, updateGroundColor)
+createColorCategory("LeafyGrass Colors", leafyGrassColors, updateLeafyColor)
+createColorCategory("Rock Colors", rockColors, updateRockColor)
+
+-- --- JENDELA SCRIPT CONVERTER ---
+local scriptWindow = Instance.new("Frame")
+scriptWindow.Name = "ScriptResult"
+scriptWindow.Size = UDim2.new(0, 400, 0, 500)
+scriptWindow.Position = UDim2.new(0.5, -200, 0.5, -250)
+scriptWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+scriptWindow.BorderSizePixel = 0
+scriptWindow.Visible = false
+scriptWindow.Parent = ScreenGui
+
+local swHeader = Instance.new("Frame")
+swHeader.Size = UDim2.new(1, 0, 0, 40)
+swHeader.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+swHeader.Parent = scriptWindow
+
+local swTitle = Instance.new("TextLabel")
+swTitle.Text = "Hasil Convert"
+swTitle.Size = UDim2.new(1, -40, 1, 0)
+swTitle.BackgroundTransparency = 1
+swTitle.Font = Enum.Font.GothamBold
+swTitle.TextColor3 = Color3.white
+swTitle.Parent = swHeader
+
+local swClose = Instance.new("TextButton")
+swClose.Text = "X"
+swClose.Size = UDim2.new(0, 40, 1, 0)
+swClose.Position = UDim2.new(1, -40, 0, 0)
+swClose.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+swClose.TextColor3 = Color3.white
+swClose.Parent = swHeader
+swClose.MouseButton1Click:Connect(function() scriptWindow.Visible = false end)
+
+local swTextBox = Instance.new("TextBox")
+swTextBox.MultiLine = true
+swTextBox.Size = UDim2.new(1, -10, 1, -90)
+swTextBox.Position = UDim2.new(0, 5, 0, 45)
+swTextBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+swTextBox.Font = Enum.Font.Code
+swTextBox.TextColor3 = Color3.fromRGB(0, 255, 0)
+swTextBox.ClearTextOnFocus = false
+swTextBox.TextEditable = false
+swTextBox.Parent = scriptWindow
 
 local copyBtn = Instance.new("TextButton")
-copyBtn.Size = UDim2.new(0, 60, 0, 30)
-copyBtn.Position = UDim2.new(1, -130, 0.5, -15)
-copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-copyBtn.Text = "Copy"
-copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyBtn.TextSize = 12
+copyBtn.Text = "Copy Script"
+copyBtn.Size = UDim2.new(1, -20, 0, 40)
+copyBtn.Position = UDim2.new(0, 10, 1, -45)
+copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
 copyBtn.Font = Enum.Font.GothamBold
-copyBtn.Parent = scriptTitle
-Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 6)
-
-local closeScriptBtn = Instance.new("TextButton")
-closeScriptBtn.Size = UDim2.new(0, 30, 0, 30)
-closeScriptBtn.Position = UDim2.new(1, -40, 0.5, -15)
-closeScriptBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-closeScriptBtn.Text = "X"
-closeScriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeScriptBtn.TextSize = 14
-closeScriptBtn.Font = Enum.Font.GothamBold
-closeScriptBtn.Parent = scriptTitle
-Instance.new("UICorner", closeScriptBtn).CornerRadius = UDim.new(0, 6)
-
-local codeScroll = Instance.new("ScrollingFrame")
-codeScroll.Size = UDim2.new(1, -16, 1, -100)
-codeScroll.Position = UDim2.new(0, 8, 0, 48)
-codeScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-codeScroll.BorderSizePixel = 0
-codeScroll.ScrollBarThickness = 5
-codeScroll.Parent = scriptWin
-Instance.new("UICorner", codeScroll).CornerRadius = UDim.new(0, 6)
-
-local codeText = Instance.new("TextLabel")
-codeText.Size = UDim2.new(1, -12, 0, 0)
-codeText.Position = UDim2.new(0, 6, 0, 6)
-codeText.BackgroundTransparency = 1
-codeText.Text = "-- No terrain spawned yet --"
-codeText.TextColor3 = Color3.fromRGB(200, 200, 200)
-codeText.TextSize = 11
-codeText.Font = Enum.Font.Code
-codeText.TextXAlignment = Enum.TextXAlignment.Left
-codeText.TextYAlignment = Enum.TextYAlignment.Top
-codeText.AutomaticSize = Enum.AutomaticSize.Y
-codeText.TextWrapped = true
-codeText.Parent = codeScroll
-
---// EVENT CONNECTIONS
-
--- Mode Switching
-local function UpdateModeUI()
-    if CurrentMode == "Smooth" then
-        smoothBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-        flattenBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-        modeBtn.Text = "🟢\nSMOOTH"
-        modeBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-        status.Text = "Mode: Smooth | Shape: " .. CurrentShape
-    else
-        smoothBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-        flattenBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
-        modeBtn.Text = "🟠\nFLATTEN"
-        modeBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
-        status.Text = "Mode: Flatten | Y-Lock: " .. (FlattenLevel and tostring(math.floor(FlattenLevel)) or "Not Set")
-    end
-    UpdatePreview()
-end
-
-smoothBtn.MouseButton1Click:Connect(function()
-    CurrentMode = "Smooth"
-    ResetFlattenLevel()
-    UpdateModeUI()
-end)
-
-flattenBtn.MouseButton1Click:Connect(function()
-    CurrentMode = "Flatten"
-    ResetFlattenLevel() -- Reset when first entering flatten mode
-    UpdateModeUI()
-end)
-
--- Mode Toggle Button (Top Left)
-modeBtn.MouseButton1Click:Connect(function()
-    if CurrentMode == "Smooth" then
-        CurrentMode = "Flatten"
-        ResetFlattenLevel()
-    else
-        CurrentMode = "Smooth"
-        ResetFlattenLevel()
-    end
-    UpdateModeUI()
-end)
-
--- Grass Color
-grassLeft.MouseButton1Click:Connect(function()
-    currentGrassColorIndex = currentGrassColorIndex - 1
-    if currentGrassColorIndex < 1 then currentGrassColorIndex = #grassColors end
-    grassDisplay.Text = grassColors[currentGrassColorIndex].name
-    grassDisplay.BackgroundColor3 = grassColors[currentGrassColorIndex].color
-    ApplyMaterialColors()
-end)
-
-grassRight.MouseButton1Click:Connect(function()
-    currentGrassColorIndex = currentGrassColorIndex + 1
-    if currentGrassColorIndex > #grassColors then currentGrassColorIndex = 1 end
-    grassDisplay.Text = grassColors[currentGrassColorIndex].name
-    grassDisplay.BackgroundColor3 = grassColors[currentGrassColorIndex].color
-    ApplyMaterialColors()
-end)
-
--- Ground Color
-groundLeft.MouseButton1Click:Connect(function()
-    currentGroundColorIndex = currentGroundColorIndex - 1
-    if currentGroundColorIndex < 1 then currentGroundColorIndex = #groundColors end
-    groundDisplay.Text = groundColors[currentGroundColorIndex].name
-    groundDisplay.BackgroundColor3 = groundColors[currentGroundColorIndex].color
-    ApplyMaterialColors()
-end)
-
-groundRight.MouseButton1Click:Connect(function()
-    currentGroundColorIndex = currentGroundColorIndex + 1
-    if currentGroundColorIndex > #groundColors then currentGroundColorIndex = 1 end
-    groundDisplay.Text = groundColors[currentGroundColorIndex].name
-    groundDisplay.BackgroundColor3 = groundColors[currentGroundColorIndex].color
-    ApplyMaterialColors()
-end)
-
--- Shape
-ballBtn.MouseButton1Click:Connect(function()
-    CurrentShape = "Ball"
-    ballBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    blockBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-    CreatePreview()
-    UpdateModeUI()
-end)
-
-blockBtn.MouseButton1Click:Connect(function()
-    CurrentShape = "Block"
-    ballBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-    blockBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    CreatePreview()
-    UpdateModeUI()
-end)
-
--- Size X
-xMinus.MouseButton1Click:Connect(function()
-    SizeX = math.max(1, SizeX - 1)
-    xValue.Text = tostring(SizeX)
-    UpdatePreview()
-end)
-
-xPlus.MouseButton1Click:Connect(function()
-    SizeX = math.min(50, SizeX + 1)
-    xValue.Text = tostring(SizeX)
-    UpdatePreview()
-end)
-
--- Size Y
-yMinus.MouseButton1Click:Connect(function()
-    SizeY = math.max(1, SizeY - 1)
-    yValue.Text = tostring(SizeY)
-    UpdatePreview()
-end)
-
-yPlus.MouseButton1Click:Connect(function()
-    SizeY = math.min(50, SizeY + 1)
-    yValue.Text = tostring(SizeY)
-    UpdatePreview()
-end)
-
--- Size Z
-zMinus.MouseButton1Click:Connect(function()
-    SizeZ = math.max(1, SizeZ - 1)
-    zValue.Text = tostring(SizeZ)
-    UpdatePreview()
-end)
-
-zPlus.MouseButton1Click:Connect(function()
-    SizeZ = math.min(50, SizeZ + 1)
-    zValue.Text = tostring(SizeZ)
-    UpdatePreview()
-end)
-
--- Presets
-local function setPreset(size)
-    SizeX, SizeY, SizeZ = size, size, size
-    xValue.Text = tostring(SizeX)
-    yValue.Text = tostring(SizeY)
-    zValue.Text = tostring(SizeZ)
-    UpdatePreview()
-end
-
-preset4.MouseButton1Click:Connect(function() setPreset(4) end)
-preset6.MouseButton1Click:Connect(function() setPreset(6) end)
-preset8.MouseButton1Click:Connect(function() setPreset(8) end)
-preset10.MouseButton1Click:Connect(function() setPreset(10) end)
-preset12.MouseButton1Click:Connect(function() setPreset(12) end)
-preset16.MouseButton1Click:Connect(function() setPreset(16) end)
-
--- Undo/Redo
-undoBtn.MouseButton1Click:Connect(function()
-    local success, msg = Undo()
-    status.Text = success and ("↩️ " .. msg .. " (" .. #SpawnedData .. ")") or ("↩️ " .. msg)
-    status.TextColor3 = success and Color3.fromRGB(255, 200, 100) or Color3.fromRGB(255, 100, 100)
-end)
-
-redoBtn.MouseButton1Click:Connect(function()
-    local success, msg = Redo()
-    status.Text = success and ("↪️ " .. msg .. " (" .. #SpawnedData .. ")") or ("↪️ " .. msg)
-    status.TextColor3 = success and Color3.fromRGB(100, 200, 255) or Color3.fromRGB(255, 100, 100)
-end)
-
--- Minimize
-minBtn.MouseButton1Click:Connect(function()
-    panel.Visible = false
-    minIcon.Visible = true
-end)
-
-minIcon.MouseButton1Click:Connect(function()
-    minIcon.Visible = false
-    panel.Visible = true
-end)
-
--- Close
-closeBtn.MouseButton1Click:Connect(function()
-    gui:Destroy()
-end)
-
--- Script Window
-scriptBtn.MouseButton1Click:Connect(function()
-    codeText.Text = GenerateScript()
-    scriptWin.Visible = true
-end)
-
-closeScriptBtn.MouseButton1Click:Connect(function()
-    scriptWin.Visible = false
-end)
+copyBtn.TextColor3 = Color3.white
+copyBtn.Parent = scriptWindow
 
 copyBtn.MouseButton1Click:Connect(function()
-    local code = codeText.Text
     if setclipboard then
-        setclipboard(code)
+        setclipboard(swTextBox.Text)
         copyBtn.Text = "Copied!"
-        delay(1.5, function() copyBtn.Text = "Copy" end)
-    end
-end)
-
--- Clear
-clearBtn.MouseButton1Click:Connect(function()
-    Terrain:Clear()
-    SpawnedData = {}
-    UndoHistory = {}
-    RedoHistory = {}
-    ResetFlattenLevel()
-    status.Text = "🗑️ All cleared!"
-    status.TextColor3 = Color3.fromRGB(255, 100, 100)
-end)
-
--- Spawn
-spawnBtn.MouseButton1Click:Connect(function()
-    if PreviewPos then
-        TweenService:Create(spawnBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 45, 0, 45)}):Play()
-        wait(0.1)
-        TweenService:Create(spawnBtn, TweenInfo.new(0.2), {Size = UDim2.new(0, 50, 0, 50)}):Play()
-        
-        if SpawnTerrain() then
-            if CurrentMode == "Flatten" then
-                status.Text = "✅ Flattened! Y-Level: " .. math.floor(FlattenLevel) .. " (" .. #SpawnedData .. " total)"
-            else
-                status.Text = "✅ Spawned! (" .. #SpawnedData .. " total)"
-            end
-            status.TextColor3 = Color3.fromRGB(0, 255, 100)
-        else
-            status.Text = "❌ Failed!"
-            status.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
+        task.wait(1)
+        copyBtn.Text = "Copy Script"
     else
-        status.Text = "❌ Aim at ground!"
-        status.TextColor3 = Color3.fromRGB(255, 100, 100)
+        copyBtn.Text = "Select & Copy Manual"
+        swTextBox.TextEditable = true
+        swTextBox:CaptureFocus()
     end
 end)
 
--- Drag Panel
-local drag = false
-local startPos, startFrame
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        drag = true
-        startPos = input.Position
-        startFrame = panel.Position
+local function generateScriptWindow()
+    if not Terrain then return end
+    local gC = grassColors[currentGrassColorIndex].color
+    local grC = groundColors[currentGroundColorIndex].color
+    local lC = leafyGrassColors[currentLeafyColorIndex].color
+    local rC = rockColors[currentRockColorIndex].color
+
+    local generatedCode = "-- Script Konfigurasi Terrain (Final)\nlocal Terrain = workspace:FindFirstChildOfClass(\"Terrain\")\nif Terrain then\n\tTerrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(" .. math.floor(gC.R*255) .. ", " .. math.floor(gC.G*255) .. ", " .. math.floor(gC.B*255) .. "))\n\tTerrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(" .. math.floor(grC.R*255) .. ", " .. math.floor(grC.G*255) .. ", " .. math.floor(grC.B*255) .. "))\n\tTerrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(" .. math.floor(lC.R*255) .. ", " .. math.floor(lC.G*255) .. ", " .. math.floor(lC.B*255) .. "))\n\tTerrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(" .. math.floor(rC.R*255) .. ", " .. math.floor(rC.G*255) .. ", " .. math.floor(rC.B*255) .. "))\nend"
+    swTextBox.Text = generatedCode
+end
+
+-- --- LOGIKA EDITING TERRAIN ---
+local function getMousePosition()
+    if not Mouse then 
+        return Vector3.new(0,0,0) 
     end
-end)
-titleBar.InputEnded:Connect(function() drag = false end)
-UserInputService.InputChanged:Connect(function(input)
-    if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - startPos
-        panel.Position = UDim2.new(startFrame.X.Scale, startFrame.X.Offset + delta.X, startFrame.Y.Scale, startFrame.Y.Offset + delta.Y)
+    local success, result = pcall(function()
+        return Mouse.Hit.Position
+    end)
+    if success then return result end
+    return Vector3.new(0,0,0)
+end
+
+if Mouse then
+    Mouse.Button1Down:Connect(function()
+        if not isActive then return end
+        if not isDrawing then
+            isDrawing = true
+            flattenLevel = nil
+        end
+    end)
+
+    Mouse.Button1Up:Connect(function()
+        isDrawing = false
+        flattenLevel = nil
+    end)
+end
+
+RunService.RenderStepped:Connect(function()
+    if not isActive or not isDrawing then return end
+    
+    if Mouse then
+        if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and 
+           not UserInputService:IsTouchPressed() then
+            isDrawing = false
+            flattenLevel = nil
+            return
+        end
+    end
+
+    local position = getMousePosition()
+    if position.Magnitude == 0 then return end
+    
+    if currentTool == "Draw" then
+        if Terrain then
+            Terrain:FillBlock(CFrame.new(position), brushSize, currentMaterial)
+        end
+    elseif currentTool == "Flatten" then
+        if not flattenLevel then
+            flattenLevel = position.Y
+        end
+        
+        if Terrain then
+            local areaSize = Vector3.new(brushSize.X, 4, brushSize.Z)
+            Terrain:FillBlock(CFrame.new(position.X, flattenLevel, position.Z), areaSize, currentMaterial)
+        end
     end
 end)
 
--- Update Loop
-RunService.RenderStepped:Connect(UpdatePreview)
+-- Inisialisasi Warna Awal
+if Terrain then
+    updateGrassColor(currentGrassColorIndex, grassColors[currentGrassColorIndex].color)
+    updateGroundColor(currentGroundColorIndex, groundColors[currentGroundColorIndex].color)
+    updateLeafyColor(currentLeafyColorIndex, leafyGrassColors[currentLeafyColorIndex].color)
+    updateRockColor(currentRockColorIndex, rockColors[currentRockColorIndex].color)
+end
 
-print("✅ Terrain Editor v15.0 by shhhhnayy05 Loaded!")
-print("🟢 Smooth Mode: Normal terrain spawn")
-print("🟠 Flatten Mode: Flatten terrain to locked Y-level")
-print("🌿 Grass Colors: " .. #grassColors .. " options")
-print("🟫 Ground Colors: " .. #groundColors .. " options")
-print("📐 Custom XYZ Size")
-print("💯 Executor Level 7-8 Compatible")
+print(">> Terrain Editor Pro (FINAL - NO CORAL) Loaded!")
+print(">> Silakan klik tombol ON di pojok kanan bawah.")
