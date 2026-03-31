@@ -1486,7 +1486,7 @@ local function CreateMinimizedIcon()
 end
 
 --// ============================================
---// TIMER OVERLAY (LANJUTAN)
+--// TIMER OVERLAY (LANJUTAN - DIperbaiki)
 --// ============================================
 
 local function CreateTimerOverlay()
@@ -1550,7 +1550,7 @@ local function CreateTimerOverlay()
 end
 
 --// ============================================
---// CORE FUNCTIONS - RECORDING
+--// CORE FUNCTIONS - RECORDING (SINKRON DENGAN LOGIKA ANDA)
 --// ============================================
 
 local function StartRecording(GUI)
@@ -1577,29 +1577,28 @@ local function StartRecording(GUI)
     GUI.StatusLabel.Text = "Status: Recording..."
     GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
     
-    -- Disable collisions
-    for _, part in ipairs(Character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            State.OriginalCollisions[part] = part.CanCollide
-            part.CanCollide = false
+    -- SINKRON DENGAN LOGIKA ANDA: Record dengan Velocity dan State
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        if not State.IsRecording then 
+            connection:Disconnect() 
+            return 
         end
-    end
-    
-    -- Record loop
-    State.RecordConnection = RunService.RenderStepped:Connect(function()
-        if not State.IsRecording or State.IsPaused then return end
         
-        local hrp = Character:FindFirstChild("HumanoidRootPart")
-        local humanoid = Character:FindFirstChild("Humanoid")
+        if State.IsPaused then return end
         
-        if hrp and humanoid then
-            local frame = {
-                Position = hrp.Position,
-                Rotation = hrp.CFrame - hrp.Position,
-                Jump = humanoid.Jump,
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+        
+        if hrp and hum then
+            -- LOGIKA ANDA: Merekam State agar jump tidak kaku
+            table.insert(State.PathData, {
+                cf = hrp.CFrame,           -- CFrame lengkap (posisi + rotasi)
+                velocity = hrp.Velocity,    -- Velocity untuk animasi
+                state = hum:GetState(),     -- State untuk anti kaku jump
                 Time = tick() - State.RecordStartTime
-            }
-            table.insert(State.PathData, frame)
+            })
             
             -- Update timer
             local elapsed = tick() - State.RecordStartTime
@@ -1610,13 +1609,14 @@ local function StartRecording(GUI)
             end
         end
     end)
+    
+    State.RecordConnection = connection
 end
 
 local function StopRecording(GUI)
     if not State.IsRecording then return end
     
     State.IsRecording = false
-    State.IsPaused = false
     
     if State.RecordConnection then
         State.RecordConnection:Disconnect()
@@ -1627,14 +1627,6 @@ local function StopRecording(GUI)
     if State.TimerOverlay then
         State.TimerOverlay.ScreenGui.Enabled = false
     end
-    
-    -- Restore collisions
-    for part, original in pairs(State.OriginalCollisions) do
-        if part and part.Parent then
-            part.CanCollide = original
-        end
-    end
-    State.OriginalCollisions = {}
     
     -- Calculate duration
     State.RecordDuration = tick() - State.RecordStartTime
@@ -1709,7 +1701,7 @@ local function PauseRecording(GUI)
 end
 
 --// ============================================
---// CORE FUNCTIONS - PLAYBACK
+--// CORE FUNCTIONS - PLAYBACK (SINKRON DENGAN LOGIKA ANDA)
 --// ============================================
 
 local function StartPlayback(fileData, GUI, speedMultiplier)
@@ -1729,50 +1721,103 @@ local function StartPlayback(fileData, GUI, speedMultiplier)
     GUI.StatusLabel.Text = "Status: Playing..."
     GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
     
-    -- Disable collisions during playback
-    for _, part in ipairs(Character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            State.OriginalCollisions[part] = part.CanCollide
-            part.CanCollide = false
+    -- SINKRON DENGAN LOGIKA ANDA: Matikan collisions sementara
+    local char = LocalPlayer.Character
+    if not char then 
+        State.IsPlaying = false
+        return 
+    end
+    
+    local originalCollisions = {}
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then 
+            originalCollisions[v] = v.CanCollide
+            v.CanCollide = false 
         end
     end
     
-    -- Playback loop
-    local startTime = tick()
-    State.PlayConnection = RunService.RenderStepped:Connect(function()
-        if not State.IsPlaying then return end
+    -- SINKRON DENGAN LOGIKA ANDA: Playback dengan State dan Velocity
+    local connection
+    local currentFrame = 1
+    
+    connection = RunService.Heartbeat:Connect(function()
+        if not State.IsPlaying then 
+            connection:Disconnect()
+            return 
+        end
         
-        local hrp = Character:FindFirstChild("HumanoidRootPart")
-        local humanoid = Character:FindFirstChild("Humanoid")
+        -- Re-check character (penting untuk executor)
+        char = LocalPlayer.Character
+        if not char then 
+            State.IsPlaying = false
+            connection:Disconnect()
+            return 
+        end
         
-        if not hrp or not humanoid then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChild("Humanoid")
         
-        -- Calculate current frame based on time
-        local elapsed = (tick() - startTime) * State.CurrentSpeedMultiplier
-        local targetIndex = math.min(math.floor(elapsed / CONFIG.RecordInterval) + 1, #pathData)
+        if not hrp or not hum then 
+            State.IsPlaying = false
+            connection:Disconnect()
+            return 
+        end
+        
+        -- Calculate frame based on speed multiplier
+        local step = math.max(1, math.floor(State.CurrentSpeedMultiplier))
+        currentFrame = currentFrame + (step * 0.5) -- Adjust for speed
+        
+        local targetIndex = math.floor(currentFrame)
         
         if targetIndex > #pathData then
             -- Playback finished
             if State.LoopPlayback then
-                startTime = tick()
+                currentFrame = 1
                 targetIndex = 1
             else
-                StopPlayback(GUI)
+                State.IsPlaying = false
+                connection:Disconnect()
+                
+                -- Kembalikan Collisions (LOGIKA ANDA)
+                char = LocalPlayer.Character
+                if char then
+                    for v, original in pairs(originalCollisions) do
+                        if v and v.Parent then 
+                            v.CanCollide = original 
+                        end
+                    end
+                end
+                
+                GUI.StatusLabel.Text = "Status: Playback finished"
+                GUI.StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
                 return
             end
         end
         
-        -- Move to frame
-        local frame = pathData[targetIndex]
-        if frame then
-            hrp.CFrame = CFrame.new(frame.Position) * (frame.Rotation or CFrame.new())
-            if frame.Jump and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
+        local data = pathData[targetIndex]
+        if not data then return end
+        
+        -- LOGIKA ANDA: 1. Paksa Posisi (Smooth)
+        if data.cf then
+            hrp.CFrame = data.cf
+        elseif data.Position and data.Rotation then
+            hrp.CFrame = CFrame.new(data.Position) * data.Rotation
+        end
+        
+        -- LOGIKA ANDA: 2. Paksa Animasi State (ANTI KAKU JUMP)
+        if data.state and hum:GetState() ~= data.state then
+            hum:ChangeState(data.state)
+        end
+        
+        -- LOGIKA ANDA: 3. Beri Velocity visual agar script Animate Roblox bekerja
+        if data.velocity then
+            hrp.Velocity = data.velocity
         end
         
         State.CurrentIndex = targetIndex
     end)
+    
+    State.PlayConnection = connection
 end
 
 local function StopPlayback(GUI)
@@ -1783,20 +1828,12 @@ local function StopPlayback(GUI)
         State.PlayConnection = nil
     end
     
-    -- Restore collisions
-    for part, original in pairs(State.OriginalCollisions) do
-        if part and part.Parent then
-            part.CanCollide = original
-        end
-    end
-    State.OriginalCollisions = {}
-    
     GUI.StatusLabel.Text = "Status: Playback stopped"
     GUI.StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 end
 
 --// ============================================
-// FILE LIST MANAGEMENT
+--// FILE LIST MANAGEMENT
 --// ============================================
 
 local function RefreshFileList(GUI)
