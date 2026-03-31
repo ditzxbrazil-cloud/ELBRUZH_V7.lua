@@ -1486,7 +1486,71 @@ local function CreateMinimizedIcon()
 end
 
 --// ============================================
---// TIMER OVERLAY (LANJUTAN - DIperbaiki)
+--// TIMER OVERLAY (LANJUTAN)
+--// ============================================
+
+local function CreateTimerOverlay()
+    local parent = CoreGui
+    if not parent then parent = LocalPlayer:WaitForChild("PlayerGui") end
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "shhhhnayy05_TimerOverlay"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = parent
+
+    local TimerFrame = Instance.new("Frame")
+    TimerFrame.Size = UDim2.new(0, 120, 0, 40)
+    TimerFrame.Position = UDim2.new(0.5, -60, 0, 10)
+    TimerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    TimerFrame.BorderSizePixel = 0
+    TimerFrame.BackgroundTransparency = 0.2
+    TimerFrame.Parent = ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = TimerFrame
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(100, 255, 100)
+    Stroke.Thickness = 2
+    Stroke.Parent = TimerFrame
+
+    local TimerLabel = Instance.new("TextLabel")
+    TimerLabel.Size = UDim2.new(1, 0, 1, 0)
+    TimerLabel.BackgroundTransparency = 1
+    TimerLabel.Text = "⏱ 00:00"
+    TimerLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    TimerLabel.TextSize = 20
+    TimerLabel.Font = Enum.Font.GothamBold
+    TimerLabel.Parent = TimerFrame
+
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Size = UDim2.new(1, 0, 0, 20)
+    StatusLabel.Position = UDim2.new(0, 0, 1, 0)
+    StatusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    StatusLabel.BackgroundTransparency = 0.2
+    StatusLabel.Text = "● REC"
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    StatusLabel.TextSize = 12
+    StatusLabel.Font = Enum.Font.GothamBold
+    StatusLabel.Parent = TimerFrame
+
+    local StatusCorner = Instance.new("UICorner")
+    StatusCorner.CornerRadius = UDim.new(0, 4)
+    StatusCorner.Parent = StatusLabel
+
+    State.TimerOverlay = {
+        ScreenGui = ScreenGui,
+        TimerLabel = TimerLabel,
+        StatusLabel = StatusLabel,
+        TimerFrame = TimerFrame
+    }
+
+    return State.TimerOverlay
+end
+
+--// ============================================
+--// TIMER OVERLAY (LANJUTAN)
 --// ============================================
 
 local function CreateTimerOverlay()
@@ -1596,7 +1660,7 @@ local function StartRecording(GUI)
             table.insert(State.PathData, {
                 cf = hrp.CFrame,           -- CFrame lengkap (posisi + rotasi)
                 velocity = hrp.Velocity,    -- Velocity untuk animasi
-                state = hum:GetState(),     -- State untuk anti kaku jump
+                state = tostring(hum:GetState()),     -- State untuk anti kaku jump (simpan sebagai string)
                 Time = tick() - State.RecordStartTime
             })
             
@@ -1701,12 +1765,13 @@ local function PauseRecording(GUI)
 end
 
 --// ============================================
---// CORE FUNCTIONS - PLAYBACK (SINKRON DENGAN LOGIKA ANDA)
+--// CORE FUNCTIONS - PLAYBACK (PERBAIKAN UTAMA)
 --// ============================================
 
 local function StartPlayback(fileData, GUI, speedMultiplier)
     if State.IsPlaying then return end
     
+    -- PERBAIKAN: Ambil pathData dengan benar dari fileData
     local pathData = fileData.PathData or fileData.Path or {}
     if #pathData == 0 then
         GUI.StatusLabel.Text = "Status: No path data!"
@@ -1728,6 +1793,15 @@ local function StartPlayback(fileData, GUI, speedMultiplier)
         return 
     end
     
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
+    
+    if not hrp or not hum then 
+        State.IsPlaying = false
+        return 
+    end
+    
+    -- Simpan original collisions
     local originalCollisions = {}
     for _, v in pairs(char:GetChildren()) do
         if v:IsA("BasePart") then 
@@ -1736,13 +1810,23 @@ local function StartPlayback(fileData, GUI, speedMultiplier)
         end
     end
     
-    -- SINKRON DENGAN LOGIKA ANDA: Playback dengan State dan Velocity
+    -- SINKRON DENGAN LOGIKA ANDA: Playback dengan for loop + Heartbeat:Wait()
     local connection
-    local currentFrame = 1
+    local currentIndex = 1
     
     connection = RunService.Heartbeat:Connect(function()
         if not State.IsPlaying then 
             connection:Disconnect()
+            -- Kembalikan Collisions
+            char = LocalPlayer.Character
+            if char then
+                for v, original in pairs(originalCollisions) do
+                    if v and v.Parent then 
+                        v.CanCollide = original 
+                    end
+                end
+            end
+            isPlaying = false
             return 
         end
         
@@ -1754,8 +1838,8 @@ local function StartPlayback(fileData, GUI, speedMultiplier)
             return 
         end
         
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChild("Humanoid")
+        hrp = char:FindFirstChild("HumanoidRootPart")
+        hum = char:FindFirstChild("Humanoid")
         
         if not hrp or not hum then 
             State.IsPlaying = false
@@ -1763,17 +1847,11 @@ local function StartPlayback(fileData, GUI, speedMultiplier)
             return 
         end
         
-        -- Calculate frame based on speed multiplier
-        local step = math.max(1, math.floor(State.CurrentSpeedMultiplier))
-        currentFrame = currentFrame + (step * 0.5) -- Adjust for speed
-        
-        local targetIndex = math.floor(currentFrame)
-        
-        if targetIndex > #pathData then
+        -- PERBAIKAN: Pastikan index valid
+        if currentIndex > #pathData then
             -- Playback finished
             if State.LoopPlayback then
-                currentFrame = 1
-                targetIndex = 1
+                currentIndex = 1
             else
                 State.IsPlaying = false
                 connection:Disconnect()
@@ -1794,27 +1872,61 @@ local function StartPlayback(fileData, GUI, speedMultiplier)
             end
         end
         
-        local data = pathData[targetIndex]
-        if not data then return end
+        local data = pathData[currentIndex]
+        if not data then 
+            currentIndex = currentIndex + 1
+            return 
+        end
         
         -- LOGIKA ANDA: 1. Paksa Posisi (Smooth)
         if data.cf then
-            hrp.CFrame = data.cf
-        elseif data.Position and data.Rotation then
-            hrp.CFrame = CFrame.new(data.Position) * data.Rotation
+            -- PERBAIKAN: Konversi CFrame dari JSON kembali ke CFrame
+            if typeof(data.cf) == "table" then
+                -- Data dari JSON, reconstruct CFrame
+                local pos = data.cf.position or data.cf.Position
+                local rot = data.cf.rotation or data.cf.Rotation or {}
+                
+                if pos then
+                    hrp.CFrame = CFrame.new(pos[1], pos[2], pos[3])
+                end
+            else
+                hrp.CFrame = data.cf
+            end
         end
         
         -- LOGIKA ANDA: 2. Paksa Animasi State (ANTI KAKU JUMP)
-        if data.state and hum:GetState() ~= data.state then
-            hum:ChangeState(data.state)
+        if data.state then
+            local stateEnum = nil
+            -- PERBAIKAN: Konversi string state kembali ke Enum
+            if typeof(data.state) == "string" then
+                for _, enum in pairs(Enum.HumanoidStateType:GetEnumItems()) do
+                    if tostring(enum) == data.state then
+                        stateEnum = enum
+                        break
+                    end
+                end
+            else
+                stateEnum = data.state
+            end
+            
+            if stateEnum and hum:GetState() ~= stateEnum then
+                hum:ChangeState(stateEnum)
+            end
         end
         
         -- LOGIKA ANDA: 3. Beri Velocity visual agar script Animate Roblox bekerja
         if data.velocity then
-            hrp.Velocity = data.velocity
+            if typeof(data.velocity) == "table" then
+                -- Data dari JSON, reconstruct Vector3
+                hrp.Velocity = Vector3.new(data.velocity[1] or 0, data.velocity[2] or 0, data.velocity[3] or 0)
+            else
+                hrp.Velocity = data.velocity
+            end
         end
         
-        State.CurrentIndex = targetIndex
+        -- PERBAIKAN: Increment index dengan speed multiplier
+        currentIndex = currentIndex + math.max(0.1, State.CurrentSpeedMultiplier)
+        State.CurrentIndex = math.floor(currentIndex)
     end)
     
     State.PlayConnection = connection
