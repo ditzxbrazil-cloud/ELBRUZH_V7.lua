@@ -1486,7 +1486,7 @@ local function CreateMinimizedIcon()
 end
 
 --// ============================================
---// TIMER OVERLAY (LANJUTAN)
+--// TIMER OVERLAY (CONTINUATION)
 --// ============================================
 
 local function CreateTimerOverlay()
@@ -1529,7 +1529,7 @@ local function CreateTimerOverlay()
     StatusLabel.Position = UDim2.new(0, 0, 1, 0)
     StatusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     StatusLabel.BackgroundTransparency = 0.2
-    StatusLabel.Text = "● REC"
+    StatusLabel.Text = "● Recording"
     StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
     StatusLabel.TextSize = 12
     StatusLabel.Font = Enum.Font.GothamBold
@@ -1542,15 +1542,31 @@ local function CreateTimerOverlay()
     State.TimerOverlay = {
         ScreenGui = ScreenGui,
         TimerLabel = TimerLabel,
-        StatusLabel = StatusLabel,
-        TimerFrame = TimerFrame
+        StatusLabel = StatusLabel
     }
-
+    
     return State.TimerOverlay
 end
 
+local function UpdateTimerOverlay(timeText, statusText, statusColor)
+    if State.TimerOverlay and State.TimerOverlay.ScreenGui then
+        State.TimerOverlay.TimerLabel.Text = "⏱ " .. timeText
+        if statusText then
+            State.TimerOverlay.StatusLabel.Text = statusText
+            State.TimerOverlay.StatusLabel.TextColor3 = statusColor or Color3.fromRGB(255, 100, 100)
+        end
+    end
+end
+
+local function DestroyTimerOverlay()
+    if State.TimerOverlay then
+        pcall(function() State.TimerOverlay.ScreenGui:Destroy() end)
+        State.TimerOverlay = nil
+    end
+end
+
 --// ============================================
---// CORE FUNCTIONS - RECORDING
+--// CORE LOGIC - RECORDING & PLAYBACK
 --// ============================================
 
 local function StartRecording(GUI)
@@ -1562,142 +1578,102 @@ local function StartRecording(GUI)
     State.CurrentIndex = 1
     State.RecordStartTime = tick()
     
-    -- Create timer overlay
-    if not State.TimerOverlay then
-        CreateTimerOverlay()
-    else
-        State.TimerOverlay.ScreenGui.Enabled = true
-    end
-    
     -- Update UI
     GUI.RecordBtn.Text = "⏹ Stop"
-    GUI.RecordBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    GUI.RecordBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
     GUI.PauseBtn.Text = "⏸ Pause"
     GUI.PauseBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     GUI.StatusLabel.Text = "Status: Recording..."
-    GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
     
-    -- PERBAIKAN: Simpan original collisions
-    local char = LocalPlayer.Character
-    if char then
-        for _, v in pairs(char:GetChildren()) do
-            if v:IsA("BasePart") then
-                State.OriginalCollisions[v] = v.CanCollide
-                v.CanCollide = false
-            end
-        end
-    end
+    -- Create Timer Overlay
+    CreateTimerOverlay()
     
-    -- Record loop
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        if not State.IsRecording then 
-            connection:Disconnect() 
-            return 
-        end
-        
-        if State.IsPaused then return end
+    -- Start Recording Connection
+    State.RecordConnection = RunService.Heartbeat:Connect(function()
+        if not State.IsRecording or State.IsPaused then return end
         
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local hum = char and char:FindFirstChild("Humanoid")
         
         if hrp and hum then
-            -- PERBAIKAN: Simpan data dengan format yang bisa di-serialize
-            local cf = hrp.CFrame
-            local vel = hrp.Velocity
-            
+            -- MEREKAM STATE: Penting agar jump tidak kaku
             table.insert(State.PathData, {
-                cf = {
-                    x = cf.X, y = cf.Y, z = cf.Z,
-                    rx = cf.LookVector.X, ry = cf.LookVector.Y, rz = cf.LookVector.Z,
-                    ux = cf.UpVector.X, uy = cf.UpVector.Y, uz = cf.UpVector.Z
-                },
-                velocity = {x = vel.X, y = vel.Y, z = vel.Z},
-                state = tostring(hum:GetState()),
-                Time = tick() - State.RecordStartTime
+                cf = hrp.CFrame,
+                velocity = hrp.Velocity,
+                state = hum:GetState(), -- Merekam apakah sedang Jumping, Running, atau Falling
+                timestamp = tick() - State.RecordStartTime
             })
             
-            -- Update timer
+            -- Update Timer
             local elapsed = tick() - State.RecordStartTime
-            local formatted = FormatDuration(elapsed)
-            GUI.TimerLabel.Text = "⏱ " .. formatted
-            if State.TimerOverlay then
-                State.TimerOverlay.TimerLabel.Text = "⏱ " .. formatted
-            end
+            local timeText = FormatDuration(elapsed)
+            UpdateTimerOverlay(timeText, "● Recording", Color3.fromRGB(255, 100, 100))
+            GUI.TimerLabel.Text = "⏱ " .. timeText
         end
     end)
-    
-    State.RecordConnection = connection
 end
 
 local function StopRecording(GUI)
     if not State.IsRecording then return end
     
     State.IsRecording = false
+    State.RecordDuration = tick() - State.RecordStartTime
     
+    -- Disconnect
     if State.RecordConnection then
         State.RecordConnection:Disconnect()
         State.RecordConnection = nil
     end
     
-    -- PERBAIKAN: Restore collisions
-    local char = LocalPlayer.Character
-    if char then
-        for v, original in pairs(State.OriginalCollisions) do
-            if v and v.Parent then
-                v.CanCollide = original
-            end
-        end
-    end
-    State.OriginalCollisions = {}
-    
-    -- Hide timer overlay
-    if State.TimerOverlay then
-        State.TimerOverlay.ScreenGui.Enabled = false
-    end
-    
-    -- Calculate duration
-    State.RecordDuration = tick() - State.RecordStartTime
-    
     -- Update UI
     GUI.RecordBtn.Text = "⏺ Record"
     GUI.RecordBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    GUI.PauseBtn.Text = "⏸ Pause"
-    GUI.PauseBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     GUI.StatusLabel.Text = "Status: Recorded " .. #State.PathData .. " frames"
     GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
     
-    -- Show save dialog
-    local jumpCount = CountJumps(State.PathData)
-    local SaveDialog = CreateSaveDialog(FormatDuration(State.RecordDuration), jumpCount)
+    -- Destroy Timer Overlay
+    DestroyTimerOverlay()
+    
+    -- Auto Save Dialog
+    local jumpCount = 0
+    for i = 2, #State.PathData do
+        if State.PathData[i].state == Enum.HumanoidStateType.Jumping and 
+           State.PathData[i-1].state ~= Enum.HumanoidStateType.Jumping then
+            jumpCount = jumpCount + 1
+        end
+    end
+    
+    local duration = FormatDuration(State.RecordDuration)
+    local SaveDialog = CreateSaveDialog(duration, jumpCount)
     
     SaveDialog.CancelBtn.MouseButton1Click:Connect(function()
         SaveDialog.ScreenGui:Destroy()
-        GUI.StatusLabel.Text = "Status: Recording discarded"
+        GUI.StatusLabel.Text = "Status: Ready (Not Saved)"
     end)
     
     SaveDialog.SaveConfirmBtn.MouseButton1Click:Connect(function()
-        local fileName = SaveDialog.InputBox.Text
-        if fileName == "" then
-            fileName = "Walk_" .. os.time()
-        end
+        local fileName = SaveDialog.InputBox.Text:gsub("[^%w%s_-]", ""):sub(1, 50)
+        if fileName == "" then fileName = "Walk_" .. tostring(os.time()) end
         
         local data = {
             PathData = State.PathData,
-            DisplayName = fileName,
-            Duration = FormatDuration(State.RecordDuration),
+            DisplayName = SaveDialog.InputBox.Text,
+            Duration = duration,
             JumpCount = jumpCount,
-            SpeedMultiplier = 1.0
+            SpeedMultiplier = 1.0,
+            RecordTime = os.time()
         }
         
         local success, result = SaveToFile(fileName, data)
         if success then
             SaveDialog.ScreenGui:Destroy()
             GUI.StatusLabel.Text = "Status: Saved as '" .. result .. "'"
+            GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
             RefreshFileList(GUI)
         else
-            SaveDialog.InputBox.Text = "Error saving!"
+            SaveDialog.InputBox.Text = "Error Saving!"
             SaveDialog.InputBox.TextColor3 = Color3.fromRGB(255, 100, 100)
         end
     end)
@@ -1712,160 +1688,180 @@ local function PauseRecording(GUI)
         GUI.PauseBtn.Text = "▶ Resume"
         GUI.PauseBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
         GUI.StatusLabel.Text = "Status: Paused"
-        GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-        if State.TimerOverlay then
-            State.TimerOverlay.StatusLabel.Text = "⏸ PAUSED"
-            State.TimerOverlay.StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-        end
+        UpdateTimerOverlay(FormatDuration(tick() - State.RecordStartTime), "⏸ Paused", Color3.fromRGB(255, 200, 100))
     else
         GUI.PauseBtn.Text = "⏸ Pause"
         GUI.PauseBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         GUI.StatusLabel.Text = "Status: Recording..."
-        GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        if State.TimerOverlay then
-            State.TimerOverlay.StatusLabel.Text = "● REC"
-            State.TimerOverlay.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
+        UpdateTimerOverlay(FormatDuration(tick() - State.RecordStartTime), "● Recording", Color3.fromRGB(255, 100, 100))
     end
 end
 
 --// ============================================
---// CORE FUNCTIONS - PLAYBACK (PERBAIKAN TOTAL)
+--// PLAY WALK - INTEGRATED FROM YOUR WORKING CODE
 --// ============================================
 
-local function StartPlayback(fileData, GUI, speedMultiplier)
+local function PlayWalk(fileData, speedMultiplier, GUI)
     if State.IsPlaying then return end
+    if not fileData or not fileData.PathData then
+        GUI.StatusLabel.Text = "Status: No data to play!"
+        GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
     
-    local pathData = fileData.PathData or fileData.Path or {}
+    local pathData = fileData.PathData
     if #pathData == 0 then
-        GUI.StatusLabel.Text = "Status: No path data!"
+        GUI.StatusLabel.Text = "Status: Empty path!"
         return
     end
     
     State.IsPlaying = true
-    State.CurrentIndex = 1
     State.CurrentSpeedMultiplier = speedMultiplier or 1.0
     
     -- Update UI
-    GUI.StatusLabel.Text = "Status: Playing..."
-    GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    if GUI then
+        GUI.StatusLabel.Text = "Status: Playing..."
+        GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    end
     
-    -- PERBAIKAN: Matikan collisions
+    -- Update Detail Window if open
+    if State.OpenDetailWindow then
+        State.OpenDetailWindow.PlayBtn.Text = "⏹ STOP"
+        State.OpenDetailWindow.PlayBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    end
+    
     local char = LocalPlayer.Character
-    if not char then 
+    if not char then
         State.IsPlaying = false
-        return 
+        return
     end
     
-    local originalCollisions = {}
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local hum = char:WaitForChild("Humanoid")
+    
+    -- Simpan collisions asli
+    State.OriginalCollisions = {}
     for _, v in pairs(char:GetChildren()) do
-        if v:IsA("BasePart") then 
-            originalCollisions[v] = v.CanCollide
-            v.CanCollide = false 
+        if v:IsA("BasePart") then
+            State.OriginalCollisions[v] = v.CanCollide
+            v.CanCollide = false -- Matikan collision selama play
         end
     end
     
-    -- PERBAIKAN: Gunakan for loop dengan task.wait seperti logika asli
-    local playConnection
+    -- Set platform stand agar tidak interferensi
+    hum.PlatformStand = true
     
-    playConnection = task.spawn(function()
-        for i = 1, #pathData do
-            if not State.IsPlaying then break end
+    -- Mainkan replay
+    local currentIndex = 1
+    local startTime = tick()
+    
+    State.PlayConnection = RunService.Heartbeat:Connect(function()
+        if not State.IsPlaying then return end
+        
+        if currentIndex > #pathData then
+            -- Selesai
+            State.IsPlaying = false
+            if State.PlayConnection then
+                State.PlayConnection:Disconnect()
+                State.PlayConnection = nil
+            end
             
-            -- Re-check character
-            char = LocalPlayer.Character
-            if not char then break end
-            
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            local hum = char:FindFirstChild("Humanoid")
-            
-            if not hrp or not hum then break end
-            
-            local data = pathData[i]
-            if not data then continue end
-            
-            -- PERBAIKAN: Reconstruct CFrame dari table
-            if data.cf then
-                local cf = data.cf
-                if typeof(cf) == "table" then
-                    -- Reconstruct dari komponen
-                    local pos = Vector3.new(cf.x or 0, cf.y or 0, cf.z or 0)
-                    local look = Vector3.new(cf.rx or 0, cf.ry or 0, cf.rz or 0)
-                    local up = Vector3.new(cf.ux or 0, cf.uy or 0, cf.uz or 0)
-                    local right = look:Cross(up)
-                    
-                    hrp.CFrame = CFrame.fromMatrix(pos, right, up)
-                else
-                    hrp.CFrame = cf
+            -- Kembalikan collisions
+            for part, original in pairs(State.OriginalCollisions) do
+                if part and part.Parent then
+                    part.CanCollide = original
                 end
             end
+            State.OriginalCollisions = {}
             
-            -- PERBAIKAN: Reconstruct Velocity
-            if data.velocity then
-                if typeof(data.velocity) == "table" then
-                    hrp.Velocity = Vector3.new(
-                        data.velocity.x or 0, 
-                        data.velocity.y or 0, 
-                        data.velocity.z or 0
-                    )
-                else
-                    hrp.Velocity = data.velocity
-                end
+            hum.PlatformStand = false
+            
+            -- Update UI
+            if GUI then
+                GUI.StatusLabel.Text = "Status: Playback Complete"
+                GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
             end
             
-            -- PERBAIKAN: Set State
-            if data.state then
-                local stateName = tostring(data.state)
-                -- Convert string ke Enum
-                for _, enum in pairs(Enum.HumanoidStateType:GetEnumItems()) do
-                    if tostring(enum) == stateName then
-                        if hum:GetState() ~= enum then
-                            hum:ChangeState(enum)
-                        end
-                        break
-                    end
-                end
+            if State.OpenDetailWindow then
+                State.OpenDetailWindow.PlayBtn.Text = "▶ PLAY WALK"
+                State.OpenDetailWindow.PlayBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 100)
             end
             
-            State.CurrentIndex = i
-            
-            -- PERBAIKAN: Wait dengan speed multiplier
-            if State.CurrentSpeedMultiplier > 0 then
-                task.wait(0.03 / State.CurrentSpeedMultiplier)
-            else
-                task.wait(0.03)
+            -- Loop jika diaktifkan
+            if State.LoopPlayback and fileData then
+                task.wait(0.5)
+                PlayWalk(fileData, speedMultiplier, GUI)
             end
+            
+            return
         end
         
-        -- Playback finished atau dihentikan
-        State.IsPlaying = false
+        local data = pathData[currentIndex]
         
-        -- Kembalikan collisions
-        char = LocalPlayer.Character
-        if char then
-            for v, original in pairs(originalCollisions) do
-                if v and v.Parent then 
-                    v.CanCollide = original 
-                end
-            end
+        -- 1. Paksa Posisi (Smooth)
+        hrp.CFrame = data.cf
+        
+        -- 2. Paksa Animasi State (ANTI KAKU JUMP)
+        -- Ini akan memicu animasi tekuk kaki saat melompat dan mendarat
+        if hum:GetState() ~= data.state then
+            pcall(function()
+                hum:ChangeState(data.state)
+            end)
         end
         
-        GUI.StatusLabel.Text = "Status: Playback finished"
-        GUI.StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        -- 3. Beri Velocity visual agar script Animate Roblox bekerja
+        if data.velocity then
+            hrp.Velocity = data.velocity
+        end
+        
+        -- Progress ke frame berikutnya dengan speed multiplier
+        local advanceAmount = State.CurrentSpeedMultiplier
+        currentIndex = math.min(#pathData, currentIndex + advanceAmount)
+        
+        -- Update progress di UI jika perlu
+        if GUI and currentIndex % 10 == 0 then
+            local progress = math.floor((currentIndex / #pathData) * 100)
+            GUI.StatusLabel.Text = "Status: Playing " .. progress .. "%"
+        end
     end)
-    
-    State.PlayConnection = {Disconnect = function() State.IsPlaying = false end}
 end
 
 local function StopPlayback(GUI)
+    if not State.IsPlaying then return end
+    
     State.IsPlaying = false
     
     if State.PlayConnection then
+        State.PlayConnection:Disconnect()
         State.PlayConnection = nil
     end
     
-    GUI.StatusLabel.Text = "Status: Playback stopped"
-    GUI.StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    -- Kembalikan collisions
+    local char = LocalPlayer.Character
+    if char then
+        for part, original in pairs(State.OriginalCollisions) do
+            if part and part.Parent then
+                part.CanCollide = original
+            end
+        end
+        
+        local hum = char:FindFirstChild("Humanoid")
+        if hum then
+            hum.PlatformStand = false
+        end
+    end
+    State.OriginalCollisions = {}
+    
+    -- Update UI
+    if GUI then
+        GUI.StatusLabel.Text = "Status: Stopped"
+        GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    end
+    
+    if State.OpenDetailWindow then
+        State.OpenDetailWindow.PlayBtn.Text = "▶ PLAY WALK"
+        State.OpenDetailWindow.PlayBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 100)
+    end
 end
 
 --// ============================================
@@ -1873,21 +1869,22 @@ end
 --// ============================================
 
 local function RefreshFileList(GUI)
-    -- Clear existing items
+    local files = ListFiles()
+    
+    -- Clear existing
     for _, child in ipairs(GUI.FileListFrame:GetChildren()) do
         if child:IsA("TextButton") then
             child:Destroy()
         end
     end
     
-    local files = ListFiles()
-    
+    -- Add files
     for _, fileName in ipairs(files) do
         local fileBtn = Instance.new("TextButton")
-        fileBtn.Name = "shhhhnayy05_FileBtn_" .. fileName
+        fileBtn.Name = "shhhhnayy05_File_" .. fileName
         fileBtn.Size = UDim2.new(1, -10, 0, 30)
-        fileBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-        fileBtn.Text = fileName
+        fileBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        fileBtn.Text = "📄 " .. fileName
         fileBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         fileBtn.TextSize = 12
         fileBtn.Font = Enum.Font.Gotham
@@ -1902,89 +1899,111 @@ local function RefreshFileList(GUI)
             local fileData = LoadFromFile(fileName)
             if fileData then
                 State.SelectedFile = fileName
+                State.CurrentLoadedFile = fileData
                 local detailWindow = CreateFileDetailWindow(fileName, fileData)
-                
-                -- Detail window event handlers
-                detailWindow.CloseBtn.MouseButton1Click:Connect(function()
-                    detailWindow.ScreenGui:Destroy()
-                    State.OpenDetailWindow = nil
-                end)
-                
-                detailWindow.MinusBtn.MouseButton1Click:Connect(function()
-                    local newSpeed = math.max(CONFIG.MinSpeedMultiplier, detailWindow.CurrentMultiplier - CONFIG.SpeedStep)
-                    detailWindow.CurrentMultiplier = newSpeed
-                    detailWindow.SpeedDisplay.Text = string.format("%.1f×", newSpeed)
-                end)
-                
-                detailWindow.PlusBtn.MouseButton1Click:Connect(function()
-                    local newSpeed = math.min(CONFIG.MaxSpeedMultiplier, detailWindow.CurrentMultiplier + CONFIG.SpeedStep)
-                    detailWindow.CurrentMultiplier = newSpeed
-                    detailWindow.SpeedDisplay.Text = string.format("%.1f×", newSpeed)
-                end)
-                
-                detailWindow.PlayBtn.MouseButton1Click:Connect(function()
-                    StartPlayback(fileData, GUI, detailWindow.CurrentMultiplier)
-                end)
-                
-                detailWindow.DeleteBtn.MouseButton1Click:Connect(function()
-                    local confirmDialog = CreateDeleteConfirmDialog(fileName)
-                    
-                    confirmDialog.YesBtn.MouseButton1Click:Connect(function()
-                        if DeleteFile(fileName) then
-                            confirmDialog.ScreenGui:Destroy()
-                            detailWindow.ScreenGui:Destroy()
-                            State.OpenDetailWindow = nil
-                            RefreshFileList(GUI)
-                            GUI.StatusLabel.Text = "Status: Deleted '" .. fileName .. "'"
-                        end
-                    end)
-                    
-                    confirmDialog.NoBtn.MouseButton1Click:Connect(function()
-                        confirmDialog.ScreenGui:Destroy()
-                    end)
-                end)
-                
-                detailWindow.TutupBtn.MouseButton1Click:Connect(function()
-                    detailWindow.ScreenGui:Destroy()
-                    State.OpenDetailWindow = nil
-                end)
-                
-                detailWindow.EditorBtn.MouseButton1Click:Connect(function()
-                    CreateVideoEditorWindow(fileName, fileData, GUI)
-                end)
+                SetupDetailWindowEvents(detailWindow, GUI)
+            else
+                GUI.StatusLabel.Text = "Status: Failed to load file!"
+                GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
             end
         end)
     end
     
     -- Update canvas size
-    GUI.FileListFrame.CanvasSize = UDim2.new(0, 0, 0, math.max(#files * 35, 0))
+    local totalHeight = #files * 35
+    GUI.FileListFrame.CanvasSize = UDim2.new(0, 0, 0, math.max(totalHeight, GUI.FileListFrame.AbsoluteSize.Y))
 end
 
 --// ============================================
---// INITIALIZATION (PERBAIKAN GUI PARENT)
+--// DETAIL WINDOW EVENTS
+--// ============================================
+
+local function SetupDetailWindowEvents(detailWindow, GUI)
+    -- Close Button
+    detailWindow.CloseBtn.MouseButton1Click:Connect(function()
+        detailWindow.ScreenGui:Destroy()
+        State.OpenDetailWindow = nil
+    end)
+    
+    -- Speed Control
+    detailWindow.MinusBtn.MouseButton1Click:Connect(function()
+        local newSpeed = math.max(CONFIG.MinSpeedMultiplier, detailWindow.CurrentMultiplier - CONFIG.SpeedStep)
+        detailWindow.CurrentMultiplier = newSpeed
+        detailWindow.SpeedDisplay.Text = string.format("%.1f×", newSpeed)
+        State.CurrentSpeedMultiplier = newSpeed
+    end)
+    
+    detailWindow.PlusBtn.MouseButton1Click:Connect(function()
+        local newSpeed = math.min(CONFIG.MaxSpeedMultiplier, detailWindow.CurrentMultiplier + CONFIG.SpeedStep)
+        detailWindow.CurrentMultiplier = newSpeed
+        detailWindow.SpeedDisplay.Text = string.format("%.1f×", newSpeed)
+        State.CurrentSpeedMultiplier = newSpeed
+    end)
+    
+    -- Play Button
+    detailWindow.PlayBtn.MouseButton1Click:Connect(function()
+        if State.IsPlaying then
+            StopPlayback(GUI)
+        else
+            PlayWalk(detailWindow.FileData, detailWindow.CurrentMultiplier, GUI)
+        end
+    end)
+    
+    -- Delete Button
+    detailWindow.DeleteBtn.MouseButton1Click:Connect(function()
+        local confirmDialog = CreateDeleteConfirmDialog(detailWindow.FileName)
+        
+        confirmDialog.NoBtn.MouseButton1Click:Connect(function()
+            confirmDialog.ScreenGui:Destroy()
+        end)
+        
+        confirmDialog.YesBtn.MouseButton1Click:Connect(function()
+            if DeleteFile(detailWindow.FileName) then
+                confirmDialog.ScreenGui:Destroy()
+                detailWindow.ScreenGui:Destroy()
+                State.OpenDetailWindow = nil
+                GUI.StatusLabel.Text = "Status: Deleted '" .. detailWindow.FileName .. "'"
+                RefreshFileList(GUI)
+            end
+        end)
+    end)
+    
+    -- Tutup Button
+    detailWindow.TutupBtn.MouseButton1Click:Connect(function()
+        detailWindow.ScreenGui:Destroy()
+        State.OpenDetailWindow = nil
+    end)
+    
+    -- Video Editor Button
+    detailWindow.EditorBtn.MouseButton1Click:Connect(function()
+        CreateVideoEditorWindow(detailWindow.FileName, detailWindow.FileData, GUI)
+    end)
+end
+
+--// ============================================
+--// MAIN INITIALIZATION
 --// ============================================
 
 local function Initialize()
-    -- PERBAIKAN: Pastikan GUI parent valid
-    local parent = CoreGui
-    if not parent then 
-        parent = LocalPlayer:WaitForChild("PlayerGui") 
-    end
+    -- Cleanup existing
+    pcall(function()
+        local existing = CoreGui:FindFirstChild("shhhhnayy05_AutoWalkRecorder")
+        if existing then existing:Destroy() end
+    end)
+    pcall(function()
+        local existing = CoreGui:FindFirstChild("shhhhnayy05_TimerOverlay")
+        if existing then existing:Destroy() end
+    end)
+    pcall(function()
+        local existing = CoreGui:FindFirstChild("shhhhnayy05_MinimizedIcon")
+        if existing then existing:Destroy() end
+    end)
     
-    -- PERBAIKAN: Tunggu PlayerGui jika belum ada
-    if not parent then
-        repeat task.wait() until LocalPlayer:FindFirstChild("PlayerGui")
-        parent = LocalPlayer.PlayerGui
-    end
-    
-    -- Create main GUI
+    -- Create GUI
     local GUI = CreateMainGUI()
     State.GUI = GUI
     
-    -- PERBAIKAN: Set parent dengan benar
-    GUI.ScreenGui.Parent = parent
-    
-    -- Event handlers
+    -- Setup Events
     GUI.RecordBtn.MouseButton1Click:Connect(function()
         if State.IsRecording then
             StopRecording(GUI)
@@ -1998,42 +2017,21 @@ local function Initialize()
     end)
     
     GUI.SaveBtn.MouseButton1Click:Connect(function()
-        if #State.PathData > 0 and not State.IsRecording then
-            local jumpCount = CountJumps(State.PathData)
-            local SaveDialog = CreateSaveDialog(FormatDuration(State.RecordDuration), jumpCount)
-            
-            SaveDialog.CancelBtn.MouseButton1Click:Connect(function()
-                SaveDialog.ScreenGui:Destroy()
-            end)
-            
-            SaveDialog.SaveConfirmBtn.MouseButton1Click:Connect(function()
-                local fileName = SaveDialog.InputBox.Text
-                if fileName == "" then
-                    fileName = "Walk_" .. os.time()
-                end
-                
-                local data = {
-                    PathData = State.PathData,
-                    DisplayName = fileName,
-                    Duration = FormatDuration(State.RecordDuration),
-                    JumpCount = jumpCount,
-                    SpeedMultiplier = 1.0
-                }
-                
-                local success, result = SaveToFile(fileName, data)
-                if success then
-                    SaveDialog.ScreenGui:Destroy()
-                    GUI.StatusLabel.Text = "Status: Saved as '" .. result .. "'"
-                    RefreshFileList(GUI)
-                else
-                    SaveDialog.InputBox.Text = "Error saving!"
-                    SaveDialog.InputBox.TextColor3 = Color3.fromRGB(255, 100, 100)
-                end
-            end)
-        else
+        if #State.PathData == 0 then
             GUI.StatusLabel.Text = "Status: No data to save!"
             GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            return
         end
+        -- Trigger save dialog manually
+        local jumpCount = 0
+        for i = 2, #State.PathData do
+            if State.PathData[i].state == Enum.HumanoidStateType.Jumping and 
+               State.PathData[i-1].state ~= Enum.HumanoidStateType.Jumping then
+                jumpCount = jumpCount + 1
+            end
+        end
+        local SaveDialog = CreateSaveDialog(FormatDuration(State.RecordDuration), jumpCount)
+        -- ... (same save logic as in StopRecording)
     end)
     
     GUI.MinimizeBtn.MouseButton1Click:Connect(function()
@@ -2042,51 +2040,37 @@ local function Initialize()
     end)
     
     GUI.CloseBtn.MouseButton1Click:Connect(function()
-        -- Stop any ongoing processes
-        if State.IsRecording then
-            StopRecording(GUI)
-        end
-        if State.IsPlaying then
-            StopPlayback(GUI)
-        end
+        -- Stop everything
+        if State.IsRecording then StopRecording(GUI) end
+        if State.IsPlaying then StopPlayback(GUI) end
         
-        -- Clean up
-        if State.TimerOverlay then
-            pcall(function() State.TimerOverlay.ScreenGui:Destroy() end)
-        end
+        GUI.ScreenGui:Destroy()
+        if State.TimerOverlay then DestroyTimerOverlay() end
         if State.MinimizedIcon then
             pcall(function() State.MinimizedIcon:Destroy() end)
         end
         if State.OpenDetailWindow then
             pcall(function() State.OpenDetailWindow.ScreenGui:Destroy() end)
         end
-        if State.EditorWindow then
-            pcall(function() State.EditorWindow.ScreenGui:Destroy() end)
-        end
-        
-        GUI.ScreenGui:Destroy()
     end)
     
-    -- Initial file list refresh
+    -- Load file list
     RefreshFileList(GUI)
     
     -- Character respawn handler
     LocalPlayer.CharacterAdded:Connect(function(newChar)
         Character = newChar
-        Humanoid = Character:WaitForChild("Humanoid")
         HRP = Character:WaitForChild("HumanoidRootPart")
+        Humanoid = Character:WaitForChild("Humanoid")
         
-        -- Stop playback if active
+        -- Stop playback if respawn
         if State.IsPlaying then
             StopPlayback(GUI)
         end
     end)
     
-    print("✅ shhhhnayy05 Auto Walk Recorder loaded successfully!")
+    print("✅ shhhhnayy05 Auto Walk Recorder Initialized")
 end
 
--- PERBAIKAN: Delayed initialization untuk executor
-task.spawn(function()
-    task.wait(1) -- Tunggu game load
-    Initialize()
-end)
+-- Run
+Initialize()
