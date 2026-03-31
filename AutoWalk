@@ -1,0 +1,2051 @@
+--// shhhhnayy05 Auto Walk Recorder - Video Editor Edition
+--// Support Executor Level 7-8
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local HRP = Character:WaitForChild("HumanoidRootPart")
+
+--// Configuration
+local CONFIG = {
+    FolderName = "shhhhnayy05_AutoWalk",
+    FileExtension = ".shhhhnayy05",
+    RecordInterval = 0.03,
+    DefaultSpeedMultiplier = 1.0,
+    MinSpeedMultiplier = 0.1,
+    MaxSpeedMultiplier = 5.0,
+    SpeedStep = 0.1
+}
+
+--// State Management
+local State = {
+    IsRecording = false,
+    IsPaused = false,
+    IsPlaying = false,
+    PathData = {},
+    CurrentIndex = 1,
+    RecordConnection = nil,
+    PlayConnection = nil,
+    RecordStartTime = 0,
+    RecordDuration = 0,
+    CurrentSpeedMultiplier = CONFIG.DefaultSpeedMultiplier,
+    CurrentLoadedFile = nil,
+    OriginalCollisions = {},
+    LoopPlayback = false,
+    SelectedFile = nil,
+    TimerOverlay = nil,
+    MinimizedIcon = nil,
+    OpenDetailWindow = nil,
+    EditorWindow = nil,
+    ClipboardData = nil -- For copy-paste segments
+}
+
+--// ============================================
+--// GUI SYSTEM (MOBILE COMPACT EDITION)
+--// ============================================
+
+local function CreateMainGUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "shhhhnayy05_AutoWalkRecorder"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = CoreGui
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "shhhhnayy05_MainFrame"
+    MainFrame.Size = UDim2.new(0, 320, 0, 400)
+    MainFrame.Position = UDim2.new(0.5, -160, 0.5, -200)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = MainFrame
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(100, 100, 150)
+    Stroke.Thickness = 2
+    Stroke.Parent = MainFrame
+
+    -- Title Bar
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Name = "shhhhnayy05_TitleBar"
+    TitleBar.Size = UDim2.new(1, 0, 0, 35)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Parent = MainFrame
+
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 8)
+    TitleCorner.Parent = TitleBar
+
+    local TitleFix = Instance.new("Frame")
+    TitleFix.Size = UDim2.new(1, 0, 0, 10)
+    TitleFix.Position = UDim2.new(0, 0, 1, -10)
+    TitleFix.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    TitleFix.BorderSizePixel = 0
+    TitleFix.Parent = TitleBar
+
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Name = "shhhhnayy05_TitleLabel"
+    TitleLabel.Size = UDim2.new(1, -70, 1, 0)
+    TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = "🎬 shhhhnayy05 Recorder"
+    TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleLabel.TextSize = 16
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLabel.Parent = TitleBar
+
+    local MinimizeBtn = Instance.new("TextButton")
+    MinimizeBtn.Name = "shhhhnayy05_MinimizeBtn"
+    MinimizeBtn.Size = UDim2.new(0, 30, 0, 25)
+    MinimizeBtn.Position = UDim2.new(1, -65, 0, 5)
+    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    MinimizeBtn.Text = "-"
+    MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MinimizeBtn.TextSize = 20
+    MinimizeBtn.Font = Enum.Font.GothamBold
+    MinimizeBtn.Parent = TitleBar
+
+    local MinBtnCorner = Instance.new("UICorner")
+    MinBtnCorner.CornerRadius = UDim.new(0, 6)
+    MinBtnCorner.Parent = MinimizeBtn
+
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Name = "shhhhnayy05_CloseBtn"
+    CloseBtn.Size = UDim2.new(0, 30, 0, 25)
+    CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.TextSize = 14
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Parent = TitleBar
+
+    local CloseBtnCorner = Instance.new("UICorner")
+    CloseBtnCorner.CornerRadius = UDim.new(0, 6)
+    CloseBtnCorner.Parent = CloseBtn
+
+    -- Content Frame
+    local ContentFrame = Instance.new("Frame")
+    ContentFrame.Name = "shhhhnayy05_ContentFrame"
+    ContentFrame.Size = UDim2.new(1, -20, 1, -45)
+    ContentFrame.Position = UDim2.new(0, 10, 0, 40)
+    ContentFrame.BackgroundTransparency = 1
+    ContentFrame.Parent = MainFrame
+
+    -- Timer Label
+    local TimerLabel = Instance.new("TextLabel")
+    TimerLabel.Name = "shhhhnayy05_TimerLabel"
+    TimerLabel.Size = UDim2.new(1, 0, 0, 25)
+    TimerLabel.BackgroundTransparency = 1
+    TimerLabel.Text = "⏱ 00:00"
+    TimerLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    TimerLabel.TextSize = 20
+    TimerLabel.Font = Enum.Font.GothamBold
+    TimerLabel.Parent = ContentFrame
+
+    -- Control Buttons Frame
+    local ControlFrame = Instance.new("Frame")
+    ControlFrame.Name = "shhhhnayy05_ControlFrame"
+    ControlFrame.Size = UDim2.new(1, 0, 0, 35)
+    ControlFrame.Position = UDim2.new(0, 0, 0, 30)
+    ControlFrame.BackgroundTransparency = 1
+    ControlFrame.Parent = ContentFrame
+
+    local RecordBtn = Instance.new("TextButton")
+    RecordBtn.Name = "shhhhnayy05_RecordBtn"
+    RecordBtn.Size = UDim2.new(0.48, 0, 1, 0)
+    RecordBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    RecordBtn.Text = "⏺ Record"
+    RecordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RecordBtn.TextSize = 14
+    RecordBtn.Font = Enum.Font.GothamBold
+    RecordBtn.Parent = ControlFrame
+
+    local RecordCorner = Instance.new("UICorner")
+    RecordCorner.CornerRadius = UDim.new(0, 6)
+    RecordCorner.Parent = RecordBtn
+
+    local PauseBtn = Instance.new("TextButton")
+    PauseBtn.Name = "shhhhnayy05_PauseBtn"
+    PauseBtn.Size = UDim2.new(0.48, 0, 1, 0)
+    PauseBtn.Position = UDim2.new(0.52, 0, 0, 0)
+    PauseBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    PauseBtn.Text = "⏸ Pause"
+    PauseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PauseBtn.TextSize = 14
+    PauseBtn.Font = Enum.Font.GothamBold
+    PauseBtn.Parent = ControlFrame
+
+    local PauseCorner = Instance.new("UICorner")
+    PauseCorner.CornerRadius = UDim.new(0, 6)
+    PauseCorner.Parent = PauseBtn
+
+    -- Save Button
+    local SaveBtn = Instance.new("TextButton")
+    SaveBtn.Name = "shhhhnayy05_SaveBtn"
+    SaveBtn.Size = UDim2.new(1, 0, 0, 30)
+    SaveBtn.Position = UDim2.new(0, 0, 0, 70)
+    SaveBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
+    SaveBtn.Text = "💾 Save Recording"
+    SaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SaveBtn.TextSize = 14
+    SaveBtn.Font = Enum.Font.GothamBold
+    SaveBtn.Parent = ContentFrame
+
+    local SaveCorner = Instance.new("UICorner")
+    SaveCorner.CornerRadius = UDim.new(0, 6)
+    SaveCorner.Parent = SaveBtn
+
+    -- Separator
+    local Separator = Instance.new("Frame")
+    Separator.Name = "shhhhnayy05_Separator"
+    Separator.Size = UDim2.new(1, 0, 0, 2)
+    Separator.Position = UDim2.new(0, 0, 0, 108)
+    Separator.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    Separator.BorderSizePixel = 0
+    Separator.Parent = ContentFrame
+
+    -- File List Label
+    local FileLabel = Instance.new("TextLabel")
+    FileLabel.Name = "shhhhnayy05_FileLabel"
+    FileLabel.Size = UDim2.new(1, 0, 0, 20)
+    FileLabel.Position = UDim2.new(0, 0, 0, 115)
+    FileLabel.BackgroundTransparency = 1
+    FileLabel.Text = "📁 File Saves (Click to Open)"
+    FileLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FileLabel.TextSize = 12
+    FileLabel.Font = Enum.Font.GothamBold
+    FileLabel.TextXAlignment = Enum.TextXAlignment.Left
+    FileLabel.Parent = ContentFrame
+
+    -- File List Frame (Scrollable)
+    local FileListFrame = Instance.new("ScrollingFrame")
+    FileListFrame.Name = "shhhhnayy05_FileListFrame"
+    FileListFrame.Size = UDim2.new(1, 0, 1, -140)
+    FileListFrame.Position = UDim2.new(0, 0, 0, 140)
+    FileListFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    FileListFrame.BorderSizePixel = 0
+    FileListFrame.ScrollBarThickness = 4
+    FileListFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 150)
+    FileListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    FileListFrame.Parent = ContentFrame
+
+    local FileListCorner = Instance.new("UICorner")
+    FileListCorner.CornerRadius = UDim.new(0, 6)
+    FileListCorner.Parent = FileListFrame
+
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.Padding = UDim.new(0, 5)
+    ListLayout.Parent = FileListFrame
+
+    -- Status Label
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Name = "shhhhnayy05_StatusLabel"
+    StatusLabel.Size = UDim2.new(1, 0, 0, 18)
+    StatusLabel.Position = UDim2.new(0, 0, 1, -20)
+    StatusLabel.BackgroundTransparency = 1
+    StatusLabel.Text = "Status: Idle"
+    StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    StatusLabel.TextSize = 11
+    StatusLabel.Font = Enum.Font.Gotham
+    StatusLabel.Parent = ContentFrame
+
+    return {
+        ScreenGui = ScreenGui,
+        MainFrame = MainFrame,
+        ContentFrame = ContentFrame,
+        TimerLabel = TimerLabel,
+        RecordBtn = RecordBtn,
+        PauseBtn = PauseBtn,
+        SaveBtn = SaveBtn,
+        FileListFrame = FileListFrame,
+        StatusLabel = StatusLabel,
+        MinimizeBtn = MinimizeBtn,
+        CloseBtn = CloseBtn
+    }
+end
+
+--// ============================================
+--// SAVE DIALOG
+--// ============================================
+
+local function CreateSaveDialog(duration, jumpCount)
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "shhhhnayy05_SaveDialog"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = CoreGui
+
+    local DialogFrame = Instance.new("Frame")
+    DialogFrame.Name = "shhhhnayy05_DialogFrame"
+    DialogFrame.Size = UDim2.new(0, 300, 0, 180)
+    DialogFrame.Position = UDim2.new(0.5, -150, 0.5, -90)
+    DialogFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    DialogFrame.BorderSizePixel = 0
+    DialogFrame.Parent = ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 10)
+    Corner.Parent = DialogFrame
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(100, 100, 200)
+    Stroke.Thickness = 2
+    Stroke.Parent = DialogFrame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 35)
+    Title.BackgroundTransparency = 1
+    Title.Text = "💾 Save Auto Walk"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 16
+    Title.Font = Enum.Font.GothamBold
+    Title.Parent = DialogFrame
+
+    local InfoLabel = Instance.new("TextLabel")
+    InfoLabel.Size = UDim2.new(1, -20, 0, 25)
+    InfoLabel.Position = UDim2.new(0, 10, 0, 35)
+    InfoLabel.BackgroundTransparency = 1
+    InfoLabel.Text = "Durasi: " .. duration .. " | Jumps: " .. (jumpCount or 0)
+    InfoLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+    InfoLabel.TextSize = 12
+    InfoLabel.Font = Enum.Font.Gotham
+    InfoLabel.Parent = DialogFrame
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -20, 0, 20)
+    Label.Position = UDim2.new(0, 10, 0, 65)
+    Label.BackgroundTransparency = 1
+    Label.Text = "Judul/Nama Save:"
+    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Label.TextSize = 12
+    Label.Font = Enum.Font.Gotham
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = DialogFrame
+
+    local InputBox = Instance.new("TextBox")
+    InputBox.Name = "shhhhnayy05_InputBox"
+    InputBox.Size = UDim2.new(1, -20, 0, 30)
+    InputBox.Position = UDim2.new(0, 10, 0, 85)
+    InputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    InputBox.Text = ""
+    InputBox.PlaceholderText = "Contoh: Farming Route 1"
+    InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    InputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    InputBox.TextSize = 13
+    InputBox.Font = Enum.Font.Gotham
+    InputBox.ClearTextOnFocus = false
+    InputBox.Parent = DialogFrame
+
+    local InputCorner = Instance.new("UICorner")
+    InputCorner.CornerRadius = UDim.new(0, 6)
+    InputCorner.Parent = InputBox
+
+    local BtnFrame = Instance.new("Frame")
+    BtnFrame.Size = UDim2.new(1, -20, 0, 30)
+    BtnFrame.Position = UDim2.new(0, 10, 0, 125)
+    BtnFrame.BackgroundTransparency = 1
+    BtnFrame.Parent = DialogFrame
+
+    local CancelBtn = Instance.new("TextButton")
+    CancelBtn.Size = UDim2.new(0.48, 0, 1, 0)
+    CancelBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    CancelBtn.Text = "Batal"
+    CancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CancelBtn.TextSize = 13
+    CancelBtn.Font = Enum.Font.GothamBold
+    CancelBtn.Parent = BtnFrame
+
+    local CancelCorner = Instance.new("UICorner")
+    CancelCorner.CornerRadius = UDim.new(0, 6)
+    CancelCorner.Parent = CancelBtn
+
+    local SaveConfirmBtn = Instance.new("TextButton")
+    SaveConfirmBtn.Size = UDim2.new(0.48, 0, 1, 0)
+    SaveConfirmBtn.Position = UDim2.new(0.52, 0, 0, 0)
+    SaveConfirmBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 100)
+    SaveConfirmBtn.Text = "Simpan"
+    SaveConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SaveConfirmBtn.TextSize = 13
+    SaveConfirmBtn.Font = Enum.Font.GothamBold
+    SaveConfirmBtn.Parent = BtnFrame
+
+    local SaveConfirmCorner = Instance.new("UICorner")
+    SaveConfirmCorner.CornerRadius = UDim.new(0, 6)
+    SaveConfirmCorner.Parent = SaveConfirmBtn
+
+    return {
+        ScreenGui = ScreenGui,
+        DialogFrame = DialogFrame,
+        InputBox = InputBox,
+        CancelBtn = CancelBtn,
+        SaveConfirmBtn = SaveConfirmBtn
+    }
+end
+
+--// ============================================
+--// FILE DETAIL WINDOW - FIXED LAYOUT (LEBIH RAPI)
+--// ============================================
+
+local function CreateFileDetailWindow(fileName, fileData)
+    if State.OpenDetailWindow then
+        pcall(function()
+            State.OpenDetailWindow.ScreenGui:Destroy()
+        end)
+        State.OpenDetailWindow = nil
+    end
+
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "shhhhnayy05_FileDetail_" .. tostring(tick())
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = CoreGui
+
+    -- UKURAN: L300 P350 (disesuaikan agar tombol rapi)
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "shhhhnayy05_DetailFrame"
+    MainFrame.Size = UDim2.new(0, 300, 0, 350)
+    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 12)
+    Corner.Parent = MainFrame
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(100, 100, 200)
+    Stroke.Thickness = 2
+    Stroke.Parent = MainFrame
+
+    -- Title Bar
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Size = UDim2.new(1, 0, 0, 40)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Parent = MainFrame
+
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 12)
+    TitleCorner.Parent = TitleBar
+
+    local TitleFix = Instance.new("Frame")
+    TitleFix.Size = UDim2.new(1, 0, 0, 15)
+    TitleFix.Position = UDim2.new(0, 0, 1, -15)
+    TitleFix.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    TitleFix.BorderSizePixel = 0
+    TitleFix.Parent = TitleBar
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -50, 1, 0)
+    Title.Position = UDim2.new(0, 15, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = fileName
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 16
+    Title.Font = Enum.Font.GothamBold
+    Title.TextTruncate = Enum.TextTruncate.AtEnd
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TitleBar
+
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Name = "shhhhnayy05_CloseDetailBtn"
+    CloseBtn.Size = UDim2.new(0, 30, 0, 25)
+    CloseBtn.Position = UDim2.new(1, -40, 0, 7)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.TextSize = 14
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Parent = TitleBar
+
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.Parent = CloseBtn
+
+    -- Content
+    local Content = Instance.new("Frame")
+    Content.Name = "shhhhnayy05_DetailContent"
+    Content.Size = UDim2.new(1, -20, 1, -50)
+    Content.Position = UDim2.new(0, 10, 0, 45)
+    Content.BackgroundTransparency = 1
+    Content.Parent = MainFrame
+
+    -- Durasi Section
+    local DurasiLabel = Instance.new("TextLabel")
+    DurasiLabel.Name = "shhhhnayy05_DurasiLabel"
+    DurasiLabel.Size = UDim2.new(1, 0, 0, 20)
+    DurasiLabel.Position = UDim2.new(0, 0, 0, 5)
+    DurasiLabel.BackgroundTransparency = 1
+    DurasiLabel.Text = "Durasi:"
+    DurasiLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    DurasiLabel.TextSize = 12
+    DurasiLabel.Font = Enum.Font.Gotham
+    DurasiLabel.TextXAlignment = Enum.TextXAlignment.Left
+    DurasiLabel.Parent = Content
+
+    local DurasiValue = Instance.new("TextLabel")
+    DurasiValue.Name = "shhhhnayy05_DurasiValue"
+    DurasiValue.Size = UDim2.new(1, 0, 0, 25)
+    DurasiValue.Position = UDim2.new(0, 0, 0, 25)
+    DurasiValue.BackgroundTransparency = 1
+    DurasiValue.Text = tostring(fileData.Duration or fileData.duration or "00:00")
+    DurasiValue.TextColor3 = Color3.fromRGB(100, 255, 150)
+    DurasiValue.TextSize = 20
+    DurasiValue.Font = Enum.Font.GothamBold
+    DurasiValue.Parent = Content
+
+    -- Info tambahan
+    local InfoFrame = Instance.new("Frame")
+    InfoFrame.Name = "shhhhnayy05_InfoFrame"
+    InfoFrame.Size = UDim2.new(1, 0, 0, 25)
+    InfoFrame.Position = UDim2.new(0, 0, 0, 55)
+    InfoFrame.BackgroundTransparency = 1
+    InfoFrame.Parent = Content
+
+    local pointsCount = fileData.Points or (fileData.Path and #fileData.Path) or 0
+    local jumpCount = fileData.JumpCount or fileData.jumpCount or 0
+
+    local PointsLabel = Instance.new("TextLabel")
+    PointsLabel.Name = "shhhhnayy05_PointsLabel"
+    PointsLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    PointsLabel.BackgroundTransparency = 1
+    PointsLabel.Text = "📍 Points: " .. tostring(pointsCount)
+    PointsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    PointsLabel.TextSize = 11
+    PointsLabel.Font = Enum.Font.Gotham
+    PointsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    PointsLabel.Parent = InfoFrame
+
+    local JumpsLabel = Instance.new("TextLabel")
+    JumpsLabel.Name = "shhhhnayy05_JumpsLabel"
+    JumpsLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    JumpsLabel.Position = UDim2.new(0.5, 0, 0, 0)
+    JumpsLabel.BackgroundTransparency = 1
+    JumpsLabel.Text = "⬆️ Jumps: " .. tostring(jumpCount)
+    JumpsLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    JumpsLabel.TextSize = 11
+    JumpsLabel.Font = Enum.Font.Gotham
+    JumpsLabel.TextXAlignment = Enum.TextXAlignment.Right
+    JumpsLabel.Parent = InfoFrame
+
+    -- Separator
+    local Sep1 = Instance.new("Frame")
+    Sep1.Size = UDim2.new(1, 0, 0, 1)
+    Sep1.Position = UDim2.new(0, 0, 0, 85)
+    Sep1.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
+    Sep1.BorderSizePixel = 0
+    Sep1.Parent = Content
+
+    -- SPEED WALK Section
+    local SpeedTitle = Instance.new("TextLabel")
+    SpeedTitle.Name = "shhhhnayy05_SpeedTitle"
+    SpeedTitle.Size = UDim2.new(1, 0, 0, 20)
+    SpeedTitle.Position = UDim2.new(0, 0, 0, 90)
+    SpeedTitle.BackgroundTransparency = 1
+    SpeedTitle.Text = "SPEED WALK"
+    SpeedTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SpeedTitle.TextSize = 14
+    SpeedTitle.Font = Enum.Font.GothamBold
+    SpeedTitle.Parent = Content
+
+    -- Speed Control
+    local SpeedFrame = Instance.new("Frame")
+    SpeedFrame.Name = "shhhhnayy05_SpeedFrame"
+    SpeedFrame.Size = UDim2.new(1, 0, 0, 40)
+    SpeedFrame.Position = UDim2.new(0, 0, 0, 115)
+    SpeedFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    SpeedFrame.BorderSizePixel = 0
+    SpeedFrame.Parent = Content
+
+    local SpeedCorner = Instance.new("UICorner")
+    SpeedCorner.CornerRadius = UDim.new(0, 8)
+    SpeedCorner.Parent = SpeedFrame
+
+    local MinusBtn = Instance.new("TextButton")
+    MinusBtn.Name = "shhhhnayy05_MinusBtn"
+    MinusBtn.Size = UDim2.new(0, 35, 0, 30)
+    MinusBtn.Position = UDim2.new(0.15, 0, 0.5, -15)
+    MinusBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    MinusBtn.Text = "−"
+    MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MinusBtn.TextSize = 20
+    MinusBtn.Font = Enum.Font.GothamBold
+    MinusBtn.Parent = SpeedFrame
+
+    local MinusCorner = Instance.new("UICorner")
+    MinusCorner.CornerRadius = UDim.new(0, 6)
+    MinusCorner.Parent = MinusBtn
+
+    local SpeedDisplay = Instance.new("TextLabel")
+    SpeedDisplay.Name = "shhhhnayy05_DetailSpeedDisplay"
+    SpeedDisplay.Size = UDim2.new(0, 60, 0, 30)
+    SpeedDisplay.Position = UDim2.new(0.5, -30, 0.5, -15)
+    SpeedDisplay.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    SpeedDisplay.Text = tostring(fileData.SpeedMultiplier or fileData.speedMultiplier or "1.0") .. "×"
+    SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SpeedDisplay.TextSize = 16
+    SpeedDisplay.Font = Enum.Font.GothamBold
+    SpeedDisplay.Parent = SpeedFrame
+
+    local SpeedDisplayCorner = Instance.new("UICorner")
+    SpeedDisplayCorner.CornerRadius = UDim.new(0, 6)
+    SpeedDisplayCorner.Parent = SpeedDisplay
+
+    local PlusBtn = Instance.new("TextButton")
+    PlusBtn.Name = "shhhhnayy05_PlusBtn"
+    PlusBtn.Size = UDim2.new(0, 35, 0, 30)
+    PlusBtn.Position = UDim2.new(0.85, -35, 0.5, -15)
+    PlusBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 100)
+    PlusBtn.Text = "+"
+    PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PlusBtn.TextSize = 20
+    PlusBtn.Font = Enum.Font.GothamBold
+    PlusBtn.Parent = SpeedFrame
+
+    local PlusCorner = Instance.new("UICorner")
+    PlusCorner.CornerRadius = UDim.new(0, 6)
+    PlusCorner.Parent = PlusBtn
+
+    -- Separator
+    local Sep2 = Instance.new("Frame")
+    Sep2.Size = UDim2.new(1, 0, 0, 1)
+    Sep2.Position = UDim2.new(0, 0, 0, 165)
+    Sep2.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
+    Sep2.BorderSizePixel = 0
+    Sep2.Parent = Content
+
+    -- PLAY WALK Button (Besar)
+    local PlayBtn = Instance.new("TextButton")
+    PlayBtn.Name = "shhhhnayy05_PlayBtn"
+    PlayBtn.Size = UDim2.new(1, 0, 0, 45)
+    PlayBtn.Position = UDim2.new(0, 0, 0, 170)
+    PlayBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 100)
+    PlayBtn.Text = "▶ PLAY WALK"
+    PlayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PlayBtn.TextSize = 18
+    PlayBtn.Font = Enum.Font.GothamBold
+    PlayBtn.Parent = Content
+
+    local PlayCorner = Instance.new("UICorner")
+    PlayCorner.CornerRadius = UDim.new(0, 10)
+    PlayCorner.Parent = PlayBtn
+
+    local PlayStroke = Instance.new("UIStroke")
+    PlayStroke.Color = Color3.fromRGB(100, 255, 150)
+    PlayStroke.Thickness = 2
+    PlayStroke.Parent = PlayBtn
+
+    -- Separator sebelum tombol bawah
+    local Sep3 = Instance.new("Frame")
+    Sep3.Size = UDim2.new(1, 0, 0, 1)
+    Sep3.Position = UDim2.new(0, 0, 0, 225)
+    Sep3.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
+    Sep3.BorderSizePixel = 0
+    Sep3.Parent = Content
+
+    -- Tombol HAPUS dan TUTUP - RAPI & SEJAJAR
+    local BottomFrame = Instance.new("Frame")
+    BottomFrame.Name = "shhhhnayy05_BottomFrame"
+    BottomFrame.Size = UDim2.new(1, 0, 0, 40)
+    BottomFrame.Position = UDim2.new(0, 0, 0, 230)
+    BottomFrame.BackgroundTransparency = 1
+    BottomFrame.Parent = Content
+
+    local DeleteBtn = Instance.new("TextButton")
+    DeleteBtn.Name = "shhhhnayy05_DeleteBtn"
+    DeleteBtn.Size = UDim2.new(0.48, 0, 1, 0)
+    DeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    DeleteBtn.Text = "🗑 HAPUS"
+    DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DeleteBtn.TextSize = 13
+    DeleteBtn.Font = Enum.Font.GothamBold
+    DeleteBtn.Parent = BottomFrame
+
+    local DeleteCorner = Instance.new("UICorner")
+    DeleteCorner.CornerRadius = UDim.new(0, 6)
+    DeleteCorner.Parent = DeleteBtn
+
+    local TutupBtn = Instance.new("TextButton")
+    TutupBtn.Name = "shhhhnayy05_TutupBtn"
+    TutupBtn.Size = UDim2.new(0.48, 0, 1, 0)
+    TutupBtn.Position = UDim2.new(0.52, 0, 0, 0)
+    TutupBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    TutupBtn.Text = "TUTUP"
+    TutupBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TutupBtn.TextSize = 13
+    TutupBtn.Font = Enum.Font.GothamBold
+    TutupBtn.Parent = BottomFrame
+
+    local TutupCorner = Instance.new("UICorner")
+    TutupCorner.CornerRadius = UDim.new(0, 6)
+    TutupCorner.Parent = TutupBtn
+
+    -- VIDEO EDITOR BUTTON (NEW)
+    local EditorBtn = Instance.new("TextButton")
+    EditorBtn.Name = "shhhhnayy05_EditorBtn"
+    EditorBtn.Size = UDim2.new(1, 0, 0, 35)
+    EditorBtn.Position = UDim2.new(0, 0, 0, 275)
+    EditorBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
+    EditorBtn.Text = "🎬 VIDEO EDITOR"
+    EditorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    EditorBtn.TextSize = 14
+    EditorBtn.Font = Enum.Font.GothamBold
+    EditorBtn.Parent = Content
+
+    local EditorCorner = Instance.new("UICorner")
+    EditorCorner.CornerRadius = UDim.new(0, 8)
+    EditorCorner.Parent = EditorBtn
+
+    local windowData = {
+        ScreenGui = ScreenGui,
+        MainFrame = MainFrame,
+        CloseBtn = CloseBtn,
+        MinusBtn = MinusBtn,
+        PlusBtn = PlusBtn,
+        SpeedDisplay = SpeedDisplay,
+        PlayBtn = PlayBtn,
+        DeleteBtn = DeleteBtn,
+        TutupBtn = TutupBtn,
+        EditorBtn = EditorBtn,
+        CurrentMultiplier = tonumber(fileData.SpeedMultiplier or fileData.speedMultiplier) or 1.0,
+        FileData = fileData,
+        FileName = fileName
+    }
+
+    State.OpenDetailWindow = windowData
+    return windowData
+end
+
+--// ============================================
+--// VIDEO EDITOR WINDOW (FITUR BARU)
+--// ============================================
+
+local function CreateVideoEditorWindow(fileName, fileData, GUI)
+    if State.EditorWindow then
+        pcall(function()
+            State.EditorWindow.ScreenGui:Destroy()
+        end)
+        State.EditorWindow = nil
+    end
+
+    local pathData = fileData.PathData or fileData.Path or {}
+    local totalFrames = #pathData
+
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "shhhhnayy05_VideoEditor"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = CoreGui
+
+    -- UKURAN: L320 P450
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "shhhhnayy05_EditorFrame"
+    MainFrame.Size = UDim2.new(0, 320, 0, 450)
+    MainFrame.Position = UDim2.new(0.5, -160, 0.5, -225)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 12)
+    Corner.Parent = MainFrame
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(150, 50, 200)
+    Stroke.Thickness = 2
+    Stroke.Parent = MainFrame
+
+    -- Title Bar
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Size = UDim2.new(1, 0, 0, 40)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Parent = MainFrame
+
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 12)
+    TitleCorner.Parent = TitleBar
+
+    local TitleFix = Instance.new("Frame")
+    TitleFix.Size = UDim2.new(1, 0, 0, 15)
+    TitleFix.Position = UDim2.new(0, 0, 1, -15)
+    TitleFix.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    TitleFix.BorderSizePixel = 0
+    TitleFix.Parent = TitleBar
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -50, 1, 0)
+    Title.Position = UDim2.new(0, 15, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "🎬 Video Editor: " .. fileName
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 14
+    Title.Font = Enum.Font.GothamBold
+    Title.TextTruncate = Enum.TextTruncate.AtEnd
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TitleBar
+
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Name = "shhhhnayy05_CloseEditorBtn"
+    CloseBtn.Size = UDim2.new(0, 30, 0, 25)
+    CloseBtn.Position = UDim2.new(1, -40, 0, 7)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.TextSize = 14
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Parent = TitleBar
+
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.Parent = CloseBtn
+
+    -- Content
+    local Content = Instance.new("Frame")
+    Content.Size = UDim2.new(1, -20, 1, -50)
+    Content.Position = UDim2.new(0, 10, 0, 45)
+    Content.BackgroundTransparency = 1
+    Content.Parent = MainFrame
+
+    -- Timeline Info
+    local InfoLabel = Instance.new("TextLabel")
+    InfoLabel.Size = UDim2.new(1, 0, 0, 20)
+    InfoLabel.Position = UDim2.new(0, 0, 0, 5)
+    InfoLabel.BackgroundTransparency = 1
+    InfoLabel.Text = "Total Frames: " .. totalFrames .. " | Duration: " .. (fileData.Duration or "00:00")
+    InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    InfoLabel.TextSize = 12
+    InfoLabel.Font = Enum.Font.Gotham
+    InfoLabel.Parent = Content
+
+    -- Timeline Visual (Bar)
+    local TimelineBg = Instance.new("Frame")
+    TimelineBg.Name = "shhhhnayy05_TimelineBg"
+    TimelineBg.Size = UDim2.new(1, 0, 0, 30)
+    TimelineBg.Position = UDim2.new(0, 0, 0, 30)
+    TimelineBg.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    TimelineBg.BorderSizePixel = 0
+    TimelineBg.Parent = Content
+
+    local TimelineCorner = Instance.new("UICorner")
+    TimelineCorner.CornerRadius = UDim.new(0, 6)
+    TimelineCorner.Parent = TimelineBg
+
+    local TimelineFill = Instance.new("Frame")
+    TimelineFill.Name = "shhhhnayy05_TimelineFill"
+    TimelineFill.Size = UDim2.new(1, 0, 1, 0)
+    TimelineFill.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
+    TimelineFill.BorderSizePixel = 0
+    TimelineFill.Parent = TimelineBg
+
+    local TimelineFillCorner = Instance.new("UICorner")
+    TimelineFillCorner.CornerRadius = UDim.new(0, 6)
+    TimelineFillCorner.Parent = TimelineFill
+
+    -- Trim Section
+    local TrimTitle = Instance.new("TextLabel")
+    TrimTitle.Size = UDim2.new(1, 0, 0, 20)
+    TrimTitle.Position = UDim2.new(0, 0, 0, 70)
+    TrimTitle.BackgroundTransparency = 1
+    TrimTitle.Text = "✂️ TRIM / POTONG"
+    TrimTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
+    TrimTitle.TextSize = 14
+    TrimTitle.Font = Enum.Font.GothamBold
+    TrimTitle.Parent = Content
+
+    -- Start Trim
+    local StartLabel = Instance.new("TextLabel")
+    StartLabel.Size = UDim2.new(0.3, 0, 0, 20)
+    StartLabel.Position = UDim2.new(0, 0, 0, 95)
+    StartLabel.BackgroundTransparency = 1
+    StartLabel.Text = "Start Frame:"
+    StartLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    StartLabel.TextSize = 11
+    StartLabel.Font = Enum.Font.Gotham
+    StartLabel.TextXAlignment = Enum.TextXAlignment.Left
+    StartLabel.Parent = Content
+
+    local StartInput = Instance.new("TextBox")
+    StartInput.Name = "shhhhnayy05_StartInput"
+    StartInput.Size = UDim2.new(0.65, 0, 0, 25)
+    StartInput.Position = UDim2.new(0.35, 0, 0, 95)
+    StartInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    StartInput.Text = "1"
+    StartInput.PlaceholderText = "1"
+    StartInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    StartInput.TextSize = 12
+    StartInput.Font = Enum.Font.Gotham
+    StartInput.ClearTextOnFocus = false
+    StartInput.Parent = Content
+
+    local StartCorner = Instance.new("UICorner")
+    StartCorner.CornerRadius = UDim.new(0, 4)
+    StartCorner.Parent = StartInput
+
+    -- End Trim
+    local EndLabel = Instance.new("TextLabel")
+    EndLabel.Size = UDim2.new(0.3, 0, 0, 20)
+    EndLabel.Position = UDim2.new(0, 0, 0, 125)
+    EndLabel.BackgroundTransparency = 1
+    EndLabel.Text = "End Frame:"
+    EndLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    EndLabel.TextSize = 11
+    EndLabel.Font = Enum.Font.Gotham
+    EndLabel.TextXAlignment = Enum.TextXAlignment.Left
+    EndLabel.Parent = Content
+
+    local EndInput = Instance.new("TextBox")
+    EndInput.Name = "shhhhnayy05_EndInput"
+    EndInput.Size = UDim2.new(0.65, 0, 0, 25)
+    EndInput.Position = UDim2.new(0.35, 0, 0, 125)
+    EndInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    EndInput.Text = tostring(totalFrames)
+    EndInput.PlaceholderText = tostring(totalFrames)
+    EndInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    EndInput.TextSize = 12
+    EndInput.Font = Enum.Font.Gotham
+    EndInput.ClearTextOnFocus = false
+    EndInput.Parent = Content
+
+    local EndCorner = Instance.new("UICorner")
+    EndCorner.CornerRadius = UDim.new(0, 4)
+    EndCorner.Parent = EndInput
+
+    -- Trim Buttons
+    local TrimBtn = Instance.new("TextButton")
+    TrimBtn.Name = "shhhhnayy05_TrimBtn"
+    TrimBtn.Size = UDim2.new(0.48, 0, 0, 30)
+    TrimBtn.Position = UDim2.new(0, 0, 0, 160)
+    TrimBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+    TrimBtn.Text = "✂️ TRIM"
+    TrimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TrimBtn.TextSize = 12
+    TrimBtn.Font = Enum.Font.GothamBold
+    TrimBtn.Parent = Content
+
+    local TrimCorner = Instance.new("UICorner")
+    TrimCorner.CornerRadius = UDim.new(0, 6)
+    TrimCorner.Parent = TrimBtn
+
+    local PreviewTrimBtn = Instance.new("TextButton")
+    PreviewTrimBtn.Name = "shhhhnayy05_PreviewTrimBtn"
+    PreviewTrimBtn.Size = UDim2.new(0.48, 0, 0, 30)
+    PreviewTrimBtn.Position = UDim2.new(0.52, 0, 0, 160)
+    PreviewTrimBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
+    PreviewTrimBtn.Text = "👁 PREVIEW"
+    PreviewTrimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PreviewTrimBtn.TextSize = 12
+    PreviewTrimBtn.Font = Enum.Font.GothamBold
+    PreviewTrimBtn.Parent = Content
+
+    local PreviewCorner = Instance.new("UICorner")
+    PreviewCorner.CornerRadius = UDim.new(0, 6)
+    PreviewCorner.Parent = PreviewTrimBtn
+
+    -- Separator
+    local Sep1 = Instance.new("Frame")
+    Sep1.Size = UDim2.new(1, 0, 0, 1)
+    Sep1.Position = UDim2.new(0, 0, 0, 200)
+    Sep1.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
+    Sep1.BorderSizePixel = 0
+    Sep1.Parent = Content
+
+    -- Concatenate Section
+    local ConcatTitle = Instance.new("TextLabel")
+    ConcatTitle.Size = UDim2.new(1, 0, 0, 20)
+    ConcatTitle.Position = UDim2.new(0, 0, 0, 210)
+    ConcatTitle.BackgroundTransparency = 1
+    ConcatTitle.Text = "🔗 CONCAT / SAMBUNG"
+    ConcatTitle.TextColor3 = Color3.fromRGB(100, 255, 150)
+    ConcatTitle.TextSize = 14
+    ConcatTitle.Font = Enum.Font.GothamBold
+    ConcatTitle.Parent = Content
+
+    local ConcatDesc = Instance.new("TextLabel")
+    ConcatDesc.Size = UDim2.new(1, 0, 0, 30)
+    ConcatDesc.Position = UDim2.new(0, 0, 0, 235)
+    ConcatDesc.BackgroundTransparency = 1
+    ConcatDesc.Text = "Pilih file lain untuk disambung\ndi akhir walk ini:"
+    ConcatDesc.TextColor3 = Color3.fromRGB(150, 150, 150)
+    ConcatDesc.TextSize = 11
+    ConcatDesc.Font = Enum.Font.Gotham
+    ConcatDesc.TextWrapped = true
+    ConcatDesc.Parent = Content
+
+    -- File List for Concat
+    local ConcatList = Instance.new("ScrollingFrame")
+    ConcatList.Name = "shhhhnayy05_ConcatList"
+    ConcatList.Size = UDim2.new(1, 0, 0, 80)
+    ConcatList.Position = UDim2.new(0, 0, 0, 270)
+    ConcatList.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    ConcatList.BorderSizePixel = 0
+    ConcatList.ScrollBarThickness = 3
+    ConcatList.CanvasSize = UDim2.new(0, 0, 0, 0)
+    ConcatList.Parent = Content
+
+    local ConcatListCorner = Instance.new("UICorner")
+    ConcatListCorner.CornerRadius = UDim.new(0, 6)
+    ConcatListCorner.Parent = ConcatList
+
+    local ConcatListLayout = Instance.new("UIListLayout")
+    ConcatListLayout.Padding = UDim.new(0, 3)
+    ConcatListLayout.Parent = ConcatList
+
+    -- Concat Buttons
+    local ConcatBtn = Instance.new("TextButton")
+    ConcatBtn.Name = "shhhhnayy05_ConcatBtn"
+    ConcatBtn.Size = UDim2.new(0.48, 0, 0, 30)
+    ConcatBtn.Position = UDim2.new(0, 0, 0, 360)
+    ConcatBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 100)
+    ConcatBtn.Text = "🔗 SAMBUNG"
+    ConcatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ConcatBtn.TextSize = 12
+    ConcatBtn.Font = Enum.Font.GothamBold
+    ConcatBtn.Parent = Content
+
+    local ConcatBtnCorner = Instance.new("UICorner")
+    ConcatBtnCorner.CornerRadius = UDim.new(0, 6)
+    ConcatBtnCorner.Parent = ConcatBtn
+
+    local SaveNewBtn = Instance.new("TextButton")
+    SaveNewBtn.Name = "shhhhnayy05_SaveNewBtn"
+    SaveNewBtn.Size = UDim2.new(0.48, 0, 0, 30)
+    SaveNewBtn.Position = UDim2.new(0.52, 0, 0, 360)
+    SaveNewBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
+    SaveNewBtn.Text = "💾 SAVE AS NEW"
+    SaveNewBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SaveNewBtn.TextSize = 12
+    SaveNewBtn.Font = Enum.Font.GothamBold
+    SaveNewBtn.Parent = Content
+
+    local SaveNewCorner = Instance.new("UICorner")
+    SaveNewCorner.CornerRadius = UDim.new(0, 6)
+    SaveNewCorner.Parent = SaveNewBtn
+
+    -- Separator
+    local Sep2 = Instance.new("Frame")
+    Sep2.Size = UDim2.new(1, 0, 0, 1)
+    Sep2.Position = UDim2.new(0, 0, 0, 400)
+    Sep2.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
+    Sep2.BorderSizePixel = 0
+    Sep2.Parent = Content
+
+    -- Bottom Buttons
+    local CloseEditorBtn = Instance.new("TextButton")
+    CloseEditorBtn.Name = "shhhhnayy05_CloseEditorBtn2"
+    CloseEditorBtn.Size = UDim2.new(1, 0, 0, 35)
+    CloseEditorBtn.Position = UDim2.new(0, 0, 0, 410)
+    CloseEditorBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    CloseEditorBtn.Text = "TUTUP EDITOR"
+    CloseEditorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseEditorBtn.TextSize = 14
+    CloseEditorBtn.Font = Enum.Font.GothamBold
+    CloseEditorBtn.Parent = Content
+
+    local CloseEditorCorner = Instance.new("UICorner")
+    CloseEditorCorner.CornerRadius = UDim.new(0, 6)
+    CloseEditorCorner.Parent = CloseEditorBtn
+
+    -- Populate Concat List
+    local allFiles = ListFiles()
+    local selectedConcatFile = nil
+
+    for _, otherFile in ipairs(allFiles) do
+        if otherFile ~= fileName then
+            local fileBtn = Instance.new("TextButton")
+            fileBtn.Size = UDim2.new(1, -10, 0, 25)
+            fileBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+            fileBtn.Text = otherFile
+            fileBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            fileBtn.TextSize = 11
+            fileBtn.Font = Enum.Font.Gotham
+            fileBtn.TextTruncate = Enum.TextTruncate.AtEnd
+            fileBtn.Parent = ConcatList
+
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 4)
+            btnCorner.Parent = fileBtn
+
+            fileBtn.MouseButton1Click:Connect(function()
+                selectedConcatFile = otherFile
+                for _, btn in ipairs(ConcatList:GetChildren()) do
+                    if btn:IsA("TextButton") then
+                        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+                    end
+                end
+                fileBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 150)
+            end)
+        end
+    end
+
+    ConcatList.CanvasSize = UDim2.new(0, 0, 0, math.max(#allFiles * 28, 80))
+
+    local editorData = {
+        ScreenGui = ScreenGui,
+        MainFrame = MainFrame,
+        CloseBtn = CloseBtn,
+        CloseEditorBtn = CloseEditorBtn,
+        StartInput = StartInput,
+        EndInput = EndInput,
+        TrimBtn = TrimBtn,
+        PreviewTrimBtn = PreviewTrimBtn,
+        ConcatBtn = ConcatBtn,
+        SaveNewBtn = SaveNewBtn,
+        TimelineFill = TimelineFill,
+        SelectedConcatFile = selectedConcatFile,
+        OriginalFileName = fileName,
+        OriginalFileData = fileData
+    }
+
+    State.EditorWindow = editorData
+
+    -- Event Handlers
+    CloseBtn.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+        State.EditorWindow = nil
+    end)
+
+    CloseEditorBtn.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+        State.EditorWindow = nil
+    end)
+
+    -- Trim Function
+    TrimBtn.MouseButton1Click:Connect(function()
+        local startFrame = tonumber(StartInput.Text) or 1
+        local endFrame = tonumber(EndInput.Text) or totalFrames
+
+        if startFrame < 1 then startFrame = 1 end
+        if endFrame > totalFrames then endFrame = totalFrames end
+        if startFrame > endFrame then
+            GUI.StatusLabel.Text = "Status: Start harus < End!"
+            GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            return
+        end
+
+        -- Trim data
+        local trimmedData = {}
+        for i = startFrame, endFrame do
+            table.insert(trimmedData, pathData[i])
+        end
+
+        -- Update fileData
+        fileData.PathData = trimmedData
+        fileData.Path = trimmedData
+        fileData.Points = #trimmedData
+
+        -- Recalculate duration
+        local newDuration = FormatDuration(#trimmedData * CONFIG.RecordInterval)
+        fileData.Duration = newDuration
+
+        GUI.StatusLabel.Text = "Status: Trimmed " .. startFrame .. "-" .. endFrame .. " (" .. #trimmedData .. " frames)"
+        GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+
+        -- Visual feedback
+        TimelineFill.Size = UDim2.new((endFrame - startFrame + 1) / totalFrames, 0, 1, 0)
+    end)
+
+    -- Preview Trim
+    PreviewTrimBtn.MouseButton1Click:Connect(function()
+        local startFrame = tonumber(StartInput.Text) or 1
+        local endFrame = tonumber(EndInput.Text) or totalFrames
+
+        if startFrame < 1 then startFrame = 1 end
+        if endFrame > totalFrames then endFrame = totalFrames end
+
+        local previewData = {}
+        for i = startFrame, endFrame do
+            table.insert(previewData, pathData[i])
+        end
+
+        -- Play preview with current speed
+        local speedMult = State.OpenDetailWindow and State.OpenDetailWindow.CurrentMultiplier or 1.0
+        PlayWalk({PathData = previewData, Duration = "Preview"}, speedMult, GUI)
+    end)
+
+    -- Concatenate Function
+    ConcatBtn.MouseButton1Click:Connect(function()
+        if not selectedConcatFile then
+            GUI.StatusLabel.Text = "Status: Pilih file dulu!"
+            GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            return
+        end
+
+        local concatData = LoadFromFile(selectedConcatFile)
+        if not concatData then
+            GUI.StatusLabel.Text = "Status: Gagal load file!"
+            return
+        end
+
+        local concatPath = concatData.PathData or concatData.Path or {}
+        if #concatPath == 0 then
+            GUI.StatusLabel.Text = "Status: File kosong!"
+            return
+        end
+
+        -- Concatenate: current + selected
+        for _, frame in ipairs(concatPath) do
+            table.insert(pathData, frame)
+        end
+
+        fileData.Points = #pathData
+        GUI.StatusLabel.Text = "Status: Disambung dengan " .. selectedConcatFile .. " (Total: " .. #pathData .. " frames)"
+        GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+
+        -- Update timeline
+        TimelineFill.Size = UDim2.new(1, 0, 1, 0)
+    end)
+
+    -- Save As New
+    SaveNewBtn.MouseButton1Click:Connect(function()
+        local SaveDialog = CreateSaveDialog(fileData.Duration or "00:00", CountJumps(pathData))
+        
+        SaveDialog.CancelBtn.MouseButton1Click:Connect(function()
+            SaveDialog.ScreenGui:Destroy()
+        end)
+        
+        SaveDialog.SaveConfirmBtn.MouseButton1Click:Connect(function()
+            local newFileName = SaveDialog.InputBox.Text:gsub("[^%w%s_-]", ""):sub(1, 50)
+            if newFileName == "" then
+                newFileName = "Edited_" .. os.time()
+            end
+
+            local data = {
+                PathData = pathData,
+                DisplayName = SaveDialog.InputBox.Text,
+                Duration = fileData.Duration or "00:00",
+                JumpCount = CountJumps(pathData),
+                SpeedMultiplier = 1.0
+            }
+
+            local success, err = SaveToFile(newFileName, data)
+            if success then
+                SaveDialog.ScreenGui:Destroy()
+                GUI.StatusLabel.Text = "Status: Saved as '" .. newFileName .. "'"
+                GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+                RefreshFileList(GUI)
+            else
+                SaveDialog.InputBox.Text = "Error!"
+                SaveDialog.InputBox.TextColor3 = Color3.fromRGB(255, 100, 100)
+            end
+        end)
+    end)
+
+    return editorData
+end
+
+--// ============================================
+--// DELETE CONFIRMATION DIALOG
+--// ============================================
+
+local function CreateDeleteConfirmDialog(fileName)
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "shhhhnayy05_DeleteConfirm"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = CoreGui
+
+    local DialogFrame = Instance.new("Frame")
+    DialogFrame.Name = "shhhhnayy05_DeleteConfirmFrame"
+    DialogFrame.Size = UDim2.new(0, 280, 0, 140)
+    DialogFrame.Position = UDim2.new(0.5, -140, 0.5, -70)
+    DialogFrame.BackgroundColor3 = Color3.fromRGB(45, 30, 30)
+    DialogFrame.BorderSizePixel = 0
+    DialogFrame.Parent = ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 10)
+    Corner.Parent = DialogFrame
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(200, 80, 80)
+    Stroke.Thickness = 2
+    Stroke.Parent = DialogFrame
+
+    local WarningIcon = Instance.new("TextLabel")
+    WarningIcon.Size = UDim2.new(0, 40, 0, 40)
+    WarningIcon.Position = UDim2.new(0.5, -20, 0, 10)
+    WarningIcon.BackgroundTransparency = 1
+    WarningIcon.Text = "⚠️"
+    WarningIcon.TextSize = 30
+    WarningIcon.Parent = DialogFrame
+
+    local Message = Instance.new("TextLabel")
+    Message.Size = UDim2.new(1, -20, 0, 40)
+    Message.Position = UDim2.new(0, 10, 0, 55)
+    Message.BackgroundTransparency = 1
+    Message.Text = "Apakah anda yakin menghapus file ini?\n\"" .. tostring(fileName) .. "\""
+    Message.TextColor3 = Color3.fromRGB(255, 200, 200)
+    Message.TextSize = 13
+    Message.Font = Enum.Font.GothamBold
+    Message.TextWrapped = true
+    Message.Parent = DialogFrame
+
+    local BtnFrame = Instance.new("Frame")
+    BtnFrame.Size = UDim2.new(1, -20, 0, 35)
+    BtnFrame.Position = UDim2.new(0, 10, 0, 95)
+    BtnFrame.BackgroundTransparency = 1
+    BtnFrame.Parent = DialogFrame
+
+    local NoBtn = Instance.new("TextButton")
+    NoBtn.Size = UDim2.new(0.48, 0, 1, 0)
+    NoBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    NoBtn.Text = "NO"
+    NoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    NoBtn.TextSize = 14
+    NoBtn.Font = Enum.Font.GothamBold
+    NoBtn.Parent = BtnFrame
+
+    local NoCorner = Instance.new("UICorner")
+    NoCorner.CornerRadius = UDim.new(0, 6)
+    NoCorner.Parent = NoBtn
+
+    local YesBtn = Instance.new("TextButton")
+    YesBtn.Size = UDim2.new(0.48, 0, 1, 0)
+    YesBtn.Position = UDim2.new(0.52, 0, 0, 0)
+    YesBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    YesBtn.Text = "YES"
+    YesBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    YesBtn.TextSize = 14
+    YesBtn.Font = Enum.Font.GothamBold
+    YesBtn.Parent = BtnFrame
+
+    local YesCorner = Instance.new("UICorner")
+    YesCorner.CornerRadius = UDim.new(0, 6)
+    YesCorner.Parent = YesBtn
+
+    return {
+        ScreenGui = ScreenGui,
+        DialogFrame = DialogFrame,
+        YesBtn = YesBtn,
+        NoBtn = NoBtn
+    }
+end
+
+--// ============================================
+--// MINIMIZED ICON
+--// ============================================
+
+local function CreateMinimizedIcon()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "shhhhnayy05_MinimizedIcon"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = CoreGui
+
+    local IconBtn = Instance.new("TextButton")
+    IconBtn.Name = "shhhhnayy05_IconBtn"
+    IconBtn.Size = UDim2.new(0, 50, 0, 50)
+    IconBtn.Position = UDim2.new(0.10, 0, 0.10, 0)
+    IconBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
+    IconBtn.Text = "🚶"
+    IconBtn.TextSize = 25
+    IconBtn.Parent = ScreenGui
+
+    local IconCorner = Instance.new("UICorner")
+    IconCorner.CornerRadius = UDim.new(1, 0)
+    IconCorner.Parent = IconBtn
+
+    local IconStroke = Instance.new("UIStroke")
+    IconStroke.Color = Color3.fromRGB(100, 200, 255)
+    IconStroke.Thickness = 3
+    IconStroke.Parent = IconBtn
+
+    -- Touch/Mouse drag support
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+
+    IconBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = IconBtn.Position
+        end
+    end)
+
+    IconBtn.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            IconBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    IconBtn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    return {
+        ScreenGui = ScreenGui,
+        IconBtn = IconBtn
+    }
+end
+
+--// ============================================
+--// TIMER OVERLAY (LEBIH KECIL - FIXED)
+--// ============================================
+
+local function CreateTimerOverlay()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "shhhhnayy05_TimerOverlay"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = CoreGui
+
+    -- UKURAN LEBIH KECIL: 150x40 (dari 220x60)
+    local Container = Instance.new("Frame")
+    Container.Name = "shhhhnayy05_TimerContainer"
+    Container.Size = UDim2.new(0, 150, 0, 40)
+    Container.Position = UDim2.new(0.5, -75, 0, 10) -- Tengah atas
+    Container.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    Container.BorderSizePixel = 0
+    Container.Parent = ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = Container
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(100, 255, 100)
+    Stroke.Thickness = 2
+    Stroke.Parent = Container
+
+    -- Timer Label (Lebih kecil)
+    local TimerLabel = Instance.new("TextLabel")
+    TimerLabel.Name = "shhhhnayy05_OverlayTimer"
+    TimerLabel.Size = UDim2.new(1, 0, 0, 22)
+    TimerLabel.BackgroundTransparency = 1
+    TimerLabel.Text = "⏱ 00:00"
+    TimerLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    TimerLabel.TextSize = 18 -- Dari 28 jadi 18
+    TimerLabel.Font = Enum.Font.GothamBold
+    TimerLabel.Parent = Container
+
+    -- Status Label (Lebih kecil)
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Name = "shhhhnayy05_OverlayStatus"
+    StatusLabel.Size = UDim2.new(1, 0, 0, 18)
+    StatusLabel.Position = UDim2.new(0, 0, 0, 22)
+    StatusLabel.BackgroundTransparency = 1
+    StatusLabel.Text = "Recording..."
+    StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    StatusLabel.TextSize = 11 -- Dari 14 jadi 11
+    StatusLabel.Font = Enum.Font.Gotham
+    StatusLabel.Parent = Container
+
+    return {
+        ScreenGui = ScreenGui,
+        Container = Container,
+        TimerLabel = TimerLabel,
+        StatusLabel = StatusLabel
+    }
+end
+
+--// ============================================
+// UTILITY FUNCTIONS (LANJUTAN)
+--// ============================================
+
+local function FormatDuration(seconds)
+    local mins = math.floor(seconds / 60)
+    local secs = math.floor(seconds % 60)
+    return string.format("%02d:%02d", mins, secs)
+end
+
+local function CountJumps(pathData)
+    local count = 0
+    for i = 2, #pathData do
+        if pathData[i].Jump and not pathData[i-1].Jump then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+--// ============================================
+--// FILE SYSTEM
+--// ============================================
+
+local function EnsureFolder()
+    if not isfolder(CONFIG.FolderName) then
+        makefolder(CONFIG.FolderName)
+    end
+end
+
+local function SaveToFile(fileName, data)
+    EnsureFolder()
+    local filePath = CONFIG.FolderName .. "/" .. fileName .. CONFIG.FileExtension
+    local success, err = pcall(function()
+        local jsonData = HttpService:JSONEncode(data)
+        writefile(filePath, jsonData)
+    end)
+    return success, err
+end
+
+local function LoadFromFile(fileName)
+    local filePath = CONFIG.FolderName .. "/" .. fileName .. CONFIG.FileExtension
+    if not isfile(filePath) then return nil end
+    
+    local success, data = pcall(function()
+        local jsonData = readfile(filePath)
+        return HttpService:JSONDecode(jsonData)
+    end)
+    return success and data or nil
+end
+
+local function DeleteFile(fileName)
+    local filePath = CONFIG.FolderName .. "/" .. fileName .. CONFIG.FileExtension
+    if isfile(filePath) then
+        delfile(filePath)
+        return true
+    end
+    return false
+end
+
+local function ListFiles()
+    EnsureFolder()
+    local files = {}
+    local allFiles = listfiles(CONFIG.FolderName)
+    
+    for _, filePath in ipairs(allFiles) do
+        if filePath:match(CONFIG.FileExtension .. "$") then
+            local fileName = filePath:match("([^/\\]+)" .. CONFIG.FileExtension .. "$")
+            if fileName then
+                table.insert(files, fileName)
+            end
+        end
+    end
+    
+    table.sort(files)
+    return files
+end
+
+--// ============================================
+--// WALK PLAYBACK SYSTEM (FIXED - SESUAI ANIMASI)
+--// ============================================
+
+local function PlayWalk(fileData, speedMultiplier, GUI)
+    if State.IsPlaying then return end
+    
+    -- Hentikan playback sebelumnya
+    if State.PlayConnection then
+        State.PlayConnection:Disconnect()
+        State.PlayConnection = nil
+    end
+    
+    State.IsPlaying = true
+    State.CurrentSpeedMultiplier = speedMultiplier or 1.0
+    
+    local pathData = fileData.PathData or fileData.Path or {}
+    if #pathData == 0 then
+        GUI.StatusLabel.Text = "Status: No path data!"
+        State.IsPlaying = false
+        return
+    end
+    
+    -- Setup karakter
+    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    Humanoid = Character:WaitForChild("Humanoid")
+    HRP = Character:WaitForChild("HumanoidRootPart")
+    
+    -- Simpan collisions asli
+    State.OriginalCollisions = {}
+    for _, part in pairs(Character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            State.OriginalCollisions[part] = part.CanCollide
+            part.CanCollide = false
+        end
+    end
+    
+    -- NON-BLOCKING: Gunakan WalkSpeed asli dari animasi, TIDAK diubah
+    -- Hanya naikkan WalkSpeed sedikit untuk kompensasi delay, bukan lari
+    local originalWalkSpeed = Humanoid.WalkSpeed
+    local targetSpeed = math.min(originalWalkSpeed * 1.2, 32) -- Max 32 (walk normal)
+    Humanoid.WalkSpeed = targetSpeed
+    
+    GUI.StatusLabel.Text = "Status: Playing... (Speed: " .. speedMultiplier .. "x)"
+    GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    local currentIndex = 1
+    local startTime = tick()
+    local baseInterval = CONFIG.RecordInterval / speedMultiplier
+    
+    State.PlayConnection = RunService.Heartbeat:Connect(function()
+        if not State.IsPlaying then return end
+        
+        local now = tick()
+        local elapsed = now - startTime
+        local targetIndex = math.floor(elapsed / baseInterval) + 1
+        
+        if targetIndex > #pathData then
+            -- Selesai
+            State.IsPlaying = false
+            if State.PlayConnection then
+                State.PlayConnection:Disconnect()
+                State.PlayConnection = nil
+            end
+            
+            -- Restore
+            Humanoid.WalkSpeed = originalWalkSpeed
+            for part, col in pairs(State.OriginalCollisions) do
+                if part and part.Parent then
+                    part.CanCollide = col
+                end
+            end
+            
+            -- Loop jika diaktifkan
+            if State.LoopPlayback and fileData then
+                task.wait(0.5)
+                PlayWalk(fileData, speedMultiplier, GUI)
+            else
+                GUI.StatusLabel.Text = "Status: Playback finished"
+            end
+            return
+        end
+        
+        -- Update posisi hanya jika index berubah
+        if targetIndex > currentIndex then
+            currentIndex = targetIndex
+            local frame = pathData[currentIndex]
+            
+            if frame and HRP then
+                local targetCFrame = CFrame.new(frame.X, frame.Y, frame.Z)
+                if frame.RX then
+                    targetCFrame = targetCFrame * CFrame.Angles(frame.RX, frame.RY, frame.RZ)
+                end
+                
+                -- Smooth teleport
+                HRP.CFrame = targetCFrame
+                
+                -- Handle jump
+                if frame.Jump then
+                    Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
+        end
+    end)
+end
+
+local function StopPlayback()
+    State.IsPlaying = false
+    if State.PlayConnection then
+        State.PlayConnection:Disconnect()
+        State.PlayConnection = nil
+    end
+    
+    -- Restore collisions
+    for part, col in pairs(State.OriginalCollisions) do
+        if part and part.Parent then
+            part.CanCollide = col
+        end
+    end
+    
+    -- Restore walkspeed
+    if Humanoid then
+        Humanoid.WalkSpeed = 16 -- Default
+    end
+end
+
+--// ============================================
+--// RECORDING SYSTEM
+--// ============================================
+
+local function StartRecording(GUI)
+    if State.IsRecording then return end
+    
+    State.IsRecording = true
+    State.IsPaused = false
+    State.PathData = {}
+    State.CurrentIndex = 1
+    State.RecordStartTime = tick()
+    
+    -- Timer overlay
+    if State.TimerOverlay then
+        pcall(function() State.TimerOverlay.ScreenGui:Destroy() end)
+    end
+    State.TimerOverlay = CreateTimerOverlay()
+    
+    GUI.RecordBtn.Text = "⏹ Stop"
+    GUI.RecordBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    GUI.StatusLabel.Text = "Status: Recording..."
+    GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    
+    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    HRP = Character:WaitForChild("HumanoidRootPart")
+    Humanoid = Character:WaitForChild("Humanoid")
+    
+    State.RecordConnection = RunService.Heartbeat:Connect(function()
+        if not State.IsRecording or State.IsPaused then return end
+        
+        local hrpPos = HRP.Position
+        local hrpRot = CFrame.toOrientation(HRP.CFrame)
+        
+        local frame = {
+            X = hrpPos.X,
+            Y = hrpPos.Y,
+            Z = hrpPos.Z,
+            RX = hrpRot[1],
+            RY = hrpRot[2],
+            RZ = hrpRot[3],
+            Jump = Humanoid:GetState() == Enum.HumanoidStateType.Jumping or 
+                   Humanoid:GetState() == Enum.HumanoidStateType.Freefall,
+            Time = tick() - State.RecordStartTime
+        }
+        
+        table.insert(State.PathData, frame)
+        
+        -- Update timer
+        local elapsed = tick() - State.RecordStartTime
+        local duration = FormatDuration(elapsed)
+        GUI.TimerLabel.Text = "⏱ " .. duration
+        
+        if State.TimerOverlay then
+            State.TimerOverlay.TimerLabel.Text = "⏱ " .. duration
+        end
+    end)
+end
+
+local function StopRecording(GUI)
+    if not State.IsRecording then return end
+    
+    State.IsRecording = false
+    State.RecordDuration = tick() - State.RecordStartTime
+    
+    if State.RecordConnection then
+        State.RecordConnection:Disconnect()
+        State.RecordConnection = nil
+    end
+    
+    -- Hide timer overlay
+    if State.TimerOverlay then
+        pcall(function() State.TimerOverlay.ScreenGui:Destroy() end)
+        State.TimerOverlay = nil
+    end
+    
+    GUI.RecordBtn.Text = "⏺ Record"
+    GUI.RecordBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    GUI.StatusLabel.Text = "Status: Recorded " .. #State.PathData .. " frames"
+    
+    -- Auto show save dialog
+    local jumpCount = CountJumps(State.PathData)
+    local SaveDialog = CreateSaveDialog(FormatDuration(State.RecordDuration), jumpCount)
+    
+    SaveDialog.CancelBtn.MouseButton1Click:Connect(function()
+        SaveDialog.ScreenGui:Destroy()
+        GUI.StatusLabel.Text = "Status: Recording discarded"
+    end)
+    
+    SaveDialog.SaveConfirmBtn.MouseButton1Click:Connect(function()
+        local fileName = SaveDialog.InputBox.Text:gsub("[^%w%s_-]", ""):sub(1, 50)
+        if fileName == "" then
+            fileName = "Walk_" .. os.time()
+        end
+        
+        local data = {
+            PathData = State.PathData,
+            DisplayName = SaveDialog.InputBox.Text,
+            Duration = FormatDuration(State.RecordDuration),
+            JumpCount = jumpCount,
+            SpeedMultiplier = 1.0,
+            CreatedAt = os.time()
+        }
+        
+        local success, err = SaveToFile(fileName, data)
+        if success then
+            SaveDialog.ScreenGui:Destroy()
+            GUI.StatusLabel.Text = "Status: Saved '" .. fileName .. "'"
+            GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+            RefreshFileList(GUI)
+        else
+            SaveDialog.InputBox.Text = "Error saving!"
+            SaveDialog.InputBox.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
+    end)
+end
+
+local function PauseRecording(GUI)
+    if not State.IsRecording then return end
+    
+    State.IsPaused = not State.IsPaused
+    
+    if State.IsPaused then
+        GUI.PauseBtn.Text = "▶ Resume"
+        GUI.PauseBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
+        GUI.StatusLabel.Text = "Status: Paused"
+        
+        if State.TimerOverlay then
+            State.TimerOverlay.StatusLabel.Text = "Paused"
+            State.TimerOverlay.StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+        end
+    else
+        GUI.PauseBtn.Text = "⏸ Pause"
+        GUI.PauseBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        GUI.StatusLabel.Text = "Status: Recording..."
+        
+        if State.TimerOverlay then
+            State.TimerOverlay.StatusLabel.Text = "Recording..."
+            State.TimerOverlay.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end
+    end
+end
+
+--// ============================================
+--// FILE LIST MANAGEMENT
+--// ============================================
+
+local function RefreshFileList(GUI)
+    -- Clear existing
+    for _, child in pairs(GUI.FileListFrame:GetChildren()) do
+        if child:IsA("TextButton") or child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+    
+    local files = ListFiles()
+    
+    for _, fileName in ipairs(files) do
+        local fileData = LoadFromFile(fileName)
+        if fileData then
+            local fileBtn = Instance.new("TextButton")
+            fileBtn.Name = "shhhhnayy05_FileBtn_" .. fileName
+            fileBtn.Size = UDim2.new(1, -10, 0, 35)
+            fileBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+            fileBtn.Text = ""
+            fileBtn.Parent = GUI.FileListFrame
+            
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 6)
+            btnCorner.Parent = fileBtn
+            
+            -- File name label
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Size = UDim2.new(1, -10, 0, 18)
+            nameLabel.Position = UDim2.new(0, 5, 0, 2)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = fileData.DisplayName or fileName
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.TextSize = 12
+            nameLabel.Font = Enum.Font.GothamBold
+            nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+            nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+            nameLabel.Parent = fileBtn
+            
+            -- Info label
+            local infoLabel = Instance.new("TextLabel")
+            infoLabel.Size = UDim2.new(1, -10, 0, 14)
+            infoLabel.Position = UDim2.new(0, 5, 0, 20)
+            infoLabel.BackgroundTransparency = 1
+            local points = fileData.Points or (fileData.PathData and #fileData.PathData) or 0
+            infoLabel.Text = (fileData.Duration or "00:00") .. " | " .. points .. " points"
+            infoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+            infoLabel.TextSize = 10
+            infoLabel.Font = Enum.Font.Gotham
+            infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+            infoLabel.Parent = fileBtn
+            
+            fileBtn.MouseButton1Click:Connect(function()
+                State.SelectedFile = fileName
+                local detailWindow = CreateFileDetailWindow(fileName, fileData)
+                SetupDetailWindowEvents(detailWindow, fileName, fileData, GUI)
+            end)
+        end
+    end
+    
+    -- Update canvas size
+    local contentHeight = #files * 40
+    GUI.FileListFrame.CanvasSize = UDim2.new(0, 0, 0, math.max(contentHeight, 100))
+end
+
+--// ============================================
+--// EVENT SETUP
+--// ============================================
+
+local function SetupDetailWindowEvents(windowData, fileName, fileData, GUI)
+    -- Close button
+    windowData.CloseBtn.MouseButton1Click:Connect(function()
+        windowData.ScreenGui:Destroy()
+        State.OpenDetailWindow = nil
+    end)
+    
+    -- Tutup button
+    windowData.TutupBtn.MouseButton1Click:Connect(function()
+        windowData.ScreenGui:Destroy()
+        State.OpenDetailWindow = nil
+    end)
+    
+    -- Speed control
+    windowData.MinusBtn.MouseButton1Click:Connect(function()
+        local newSpeed = math.max(CONFIG.MinSpeedMultiplier, windowData.CurrentMultiplier - CONFIG.SpeedStep)
+        windowData.CurrentMultiplier = newSpeed
+        windowData.SpeedDisplay.Text = string.format("%.1f×", newSpeed)
+        
+        -- Update file data
+        fileData.SpeedMultiplier = newSpeed
+        SaveToFile(fileName, fileData)
+    end)
+    
+    windowData.PlusBtn.MouseButton1Click:Connect(function()
+        local newSpeed = math.min(CONFIG.MaxSpeedMultiplier, windowData.CurrentMultiplier + CONFIG.SpeedStep)
+        windowData.CurrentMultiplier = newSpeed
+        windowData.SpeedDisplay.Text = string.format("%.1f×", newSpeed)
+        
+        -- Update file data
+        fileData.SpeedMultiplier = newSpeed
+        SaveToFile(fileName, fileData)
+    end)
+    
+    -- Play button
+    windowData.PlayBtn.MouseButton1Click:Connect(function()
+        if State.IsPlaying then
+            StopPlayback()
+            windowData.PlayBtn.Text = "▶ PLAY WALK"
+            windowData.PlayBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 100)
+        else
+            -- Tutup main GUI
+            GUI.MainFrame.Visible = false
+            
+            PlayWalk(fileData, windowData.CurrentMultiplier, GUI)
+            windowData.PlayBtn.Text = "⏹ STOP"
+            windowData.PlayBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+            
+            -- Auto stop UI update
+            task.spawn(function()
+                while State.IsPlaying do
+                    task.wait(0.1)
+                end
+                windowData.PlayBtn.Text = "▶ PLAY WALK"
+                windowData.PlayBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 100)
+                GUI.MainFrame.Visible = true
+            end)
+        end
+    end)
+    
+    -- Delete button
+    windowData.DeleteBtn.MouseButton1Click:Connect(function()
+        local confirmDialog = CreateDeleteConfirmDialog(fileName)
+        
+        confirmDialog.NoBtn.MouseButton1Click:Connect(function()
+            confirmDialog.ScreenGui:Destroy()
+        end)
+        
+        confirmDialog.YesBtn.MouseButton1Click:Connect(function()
+            if DeleteFile(fileName) then
+                confirmDialog.ScreenGui:Destroy()
+                windowData.ScreenGui:Destroy()
+                State.OpenDetailWindow = nil
+                GUI.StatusLabel.Text = "Status: Deleted '" .. fileName .. "'"
+                RefreshFileList(GUI)
+            end
+        end)
+    end)
+    
+    -- Video Editor button
+    windowData.EditorBtn.MouseButton1Click:Connect(function()
+        CreateVideoEditorWindow(fileName, fileData, GUI)
+    end)
+end
+
+local function SetupMainGUIEvents(GUI)
+    -- Record button
+    GUI.RecordBtn.MouseButton1Click:Connect(function()
+        if State.IsRecording then
+            StopRecording(GUI)
+        else
+            StartRecording(GUI)
+        end
+    end)
+    
+    -- Pause button
+    GUI.PauseBtn.MouseButton1Click:Connect(function()
+        PauseRecording(GUI)
+    end)
+    
+    -- Save button (manual save)
+    GUI.SaveBtn.MouseButton1Click:Connect(function()
+        if #State.PathData == 0 then
+            GUI.StatusLabel.Text = "Status: No data to save!"
+            return
+        end
+        StopRecording(GUI)
+    end)
+    
+    -- Minimize
+    GUI.MinimizeBtn.MouseButton1Click:Connect(function()
+        GUI.MainFrame.Visible = false
+        
+        if not State.MinimizedIcon then
+            State.MinimizedIcon = CreateMinimizedIcon()
+            State.MinimizedIcon.IconBtn.MouseButton1Click:Connect(function()
+                GUI.MainFrame.Visible = true
+                State.MinimizedIcon.ScreenGui:Destroy()
+                State.MinimizedIcon = nil
+            end)
+        end
+    end)
+    
+    -- Close
+    GUI.CloseBtn.MouseButton1Click:Connect(function()
+        StopPlayback()
+        if State.IsRecording then
+            StopRecording(GUI)
+        end
+        GUI.ScreenGui:Destroy()
+        if State.MinimizedIcon then
+            State.MinimizedIcon.ScreenGui:Destroy()
+        end
+        if State.TimerOverlay then
+            State.TimerOverlay.ScreenGui:Destroy()
+        end
+    end)
+    
+    -- Initial file list
+    RefreshFileList(GUI)
+end
+
+--// ============================================
+--// INITIALIZATION
+--// ============================================
+
+local function Initialize()
+    -- Cleanup existing
+    for _, gui in pairs(CoreGui:GetChildren()) do
+        if gui.Name:match("^shhhhnayy05_") then
+            gui:Destroy()
+        end
+    end
+    
+    local GUI = CreateMainGUI()
+    SetupMainGUIEvents(GUI)
+    
+    -- Notifikasi startup
+    GUI.StatusLabel.Text = "shhhhnayy05 Auto Walk Ready!"
+    GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    print("shhhhnayy05 Auto Walk Recorder - Video Editor Edition Loaded!")
+    print("Features: Record, Trim, Concatenate, Speed Control")
+end
+
+-- Start
+Initialize()
+
