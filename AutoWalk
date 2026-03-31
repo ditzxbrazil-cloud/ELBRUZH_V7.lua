@@ -1,7 +1,7 @@
 -- ==========================================
--- SHHHHNAYY05 AUTO WALK RECORDER V6
+-- SHHHHNAYY05 AUTO WALK RECORDER V7
 -- ==========================================
--- Fix GUI + Advanced Merge System
+-- Jendela besar + Speed control fixed + 0.1 increment
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -23,7 +23,7 @@ local WalkData = {
     CurrentPath = {},
     isRecording = false,
     isPlaying = false,
-    MergeSlots = {}, -- Multiple merge slots
+    MergeSlots = {},
     ActiveMergeSlot = 1
 }
 
@@ -56,13 +56,13 @@ end
 
 -- === UI CREATION ===
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "shhhhnayy05_WalkRecorderV6"
+ScreenGui.Name = "shhhhnayy05_WalkRecorderV7"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
 
 -- ==========================================
--- MAIN PANEL (Fixed Layout)
+-- MAIN PANEL (300x400)
 -- ==========================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "shhhhnayy05_MainFrame"
@@ -70,7 +70,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 300, 0, 340)
+MainFrame.Size = UDim2.new(0, 300, 0, 400)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
@@ -127,7 +127,7 @@ Content.BackgroundTransparency = 1
 Content.Position = UDim2.new(0, 10, 0, 40)
 Content.Size = UDim2.new(1, -20, 1, -50)
 
--- Record Section - Y: 0, Height: 85
+-- Record Section
 local RecSection = Instance.new("Frame")
 RecSection.Name = "shhhhnayy05_RecSection"
 RecSection.Parent = Content
@@ -140,7 +140,6 @@ local RecSectionCorner = Instance.new("UICorner")
 RecSectionCorner.CornerRadius = UDim.new(0, 6)
 RecSectionCorner.Parent = RecSection
 
--- Record Button - Left
 local RecBtn = Instance.new("TextButton")
 RecBtn.Name = "shhhhnayy05_RecBtn"
 RecBtn.Parent = RecSection
@@ -157,7 +156,6 @@ local RecBtnCorner = Instance.new("UICorner")
 RecBtnCorner.CornerRadius = UDim.new(0, 6)
 RecBtnCorner.Parent = RecBtn
 
--- Stop Button - Right (hidden by default)
 local StopBtn = Instance.new("TextButton")
 StopBtn.Name = "shhhhnayy05_StopBtn"
 StopBtn.Parent = RecSection
@@ -175,7 +173,6 @@ local StopBtnCorner = Instance.new("UICorner")
 StopBtnCorner.CornerRadius = UDim.new(0, 6)
 StopBtnCorner.Parent = StopBtn
 
--- Stats Label
 local StatsLabel = Instance.new("TextLabel")
 StatsLabel.Name = "shhhhnayy05_StatsLabel"
 StatsLabel.Parent = RecSection
@@ -187,7 +184,7 @@ StatsLabel.Text = "Points: 0 | Time: 0s"
 StatsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 StatsLabel.TextSize = 11
 
--- Action Buttons - Y: 95, Height: 38
+-- Action Buttons
 local SaveBtn = Instance.new("TextButton")
 SaveBtn.Name = "shhhhnayy05_SaveBtn"
 SaveBtn.Parent = Content
@@ -220,7 +217,7 @@ local PreviewBtnCorner = Instance.new("UICorner")
 PreviewBtnCorner.CornerRadius = UDim.new(0, 6)
 PreviewBtnCorner.Parent = PreviewBtn
 
--- Trim Button - Y: 140, Height: 35
+-- Trim Button
 local TrimBtn = Instance.new("TextButton")
 TrimBtn.Name = "shhhhnayy05_TrimBtn"
 TrimBtn.Parent = Content
@@ -237,7 +234,7 @@ local TrimBtnCorner = Instance.new("UICorner")
 TrimBtnCorner.CornerRadius = UDim.new(0, 6)
 TrimBtnCorner.Parent = TrimBtn
 
--- Merge Manager Button - Y: 182, Height: 35
+-- Merge Manager Button
 local MergeManagerBtn = Instance.new("TextButton")
 MergeManagerBtn.Name = "shhhhnayy05_MergeManagerBtn"
 MergeManagerBtn.Parent = Content
@@ -254,7 +251,7 @@ local MergeManagerCorner = Instance.new("UICorner")
 MergeManagerCorner.CornerRadius = UDim.new(0, 6)
 MergeManagerCorner.Parent = MergeManagerBtn
 
--- Open File Manager Button - Y: 224 (Fixed, tidak melewati garis)
+-- Open File Manager Button
 local OpenFileManagerBtn = Instance.new("TextButton")
 OpenFileManagerBtn.Name = "shhhhnayy05_OpenFileManagerBtn"
 OpenFileManagerBtn.Parent = Content
@@ -272,7 +269,7 @@ OpenFileManagerCorner.CornerRadius = UDim.new(0, 6)
 OpenFileManagerCorner.Parent = OpenFileManagerBtn
 
 -- ==========================================
--- FILE MANAGER WINDOW (Hanya OPEN, tanpa DELETE)
+-- FILE MANAGER WINDOW (300x400 - Sama dengan panel)
 -- ==========================================
 local FileManagerWindow = Instance.new("Frame")
 FileManagerWindow.Name = "shhhhnayy05_FileManager"
@@ -350,34 +347,25 @@ local RefreshCorner = Instance.new("UICorner")
 RefreshCorner.CornerRadius = UDim.new(0, 6)
 RefreshCorner.Parent = RefreshBtn
 
--- File List Container
-local FileListContainer = Instance.new("Frame")
-FileListContainer.Name = "shhhhnayy05_FileListContainer"
-FileListContainer.Parent = FileManagerWindow
-FileListContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-FileListContainer.BorderSizePixel = 0
-FileListContainer.Position = UDim2.new(0, 10, 0, 50)
-FileListContainer.Size = UDim2.new(1, -20, 1, -60)
-
-local FileListCorner = Instance.new("UICorner")
-FileListCorner.CornerRadius = UDim.new(0, 8)
-FileListCorner.Parent = FileListContainer
-
--- File Scroll Frame
+-- File Scroll Frame (Besar dan scrollable)
 local FileScroll = Instance.new("ScrollingFrame")
 FileScroll.Name = "shhhhnayy05_FileScroll"
-FileScroll.Parent = FileListContainer
-FileScroll.BackgroundTransparency = 1
+FileScroll.Parent = FileManagerWindow
+FileScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 FileScroll.BorderSizePixel = 0
-FileScroll.Position = UDim2.new(0, 5, 0, 5)
-FileScroll.Size = UDim2.new(1, -10, 1, -10)
-FileScroll.ScrollBarThickness = 6
+FileScroll.Position = UDim2.new(0, 10, 0, 50)
+FileScroll.Size = UDim2.new(1, -20, 1, -60)
+FileScroll.ScrollBarThickness = 8
 FileScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
 FileScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 
+local FileScrollCorner = Instance.new("UICorner")
+FileScrollCorner.CornerRadius = UDim.new(0, 8)
+FileScrollCorner.Parent = FileScroll
+
 local FileListLayout = Instance.new("UIListLayout")
 FileListLayout.Parent = FileScroll
-FileListLayout.Padding = UDim.new(0, 8)
+FileListLayout.Padding = UDim.new(0, 10)
 FileListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 -- Empty State Label
@@ -393,15 +381,15 @@ EmptyLabel.TextSize = 12
 EmptyLabel.TextWrapped = true
 
 -- ==========================================
--- MERGE MANAGER WINDOW (Advanced Merge System)
+-- MERGE MANAGER WINDOW (300x400 - Sama dengan panel)
 -- ==========================================
 local MergeWindow = Instance.new("Frame")
 MergeWindow.Name = "shhhhnayy05_MergeWindow"
 MergeWindow.Parent = ScreenGui
 MergeWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MergeWindow.BorderSizePixel = 0
-MergeWindow.Position = UDim2.new(0.5, -200, 0.5, -250)
-MergeWindow.Size = UDim2.new(0, 400, 0, 500)
+MergeWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
+MergeWindow.Size = UDim2.new(0, 300, 0, 400)
 MergeWindow.ZIndex = 110
 MergeWindow.Visible = false
 MergeWindow.Active = true
@@ -434,7 +422,7 @@ MergeTitleText.Parent = MergeTitleBar
 MergeTitleText.BackgroundTransparency = 1
 MergeTitleText.Size = UDim2.new(1, 0, 1, 0)
 MergeTitleText.Font = Enum.Font.GothamBold
-MergeTitleText.Text = "🔗 ADVANCED MERGE MANAGER"
+MergeTitleText.Text = "🔗 MERGE MANAGER"
 MergeTitleText.TextColor3 = Color3.fromRGB(200, 100, 255)
 MergeTitleText.TextSize = 14
 
@@ -454,22 +442,30 @@ local MergeCloseCorner = Instance.new("UICorner")
 MergeCloseCorner.CornerRadius = UDim.new(0, 6)
 MergeCloseCorner.Parent = MergeCloseBtn
 
--- Merge Content
-local MergeContent = Instance.new("Frame")
-MergeContent.Name = "shhhhnayy05_MergeContent"
-MergeContent.Parent = MergeWindow
-MergeContent.BackgroundTransparency = 1
-MergeContent.Position = UDim2.new(0, 10, 0, 50)
-MergeContent.Size = UDim2.new(1, -20, 1, -60)
+-- Merge Content Scrollable
+local MergeScroll = Instance.new("ScrollingFrame")
+MergeScroll.Name = "shhhhnayy05_MergeScroll"
+MergeScroll.Parent = MergeWindow
+MergeScroll.BackgroundTransparency = 1
+MergeScroll.BorderSizePixel = 0
+MergeScroll.Position = UDim2.new(0, 10, 0, 50)
+MergeScroll.Size = UDim2.new(1, -20, 1, -60)
+MergeScroll.ScrollBarThickness = 6
+MergeScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 100, 255)
+MergeScroll.CanvasSize = UDim2.new(0, 0, 0, 350)
+
+local MergeScrollCorner = Instance.new("UICorner")
+MergeScrollCorner.CornerRadius = UDim.new(0, 8)
+MergeScrollCorner.Parent = MergeScroll
 
 -- Current Path Section
 local CurrentPathSection = Instance.new("Frame")
 CurrentPathSection.Name = "shhhhnayy05_CurrentPathSection"
-CurrentPathSection.Parent = MergeContent
+CurrentPathSection.Parent = MergeScroll
 CurrentPathSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 CurrentPathSection.BorderSizePixel = 0
 CurrentPathSection.Position = UDim2.new(0, 0, 0, 0)
-CurrentPathSection.Size = UDim2.new(1, 0, 0, 80)
+CurrentPathSection.Size = UDim2.new(1, -10, 0, 80)
 
 local CurrentPathCorner = Instance.new("UICorner")
 CurrentPathCorner.CornerRadius = UDim.new(0, 6)
@@ -499,7 +495,6 @@ CurrentPathInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
 CurrentPathInfo.TextSize = 11
 CurrentPathInfo.TextXAlignment = Enum.TextXAlignment.Left
 
--- Store Current Button
 local StoreCurrentBtn = Instance.new("TextButton")
 StoreCurrentBtn.Name = "shhhhnayy05_StoreCurrentBtn"
 StoreCurrentBtn.Parent = CurrentPathSection
@@ -508,7 +503,7 @@ StoreCurrentBtn.BorderSizePixel = 0
 StoreCurrentBtn.Position = UDim2.new(0.03, 0, 0.55, 0)
 StoreCurrentBtn.Size = UDim2.new(0.44, 0, 0, 30)
 StoreCurrentBtn.Font = Enum.Font.GothamBold
-StoreCurrentBtn.Text = "📥 STORE TO SLOT"
+StoreCurrentBtn.Text = "📥 STORE"
 StoreCurrentBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 StoreCurrentBtn.TextSize = 10
 
@@ -516,7 +511,6 @@ local StoreCurrentCorner = Instance.new("UICorner")
 StoreCurrentCorner.CornerRadius = UDim.new(0, 4)
 StoreCurrentCorner.Parent = StoreCurrentBtn
 
--- Clear Current Button
 local ClearCurrentBtn = Instance.new("TextButton")
 ClearCurrentBtn.Name = "shhhhnayy05_ClearCurrentBtn"
 ClearCurrentBtn.Parent = CurrentPathSection
@@ -533,14 +527,14 @@ local ClearCurrentCorner = Instance.new("UICorner")
 ClearCurrentCorner.CornerRadius = UDim.new(0, 4)
 ClearCurrentCorner.Parent = ClearCurrentBtn
 
--- Merge Slots Section
+-- Slots Section
 local SlotsSection = Instance.new("Frame")
 SlotsSection.Name = "shhhhnayy05_SlotsSection"
-SlotsSection.Parent = MergeContent
+SlotsSection.Parent = MergeScroll
 SlotsSection.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 SlotsSection.BorderSizePixel = 0
 SlotsSection.Position = UDim2.new(0, 0, 0, 90)
-SlotsSection.Size = UDim2.new(1, 0, 0, 200)
+SlotsSection.Size = UDim2.new(1, -10, 0, 180)
 
 local SlotsCorner = Instance.new("UICorner")
 SlotsCorner.CornerRadius = UDim.new(0, 6)
@@ -553,34 +547,27 @@ SlotsTitle.BackgroundTransparency = 1
 SlotsTitle.Position = UDim2.new(0, 10, 0, 5)
 SlotsTitle.Size = UDim2.new(1, -20, 0, 20)
 SlotsTitle.Font = Enum.Font.GothamBold
-SlotsTitle.Text = "🗄 MERGE SLOTS (Max 5)"
+SlotsTitle.Text = "🗄 MERGE SLOTS"
 SlotsTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
 SlotsTitle.TextSize = 12
 SlotsTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 -- Slots Container
-local SlotsContainer = Instance.new("ScrollingFrame")
+local SlotsContainer = Instance.new("Frame")
 SlotsContainer.Name = "shhhhnayy05_SlotsContainer"
 SlotsContainer.Parent = SlotsSection
 SlotsContainer.BackgroundTransparency = 1
-SlotsContainer.BorderSizePixel = 0
 SlotsContainer.Position = UDim2.new(0, 10, 0, 30)
-SlotsContainer.Size = UDim2.new(1, -20, 0, 160)
-SlotsContainer.ScrollBarThickness = 4
-SlotsContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-
-local SlotsLayout = Instance.new("UIListLayout")
-SlotsLayout.Parent = SlotsContainer
-SlotsLayout.Padding = UDim.new(0, 5)
+SlotsContainer.Size = UDim2.new(1, -20, 0, 140)
 
 -- Merge Operations Section
 local MergeOpsSection = Instance.new("Frame")
 MergeOpsSection.Name = "shhhhnayy05_MergeOpsSection"
-MergeOpsSection.Parent = MergeContent
+MergeOpsSection.Parent = MergeScroll
 MergeOpsSection.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 MergeOpsSection.BorderSizePixel = 0
-MergeOpsSection.Position = UDim2.new(0, 0, 0, 298)
-MergeOpsSection.Size = UDim2.new(1, 0, 0, 140)
+MergeOpsSection.Position = UDim2.new(0, 0, 0, 280)
+MergeOpsSection.Size = UDim2.new(1, -10, 0, 120)
 
 local MergeOpsCorner = Instance.new("UICorner")
 MergeOpsCorner.CornerRadius = UDim.new(0, 6)
@@ -593,7 +580,7 @@ MergeOpsTitle.BackgroundTransparency = 1
 MergeOpsTitle.Position = UDim2.new(0, 10, 0, 5)
 MergeOpsTitle.Size = UDim2.new(1, -20, 0, 20)
 MergeOpsTitle.Font = Enum.Font.GothamBold
-MergeOpsTitle.Text = "⚙ MERGE OPERATIONS"
+MergeOpsTitle.Text = "⚙ OPERATIONS"
 MergeOpsTitle.TextColor3 = Color3.fromRGB(100, 255, 150)
 MergeOpsTitle.TextSize = 12
 MergeOpsTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -606,7 +593,7 @@ SlotSelectorLabel.BackgroundTransparency = 1
 SlotSelectorLabel.Position = UDim2.new(0, 10, 0, 30)
 SlotSelectorLabel.Size = UDim2.new(0.3, 0, 0, 25)
 SlotSelectorLabel.Font = Enum.Font.Gotham
-SlotSelectorLabel.Text = "Select Slot:"
+SlotSelectorLabel.Text = "Slot:"
 SlotSelectorLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 SlotSelectorLabel.TextSize = 11
 SlotSelectorLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -627,7 +614,6 @@ local SlotSelectorCorner = Instance.new("UICorner")
 SlotSelectorCorner.CornerRadius = UDim.new(0, 4)
 SlotSelectorCorner.Parent = SlotSelector
 
--- Append Button
 local AppendSlotBtn = Instance.new("TextButton")
 AppendSlotBtn.Name = "shhhhnayy05_AppendSlotBtn"
 AppendSlotBtn.Parent = MergeOpsSection
@@ -644,62 +630,15 @@ local AppendSlotCorner = Instance.new("UICorner")
 AppendSlotCorner.CornerRadius = UDim.new(0, 4)
 AppendSlotCorner.Parent = AppendSlotBtn
 
--- Insert At Button
-local InsertAtBtn = Instance.new("TextButton")
-InsertAtBtn.Name = "shhhhnayy05_InsertAtBtn"
-InsertAtBtn.Parent = MergeOpsSection
-InsertAtBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
-InsertAtBtn.BorderSizePixel = 0
-InsertAtBtn.Position = UDim2.new(0.03, 0, 0, 65)
-InsertAtBtn.Size = UDim2.new(0.44, 0, 0, 30)
-InsertAtBtn.Font = Enum.Font.GothamBold
-InsertAtBtn.Text = "📍 INSERT AT START"
-InsertAtBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-InsertAtBtn.TextSize = 10
-
-local InsertAtCorner = Instance.new("UICorner")
-InsertAtCorner.CornerRadius = UDim.new(0, 4)
-InsertAtCorner.Parent = InsertAtBtn
-
--- Insert Position Input
-local InsertPosLabel = Instance.new("TextLabel")
-InsertPosLabel.Name = "shhhhnayy05_InsertPosLabel"
-InsertPosLabel.Parent = MergeOpsSection
-InsertPosLabel.BackgroundTransparency = 1
-InsertPosLabel.Position = UDim2.new(0.52, 0, 0, 65)
-InsertPosLabel.Size = UDim2.new(0.2, 0, 0, 30)
-InsertPosLabel.Font = Enum.Font.Gotham
-InsertPosLabel.Text = "Pos:"
-InsertPosLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-InsertPosLabel.TextSize = 11
-InsertPosLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local InsertPosInput = Instance.new("TextBox")
-InsertPosInput.Name = "shhhhnayy05_InsertPosInput"
-InsertPosInput.Parent = MergeOpsSection
-InsertPosInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-InsertPosInput.BorderSizePixel = 0
-InsertPosInput.Position = UDim2.new(0.72, 0, 0, 65)
-InsertPosInput.Size = UDim2.new(0.23, 0, 0, 30)
-InsertPosInput.Font = Enum.Font.GothamBold
-InsertPosInput.Text = "1"
-InsertPosInput.TextColor3 = Color3.fromRGB(255, 200, 100)
-InsertPosInput.TextSize = 12
-
-local InsertPosCorner = Instance.new("UICorner")
-InsertPosCorner.CornerRadius = UDim.new(0, 4)
-InsertPosCorner.Parent = InsertPosInput
-
--- Merge All Slots Button
 local MergeAllBtn = Instance.new("TextButton")
 MergeAllBtn.Name = "shhhhnayy05_MergeAllBtn"
 MergeAllBtn.Parent = MergeOpsSection
 MergeAllBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
 MergeAllBtn.BorderSizePixel = 0
-MergeAllBtn.Position = UDim2.new(0.03, 0, 0, 102)
-MergeAllBtn.Size = UDim2.new(0.44, 0, 0, 30)
+MergeAllBtn.Position = UDim2.new(0.03, 0, 0, 65)
+MergeAllBtn.Size = UDim2.new(0.44, 0, 0, 25)
 MergeAllBtn.Font = Enum.Font.GothamBold
-MergeAllBtn.Text = "🔗 MERGE ALL SLOTS"
+MergeAllBtn.Text = "🔗 MERGE ALL"
 MergeAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MergeAllBtn.TextSize = 10
 
@@ -707,14 +646,13 @@ local MergeAllCorner = Instance.new("UICorner")
 MergeAllCorner.CornerRadius = UDim.new(0, 4)
 MergeAllCorner.Parent = MergeAllBtn
 
--- Clear All Slots Button
 local ClearAllSlotsBtn = Instance.new("TextButton")
 ClearAllSlotsBtn.Name = "shhhhnayy05_ClearAllSlotsBtn"
 ClearAllSlotsBtn.Parent = MergeOpsSection
 ClearAllSlotsBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ClearAllSlotsBtn.BorderSizePixel = 0
-ClearAllSlotsBtn.Position = UDim2.new(0.53, 0, 0, 102)
-ClearAllSlotsBtn.Size = UDim2.new(0.44, 0, 0, 30)
+ClearAllSlotsBtn.Position = UDim2.new(0.53, 0, 0, 65)
+ClearAllSlotsBtn.Size = UDim2.new(0.44, 0, 0, 25)
 ClearAllSlotsBtn.Font = Enum.Font.GothamBold
 ClearAllSlotsBtn.Text = "🗑 CLEAR ALL"
 ClearAllSlotsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -804,15 +742,15 @@ DialogCancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 DialogCancelBtn.TextSize = 14
 
 -- ==========================================
--- FILE DETAIL WINDOW
+-- FILE DETAIL WINDOW (300x400 - Sama dengan panel)
 -- ==========================================
 local FileDetail = Instance.new("Frame")
 FileDetail.Name = "shhhhnayy05_FileDetail"
 FileDetail.Parent = ScreenGui
 FileDetail.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 FileDetail.BorderSizePixel = 0
-FileDetail.Position = UDim2.new(0.5, -150, 0.5, -140)
-FileDetail.Size = UDim2.new(0, 300, 0, 280)
+FileDetail.Position = UDim2.new(0.5, -150, 0.5, -200)
+FileDetail.Size = UDim2.new(0, 300, 0, 400)
 FileDetail.ZIndex = 150
 FileDetail.Visible = false
 FileDetail.Active = true
@@ -832,7 +770,7 @@ DetailTitleBar.Name = "shhhhnayy05_DetailTitleBar"
 DetailTitleBar.Parent = FileDetail
 DetailTitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 DetailTitleBar.BorderSizePixel = 0
-DetailTitleBar.Size = UDim2.new(1, 0, 0, 35)
+DetailTitleBar.Size = UDim2.new(1, 0, 0, 40)
 
 local DetailTitleCorner = Instance.new("UICorner")
 DetailTitleCorner.CornerRadius = UDim.new(0, 8)
@@ -853,200 +791,218 @@ DetailCloseBtn.Name = "shhhhnayy05_DetailCloseBtn"
 DetailCloseBtn.Parent = DetailTitleBar
 DetailCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
 DetailCloseBtn.BorderSizePixel = 0
-DetailCloseBtn.Position = UDim2.new(1, -30, 0.5, -10)
-DetailCloseBtn.Size = UDim2.new(0, 20, 0, 20)
+DetailCloseBtn.Position = UDim2.new(1, -35, 0.5, -12)
+DetailCloseBtn.Size = UDim2.new(0, 24, 0, 24)
 DetailCloseBtn.Font = Enum.Font.GothamBold
 DetailCloseBtn.Text = "×"
 DetailCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DetailCloseBtn.TextSize = 16
+DetailCloseBtn.TextSize = 18
 
 local DetailCloseCorner = Instance.new("UICorner")
-DetailCloseCorner.CornerRadius = UDim.new(0, 4)
+DetailCloseCorner.CornerRadius = UDim.new(0, 6)
 DetailCloseCorner.Parent = DetailCloseBtn
 
--- Detail Content
-local DetailContent = Instance.new("Frame")
-DetailContent.Name = "shhhhnayy05_DetailContent"
-DetailContent.Parent = FileDetail
-DetailContent.BackgroundTransparency = 1
-DetailContent.Position = UDim2.new(0, 15, 0, 45)
-DetailContent.Size = UDim2.new(1, -30, 1, -55)
+-- Detail Content Scrollable
+local DetailScroll = Instance.new("ScrollingFrame")
+DetailScroll.Name = "shhhhnayy05_DetailScroll"
+DetailScroll.Parent = FileDetail
+DetailScroll.BackgroundTransparency = 1
+DetailScroll.BorderSizePixel = 0
+DetailScroll.Position = UDim2.new(0, 10, 0, 50)
+DetailScroll.Size = UDim2.new(1, -20, 1, -60)
+DetailScroll.ScrollBarThickness = 6
+DetailScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
+DetailScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
+
+local DetailScrollCorner = Instance.new("UICorner")
+DetailScrollCorner.CornerRadius = UDim.new(0, 8)
+DetailScrollCorner.Parent = DetailScroll
 
 -- File Info
 local DetailName = Instance.new("TextLabel")
 DetailName.Name = "shhhhnayy05_DetailName"
-DetailName.Parent = DetailContent
+DetailName.Parent = DetailScroll
 DetailName.BackgroundTransparency = 1
-DetailName.Size = UDim2.new(1, 0, 0, 22)
+DetailName.Position = UDim2.new(0, 5, 0, 0)
+DetailName.Size = UDim2.new(1, -10, 0, 25)
 DetailName.Font = Enum.Font.GothamBold
 DetailName.Text = "Name: -"
 DetailName.TextColor3 = Color3.fromRGB(255, 255, 255)
-DetailName.TextSize = 13
+DetailName.TextSize = 14
 DetailName.TextXAlignment = Enum.TextXAlignment.Left
 
 local DetailPoints = Instance.new("TextLabel")
 DetailPoints.Name = "shhhhnayy05_DetailPoints"
-DetailPoints.Parent = DetailContent
+DetailPoints.Parent = DetailScroll
 DetailPoints.BackgroundTransparency = 1
-DetailPoints.Position = UDim2.new(0, 0, 0, 22)
-DetailPoints.Size = UDim2.new(1, 0, 0, 18)
+DetailPoints.Position = UDim2.new(0, 5, 0, 28)
+DetailPoints.Size = UDim2.new(1, -10, 0, 20)
 DetailPoints.Font = Enum.Font.Gotham
 DetailPoints.Text = "Points: 0"
 DetailPoints.TextColor3 = Color3.fromRGB(200, 200, 200)
-DetailPoints.TextSize = 11
+DetailPoints.TextSize = 12
 DetailPoints.TextXAlignment = Enum.TextXAlignment.Left
 
 local DetailDate = Instance.new("TextLabel")
 DetailDate.Name = "shhhhnayy05_DetailDate"
-DetailDate.Parent = DetailContent
+DetailDate.Parent = DetailScroll
 DetailDate.BackgroundTransparency = 1
-DetailDate.Position = UDim2.new(0, 0, 0, 40)
-DetailDate.Size = UDim2.new(1, 0, 0, 18)
+DetailDate.Position = UDim2.new(0, 5, 0, 50)
+DetailDate.Size = UDim2.new(1, -10, 0, 20)
 DetailDate.Font = Enum.Font.Gotham
 DetailDate.Text = "Saved: -"
 DetailDate.TextColor3 = Color3.fromRGB(150, 150, 150)
-DetailDate.TextSize = 10
+DetailDate.TextSize = 11
 DetailDate.TextXAlignment = Enum.TextXAlignment.Left
 
--- Speed Control Section - Y: 65
+-- SPEED CONTROL SECTION (Fixed - Angka di tengah)
 local SpeedSection = Instance.new("Frame")
 SpeedSection.Name = "shhhhnayy05_SpeedSection"
-SpeedSection.Parent = DetailContent
+SpeedSection.Parent = DetailScroll
 SpeedSection.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 SpeedSection.BorderSizePixel = 0
-SpeedSection.Position = UDim2.new(0, 0, 0, 65)
-SpeedSection.Size = UDim2.new(1, 0, 0, 50)
+SpeedSection.Position = UDim2.new(0, 5, 0, 80)
+SpeedSection.Size = UDim2.new(1, -10, 0, 60)
 
 local SpeedSectionCorner = Instance.new("UICorner")
-SpeedSectionCorner.CornerRadius = UDim.new(0, 6)
+SpeedSectionCorner.CornerRadius = UDim.new(0, 8)
 SpeedSectionCorner.Parent = SpeedSection
 
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Name = "shhhhnayy05_SpeedLabel"
-SpeedLabel.Parent = SpeedSection
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Position = UDim2.new(0, 10, 0, 0)
-SpeedLabel.Size = UDim2.new(0.25, 0, 1, 0)
-SpeedLabel.Font = Enum.Font.GothamBold
-SpeedLabel.Text = "SPEED"
-SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-SpeedLabel.TextSize = 12
+local SpeedTitle = Instance.new("TextLabel")
+SpeedTitle.Name = "shhhhnayy05_SpeedTitle"
+SpeedTitle.Parent = SpeedSection
+SpeedTitle.BackgroundTransparency = 1
+SpeedTitle.Position = UDim2.new(0, 0, 0, 5)
+SpeedTitle.Size = UDim2.new(1, 0, 0, 18)
+SpeedTitle.Font = Enum.Font.GothamBold
+SpeedTitle.Text = "⚡ WALK SPEED"
+SpeedTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+SpeedTitle.TextSize = 12
 
--- Speed Minus Button
+-- Speed Control Container (Centered)
+local SpeedControlContainer = Instance.new("Frame")
+SpeedControlContainer.Name = "shhhhnayy05_SpeedControlContainer"
+SpeedControlContainer.Parent = SpeedSection
+SpeedControlContainer.BackgroundTransparency = 1
+SpeedControlContainer.Position = UDim2.new(0.5, -75, 0, 28)
+SpeedControlContainer.Size = UDim2.new(0, 150, 0, 30)
+
+-- Minus Button
 local SpeedMinus = Instance.new("TextButton")
 SpeedMinus.Name = "shhhhnayy05_SpeedMinus"
-SpeedMinus.Parent = SpeedSection
+SpeedMinus.Parent = SpeedControlContainer
 SpeedMinus.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 SpeedMinus.BorderSizePixel = 0
-SpeedMinus.Position = UDim2.new(0.32, 0, 0.1, 0)
-SpeedMinus.Size = UDim2.new(0, 35, 0, 35)
+SpeedMinus.Position = UDim2.new(0, 0, 0, 0)
+SpeedMinus.Size = UDim2.new(0, 40, 1, 0)
 SpeedMinus.Font = Enum.Font.GothamBold
 SpeedMinus.Text = "-"
 SpeedMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedMinus.TextSize = 20
 
 local SpeedMinusCorner = Instance.new("UICorner")
-SpeedMinusCorner.CornerRadius = UDim.new(0, 4)
+SpeedMinusCorner.CornerRadius = UDim.new(0, 6)
 SpeedMinusCorner.Parent = SpeedMinus
 
--- Speed Display
+-- Speed Display (Tengah)
 local SpeedDisplay = Instance.new("TextLabel")
 SpeedDisplay.Name = "shhhhnayy05_SpeedDisplay"
-SpeedDisplay.Parent = SpeedSection
+SpeedDisplay.Parent = SpeedControlContainer
 SpeedDisplay.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 SpeedDisplay.BorderSizePixel = 0
-SpeedDisplay.Position = UDim2.new(0.5, -25, 0.1, 0)
-SpeedDisplay.Size = UDim2.new(0, 50, 0, 35)
+SpeedDisplay.Position = UDim2.new(0.5, -30, 0, 0)
+SpeedDisplay.Size = UDim2.new(0, 60, 1, 0)
 SpeedDisplay.Font = Enum.Font.GothamBold
 SpeedDisplay.Text = "1.0"
 SpeedDisplay.TextColor3 = Color3.fromRGB(0, 200, 255)
-SpeedDisplay.TextSize = 16
+SpeedDisplay.TextSize = 18
 
 local SpeedDisplayCorner = Instance.new("UICorner")
-SpeedDisplayCorner.CornerRadius = UDim.new(0, 4)
+SpeedDisplayCorner.CornerRadius = UDim.new(0, 6)
 SpeedDisplayCorner.Parent = SpeedDisplay
 
--- Speed Plus Button
+-- Plus Button
 local SpeedPlus = Instance.new("TextButton")
 SpeedPlus.Name = "shhhhnayy05_SpeedPlus"
-SpeedPlus.Parent = SpeedSection
+SpeedPlus.Parent = SpeedControlContainer
 SpeedPlus.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 SpeedPlus.BorderSizePixel = 0
-SpeedPlus.Position = UDim2.new(0.72, 0, 0.1, 0)
-SpeedPlus.Size = UDim2.new(0, 35, 0, 35)
+SpeedPlus.Position = UDim2.new(1, -40, 0, 0)
+SpeedPlus.Size = UDim2.new(0, 40, 1, 0)
 SpeedPlus.Font = Enum.Font.GothamBold
 SpeedPlus.Text = "+"
 SpeedPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedPlus.TextSize = 20
 
 local SpeedPlusCorner = Instance.new("UICorner")
-SpeedPlusCorner.CornerRadius = UDim.new(0, 4)
+SpeedPlusCorner.CornerRadius = UDim.new(0, 6)
 SpeedPlusCorner.Parent = SpeedPlus
 
--- Play Walk Button - Y: 125
+-- Play Walk Button
 local PlayWalkBtn = Instance.new("TextButton")
 PlayWalkBtn.Name = "shhhhnayy05_PlayWalkBtn"
-PlayWalkBtn.Parent = DetailContent
+PlayWalkBtn.Parent = DetailScroll
 PlayWalkBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
 PlayWalkBtn.BorderSizePixel = 0
-PlayWalkBtn.Position = UDim2.new(0, 0, 0, 125)
-PlayWalkBtn.Size = UDim2.new(1, 0, 0, 45)
+PlayWalkBtn.Position = UDim2.new(0, 5, 0, 150)
+PlayWalkBtn.Size = UDim2.new(1, -10, 0, 50)
 PlayWalkBtn.Font = Enum.Font.GothamBold
 PlayWalkBtn.Text = "▶ PLAY WALK"
 PlayWalkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PlayWalkBtn.TextSize = 16
+PlayWalkBtn.TextSize = 18
 
 local PlayWalkCorner = Instance.new("UICorner")
-PlayWalkCorner.CornerRadius = UDim.new(0, 8)
+PlayWalkCorner.CornerRadius = UDim.new(0, 10)
 PlayWalkCorner.Parent = PlayWalkBtn
 
--- Load Button - Y: 180
+-- Load Button
 local LoadBtn = Instance.new("TextButton")
 LoadBtn.Name = "shhhhnayy05_LoadBtn"
-LoadBtn.Parent = DetailContent
+LoadBtn.Parent = DetailScroll
 LoadBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
 LoadBtn.BorderSizePixel = 0
-LoadBtn.Position = UDim2.new(0, 0, 0, 180)
-LoadBtn.Size = UDim2.new(0.48, 0, 0, 40)
+LoadBtn.Position = UDim2.new(0, 5, 0, 210)
+LoadBtn.Size = UDim2.new(0.48, -5, 0, 45)
 LoadBtn.Font = Enum.Font.GothamBold
 LoadBtn.Text = "📂 LOAD"
 LoadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-LoadBtn.TextSize = 12
+LoadBtn.TextSize = 13
 
 local LoadCorner = Instance.new("UICorner")
-LoadCorner.CornerRadius = UDim.new(0, 6)
+LoadCorner.CornerRadius = UDim.new(0, 8)
 LoadCorner.Parent = LoadBtn
 
--- Delete Button - Y: 180
+-- Delete Button
 local DeleteBtn = Instance.new("TextButton")
 DeleteBtn.Name = "shhhhnayy05_DeleteBtn"
-DeleteBtn.Parent = DetailContent
+DeleteBtn.Parent = DetailScroll
 DeleteBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
 DeleteBtn.BorderSizePixel = 0
-DeleteBtn.Position = UDim2.new(0.52, 0, 0, 180)
-DeleteBtn.Size = UDim2.new(0.48, 0, 0, 40)
+DeleteBtn.Position = UDim2.new(0.52, 0, 0, 210)
+DeleteBtn.Size = UDim2.new(0.48, -5, 0, 45)
 DeleteBtn.Font = Enum.Font.GothamBold
 DeleteBtn.Text = "🗑 DELETE"
 DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DeleteBtn.TextSize = 12
+DeleteBtn.TextSize = 13
 
 local DeleteCorner = Instance.new("UICorner")
-DeleteCorner.CornerRadius = UDim.new(0, 6)
+DeleteCorner.CornerRadius = UDim.new(0, 8)
 DeleteCorner.Parent = DeleteBtn
 
 -- ==========================================
--- TRIM PANEL
+-- TRIM PANEL (300x400 - Sama dengan panel)
 -- ==========================================
 local TrimPanel = Instance.new("Frame")
 TrimPanel.Name = "shhhhnayy05_TrimPanel"
 TrimPanel.Parent = ScreenGui
 TrimPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 TrimPanel.BorderSizePixel = 0
-TrimPanel.Position = UDim2.new(0.5, -150, 0.15, 0)
-TrimPanel.Size = UDim2.new(0, 300, 0, 160)
+TrimPanel.Position = UDim2.new(0.5, -150, 0.5, -200)
+TrimPanel.Size = UDim2.new(0, 300, 0, 400)
 TrimPanel.ZIndex = 80
 TrimPanel.Visible = false
 TrimPanel.Active = true
+TrimPanel.Draggable = true
 
 local TrimPanelCorner = Instance.new("UICorner")
 TrimPanelCorner.CornerRadius = UDim.new(0, 10)
@@ -1062,7 +1018,7 @@ TrimTitleBar.Name = "shhhhnayy05_TrimTitleBar"
 TrimTitleBar.Parent = TrimPanel
 TrimTitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 TrimTitleBar.BorderSizePixel = 0
-TrimTitleBar.Size = UDim2.new(1, 0, 0, 35)
+TrimTitleBar.Size = UDim2.new(1, 0, 0, 40)
 
 local TrimTitleCorner = Instance.new("UICorner")
 TrimTitleCorner.CornerRadius = UDim.new(0, 8)
@@ -1074,7 +1030,7 @@ TrimTitleText.Parent = TrimTitleBar
 TrimTitleText.BackgroundTransparency = 1
 TrimTitleText.Size = UDim2.new(1, 0, 1, 0)
 TrimTitleText.Font = Enum.Font.GothamBold
-TrimTitleText.Text = "✂️ TRIM PATH"
+TrimTitleText.Text = "✂️ TRIM EDITOR"
 TrimTitleText.TextColor3 = Color3.fromRGB(255, 150, 0)
 TrimTitleText.TextSize = 14
 
@@ -1083,96 +1039,159 @@ TrimCloseBtn.Name = "shhhhnayy05_TrimCloseBtn"
 TrimCloseBtn.Parent = TrimTitleBar
 TrimCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
 TrimCloseBtn.BorderSizePixel = 0
-TrimCloseBtn.Position = UDim2.new(1, -30, 0.5, -10)
-TrimCloseBtn.Size = UDim2.new(0, 20, 0, 20)
+TrimCloseBtn.Position = UDim2.new(1, -35, 0.5, -12)
+TrimCloseBtn.Size = UDim2.new(0, 24, 0, 24)
 TrimCloseBtn.Font = Enum.Font.GothamBold
 TrimCloseBtn.Text = "×"
 TrimCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrimCloseBtn.TextSize = 16
+TrimCloseBtn.TextSize = 18
 
 local TrimCloseCorner = Instance.new("UICorner")
-TrimCloseCorner.CornerRadius = UDim.new(0, 4)
+TrimCloseCorner.CornerRadius = UDim.new(0, 6)
 TrimCloseCorner.Parent = TrimCloseBtn
 
--- Trim Content
-local TrimContent = Instance.new("Frame")
-TrimContent.Name = "shhhhnayy05_TrimContent"
-TrimContent.Parent = TrimPanel
-TrimContent.BackgroundTransparency = 1
-TrimContent.Position = UDim2.new(0, 15, 0, 50)
-TrimContent.Size = UDim2.new(1, -30, 1, -60)
+-- Trim Content Scrollable
+local TrimScroll = Instance.new("ScrollingFrame")
+TrimScroll.Name = "shhhhnayy05_TrimScroll"
+TrimScroll.Parent = TrimPanel
+TrimScroll.BackgroundTransparency = 1
+TrimScroll.BorderSizePixel = 0
+TrimScroll.Position = UDim2.new(0, 10, 0, 50)
+TrimScroll.Size = UDim2.new(1, -20, 1, -60)
+TrimScroll.ScrollBarThickness = 6
+TrimScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 150, 0)
+TrimScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
+
+local TrimScrollCorner = Instance.new("UICorner")
+TrimScrollCorner.CornerRadius = UDim.new(0, 8)
+TrimScrollCorner.Parent = TrimScroll
+
+-- Current Path Info
+local TrimPathInfo = Instance.new("TextLabel")
+TrimPathInfo.Name = "shhhhnayy05_TrimPathInfo"
+TrimPathInfo.Parent = TrimScroll
+TrimPathInfo.BackgroundTransparency = 1
+TrimPathInfo.Position = UDim2.new(0, 5, 0, 0)
+TrimPathInfo.Size = UDim2.new(1, -10, 0, 40)
+TrimPathInfo.Font = Enum.Font.GothamBold
+TrimPathInfo.Text = "Current Path: 0 points"
+TrimPathInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+TrimPathInfo.TextSize = 13
+TrimPathInfo.TextWrapped = true
+
+-- Range Section
+local RangeSection = Instance.new("Frame")
+RangeSection.Name = "shhhhnayy05_RangeSection"
+RangeSection.Parent = TrimScroll
+RangeSection.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+RangeSection.BorderSizePixel = 0
+RangeSection.Position = UDim2.new(0, 5, 0, 50)
+RangeSection.Size = UDim2.new(1, -10, 0, 120)
+
+local RangeCorner = Instance.new("UICorner")
+RangeCorner.CornerRadius = UDim.new(0, 8)
+RangeCorner.Parent = RangeSection
+
+local RangeTitle = Instance.new("TextLabel")
+RangeTitle.Name = "shhhhnayy05_RangeTitle"
+RangeTitle.Parent = RangeSection
+RangeTitle.BackgroundTransparency = 1
+RangeTitle.Position = UDim2.new(0, 10, 0, 5)
+RangeTitle.Size = UDim2.new(1, -20, 0, 20)
+RangeTitle.Font = Enum.Font.GothamBold
+RangeTitle.Text = "📍 TRIM RANGE"
+RangeTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
+RangeTitle.TextSize = 12
 
 -- Start Input
 local TrimStartLabel = Instance.new("TextLabel")
-TrimStartLabel.Parent = TrimContent
+TrimStartLabel.Parent = RangeSection
 TrimStartLabel.BackgroundTransparency = 1
-TrimStartLabel.Size = UDim2.new(0.2, 0, 0, 30)
+TrimStartLabel.Position = UDim2.new(0, 10, 0, 35)
+TrimStartLabel.Size = UDim2.new(0.3, 0, 0, 30)
 TrimStartLabel.Font = Enum.Font.Gotham
-TrimStartLabel.Text = "Start:"
+TrimStartLabel.Text = "Start Index:"
 TrimStartLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TrimStartLabel.TextSize = 12
+TrimStartLabel.TextSize = 11
 TrimStartLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local TrimStartInput = Instance.new("TextBox")
 TrimStartInput.Name = "shhhhnayy05_TrimStartInput"
-TrimStartInput.Parent = TrimContent
+TrimStartInput.Parent = RangeSection
 TrimStartInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 TrimStartInput.BorderSizePixel = 0
-TrimStartInput.Position = UDim2.new(0.25, 0, 0, 0)
-TrimStartInput.Size = UDim2.new(0.2, 0, 0, 30)
+TrimStartInput.Position = UDim2.new(0.35, 0, 0, 35)
+TrimStartInput.Size = UDim2.new(0.6, -10, 0, 30)
 TrimStartInput.Font = Enum.Font.GothamBold
 TrimStartInput.Text = "1"
 TrimStartInput.TextColor3 = Color3.fromRGB(255, 200, 100)
 TrimStartInput.TextSize = 14
 
 local TrimStartCorner = Instance.new("UICorner")
-TrimStartCorner.CornerRadius = UDim.new(0, 4)
+TrimStartCorner.CornerRadius = UDim.new(0, 6)
 TrimStartCorner.Parent = TrimStartInput
 
 -- End Input
 local TrimEndLabel = Instance.new("TextLabel")
-TrimEndLabel.Parent = TrimContent
+TrimEndLabel.Parent = RangeSection
 TrimEndLabel.BackgroundTransparency = 1
-TrimEndLabel.Position = UDim2.new(0.55, 0, 0, 0)
-TrimEndLabel.Size = UDim2.new(0.15, 0, 0, 30)
+TrimEndLabel.Position = UDim2.new(0, 10, 0, 75)
+TrimEndLabel.Size = UDim2.new(0.3, 0, 0, 30)
 TrimEndLabel.Font = Enum.Font.Gotham
-TrimEndLabel.Text = "End:"
+TrimEndLabel.Text = "End Index:"
 TrimEndLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TrimEndLabel.TextSize = 12
+TrimEndLabel.TextSize = 11
 TrimEndLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local TrimEndInput = Instance.new("TextBox")
 TrimEndInput.Name = "shhhhnayy05_TrimEndInput"
-TrimEndInput.Parent = TrimContent
+TrimEndInput.Parent = RangeSection
 TrimEndInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 TrimEndInput.BorderSizePixel = 0
-TrimEndInput.Position = UDim2.new(0.75, 0, 0, 0)
-TrimEndInput.Size = UDim2.new(0.2, 0, 0, 30)
+TrimEndInput.Position = UDim2.new(0.35, 0, 0, 75)
+TrimEndInput.Size = UDim2.new(0.6, -10, 0, 30)
 TrimEndInput.Font = Enum.Font.GothamBold
 TrimEndInput.Text = "0"
 TrimEndInput.TextColor3 = Color3.fromRGB(255, 200, 100)
 TrimEndInput.TextSize = 14
 
 local TrimEndCorner = Instance.new("UICorner")
-TrimEndCorner.CornerRadius = UDim.new(0, 4)
+TrimEndCorner.CornerRadius = UDim.new(0, 6)
 TrimEndCorner.Parent = TrimEndInput
 
 -- Trim Execute Button
 local TrimExecuteBtn = Instance.new("TextButton")
 TrimExecuteBtn.Name = "shhhhnayy05_TrimExecuteBtn"
-TrimExecuteBtn.Parent = TrimContent
+TrimExecuteBtn.Parent = TrimScroll
 TrimExecuteBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
 TrimExecuteBtn.BorderSizePixel = 0
-TrimExecuteBtn.Position = UDim2.new(0, 0, 0, 50)
-TrimExecuteBtn.Size = UDim2.new(1, 0, 0, 40)
+TrimExecuteBtn.Position = UDim2.new(0, 5, 0, 180)
+TrimExecuteBtn.Size = UDim2.new(1, -10, 0, 45)
 TrimExecuteBtn.Font = Enum.Font.GothamBold
 TrimExecuteBtn.Text = "✂️ TRIM PATH"
 TrimExecuteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrimExecuteBtn.TextSize = 14
+TrimExecuteBtn.TextSize = 16
 
 local TrimExecuteCorner = Instance.new("UICorner")
-TrimExecuteCorner.CornerRadius = UDim.new(0, 6)
+TrimExecuteCorner.CornerRadius = UDim.new(0, 10)
 TrimExecuteCorner.Parent = TrimExecuteBtn
+
+-- Preview Trim Button
+local PreviewTrimBtn = Instance.new("TextButton")
+PreviewTrimBtn.Name = "shhhhnayy05_PreviewTrimBtn"
+PreviewTrimBtn.Parent = TrimScroll
+PreviewTrimBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+PreviewTrimBtn.BorderSizePixel = 0
+PreviewTrimBtn.Position = UDim2.new(0, 5, 0, 235)
+PreviewTrimBtn.Size = UDim2.new(1, -10, 0, 40)
+PreviewTrimBtn.Font = Enum.Font.GothamBold
+PreviewTrimBtn.Text = "👁 PREVIEW TRIMMED"
+PreviewTrimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PreviewTrimBtn.TextSize = 14
+
+local PreviewTrimCorner = Instance.new("UICorner")
+PreviewTrimCorner.CornerRadius = UDim.new(0, 8)
+PreviewTrimCorner.Parent = PreviewTrimBtn
 
 -- ==========================================
 -- MINIMIZE BUTTON
@@ -1216,10 +1235,16 @@ local function updateStats()
     end
     StatsLabel.Text = string.format("Points: %d | Time: %.1fs", #WalkData.CurrentPath, duration)
     
-    -- Update merge window stats too
-    local mergeInfo = MergeContent:FindFirstChild("shhhhnayy05_CurrentPathInfo")
+    -- Update merge window
+    local mergeInfo = MergeScroll:FindFirstChild("shhhhnayy05_CurrentPathInfo")
     if mergeInfo then
         mergeInfo.Text = string.format("Points: %d | Duration: %.1fs", #WalkData.CurrentPath, duration)
+    end
+    
+    -- Update trim window
+    local trimInfo = TrimScroll:FindFirstChild("shhhhnayy05_TrimPathInfo")
+    if trimInfo then
+        trimInfo.Text = string.format("Current Path: %d points", #WalkData.CurrentPath)
     end
 end
 
@@ -1265,10 +1290,11 @@ local function stopRecording()
     StopBtn.Visible = false
     
     updateStats()
+    TrimStartInput.Text = "1"
     TrimEndInput.Text = tostring(#WalkData.CurrentPath)
 end
 
--- === PLAY WALK SYSTEM ===
+-- === PLAY WALK SYSTEM (Speed yang benar) ===
 local function playWalk(pathData, speed, isPreview)
     if WalkData.isPlaying or #pathData == 0 then return end
     
@@ -1310,31 +1336,43 @@ local function playWalk(pathData, speed, isPreview)
         return
     end
     
+    -- Disable collisions
     for _, v in pairs(char:GetChildren()) do
         if v:IsA("BasePart") then 
             v.CanCollide = false 
         end
     end
 
+    -- Set walk speed untuk animasi (semakin tinggi speed = semakin cepat jalan/berlari)
+    local baseWalkSpeed = 16
+    hum.WalkSpeed = baseWalkSpeed * speed
+
+    -- Loop dengan frame skipping berdasarkan speed
     local i = 1
     while i <= #pathData and WalkData.isPlaying do
         local data = pathData[i]
         local targetCF = CFrame.new(unpack(data.cf_raw))
         
+        -- Apply CFrame dan Velocity
         hrp.CFrame = targetCF
         hrp.Velocity = Vector3.new(unpack(data.velocity)) * speed
         
+        -- Apply State
         if hum:GetState().Value ~= data.state then
             hum:ChangeState(data.state)
         end
         
-        for _ = 1, math.max(1, math.floor(1/speed)) do
+        -- Tunggu berdasarkan speed (semakin tinggi speed = semakin cepat loop)
+        local waitFrames = math.max(1, math.floor(1/speed))
+        for _ = 1, waitFrames do
              RunService.Heartbeat:Wait()
         end
         
+        -- Advance index berdasarkan speed (semakin tinggi = loncat lebih banyak frame)
         i = i + math.max(1, math.round(speed))
     end
 
+    -- Restore
     if char then
         for _, v in pairs(char:GetChildren()) do
             if v:IsA("BasePart") then 
@@ -1343,6 +1381,7 @@ local function playWalk(pathData, speed, isPreview)
         end
     end
     
+    hum.WalkSpeed = baseWalkSpeed
     WalkData.isPlaying = false
     
     if isPreview then
@@ -1355,11 +1394,10 @@ local function playWalk(pathData, speed, isPreview)
 end
 
 -- ==========================================
--- MERGE SYSTEM FUNCTIONS
+-- MERGE SYSTEM
 -- ==========================================
 
 local function updateMergeSlotsDisplay()
-    -- Clear existing slots
     for _, child in pairs(SlotsContainer:GetChildren()) do
         if child:IsA("Frame") then
             child:Destroy()
@@ -1374,60 +1412,43 @@ local function updateMergeSlotsDisplay()
         slotFrame.Parent = SlotsContainer
         slotFrame.BackgroundColor3 = slot and Color3.fromRGB(60, 80, 60) or Color3.fromRGB(50, 50, 60)
         slotFrame.BorderSizePixel = 0
-        slotFrame.Size = UDim2.new(1, -10, 0, 45)
+        slotFrame.Position = UDim2.new(0, 0, 0, (i-1) * 28)
+        slotFrame.Size = UDim2.new(1, 0, 0, 25)
         
         local slotCorner = Instance.new("UICorner")
-        slotCorner.CornerRadius = UDim.new(0, 6)
+        slotCorner.CornerRadius = UDim.new(0, 4)
         slotCorner.Parent = slotFrame
         
-        -- Slot Number
         local slotNum = Instance.new("TextLabel")
         slotNum.Name = "shhhhnayy05_SlotNum"
         slotNum.Parent = slotFrame
         slotNum.BackgroundTransparency = 1
-        slotNum.Position = UDim2.new(0, 10, 0, 0)
-        slotNum.Size = UDim2.new(0, 30, 1, 0)
+        slotNum.Position = UDim2.new(0, 8, 0, 0)
+        slotNum.Size = UDim2.new(0, 25, 1, 0)
         slotNum.Font = Enum.Font.GothamBold
         slotNum.Text = "#" .. i
         slotNum.TextColor3 = slot and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(150, 150, 150)
-        slotNum.TextSize = 14
+        slotNum.TextSize = 12
         
-        -- Slot Info
         local slotInfo = Instance.new("TextLabel")
         slotInfo.Name = "shhhhnayy05_SlotInfo"
         slotInfo.Parent = slotFrame
         slotInfo.BackgroundTransparency = 1
-        slotInfo.Position = UDim2.new(0, 45, 0, 5)
-        slotInfo.Size = UDim2.new(0.6, 0, 0.5, 0)
-        slotInfo.Font = Enum.Font.GothamBold
-        slotInfo.Text = slot and "FILLED" or "EMPTY"
+        slotInfo.Position = UDim2.new(0, 35, 0, 0)
+        slotInfo.Size = UDim2.new(0.5, 0, 1, 0)
+        slotInfo.Font = Enum.Font.Gotham
+        slotInfo.Text = slot and (#slot .. " pts") or "Empty"
         slotInfo.TextColor3 = slot and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 120, 120)
-        slotInfo.TextSize = 12
+        slotInfo.TextSize = 11
         slotInfo.TextXAlignment = Enum.TextXAlignment.Left
         
-        -- Points count
-        if slot then
-            local pointsLabel = Instance.new("TextLabel")
-            pointsLabel.Name = "shhhhnayy05_PointsLabel"
-            pointsLabel.Parent = slotFrame
-            pointsLabel.BackgroundTransparency = 1
-            pointsLabel.Position = UDim2.new(0, 45, 0.5, 0)
-            pointsLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
-            pointsLabel.Font = Enum.Font.Gotham
-            pointsLabel.Text = #slot .. " points"
-            pointsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-            pointsLabel.TextSize = 10
-            pointsLabel.TextXAlignment = Enum.TextXAlignment.Left
-        end
-        
-        -- Use Slot Button
         local useBtn = Instance.new("TextButton")
         useBtn.Name = "shhhhnayy05_UseBtn"
         useBtn.Parent = slotFrame
         useBtn.BackgroundColor3 = slot and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(80, 80, 80)
         useBtn.BorderSizePixel = 0
-        useBtn.Position = UDim2.new(0.75, 0, 0.15, 0)
-        useBtn.Size = UDim2.new(0.22, 0, 0.7, 0)
+        useBtn.Position = UDim2.new(0.75, 0, 0.1, 0)
+        useBtn.Size = UDim2.new(0.22, 0, 0.8, 0)
         useBtn.Font = Enum.Font.GothamBold
         useBtn.Text = slot and "USE" or "-"
         useBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1435,390 +1456,316 @@ local function updateMergeSlotsDisplay()
         useBtn.AutoButtonColor = slot ~= nil
         
         local useCorner = Instance.new("UICorner")
-        useCorner.CornerRadius = UDim.new(0, 4)
+        useCorner.CornerRadius = UDim.new(0, 3)
         useCorner.Parent = useBtn
         
         if slot then
             useBtn.MouseButton1Click:Connect(function()
                 SlotSelector.Text = tostring(i)
                 game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "SHHHHNAYY05",
-                    Text = "Selected slot #" .. i,
+                                    Title = "Slot Selected",
+                    Text = "Slot " .. i .. " selected for merge operations",
                     Duration = 2
                 })
             end)
         end
     end
-    
-    SlotsContainer.CanvasSize = UDim2.new(0, 0, 0, 5 * 50)
 end
 
-local function storeToSlot(slotIndex, pathData)
-    if not pathData or #pathData == 0 then
+-- Store current path to slot
+StoreCurrentBtn.MouseButton1Click:Connect(function()
+    if #WalkData.CurrentPath == 0 then
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "No path to store!",
+            Title = "Empty Path",
+            Text = "No path to store. Record first!",
             Duration = 3
         })
-        return false
+        return
     end
     
-    if slotIndex < 1 or slotIndex > 5 then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "Invalid slot! (1-5)",
-            Duration = 3
-        })
-        return false
-    end
+    local slotNum = tonumber(SlotSelector.Text) or 1
+    slotNum = math.clamp(slotNum, 1, 5)
     
-    -- Deep copy path data
-    WalkData.MergeSlots[slotIndex] = {}
-    for _, point in ipairs(pathData) do
-        table.insert(WalkData.MergeSlots[slotIndex], {
-            cf_raw = point.cf_raw,
-            velocity = point.velocity,
+    WalkData.MergeSlots[slotNum] = {}
+    for _, point in ipairs(WalkData.CurrentPath) do
+        table.insert(WalkData.MergeSlots[slotNum], {
+            cf_raw = {unpack(point.cf_raw)},
+            velocity = {unpack(point.velocity)},
             state = point.state,
             time = point.time
         })
     end
     
+    WalkData.ActiveMergeSlot = slotNum
     updateMergeSlotsDisplay()
     
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SHHHHNAYY05",
-        Text = "Stored to slot #" .. slotIndex .. " (" .. #pathData .. " points)",
-        Duration = 3
+        Title = "Path Stored",
+        Text = "Current path stored in slot " .. slotNum,
+        Duration = 2
     })
-    return true
-end
+end)
 
-local function appendSlotToCurrent(slotIndex)
-    local slot = WalkData.MergeSlots[slotIndex]
-    if not slot or #slot == 0 then
+-- Clear current path
+ClearCurrentBtn.MouseButton1Click:Connect(function()
+    WalkData.CurrentPath = {}
+    updateStats()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Path Cleared",
+        Text = "Current path has been cleared",
+        Duration = 2
+    })
+end)
+
+-- Append slot to current path
+AppendSlotBtn.MouseButton1Click:Connect(function()
+    local slotNum = tonumber(SlotSelector.Text) or 1
+    slotNum = math.clamp(slotNum, 1, 5)
+    
+    local slotData = WalkData.MergeSlots[slotNum]
+    if not slotData or #slotData == 0 then
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "Slot #" .. slotIndex .. " is empty!",
-            Duration = 3
+            Title = "Empty Slot",
+            Text = "Slot " .. slotNum .. " is empty!",
+            Duration = 2
         })
         return
     end
     
-    if #WalkData.CurrentPath == 0 then
-        -- If current is empty, just copy
-        WalkData.CurrentPath = {}
-        for _, point in ipairs(slot) do
-            table.insert(WalkData.CurrentPath, {
-                cf_raw = point.cf_raw,
-                velocity = point.velocity,
-                state = point.state,
-                time = point.time
-            })
-        end
-    else
-        -- Append with time offset
-        local lastTime = WalkData.CurrentPath[#WalkData.CurrentPath].time
-        local slotStartTime = slot[1].time
-        local timeOffset = lastTime - slotStartTime + 0.1
-        
-        for _, point in ipairs(slot) do
-            table.insert(WalkData.CurrentPath, {
-                cf_raw = point.cf_raw,
-                velocity = point.velocity,
-                state = point.state,
-                time = point.time + timeOffset
-            })
-        end
-    end
-    
-    updateStats()
-    TrimEndInput.Text = tostring(#WalkData.CurrentPath)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SHHHHNAYY05",
-        Text = "Appended slot #" .. slotIndex .. " (" .. #slot .. " points)",
-        Duration = 3
-    })
-end
-
-local function insertSlotAtPosition(slotIndex, position)
-    local slot = WalkData.MergeSlots[slotIndex]
-    if not slot or #slot == 0 then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "Slot #" .. slotIndex .. " is empty!",
-            Duration = 3
+    for _, point in ipairs(slotData) do
+        table.insert(WalkData.CurrentPath, {
+            cf_raw = {unpack(point.cf_raw)},
+            velocity = {unpack(point.velocity)},
+            state = point.state,
+            time = point.time
         })
-        return
-    end
-    
-    if #WalkData.CurrentPath == 0 then
-        WalkData.CurrentPath = {}
-        for _, point in ipairs(slot) do
-            table.insert(WalkData.CurrentPath, {
-                cf_raw = point.cf_raw,
-                velocity = point.velocity,
-                state = point.state,
-                time = point.time
-            })
-        end
-    else
-        position = math.max(1, math.min(position, #WalkData.CurrentPath + 1))
-        
-        -- Calculate time offset for inserted segment
-        local insertTime = 0
-        if position > 1 then
-            insertTime = WalkData.CurrentPath[position - 1].time
-        end
-        
-        -- Adjust times in slot
-        local adjustedSlot = {}
-        local slotStartTime = slot[1].time
-        for _, point in ipairs(slot) do
-            table.insert(adjustedSlot, {
-                cf_raw = point.cf_raw,
-                velocity = point.velocity,
-                state = point.state,
-                time = insertTime + (point.time - slotStartTime) + 0.05
-            })
-        end
-        
-        -- Insert at position
-        for i = #adjustedSlot, 1, -1 do
-            table.insert(WalkData.CurrentPath, position, adjustedSlot[i])
-        end
-        
-        -- Recalculate all times after insertion
-        for i = position + #adjustedSlot, #WalkData.CurrentPath do
-            if i > 1 then
-                local prevTime = WalkData.CurrentPath[i - 1].time
-                local currTime = WalkData.CurrentPath[i].time
-                if currTime <= prevTime then
-                    WalkData.CurrentPath[i].time = prevTime + 0.03
-                end
-            end
-        end
     end
     
     updateStats()
-    TrimEndInput.Text = tostring(#WalkData.CurrentPath)
-    
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SHHHHNAYY05",
-        Text = "Inserted slot #" .. slotIndex .. " at position " .. position,
-        Duration = 3
+        Title = "Slot Appended",
+        Text = "Added " .. #slotData .. " points from slot " .. slotNum,
+        Duration = 2
     })
-end
+end)
 
-local function mergeAllSlots()
+-- Merge all slots
+MergeAllBtn.MouseButton1Click:Connect(function()
     local totalPoints = 0
-    local mergedPath = {}
-    
     for i = 1, 5 do
-        local slot = WalkData.MergeSlots[i]
-        if slot and #slot > 0 then
-            local slotStartTime = slot[1].time
-            local timeOffset = 0
-            
-            if #mergedPath > 0 then
-                timeOffset = mergedPath[#mergedPath].time - slotStartTime + 0.1
-            end
-            
-            for _, point in ipairs(slot) do
-                table.insert(mergedPath, {
-                    cf_raw = point.cf_raw,
-                    velocity = point.velocity,
+        if WalkData.MergeSlots[i] then
+            for _, point in ipairs(WalkData.MergeSlots[i]) do
+                table.insert(WalkData.CurrentPath, {
+                    cf_raw = {unpack(point.cf_raw)},
+                    velocity = {unpack(point.velocity)},
                     state = point.state,
-                    time = point.time + timeOffset
+                    time = point.time
                 })
+                totalPoints = totalPoints + 1
             end
-            
-            totalPoints = totalPoints + #slot
         end
     end
     
-    if totalPoints == 0 then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "No slots to merge!",
-            Duration = 3
-        })
-        return
-    end
-    
-    WalkData.CurrentPath = mergedPath
     updateStats()
-    TrimEndInput.Text = tostring(#WalkData.CurrentPath)
-    
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SHHHHNAYY05",
-        Text = "Merged all slots! Total: " .. totalPoints .. " points",
+        Title = "Merge Complete",
+        Text = "Merged " .. totalPoints .. " points from all slots",
         Duration = 3
     })
-end
+end)
+
+-- Clear all slots
+ClearAllSlotsBtn.MouseButton1Click:Connect(function()
+    WalkData.MergeSlots = {}
+    updateMergeSlotsDisplay()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Slots Cleared",
+        Text = "All merge slots have been cleared",
+        Duration = 2
+    })
+end)
 
 -- ==========================================
--- FILE MANAGER FUNCTIONS (Tanpa DELETE)
+-- FILE MANAGER FUNCTIONS
 -- ==========================================
 
 local function refreshFileList()
     for _, child in pairs(FileScroll:GetChildren()) do
-        if child:IsA("Frame") or child:IsA("TextLabel") then
+        if child:IsA("Frame") or child:IsA("TextButton") then
             child:Destroy()
         end
     end
     
-    local saves = shhhhnayy05_loadFromDisk()
-    local fileCount = 0
+    local allSaves = shhhhnayy05_loadFromDisk()
+    local fileNames = {}
+    for name, _ in pairs(allSaves) do
+        table.insert(fileNames, name)
+    end
+    table.sort(fileNames)
     
-    for filename, data in pairs(saves) do
-        fileCount = fileCount + 1
+    if #fileNames == 0 then
+        EmptyLabel.Parent = FileScroll
+        EmptyLabel.Visible = true
+        FileScroll.CanvasSize = UDim2.new(0, 0, 0, 100)
+        return
+    end
+    
+    EmptyLabel.Visible = false
+    local yOffset = 0
+    
+    for _, fileName in ipairs(fileNames) do
+        local fileData = allSaves[fileName]
         
-        local entry = Instance.new("Frame")
-        entry.Name = "shhhhnayy05_FileEntry_" .. filename
-        entry.Parent = FileScroll
-        entry.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        entry.BorderSizePixel = 0
-        entry.Size = UDim2.new(1, -10, 0, 60)
+        local fileItem = Instance.new("TextButton")
+        fileItem.Name = "shhhhnayy05_FileItem_" .. fileName
+        fileItem.Parent = FileScroll
+        fileItem.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        fileItem.BorderSizePixel = 0
+        fileItem.Position = UDim2.new(0, 0, 0, yOffset)
+        fileItem.Size = UDim2.new(1, -10, 0, 60)
+        fileItem.Font = Enum.Font.Gotham
+        fileItem.Text = ""
+        fileItem.AutoButtonColor = true
         
-        local entryCorner = Instance.new("UICorner")
-        entryCorner.CornerRadius = UDim.new(0, 8)
-        entryCorner.Parent = entry
+        local fileItemCorner = Instance.new("UICorner")
+        fileItemCorner.CornerRadius = UDim.new(0, 6)
+        fileItemCorner.Parent = fileItem
         
-        -- File Icon
-        local fileIcon = Instance.new("TextLabel")
-        fileIcon.Name = "shhhhnayy05_FileIcon"
-        fileIcon.Parent = entry
-        fileIcon.BackgroundTransparency = 1
-        fileIcon.Position = UDim2.new(0, 10, 0, 5)
-        fileIcon.Size = UDim2.new(0, 30, 0, 30)
-        fileIcon.Font = Enum.Font.GothamBold
-        fileIcon.Text = "📄"
-        fileIcon.TextColor3 = Color3.fromRGB(0, 200, 255)
-        fileIcon.TextSize = 20
+        local fileNameLabel = Instance.new("TextLabel")
+        fileNameLabel.Name = "shhhhnayy05_FileNameLabel"
+        fileNameLabel.Parent = fileItem
+        fileNameLabel.BackgroundTransparency = 1
+        fileNameLabel.Position = UDim2.new(0, 10, 0, 5)
+        fileNameLabel.Size = UDim2.new(1, -20, 0, 25)
+        fileNameLabel.Font = Enum.Font.GothamBold
+        fileNameLabel.Text = fileName
+        fileNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        fileNameLabel.TextSize = 13
+        fileNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        fileNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
         
-        -- Filename
-        local nameLabel = Instance.new("TextLabel")
-        nameLabel.Name = "shhhhnayy05_NameLabel"
-        nameLabel.Parent = entry
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Position = UDim2.new(0, 45, 0, 5)
-        nameLabel.Size = UDim2.new(0.6, 0, 0, 25)
-        nameLabel.Font = Enum.Font.GothamBold
-        nameLabel.Text = filename
-        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        nameLabel.TextSize = 12
-        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        local fileInfoLabel = Instance.new("TextLabel")
+        fileInfoLabel.Name = "shhhhnayy05_FileInfoLabel"
+        fileInfoLabel.Parent = fileItem
+        fileInfoLabel.BackgroundTransparency = 1
+        fileInfoLabel.Position = UDim2.new(0, 10, 0, 32)
+        fileInfoLabel.Size = UDim2.new(1, -20, 0, 20)
+        fileInfoLabel.Font = Enum.Font.Gotham
+        fileInfoLabel.Text = string.format("%d points | %s", #fileData.path, fileData.date or "Unknown")
+        fileInfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        fileInfoLabel.TextSize = 11
+        fileInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
         
-        -- Points count
-        local pointsLabel = Instance.new("TextLabel")
-        pointsLabel.Name = "shhhhnayy05_PointsLabel"
-        pointsLabel.Parent = entry
-        pointsLabel.BackgroundTransparency = 1
-        pointsLabel.Position = UDim2.new(0, 45, 0, 30)
-        pointsLabel.Size = UDim2.new(0.6, 0, 0, 20)
-        pointsLabel.Font = Enum.Font.Gotham
-        pointsLabel.Text = #data .. " points"
-        pointsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-        pointsLabel.TextSize = 10
-        pointsLabel.TextXAlignment = Enum.TextXAlignment.Left
-        
-        -- OPEN Button (Full width, tanpa DELETE)
-        local openBtn = Instance.new("TextButton")
-        openBtn.Name = "shhhhnayy05_OpenBtn"
-        openBtn.Parent = entry
-        openBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-        openBtn.BorderSizePixel = 0
-        openBtn.Position = UDim2.new(0.72, 0, 0.15, 0)
-        openBtn.Size = UDim2.new(0.24, 0, 0.7, 0)
-        openBtn.Font = Enum.Font.GothamBold
-        openBtn.Text = "OPEN"
-        openBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        openBtn.TextSize = 11
-        
-        local openBtnCorner = Instance.new("UICorner")
-        openBtnCorner.CornerRadius = UDim.new(0, 4)
-        openBtnCorner.Parent = openBtn
-        
-        openBtn.MouseButton1Click:Connect(function()
-            currentFileData = data
-            currentFileName = filename
+        fileItem.MouseButton1Click:Connect(function()
+            currentFileData = fileData
+            currentFileName = fileName
             currentFileSpeed = CONFIG.DefaultSpeed
             
-            DetailName.Text = "Name: " .. filename
-            DetailPoints.Text = "Points: " .. tostring(#data)
-            DetailDate.Text = "Saved: " .. (data[1] and os.date("%H:%M:%S", tick() - data[#data].time) or "-")
+            DetailName.Text = "Name: " .. fileName
+            DetailPoints.Text = string.format("Points: %d", #fileData.path)
+            DetailDate.Text = "Saved: " .. (fileData.date or "Unknown")
             SpeedDisplay.Text = string.format("%.1f", currentFileSpeed)
             
             FileDetail.Visible = true
         end)
+        
+        yOffset = yOffset + 70
     end
     
-    if fileCount == 0 then
-        EmptyLabel.Parent = FileScroll
-        EmptyLabel.Visible = true
-    else
-        EmptyLabel.Parent = nil
-    end
-    
-    FileScroll.CanvasSize = UDim2.new(0, 0, 0, fileCount * 68)
+    FileScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(yOffset, 300))
 end
 
 -- ==========================================
--- EVENT CONNECTIONS
+-- SPEED CONTROL FUNCTIONS (FIXED - Centered)
+-- ==========================================
+
+local function updateSpeedDisplay()
+    SpeedDisplay.Text = string.format("%.1f", currentFileSpeed)
+end
+
+SpeedMinus.MouseButton1Click:Connect(function()
+    currentFileSpeed = math.max(CONFIG.MinSpeed, currentFileSpeed - CONFIG.SpeedStep)
+    updateSpeedDisplay()
+end)
+
+SpeedPlus.MouseButton1Click:Connect(function()
+    currentFileSpeed = math.min(CONFIG.MaxSpeed, currentFileSpeed + CONFIG.SpeedStep)
+    updateSpeedDisplay()
+end)
+
+-- ==========================================
+-- BUTTON CONNECTIONS
 -- ==========================================
 
 RecBtn.MouseButton1Click:Connect(startRecording)
 StopBtn.MouseButton1Click:Connect(stopRecording)
 
+PreviewBtn.MouseButton1Click:Connect(function()
+    if WalkData.isPlaying then
+        WalkData.isPlaying = false
+    else
+        if #WalkData.CurrentPath > 0 then
+            playWalk(WalkData.CurrentPath, currentFileSpeed, true)
+        end
+    end
+end)
+
 SaveBtn.MouseButton1Click:Connect(function()
     if #WalkData.CurrentPath == 0 then
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "No walk data to save!",
+            Title = "No Data",
+            Text = "Record a walk first!",
             Duration = 3
         })
         return
     end
-    DialogInput.Text = ""
     SaveDialog.Visible = true
+    DialogInput.Text = ""
+    DialogInput:CaptureFocus()
 end)
 
 DialogSaveBtn.MouseButton1Click:Connect(function()
-    local name = DialogInput.Text:gsub("%s+", "_")
-    if name == "" then name = "Walk_" .. shhhhnayy05_generateId() end
+    local name = DialogInput.Text:gsub("^%s+", ""):gsub("%s+$", "")
+    if name == "" then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Invalid Name",
+            Text = "Please enter a valid name",
+            Duration = 2
+        })
+        return
+    end
     
-    local saves = shhhhnayy05_loadFromDisk()
-    saves[name] = WalkData.CurrentPath
-    shhhhnayy05_saveToDisk(saves)
+    local allSaves = shhhhnayy05_loadFromDisk()
+    allSaves[name] = {
+        path = WalkData.CurrentPath,
+        date = shhhhnayy05_formatTime(),
+        id = shhhhnayy05_generateId()
+    }
     
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SHHHHNAYY05",
-        Text = "Saved: " .. name,
-        Duration = 3
-    })
-    
-    refreshFileList()
-    SaveDialog.Visible = false
+    if shhhhnayy05_saveToDisk(allSaves) then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Saved!",
+            Text = "Walk saved as '" .. name .. "'",
+            Duration = 3
+        })
+        SaveDialog.Visible = false
+    else
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Error",
+            Text = "Failed to save file",
+            Duration = 3
+        })
+    end
 end)
 
 DialogCancelBtn.MouseButton1Click:Connect(function()
     SaveDialog.Visible = false
 end)
 
-PreviewBtn.MouseButton1Click:Connect(function()
-    if WalkData.isPlaying then
-        WalkData.isPlaying = false
-    else
-        playWalk(WalkData.CurrentPath, 1.0, true)
-    end
-end)
-
--- File Manager Controls (Tanpa tombol delete di list)
+-- File Manager Buttons
 OpenFileManagerBtn.MouseButton1Click:Connect(function()
-    FileManagerWindow.Visible = true
     refreshFileList()
+    FileManagerWindow.Visible = true
 end)
 
 FileManagerCloseBtn.MouseButton1Click:Connect(function()
@@ -1828,13 +1775,13 @@ end)
 RefreshBtn.MouseButton1Click:Connect(function()
     refreshFileList()
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SHHHHNAYY05",
-        Text = "File list refreshed!",
+        Title = "Refreshed",
+        Text = "File list updated",
         Duration = 2
     })
 end)
 
--- Merge Manager Controls
+-- Merge Manager Buttons
 MergeManagerBtn.MouseButton1Click:Connect(function()
     MergeWindow.Visible = true
     updateMergeSlotsDisplay()
@@ -1844,132 +1791,63 @@ MergeCloseBtn.MouseButton1Click:Connect(function()
     MergeWindow.Visible = false
 end)
 
-StoreCurrentBtn.MouseButton1Click:Connect(function()
-    local slotNum = tonumber(SlotSelector.Text) or 1
-    storeToSlot(slotNum, WalkData.CurrentPath)
+-- Detail Window Buttons
+DetailCloseBtn.MouseButton1Click:Connect(function()
+    FileDetail.Visible = false
 end)
 
-ClearCurrentBtn.MouseButton1Click:Connect(function()
-    WalkData.CurrentPath = {}
-    updateStats()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SHHHHNAYY05",
-        Text = "Current path cleared!",
-        Duration = 2
-    })
-end)
-
-AppendSlotBtn.MouseButton1Click:Connect(function()
-    local slotNum = tonumber(SlotSelector.Text) or 1
-    appendSlotToCurrent(slotNum)
-end)
-
-InsertAtBtn.MouseButton1Click:Connect(function()
-    local slotNum = tonumber(SlotSelector.Text) or 1
-    local pos = tonumber(InsertPosInput.Text) or 1
-    insertSlotAtPosition(slotNum, pos)
-end)
-
-MergeAllBtn.MouseButton1Click:Connect(function()
-    mergeAllSlots()
-end)
-
-ClearAllSlotsBtn.MouseButton1Click:Connect(function()
-    WalkData.MergeSlots = {}
-    updateMergeSlotsDisplay()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SHHHHNAYY05",
-        Text = "All merge slots cleared!",
-        Duration = 2
-    })
-end)
-
--- Speed Control
-SpeedMinus.MouseButton1Click:Connect(function()
-    currentFileSpeed = math.max(CONFIG.MinSpeed, currentFileSpeed - CONFIG.SpeedStep)
-    SpeedDisplay.Text = string.format("%.1f", currentFileSpeed)
-end)
-
-SpeedPlus.MouseButton1Click:Connect(function()
-    currentFileSpeed = math.min(CONFIG.MaxSpeed, currentFileSpeed + CONFIG.SpeedStep)
-    SpeedDisplay.Text = string.format("%.1f", currentFileSpeed)
-end)
-
--- Play Walk in File Detail
 PlayWalkBtn.MouseButton1Click:Connect(function()
     if WalkData.isPlaying then
         WalkData.isPlaying = false
     else
-        if currentFileData then
-            playWalk(currentFileData, currentFileSpeed, false)
+        if currentFileData and currentFileData.path then
+            playWalk(currentFileData.path, currentFileSpeed, false)
         end
-    end
-end)
-
--- File Detail Controls
-DetailCloseBtn.MouseButton1Click:Connect(function()
-    FileDetail.Visible = false
-    if WalkData.isPlaying then
-        WalkData.isPlaying = false
     end
 end)
 
 LoadBtn.MouseButton1Click:Connect(function()
-    if currentFileData then
+    if currentFileData and currentFileData.path then
         WalkData.CurrentPath = {}
-        for _, p in ipairs(currentFileData) do
+        for _, point in ipairs(currentFileData.path) do
             table.insert(WalkData.CurrentPath, {
-                cf_raw = p.cf_raw,
-                velocity = p.velocity,
-                state = p.state,
-                time = p.time
+                cf_raw = {unpack(point.cf_raw)},
+                velocity = {unpack(point.velocity)},
+                state = point.state,
+                time = point.time
             })
         end
-        
         updateStats()
-        TrimEndInput.Text = tostring(#WalkData.CurrentPath)
-        
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "Loaded: " .. currentFileName,
+            Title = "Loaded!",
+            Text = "Loaded " .. #currentFileData.path .. " points",
             Duration = 3
         })
-        
         FileDetail.Visible = false
     end
 end)
 
 DeleteBtn.MouseButton1Click:Connect(function()
-    if currentFileName then
-        local saves = shhhhnayy05_loadFromDisk()
-        saves[currentFileName] = nil
-        shhhhnayy05_saveToDisk(saves)
-        
+    if not currentFileName then return end
+    
+    local allSaves = shhhhnayy05_loadFromDisk()
+    allSaves[currentFileName] = nil
+    
+    if shhhhnayy05_saveToDisk(allSaves) then
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "Deleted: " .. currentFileName,
+            Title = "Deleted",
+            Text = "'" .. currentFileName .. "' has been deleted",
             Duration = 3
         })
-        
-        refreshFileList()
         FileDetail.Visible = false
+        refreshFileList()
     end
 end)
 
--- Trim System
+-- Trim Panel Buttons
 TrimBtn.MouseButton1Click:Connect(function()
-    if #WalkData.CurrentPath == 0 then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "No path to trim!",
-            Duration = 3
-        })
-        return
-    end
-    
-    TrimStartInput.Text = "1"
-    TrimEndInput.Text = tostring(#WalkData.CurrentPath)
     TrimPanel.Visible = true
+    updateStats()
 end)
 
 TrimCloseBtn.MouseButton1Click:Connect(function()
@@ -1980,43 +1858,51 @@ TrimExecuteBtn.MouseButton1Click:Connect(function()
     local startIdx = tonumber(TrimStartInput.Text) or 1
     local endIdx = tonumber(TrimEndInput.Text) or #WalkData.CurrentPath
     
-    startIdx = math.max(1, math.floor(startIdx))
-    endIdx = math.min(#WalkData.CurrentPath, math.floor(endIdx))
+    startIdx = math.max(1, math.min(startIdx, #WalkData.CurrentPath))
+    endIdx = math.max(startIdx, math.min(endIdx, #WalkData.CurrentPath))
     
-    if startIdx > endIdx then
+    if startIdx > endIdx or #WalkData.CurrentPath == 0 then
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "SHHHHNAYY05",
-            Text = "Invalid trim range!",
+            Title = "Invalid Range",
+            Text = "Please check your trim indices",
             Duration = 3
         })
         return
     end
     
-    local trimmed = {}
+    local trimmedPath = {}
     for i = startIdx, endIdx do
-        table.insert(trimmed, WalkData.CurrentPath[i])
+        table.insert(trimmedPath, WalkData.CurrentPath[i])
     end
     
-    if #trimmed > 0 then
-        local baseTime = trimmed[1].time
-        for _, point in ipairs(trimmed) do
-            point.time = point.time - baseTime
-        end
-    end
-    
-    WalkData.CurrentPath = trimmed
+    WalkData.CurrentPath = trimmedPath
+    updateStats()
     
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SHHHHNAYY05",
-        Text = string.format("Trimmed to %d points!", #trimmed),
+        Title = "Trimmed!",
+        Text = string.format("Path trimmed to %d points", #trimmedPath),
         Duration = 3
     })
-    
-    updateStats()
-    TrimPanel.Visible = false
 end)
 
--- Main Controls
+PreviewTrimBtn.MouseButton1Click:Connect(function()
+    local startIdx = tonumber(TrimStartInput.Text) or 1
+    local endIdx = tonumber(TrimEndInput.Text) or #WalkData.CurrentPath
+    
+    startIdx = math.max(1, math.min(startIdx, #WalkData.CurrentPath))
+    endIdx = math.max(startIdx, math.min(endIdx, #WalkData.CurrentPath))
+    
+    if startIdx > endIdx or #WalkData.CurrentPath == 0 then return end
+    
+    local trimmedPath = {}
+    for i = startIdx, endIdx do
+        table.insert(trimmedPath, WalkData.CurrentPath[i])
+    end
+    
+    playWalk(trimmedPath, currentFileSpeed, true)
+end)
+
+-- Main Window Controls
 CloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     MinimizeBtn.Visible = true
@@ -2027,14 +1913,15 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     MinimizeBtn.Visible = false
 end)
 
--- === INIT ===
+-- Initialize
+updateStats()
 updateMergeSlotsDisplay()
-refreshFileList()
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "SHHHHNAYY05 RECORDER V6",
-    Text = "Advanced Merge System + Fixed GUI!",
-    Duration = 4
+    Title = "SHHHHNAYY05 Walk Recorder V7",
+    Text = "Loaded successfully! Click Record to start.",
+    Duration = 5
 })
 
-print("SHHHHNAYY05 Auto Walk Recorder V6 Loaded")
+print("SHHHHNAYY05 Walk Recorder V7 Loaded - Big Windows + Fixed Speed Control")
+
