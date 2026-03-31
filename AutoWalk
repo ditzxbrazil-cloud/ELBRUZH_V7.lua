@@ -1,4 +1,4 @@
---// shhhhnayy05 Auto Walk Recorder - Fixed File Save Edition
+--// shhhhnayy05 Auto Walk Recorder - Complete Edition
 --// Support Executor Level 7-8
 
 local Players = game:GetService("Players")
@@ -67,95 +67,53 @@ local function CountJumps(pathData)
     return count
 end
 
-local function GetWalkSpeed()
-    return Humanoid and Humanoid.WalkSpeed or 16
-end
-
 --// ============================================
---// FILE SYSTEM - FIXED
+--// FILE SYSTEM
 --// ============================================
 
 local function EnsureFolder()
-    local success, err = pcall(function()
+    pcall(function()
         if not isfolder(CONFIG.FolderName) then
             makefolder(CONFIG.FolderName)
         end
     end)
-    if not success then
-        warn("shhhhnayy05: Failed to create folder - " .. tostring(err))
-    end
-    return success
 end
 
 local function SaveToFile(fileName, data)
-    -- Ensure folder exists first
     EnsureFolder()
-    
-    -- Sanitize filename
     local cleanName = tostring(fileName):gsub("[^%w%s_-]", ""):sub(1, 50)
-    if cleanName == "" then
-        cleanName = "Walk_" .. tostring(os.time())
-    end
+    if cleanName == "" then cleanName = "Walk_" .. tostring(os.time()) end
     
     local filePath = CONFIG.FolderName .. "/" .. cleanName .. CONFIG.FileExtension
     
-    -- Encode data to JSON
     local jsonData
-    local encodeSuccess, encodeErr = pcall(function()
+    local encodeSuccess = pcall(function()
         jsonData = HttpService:JSONEncode(data)
     end)
     
-    if not encodeSuccess then
-        warn("shhhhnayy05: JSON Encode failed - " .. tostring(encodeErr))
-        return false, "JSON Encode failed: " .. tostring(encodeErr)
-    end
+    if not encodeSuccess then return false, "JSON Encode failed" end
     
-    -- Write file
-    local writeSuccess, writeErr = pcall(function()
+    local writeSuccess = pcall(function()
         writefile(filePath, jsonData)
     end)
     
-    if not writeSuccess then
-        warn("shhhhnayy05: Write file failed - " .. tostring(writeErr))
-        return false, "Write failed: " .. tostring(writeErr)
-    end
-    
-    -- Verify file was created
-    local verifySuccess = pcall(function()
-        return isfile(filePath)
-    end)
-    
-    if verifySuccess then
-        return true, cleanName
-    else
-        return false, "File verification failed"
-    end
+    return writeSuccess, cleanName
 end
 
 local function LoadFromFile(fileName)
     local filePath = CONFIG.FolderName .. "/" .. fileName .. CONFIG.FileExtension
-    
-    if not isfile(filePath) then 
-        warn("shhhhnayy05: File not found - " .. filePath)
-        return nil 
-    end
+    if not isfile(filePath) then return nil end
     
     local success, data = pcall(function()
         local content = readfile(filePath)
         return HttpService:JSONDecode(content)
     end)
     
-    if not success then
-        warn("shhhhnayy05: Failed to load file - " .. tostring(data))
-        return nil
-    end
-    
-    return data
+    return success and data or nil
 end
 
 local function DeleteFile(fileName)
     local filePath = CONFIG.FolderName .. "/" .. fileName .. CONFIG.FileExtension
-    
     if isfile(filePath) then
         delfile(filePath)
         return true
@@ -166,19 +124,15 @@ end
 local function ListFiles()
     EnsureFolder()
     local files = {}
-    
     local success, result = pcall(function()
         return listfiles(CONFIG.FolderName)
     end)
     
     if success and result then
         for _, filePath in ipairs(result) do
-            -- Extract filename without extension
             local pattern = CONFIG.FolderName .. "/([^/]+)" .. CONFIG.FileExtension:gsub("%.", "%%.") .. "$"
             local fileName = filePath:match(pattern)
-            if fileName then
-                table.insert(files, fileName)
-            end
+            if fileName then table.insert(files, fileName) end
         end
     end
     
@@ -187,20 +141,17 @@ local function ListFiles()
 end
 
 --// ============================================
---// GUI SYSTEM
+--// GUI CREATION - MAIN
 --// ============================================
 
 local function CreateMainGUI()
     local parent = CoreGui
-    if not parent then
-        parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
+    if not parent then parent = LocalPlayer:WaitForChild("PlayerGui") end
     
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "shhhhnayy05_AutoWalkRecorder"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.Enabled = true
     ScreenGui.Parent = parent
 
     local MainFrame = Instance.new("Frame")
@@ -211,7 +162,6 @@ local function CreateMainGUI()
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
     MainFrame.Draggable = true
-    MainFrame.Visible = true
     MainFrame.Parent = ScreenGui
 
     local Corner = Instance.new("UICorner")
@@ -230,10 +180,6 @@ local function CreateMainGUI()
     TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
     TitleBar.BorderSizePixel = 0
     TitleBar.Parent = MainFrame
-
-    local TitleCorner = Instance.new("UICorner")
-    TitleCorner.CornerRadius = UDim.new(0, 8)
-    TitleCorner.Parent = TitleBar
 
     local TitleFix = Instance.new("Frame")
     TitleFix.Size = UDim2.new(1, 0, 0, 10)
@@ -303,7 +249,7 @@ local function CreateMainGUI()
     TimerLabel.Font = Enum.Font.GothamBold
     TimerLabel.Parent = ContentFrame
 
-    -- Control Buttons Frame
+    -- Control Buttons
     local ControlFrame = Instance.new("Frame")
     ControlFrame.Name = "shhhhnayy05_ControlFrame"
     ControlFrame.Size = UDim2.new(1, 0, 0, 35)
@@ -378,7 +324,7 @@ local function CreateMainGUI()
     FileLabel.TextXAlignment = Enum.TextXAlignment.Left
     FileLabel.Parent = ContentFrame
 
-    -- File List Frame (Scrollable)
+    -- File List Frame
     local FileListFrame = Instance.new("ScrollingFrame")
     FileListFrame.Name = "shhhhnayy05_FileListFrame"
     FileListFrame.Size = UDim2.new(1, 0, 1, -140)
@@ -386,7 +332,6 @@ local function CreateMainGUI()
     FileListFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     FileListFrame.BorderSizePixel = 0
     FileListFrame.ScrollBarThickness = 4
-    FileListFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 150)
     FileListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     FileListFrame.Parent = ContentFrame
 
@@ -413,7 +358,6 @@ local function CreateMainGUI()
     return {
         ScreenGui = ScreenGui,
         MainFrame = MainFrame,
-        ContentFrame = ContentFrame,
         TimerLabel = TimerLabel,
         RecordBtn = RecordBtn,
         PauseBtn = PauseBtn,
@@ -426,19 +370,16 @@ local function CreateMainGUI()
 end
 
 --// ============================================
---// SAVE DIALOG - FIXED
+--// SAVE DIALOG
 --// ============================================
 
 local function CreateSaveDialog(duration, jumpCount)
     local parent = CoreGui
-    if not parent then
-        parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
+    if not parent then parent = LocalPlayer:WaitForChild("PlayerGui") end
     
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "shhhhnayy05_SaveDialog"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = parent
 
     local DialogFrame = Instance.new("Frame")
@@ -499,7 +440,6 @@ local function CreateSaveDialog(duration, jumpCount)
     InputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
     InputBox.TextSize = 13
     InputBox.Font = Enum.Font.Gotham
-    InputBox.ClearTextOnFocus = false
     InputBox.Parent = DialogFrame
 
     local InputCorner = Instance.new("UICorner")
@@ -541,7 +481,6 @@ local function CreateSaveDialog(duration, jumpCount)
 
     return {
         ScreenGui = ScreenGui,
-        DialogFrame = DialogFrame,
         InputBox = InputBox,
         CancelBtn = CancelBtn,
         SaveConfirmBtn = SaveConfirmBtn
@@ -549,33 +488,27 @@ local function CreateSaveDialog(duration, jumpCount)
 end
 
 --// ============================================
---// FILE DETAIL WINDOW - FIXED LAYOUT
+--// FILE DETAIL WINDOW
 --// ============================================
 
 local function CreateFileDetailWindow(fileName, fileData)
     if State.OpenDetailWindow then
-        pcall(function()
-            State.OpenDetailWindow.ScreenGui:Destroy()
-        end)
+        pcall(function() State.OpenDetailWindow.ScreenGui:Destroy() end)
         State.OpenDetailWindow = nil
     end
 
     local parent = CoreGui
-    if not parent then
-        parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
+    if not parent then parent = LocalPlayer:WaitForChild("PlayerGui") end
 
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "shhhhnayy05_FileDetail_" .. tostring(tick())
+    ScreenGui.Name = "shhhhnayy05_FileDetail"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = parent
 
-    -- UKURAN: L300 P350
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "shhhhnayy05_DetailFrame"
-    MainFrame.Size = UDim2.new(0, 300, 0, 350)
-    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+    MainFrame.Size = UDim2.new(0, 300, 0, 400)
+    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
     MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
@@ -597,10 +530,6 @@ local function CreateFileDetailWindow(fileName, fileData)
     TitleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
     TitleBar.BorderSizePixel = 0
     TitleBar.Parent = MainFrame
-
-    local TitleCorner = Instance.new("UICorner")
-    TitleCorner.CornerRadius = UDim.new(0, 12)
-    TitleCorner.Parent = TitleBar
 
     local TitleFix = Instance.new("Frame")
     TitleFix.Size = UDim2.new(1, 0, 0, 15)
@@ -644,7 +573,10 @@ local function CreateFileDetailWindow(fileName, fileData)
     Content.BackgroundTransparency = 1
     Content.Parent = MainFrame
 
-    -- Durasi Section
+    local pointsCount = #(fileData.PathData or fileData.Path or {})
+    local jumpCount = fileData.JumpCount or fileData.jumpCount or 0
+
+    -- Durasi
     local DurasiLabel = Instance.new("TextLabel")
     DurasiLabel.Name = "shhhhnayy05_DurasiLabel"
     DurasiLabel.Size = UDim2.new(1, 0, 0, 20)
@@ -668,16 +600,13 @@ local function CreateFileDetailWindow(fileName, fileData)
     DurasiValue.Font = Enum.Font.GothamBold
     DurasiValue.Parent = Content
 
-    -- Info tambahan
+    -- Info
     local InfoFrame = Instance.new("Frame")
     InfoFrame.Name = "shhhhnayy05_InfoFrame"
     InfoFrame.Size = UDim2.new(1, 0, 0, 25)
     InfoFrame.Position = UDim2.new(0, 0, 0, 55)
     InfoFrame.BackgroundTransparency = 1
     InfoFrame.Parent = Content
-
-    local pointsCount = #(fileData.PathData or fileData.Path or {})
-    local jumpCount = fileData.JumpCount or fileData.jumpCount or 0
 
     local PointsLabel = Instance.new("TextLabel")
     PointsLabel.Name = "shhhhnayy05_PointsLabel"
@@ -710,7 +639,7 @@ local function CreateFileDetailWindow(fileName, fileData)
     Sep1.BorderSizePixel = 0
     Sep1.Parent = Content
 
-    -- SPEED WALK Section
+    -- Speed Control
     local SpeedTitle = Instance.new("TextLabel")
     SpeedTitle.Name = "shhhhnayy05_SpeedTitle"
     SpeedTitle.Size = UDim2.new(1, 0, 0, 20)
@@ -722,7 +651,6 @@ local function CreateFileDetailWindow(fileName, fileData)
     SpeedTitle.Font = Enum.Font.GothamBold
     SpeedTitle.Parent = Content
 
-    -- Speed Control
     local SpeedFrame = Instance.new("Frame")
     SpeedFrame.Name = "shhhhnayy05_SpeedFrame"
     SpeedFrame.Size = UDim2.new(1, 0, 0, 40)
@@ -788,7 +716,7 @@ local function CreateFileDetailWindow(fileName, fileData)
     Sep2.BorderSizePixel = 0
     Sep2.Parent = Content
 
-    -- PLAY WALK Button (Besar)
+    -- Play Button
     local PlayBtn = Instance.new("TextButton")
     PlayBtn.Name = "shhhhnayy05_PlayBtn"
     PlayBtn.Size = UDim2.new(1, 0, 0, 45)
@@ -809,7 +737,7 @@ local function CreateFileDetailWindow(fileName, fileData)
     PlayStroke.Thickness = 2
     PlayStroke.Parent = PlayBtn
 
-    -- Separator sebelum tombol bawah
+    -- Separator
     local Sep3 = Instance.new("Frame")
     Sep3.Size = UDim2.new(1, 0, 0, 1)
     Sep3.Position = UDim2.new(0, 0, 0, 225)
@@ -817,7 +745,7 @@ local function CreateFileDetailWindow(fileName, fileData)
     Sep3.BorderSizePixel = 0
     Sep3.Parent = Content
 
-    -- Tombol HAPUS dan TUTUP - RAPI & SEJAJAR
+    -- Bottom Buttons
     local BottomFrame = Instance.new("Frame")
     BottomFrame.Name = "shhhhnayy05_BottomFrame"
     BottomFrame.Size = UDim2.new(1, 0, 0, 40)
@@ -896,16 +824,12 @@ end
 
 local function CreateVideoEditorWindow(fileName, fileData, GUI)
     if State.EditorWindow then
-        pcall(function()
-            State.EditorWindow.ScreenGui:Destroy()
-        end)
+        pcall(function() State.EditorWindow.ScreenGui:Destroy() end)
         State.EditorWindow = nil
     end
 
     local parent = CoreGui
-    if not parent then
-        parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
+    if not parent then parent = LocalPlayer:WaitForChild("PlayerGui") end
 
     local pathData = fileData.PathData or fileData.Path or {}
     local totalFrames = #pathData
@@ -913,10 +837,8 @@ local function CreateVideoEditorWindow(fileName, fileData, GUI)
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "shhhhnayy05_VideoEditor"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = parent
 
-    -- UKURAN: L320 P450
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "shhhhnayy05_EditorFrame"
     MainFrame.Size = UDim2.new(0, 320, 0, 450)
@@ -942,10 +864,6 @@ local function CreateVideoEditorWindow(fileName, fileData, GUI)
     TitleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
     TitleBar.BorderSizePixel = 0
     TitleBar.Parent = MainFrame
-
-    local TitleCorner = Instance.new("UICorner")
-    TitleCorner.CornerRadius = UDim.new(0, 12)
-    TitleCorner.Parent = TitleBar
 
     local TitleFix = Instance.new("Frame")
     TitleFix.Size = UDim2.new(1, 0, 0, 15)
@@ -999,7 +917,7 @@ local function CreateVideoEditorWindow(fileName, fileData, GUI)
     InfoLabel.Font = Enum.Font.Gotham
     InfoLabel.Parent = Content
 
-    -- Timeline Visual (Bar)
+    -- Timeline Visual
     local TimelineBg = Instance.new("Frame")
     TimelineBg.Name = "shhhhnayy05_TimelineBg"
     TimelineBg.Size = UDim2.new(1, 0, 0, 30)
@@ -1056,7 +974,6 @@ local function CreateVideoEditorWindow(fileName, fileData, GUI)
     StartInput.TextColor3 = Color3.fromRGB(255, 255, 255)
     StartInput.TextSize = 12
     StartInput.Font = Enum.Font.Gotham
-    StartInput.ClearTextOnFocus = false
     StartInput.Parent = Content
 
     local StartCorner = Instance.new("UICorner")
@@ -1085,7 +1002,6 @@ local function CreateVideoEditorWindow(fileName, fileData, GUI)
     EndInput.TextColor3 = Color3.fromRGB(255, 255, 255)
     EndInput.TextSize = 12
     EndInput.Font = Enum.Font.Gotham
-    EndInput.ClearTextOnFocus = false
     EndInput.Parent = Content
 
     local EndCorner = Instance.new("UICorner")
@@ -1339,10 +1255,6 @@ local function CreateVideoEditorWindow(fileName, fileData, GUI)
             table.insert(previewData, pathData[i])
         end
 
-        -- Play preview with current speed
-        local speedMult = State.OpenDetailWindow and State.OpenDetailWindow.CurrentMultiplier or 1.0
-        -- Note: PlayWalk function needs to be accessible here
-        -- For now, just show status
         GUI.StatusLabel.Text = "Status: Preview " .. #previewData .. " frames"
     end)
 
@@ -1423,14 +1335,11 @@ end
 
 local function CreateDeleteConfirmDialog(fileName)
     local parent = CoreGui
-    if not parent then
-        parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
+    if not parent then parent = LocalPlayer:WaitForChild("PlayerGui") end
     
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "shhhhnayy05_DeleteConfirm"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = parent
 
     local DialogFrame = Instance.new("Frame")
@@ -1504,7 +1413,6 @@ local function CreateDeleteConfirmDialog(fileName)
 
     return {
         ScreenGui = ScreenGui,
-        DialogFrame = DialogFrame,
         YesBtn = YesBtn,
         NoBtn = NoBtn
     }
@@ -1516,14 +1424,11 @@ end
 
 local function CreateMinimizedIcon()
     local parent = CoreGui
-    if not parent then
-        parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
+    if not parent then parent = LocalPlayer:WaitForChild("PlayerGui") end
     
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "shhhhnayy05_MinimizedIcon"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = parent
 
     local IconBtn = Instance.new("TextButton")
@@ -1544,65 +1449,56 @@ local function CreateMinimizedIcon()
     IconStroke.Thickness = 3
     IconStroke.Parent = IconBtn
 
--- Touch/Mouse drag support
-local dragging = false
-local dragStart = nil
-local startPos = nil
+    -- Drag support
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
 
-IconBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = IconBtn.Position
-    end
-end)
+    IconBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = IconBtn.Position
+        end
+    end)
 
-IconBtn.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        IconBtn.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X, 
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
+    IconBtn.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            IconBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
 
-IconBtn.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
-end)
+    IconBtn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
 
-IconBtn.MouseButton1Click:Connect(function()
-    State.GUI.MainFrame.Visible = true
-    ScreenGui:Destroy()
-    State.MinimizedIcon = nil
-end)
+    IconBtn.MouseButton1Click:Connect(function()
+        State.GUI.MainFrame.Visible = true
+        ScreenGui:Destroy()
+        State.MinimizedIcon = nil
+    end)
 
-State.MinimizedIcon = ScreenGui
-return ScreenGui
+    State.MinimizedIcon = ScreenGui
+    return ScreenGui
 end
 
 --// ============================================
---// TIMER OVERLAY
+--// TIMER OVERLAY (LANJUTAN)
 --// ============================================
 
 local function CreateTimerOverlay()
     local parent = CoreGui
-    if not parent then
-        parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
+    if not parent then parent = LocalPlayer:WaitForChild("PlayerGui") end
     
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "shhhhnayy05_TimerOverlay"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = parent
 
     local TimerFrame = Instance.new("Frame")
-    TimerFrame.Name = "shhhhnayy05_TimerFrame"
     TimerFrame.Size = UDim2.new(0, 120, 0, 40)
     TimerFrame.Position = UDim2.new(0.5, -60, 0, 10)
     TimerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
@@ -1620,7 +1516,6 @@ local function CreateTimerOverlay()
     Stroke.Parent = TimerFrame
 
     local TimerLabel = Instance.new("TextLabel")
-    TimerLabel.Name = "shhhhnayy05_OverlayTimer"
     TimerLabel.Size = UDim2.new(1, 0, 1, 0)
     TimerLabel.BackgroundTransparency = 1
     TimerLabel.Text = "⏱ 00:00"
@@ -1630,11 +1525,10 @@ local function CreateTimerOverlay()
     TimerLabel.Parent = TimerFrame
 
     local StatusLabel = Instance.new("TextLabel")
-    StatusLabel.Name = "shhhhnayy05_OverlayStatus"
     StatusLabel.Size = UDim2.new(1, 0, 0, 20)
     StatusLabel.Position = UDim2.new(0, 0, 1, 0)
-    StatusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    StatusLabel.BackgroundTransparency = 0.3
+    StatusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    StatusLabel.BackgroundTransparency = 0.2
     StatusLabel.Text = "● REC"
     StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
     StatusLabel.TextSize = 12
@@ -1648,22 +1542,16 @@ local function CreateTimerOverlay()
     State.TimerOverlay = {
         ScreenGui = ScreenGui,
         TimerLabel = TimerLabel,
-        StatusLabel = StatusLabel
+        StatusLabel = StatusLabel,
+        TimerFrame = TimerFrame
     }
-    
+
     return State.TimerOverlay
 end
 
 --// ============================================
---// CORE FUNCTIONS
+--// CORE FUNCTIONS - RECORDING
 --// ============================================
-
-local function UpdateTimerDisplay()
-    if not State.TimerOverlay then return end
-    
-    local elapsed = tick() - State.RecordStartTime
-    State.TimerOverlay.TimerLabel.Text = "⏱ " .. FormatDuration(elapsed)
-end
 
 local function StartRecording(GUI)
     if State.IsRecording then return end
@@ -1674,6 +1562,13 @@ local function StartRecording(GUI)
     State.CurrentIndex = 1
     State.RecordStartTime = tick()
     
+    -- Create timer overlay
+    if not State.TimerOverlay then
+        CreateTimerOverlay()
+    else
+        State.TimerOverlay.ScreenGui.Enabled = true
+    end
+    
     -- Update UI
     GUI.RecordBtn.Text = "⏹ Stop"
     GUI.RecordBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -1682,27 +1577,37 @@ local function StartRecording(GUI)
     GUI.StatusLabel.Text = "Status: Recording..."
     GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
     
-    -- Create timer overlay
-    CreateTimerOverlay()
+    -- Disable collisions
+    for _, part in ipairs(Character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            State.OriginalCollisions[part] = part.CanCollide
+            part.CanCollide = false
+        end
+    end
     
-    -- Start recording loop
-    State.RecordConnection = RunService.Heartbeat:Connect(function()
-        if State.IsRecording and not State.IsPaused then
-            local character = LocalPlayer.Character
-            if character then
-                local hrp = character:FindFirstChild("HumanoidRootPart")
-                local humanoid = character:FindFirstChild("Humanoid")
-                
-                if hrp and humanoid then
-                    table.insert(State.PathData, {
-                        Position = hrp.Position,
-                        Rotation = hrp.CFrame.Rotation,
-                        Jump = humanoid.Jump,
-                        Timestamp = tick() - State.RecordStartTime
-                    })
-                end
+    -- Record loop
+    State.RecordConnection = RunService.RenderStepped:Connect(function()
+        if not State.IsRecording or State.IsPaused then return end
+        
+        local hrp = Character:FindFirstChild("HumanoidRootPart")
+        local humanoid = Character:FindFirstChild("Humanoid")
+        
+        if hrp and humanoid then
+            local frame = {
+                Position = hrp.Position,
+                Rotation = hrp.CFrame - hrp.Position,
+                Jump = humanoid.Jump,
+                Time = tick() - State.RecordStartTime
+            }
+            table.insert(State.PathData, frame)
+            
+            -- Update timer
+            local elapsed = tick() - State.RecordStartTime
+            local formatted = FormatDuration(elapsed)
+            GUI.TimerLabel.Text = "⏱ " .. formatted
+            if State.TimerOverlay then
+                State.TimerOverlay.TimerLabel.Text = "⏱ " .. formatted
             end
-            UpdateTimerDisplay()
         end
     end)
 end
@@ -1712,34 +1617,39 @@ local function StopRecording(GUI)
     
     State.IsRecording = false
     State.IsPaused = false
-    State.RecordDuration = tick() - State.RecordStartTime
     
     if State.RecordConnection then
         State.RecordConnection:Disconnect()
         State.RecordConnection = nil
     end
     
-    -- Remove timer overlay
+    -- Hide timer overlay
     if State.TimerOverlay then
-        pcall(function()
-            State.TimerOverlay.ScreenGui:Destroy()
-        end)
-        State.TimerOverlay = nil
+        State.TimerOverlay.ScreenGui.Enabled = false
     end
+    
+    -- Restore collisions
+    for part, original in pairs(State.OriginalCollisions) do
+        if part and part.Parent then
+            part.CanCollide = original
+        end
+    end
+    State.OriginalCollisions = {}
+    
+    -- Calculate duration
+    State.RecordDuration = tick() - State.RecordStartTime
     
     -- Update UI
     GUI.RecordBtn.Text = "⏺ Record"
     GUI.RecordBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     GUI.PauseBtn.Text = "⏸ Pause"
     GUI.PauseBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    GUI.StatusLabel.Text = "Status: Recorded " .. #State.PathData .. " points"
+    GUI.StatusLabel.Text = "Status: Recorded " .. #State.PathData .. " frames"
     GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
     
-    -- Auto open save dialog
+    -- Show save dialog
     local jumpCount = CountJumps(State.PathData)
-    local duration = FormatDuration(State.RecordDuration)
-    
-    local SaveDialog = CreateSaveDialog(duration, jumpCount)
+    local SaveDialog = CreateSaveDialog(FormatDuration(State.RecordDuration), jumpCount)
     
     SaveDialog.CancelBtn.MouseButton1Click:Connect(function()
         SaveDialog.ScreenGui:Destroy()
@@ -1755,26 +1665,24 @@ local function StopRecording(GUI)
         local data = {
             PathData = State.PathData,
             DisplayName = fileName,
-            Duration = duration,
+            Duration = FormatDuration(State.RecordDuration),
             JumpCount = jumpCount,
-            SpeedMultiplier = 1.0,
-            RecordedAt = os.date("%Y-%m-%d %H:%M:%S")
+            SpeedMultiplier = 1.0
         }
         
         local success, result = SaveToFile(fileName, data)
         if success then
             SaveDialog.ScreenGui:Destroy()
             GUI.StatusLabel.Text = "Status: Saved as '" .. result .. "'"
-            GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
             RefreshFileList(GUI)
         else
-            SaveDialog.InputBox.Text = "Error: " .. tostring(result)
+            SaveDialog.InputBox.Text = "Error saving!"
             SaveDialog.InputBox.TextColor3 = Color3.fromRGB(255, 100, 100)
         end
     end)
 end
 
-local function TogglePause(GUI)
+local function PauseRecording(GUI)
     if not State.IsRecording then return end
     
     State.IsPaused = not State.IsPaused
@@ -1800,170 +1708,98 @@ local function TogglePause(GUI)
     end
 end
 
-local function PlayWalk(fileData, speedMultiplier, GUI)
-    if State.IsPlaying then
-        GUI.StatusLabel.Text = "Status: Already playing!"
-        return
-    end
+--// ============================================
+--// CORE FUNCTIONS - PLAYBACK
+--// ============================================
+
+local function StartPlayback(fileData, GUI, speedMultiplier)
+    if State.IsPlaying then return end
     
     local pathData = fileData.PathData or fileData.Path or {}
     if #pathData == 0 then
-        GUI.StatusLabel.Text = "Status: No data to play!"
+        GUI.StatusLabel.Text = "Status: No path data!"
         return
     end
     
     State.IsPlaying = true
     State.CurrentIndex = 1
-    local character = LocalPlayer.Character
-    if not character then
-        State.IsPlaying = false
-        return
-    end
+    State.CurrentSpeedMultiplier = speedMultiplier or 1.0
     
-    local hrp = character:WaitForChild("HumanoidRootPart")
-    local humanoid = character:WaitForChild("Humanoid")
+    -- Update UI
+    GUI.StatusLabel.Text = "Status: Playing..."
+    GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
     
     -- Disable collisions during playback
-    for _, part in ipairs(character:GetDescendants()) do
+    for _, part in ipairs(Character:GetDescendants()) do
         if part:IsA("BasePart") then
             State.OriginalCollisions[part] = part.CanCollide
             part.CanCollide = false
         end
     end
     
-    -- Create playback overlay
-    local overlay = Instance.new("ScreenGui")
-    overlay.Name = "shhhhnayy05_PlaybackOverlay"
-    overlay.ResetOnSpawn = false
-    overlay.Parent = CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-    
-    local playFrame = Instance.new("Frame")
-    playFrame.Size = UDim2.new(0, 150, 0, 40)
-    playFrame.Position = UDim2.new(0.5, -75, 0.9, -20)
-    playFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    playFrame.BorderSizePixel = 0
-    playFrame.Parent = overlay
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = playFrame
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(100, 255, 100)
-    stroke.Thickness = 2
-    stroke.Parent = playFrame
-    
-    local playLabel = Instance.new("TextLabel")
-    playLabel.Size = UDim2.new(1, 0, 1, 0)
-    playLabel.BackgroundTransparency = 1
-    playLabel.Text = "▶ Playing..."
-    playLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-    playLabel.TextSize = 16
-    playLabel.Font = Enum.Font.GothamBold
-    playLabel.Parent = playFrame
-    
-    -- Stop button
-    local stopBtn = Instance.new("TextButton")
-    stopBtn.Size = UDim2.new(0, 30, 0, 30)
-    stopBtn.Position = UDim2.new(1, -35, 0.5, -15)
-    stopBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    stopBtn.Text = "X"
-    stopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    stopBtn.TextSize = 14
-    stopBtn.Font = Enum.Font.GothamBold
-    stopBtn.Parent = playFrame
-    
-    local stopCorner = Instance.new("UICorner")
-    stopCorner.CornerRadius = UDim.new(0, 6)
-    stopCorner.Parent = stopBtn
-    
-    GUI.StatusLabel.Text = "Status: Playing walk..."
-    GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
-    
-    local playbackStart = tick()
-    
-    State.PlayConnection = RunService.Heartbeat:Connect(function()
+    -- Playback loop
+    local startTime = tick()
+    State.PlayConnection = RunService.RenderStepped:Connect(function()
         if not State.IsPlaying then return end
         
-        local elapsed = (tick() - playbackStart) * speedMultiplier
+        local hrp = Character:FindFirstChild("HumanoidRootPart")
+        local humanoid = Character:FindFirstChild("Humanoid")
+        
+        if not hrp or not humanoid then return end
+        
+        -- Calculate current frame based on time
+        local elapsed = (tick() - startTime) * State.CurrentSpeedMultiplier
         local targetIndex = math.min(math.floor(elapsed / CONFIG.RecordInterval) + 1, #pathData)
         
-        if targetIndex > State.CurrentIndex then
-            State.CurrentIndex = targetIndex
-            local frame = pathData[State.CurrentIndex]
-            
-            if frame and hrp and humanoid then
-                -- Smooth teleport
-                hrp.CFrame = CFrame.new(frame.Position) * (frame.Rotation or CFrame.new())
-                
-                -- Handle jump
-                if frame.Jump then
-                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                end
-            end
-            
-            -- Update progress
-            playLabel.Text = string.format("▶ %d/%d", State.CurrentIndex, #pathData)
-        end
-        
-        -- Check if finished
-        if State.CurrentIndex >= #pathData then
-            -- Playback complete
-            State.IsPlaying = false
-            if State.PlayConnection then
-                State.PlayConnection:Disconnect()
-                State.PlayConnection = nil
-            end
-            
-            -- Restore collisions
-            for part, original in pairs(State.OriginalCollisions) do
-                if part and part.Parent then
-                    part.CanCollide = original
-                end
-            end
-            State.OriginalCollisions = {}
-            
-            -- Remove overlay
-            overlay:Destroy()
-            
-            GUI.StatusLabel.Text = "Status: Playback complete!"
-            GUI.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-            
-            -- Loop if enabled
+        if targetIndex > #pathData then
+            -- Playback finished
             if State.LoopPlayback then
-                task.wait(0.5)
-                PlayWalk(fileData, speedMultiplier, GUI)
+                startTime = tick()
+                targetIndex = 1
+            else
+                StopPlayback(GUI)
+                return
             end
         end
-    end)
-    
-    -- Stop button handler
-    stopBtn.MouseButton1Click:Connect(function()
-        State.IsPlaying = false
-        if State.PlayConnection then
-            State.PlayConnection:Disconnect()
-            State.PlayConnection = nil
-        end
         
-        -- Restore collisions
-        for part, original in pairs(State.OriginalCollisions) do
-            if part and part.Parent then
-                part.CanCollide = original
+        -- Move to frame
+        local frame = pathData[targetIndex]
+        if frame then
+            hrp.CFrame = CFrame.new(frame.Position) * (frame.Rotation or CFrame.new())
+            if frame.Jump and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end
-        State.OriginalCollisions = {}
         
-        overlay:Destroy()
-        GUI.StatusLabel.Text = "Status: Playback stopped"
-        GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+        State.CurrentIndex = targetIndex
     end)
 end
 
+local function StopPlayback(GUI)
+    State.IsPlaying = false
+    
+    if State.PlayConnection then
+        State.PlayConnection:Disconnect()
+        State.PlayConnection = nil
+    end
+    
+    -- Restore collisions
+    for part, original in pairs(State.OriginalCollisions) do
+        if part and part.Parent then
+            part.CanCollide = original
+        end
+    end
+    State.OriginalCollisions = {}
+    
+    GUI.StatusLabel.Text = "Status: Playback stopped"
+    GUI.StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+end
+
 --// ============================================
---// FILE LIST MANAGEMENT
+// FILE LIST MANAGEMENT
 --// ============================================
 
-function RefreshFileList(GUI)
+local function RefreshFileList(GUI)
     -- Clear existing items
     for _, child in ipairs(GUI.FileListFrame:GetChildren()) do
         if child:IsA("TextButton") then
@@ -1975,15 +1811,14 @@ function RefreshFileList(GUI)
     
     for _, fileName in ipairs(files) do
         local fileBtn = Instance.new("TextButton")
-        fileBtn.Name = "shhhhnayy05_File_" .. fileName
+        fileBtn.Name = "shhhhnayy05_FileBtn_" .. fileName
         fileBtn.Size = UDim2.new(1, -10, 0, 30)
-        fileBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-        fileBtn.Text = "📄 " .. fileName
+        fileBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        fileBtn.Text = fileName
         fileBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         fileBtn.TextSize = 12
         fileBtn.Font = Enum.Font.Gotham
         fileBtn.TextTruncate = Enum.TextTruncate.AtEnd
-        fileBtn.TextXAlignment = Enum.TextXAlignment.Left
         fileBtn.Parent = GUI.FileListFrame
         
         local btnCorner = Instance.new("UICorner")
@@ -1994,9 +1829,6 @@ function RefreshFileList(GUI)
             local fileData = LoadFromFile(fileName)
             if fileData then
                 State.SelectedFile = fileName
-                State.CurrentLoadedFile = fileData
-                
-                -- Open detail window
                 local detailWindow = CreateFileDetailWindow(fileName, fileData)
                 
                 -- Detail window event handlers
@@ -2005,27 +1837,20 @@ function RefreshFileList(GUI)
                     State.OpenDetailWindow = nil
                 end)
                 
-                detailWindow.TutupBtn.MouseButton1Click:Connect(function()
-                    detailWindow.ScreenGui:Destroy()
-                    State.OpenDetailWindow = nil
-                end)
-                
                 detailWindow.MinusBtn.MouseButton1Click:Connect(function()
-                    local newSpeed = math.max(CONFIG.MinSpeedMultiplier, 
-                        detailWindow.CurrentMultiplier - CONFIG.SpeedStep)
+                    local newSpeed = math.max(CONFIG.MinSpeedMultiplier, detailWindow.CurrentMultiplier - CONFIG.SpeedStep)
                     detailWindow.CurrentMultiplier = newSpeed
                     detailWindow.SpeedDisplay.Text = string.format("%.1f×", newSpeed)
                 end)
                 
                 detailWindow.PlusBtn.MouseButton1Click:Connect(function()
-                    local newSpeed = math.min(CONFIG.MaxSpeedMultiplier, 
-                        detailWindow.CurrentMultiplier + CONFIG.SpeedStep)
+                    local newSpeed = math.min(CONFIG.MaxSpeedMultiplier, detailWindow.CurrentMultiplier + CONFIG.SpeedStep)
                     detailWindow.CurrentMultiplier = newSpeed
                     detailWindow.SpeedDisplay.Text = string.format("%.1f×", newSpeed)
                 end)
                 
                 detailWindow.PlayBtn.MouseButton1Click:Connect(function()
-                    PlayWalk(fileData, detailWindow.CurrentMultiplier, GUI)
+                    StartPlayback(fileData, GUI, detailWindow.CurrentMultiplier)
                 end)
                 
                 detailWindow.DeleteBtn.MouseButton1Click:Connect(function()
@@ -2036,8 +1861,8 @@ function RefreshFileList(GUI)
                             confirmDialog.ScreenGui:Destroy()
                             detailWindow.ScreenGui:Destroy()
                             State.OpenDetailWindow = nil
-                            GUI.StatusLabel.Text = "Status: Deleted '" .. fileName .. "'"
                             RefreshFileList(GUI)
+                            GUI.StatusLabel.Text = "Status: Deleted '" .. fileName .. "'"
                         end
                     end)
                     
@@ -2046,21 +1871,20 @@ function RefreshFileList(GUI)
                     end)
                 end)
                 
+                detailWindow.TutupBtn.MouseButton1Click:Connect(function()
+                    detailWindow.ScreenGui:Destroy()
+                    State.OpenDetailWindow = nil
+                end)
+                
                 detailWindow.EditorBtn.MouseButton1Click:Connect(function()
                     CreateVideoEditorWindow(fileName, fileData, GUI)
                 end)
-                
-                GUI.StatusLabel.Text = "Status: Loaded '" .. fileName .. "'"
-            else
-                GUI.StatusLabel.Text = "Status: Failed to load file!"
-                GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
             end
         end)
     end
     
     -- Update canvas size
-    local contentHeight = #files * 35
-    GUI.FileListFrame.CanvasSize = UDim2.new(0, 0, 0, math.max(contentHeight, 100))
+    GUI.FileListFrame.CanvasSize = UDim2.new(0, 0, 0, math.max(#files * 35, 0))
 end
 
 --// ============================================
@@ -2068,22 +1892,11 @@ end
 --// ============================================
 
 local function Initialize()
-    -- Cleanup existing GUI
-    pcall(function()
-        local existing = CoreGui:FindFirstChild("shhhhnayy05_AutoWalkRecorder")
-        if existing then existing:Destroy() end
-    end)
-    
-    pcall(function()
-        local existing = CoreGui:FindFirstChild("shhhhnayy05_MinimizedIcon")
-        if existing then existing:Destroy() end
-    end)
-    
     -- Create main GUI
     local GUI = CreateMainGUI()
     State.GUI = GUI
     
-    -- Setup event handlers
+    -- Event handlers
     GUI.RecordBtn.MouseButton1Click:Connect(function()
         if State.IsRecording then
             StopRecording(GUI)
@@ -2093,49 +1906,46 @@ local function Initialize()
     end)
     
     GUI.PauseBtn.MouseButton1Click:Connect(function()
-        TogglePause(GUI)
+        PauseRecording(GUI)
     end)
     
     GUI.SaveBtn.MouseButton1Click:Connect(function()
-        if #State.PathData == 0 then
-            GUI.StatusLabel.Text = "Status: No data to save!"
-            return
-        end
-        
-        local jumpCount = CountJumps(State.PathData)
-        local duration = FormatDuration(State.RecordDuration)
-        
-        local SaveDialog = CreateSaveDialog(duration, jumpCount)
-        
-        SaveDialog.CancelBtn.MouseButton1Click:Connect(function()
-            SaveDialog.ScreenGui:Destroy()
-        end)
-        
-        SaveDialog.SaveConfirmBtn.MouseButton1Click:Connect(function()
-            local fileName = SaveDialog.InputBox.Text
-            if fileName == "" then
-                fileName = "Walk_" .. os.time()
-            end
+        if #State.PathData > 0 and not State.IsRecording then
+            local jumpCount = CountJumps(State.PathData)
+            local SaveDialog = CreateSaveDialog(FormatDuration(State.RecordDuration), jumpCount)
             
-            local data = {
-                PathData = State.PathData,
-                DisplayName = fileName,
-                Duration = duration,
-                JumpCount = jumpCount,
-                SpeedMultiplier = 1.0,
-                RecordedAt = os.date("%Y-%m-%d %H:%M:%S")
-            }
-            
-            local success, result = SaveToFile(fileName, data)
-            if success then
+            SaveDialog.CancelBtn.MouseButton1Click:Connect(function()
                 SaveDialog.ScreenGui:Destroy()
-                GUI.StatusLabel.Text = "Status: Saved as '" .. result .. "'"
-                RefreshFileList(GUI)
-            else
-                SaveDialog.InputBox.Text = "Error!"
-                SaveDialog.InputBox.TextColor3 = Color3.fromRGB(255, 100, 100)
-            end
-        end)
+            end)
+            
+            SaveDialog.SaveConfirmBtn.MouseButton1Click:Connect(function()
+                local fileName = SaveDialog.InputBox.Text
+                if fileName == "" then
+                    fileName = "Walk_" .. os.time()
+                end
+                
+                local data = {
+                    PathData = State.PathData,
+                    DisplayName = fileName,
+                    Duration = FormatDuration(State.RecordDuration),
+                    JumpCount = jumpCount,
+                    SpeedMultiplier = 1.0
+                }
+                
+                local success, result = SaveToFile(fileName, data)
+                if success then
+                    SaveDialog.ScreenGui:Destroy()
+                    GUI.StatusLabel.Text = "Status: Saved as '" .. result .. "'"
+                    RefreshFileList(GUI)
+                else
+                    SaveDialog.InputBox.Text = "Error saving!"
+                    SaveDialog.InputBox.TextColor3 = Color3.fromRGB(255, 100, 100)
+                end
+            end)
+        else
+            GUI.StatusLabel.Text = "Status: No data to save!"
+            GUI.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
     end)
     
     GUI.MinimizeBtn.MouseButton1Click:Connect(function()
@@ -2148,34 +1958,25 @@ local function Initialize()
         if State.IsRecording then
             StopRecording(GUI)
         end
-        if State.IsPlaying and State.PlayConnection then
-            State.IsPlaying = false
-            State.PlayConnection:Disconnect()
+        if State.IsPlaying then
+            StopPlayback(GUI)
+        end
+        
+        -- Clean up
+        if State.TimerOverlay then
+            pcall(function() State.TimerOverlay.ScreenGui:Destroy() end)
+        end
+        if State.MinimizedIcon then
+            pcall(function() State.MinimizedIcon:Destroy() end)
+        end
+        if State.OpenDetailWindow then
+            pcall(function() State.OpenDetailWindow.ScreenGui:Destroy() end)
+        end
+        if State.EditorWindow then
+            pcall(function() State.EditorWindow.ScreenGui:Destroy() end)
         end
         
         GUI.ScreenGui:Destroy()
-        
-        -- Cleanup all related GUIs
-        pcall(function()
-            if State.TimerOverlay then
-                State.TimerOverlay.ScreenGui:Destroy()
-            end
-        end)
-        pcall(function()
-            if State.OpenDetailWindow then
-                State.OpenDetailWindow.ScreenGui:Destroy()
-            end
-        end)
-        pcall(function()
-            if State.EditorWindow then
-                State.EditorWindow.ScreenGui:Destroy()
-            end
-        end)
-        pcall(function()
-            if State.MinimizedIcon then
-                State.MinimizedIcon:Destroy()
-            end
-        end)
     end)
     
     -- Initial file list refresh
@@ -2184,12 +1985,16 @@ local function Initialize()
     -- Character respawn handler
     LocalPlayer.CharacterAdded:Connect(function(newChar)
         Character = newChar
-        Humanoid = newChar:WaitForChild("Humanoid")
-        HRP = newChar:WaitForChild("HumanoidRootPart")
+        Humanoid = Character:WaitForChild("Humanoid")
+        HRP = Character:WaitForChild("HumanoidRootPart")
+        
+        -- Stop playback if active
+        if State.IsPlaying then
+            StopPlayback(GUI)
+        end
     end)
     
-    print("✅ shhhhnayy05 Auto Walk Recorder initialized!")
-    print("📁 Save location: " .. CONFIG.FolderName .. "/")
+    print("✅ shhhhnayy05 Auto Walk Recorder loaded successfully!")
 end
 
 -- Start the script
