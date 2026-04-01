@@ -1497,7 +1497,9 @@ local function updateMergeEditorList()
         fileLabel.Size = UDim2.new(1, -70, 0, 20)
         fileLabel.Font = Enum.Font.GothamBold
         fileLabel.Text = fileName
-        fileLabel.TextColor3 = Color3.fromRGB(
+                fileLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        fileLabel.TextSize = 13
+        fileLabel.TextXAlignment = Enum.TextXAlignment.Left
         fileLabel.TextTruncate = Enum.TextTruncate.AtEnd
         fileLabel.ZIndex = 113
         
