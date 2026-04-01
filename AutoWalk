@@ -1504,9 +1504,17 @@ end)
 SaveBtn.MouseButton1Click:Connect(function()
     if #PathData > 0 then
         local duration = PathData[#PathData].timestamp or 0
-    SaveInfo.Text = string.format("Duration: %s | Distance: %.1fm | Points: %d", 
-        formatTime(duration), totalDistance, #PathData)
-    SavePrompt.Visible = true
+        SaveInfo.Text = string.format("Duration: %s | Distance: %.1fm | Points: %d", 
+            formatTime(duration), totalDistance, #PathData)
+        SavePrompt.Visible = true
+    else
+        StatusText.Text = "⚠️ No data to save!"
+        StatusText.TextColor3 = Color3.fromRGB(255, 200, 0)
+        task.delay(2, function()
+            StatusText.Text = "Ready to Record"
+            StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end)
+    end
 end)
 
 SaveCancelBtn.MouseButton1Click:Connect(function()
@@ -1533,6 +1541,7 @@ SaveConfirmBtn.MouseButton1Click:Connect(function()
     StatusText.Text = "💾 SAVED: " .. name
     StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
     PathData = {}
+    totalDistance = 0
 end)
 
 -- File Manager
@@ -1720,6 +1729,7 @@ JoinerBtn.MouseButton1Click:Connect(function()
         if v:IsA("Frame") then v:Destroy() end
     end
     
+    QueueScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     JoinerWindow.Visible = true
 end)
 
@@ -1845,7 +1855,7 @@ SaveQueueBtn.MouseButton1Click:Connect(function()
     JoinerWindow.Visible = false
 end)
 
--- Initialize GUI State
+-- Initialize
 MainFrame.Visible = true
 MinimizedIcon.Visible = false
 SavePrompt.Visible = false
