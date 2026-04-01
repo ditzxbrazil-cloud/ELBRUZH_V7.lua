@@ -22,6 +22,7 @@ local SAVE_FILE_NAME = "shhhhnayy05_WalkSaves.json"
 local recordStartTime = 0
 local totalDistance = 0
 local lastPosition = nil
+local hasUnsavedData = false
 
 -- === DATA MANAGEMENT === --
 local function saveToDisk(allSaves)
@@ -39,6 +40,7 @@ end
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "shhhhnayy05_AutoWalk"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
 -- Main Frame
@@ -346,6 +348,72 @@ local MinIconCorner = Instance.new("UICorner")
 MinIconCorner.CornerRadius = UDim.new(1, 0)
 MinIconCorner.Parent = MinimizedIcon
 
+-- === UNSAVED DATA WARNING WINDOW === --
+local UnsavedWarningWindow = Instance.new("Frame")
+UnsavedWarningWindow.Name = "UnsavedWarning"
+UnsavedWarningWindow.Size = UDim2.new(0, 300, 0, 180)
+UnsavedWarningWindow.Position = UDim2.new(0.5, -150, 0.5, -90)
+UnsavedWarningWindow.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+UnsavedWarningWindow.BorderSizePixel = 0
+UnsavedWarningWindow.Visible = false
+UnsavedWarningWindow.ZIndex = 100
+UnsavedWarningWindow.Parent = ScreenGui
+
+local UnsavedWarningCorner = Instance.new("UICorner")
+UnsavedWarningCorner.CornerRadius = UDim.new(0, 12)
+UnsavedWarningCorner.Parent = UnsavedWarningWindow
+
+local UnsavedWarningTitle = Instance.new("TextLabel")
+UnsavedWarningTitle.Size = UDim2.new(1, 0, 0, 40)
+UnsavedWarningTitle.Text = "⚠️ UNSAVED DATA WARNING"
+UnsavedWarningTitle.TextColor3 = Color3.fromRGB(255, 200, 0)
+UnsavedWarningTitle.TextSize = 16
+UnsavedWarningTitle.Font = Enum.Font.GothamBold
+UnsavedWarningTitle.BackgroundColor3 = Color3.fromRGB(40, 30, 20)
+UnsavedWarningTitle.Parent = UnsavedWarningWindow
+
+local UnsavedWarningTitleCorner = Instance.new("UICorner")
+UnsavedWarningTitleCorner.CornerRadius = UDim.new(0, 12)
+UnsavedWarningTitleCorner.Parent = UnsavedWarningTitle
+
+local UnsavedWarningText = Instance.new("TextLabel")
+UnsavedWarningText.Size = UDim2.new(0.9, 0, 0, 60)
+UnsavedWarningText.Position = UDim2.new(0.05, 0, 0, 50)
+UnsavedWarningText.Text = "You have unsaved walk data!\nIf you stop recording now, all progress will be lost.\nDo you want to save first?"
+UnsavedWarningText.TextColor3 = Color3.fromRGB(255, 255, 255)
+UnsavedWarningText.TextSize = 12
+UnsavedWarningText.BackgroundTransparency = 1
+UnsavedWarningText.TextWrapped = true
+UnsavedWarningText.Parent = UnsavedWarningWindow
+
+local YesSaveBtn = Instance.new("TextButton")
+YesSaveBtn.Size = UDim2.new(0.4, 0, 0, 35)
+YesSaveBtn.Position = UDim2.new(0.08, 0, 0, 125)
+YesSaveBtn.Text = "💾 YES, SAVE"
+YesSaveBtn.TextColor3 = Color3.new(1, 1, 1)
+YesSaveBtn.TextSize = 12
+YesSaveBtn.Font = Enum.Font.GothamBold
+YesSaveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+YesSaveBtn.Parent = UnsavedWarningWindow
+
+local YesSaveCorner = Instance.new("UICorner")
+YesSaveCorner.CornerRadius = UDim.new(0, 8)
+YesSaveCorner.Parent = YesSaveBtn
+
+local NoDiscardBtn = Instance.new("TextButton")
+NoDiscardBtn.Size = UDim2.new(0.4, 0, 0, 35)
+NoDiscardBtn.Position = UDim2.new(0.52, 0, 0, 125)
+NoDiscardBtn.Text = "🗑 NO, DISCARD"
+NoDiscardBtn.TextColor3 = Color3.new(1, 1, 1)
+NoDiscardBtn.TextSize = 12
+NoDiscardBtn.Font = Enum.Font.GothamBold
+NoDiscardBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+NoDiscardBtn.Parent = UnsavedWarningWindow
+
+local NoDiscardCorner = Instance.new("UICorner")
+NoDiscardCorner.CornerRadius = UDim.new(0, 8)
+NoDiscardCorner.Parent = NoDiscardBtn
+
 -- === SAVE PROMPT WINDOW === --
 local SavePrompt = Instance.new("Frame")
 SavePrompt.Name = "SavePrompt"
@@ -354,6 +422,7 @@ SavePrompt.Position = UDim2.new(0.5, -150, 0.5, -90)
 SavePrompt.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 SavePrompt.BorderSizePixel = 0
 SavePrompt.Visible = false
+SavePrompt.ZIndex = 90
 SavePrompt.Parent = ScreenGui
 
 local SavePromptCorner = Instance.new("UICorner")
@@ -433,6 +502,7 @@ FileWindow.Position = UDim2.new(0.5, -160, 0.5, -200)
 FileWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 FileWindow.BorderSizePixel = 0
 FileWindow.Visible = false
+FileWindow.ZIndex = 80
 FileWindow.Parent = ScreenGui
 
 local FileWindowCorner = Instance.new("UICorner")
@@ -489,6 +559,7 @@ FileDetailWindow.Position = UDim2.new(0.5, -150, 0.5, -175)
 FileDetailWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 FileDetailWindow.BorderSizePixel = 0
 FileDetailWindow.Visible = false
+FileDetailWindow.ZIndex = 85
 FileDetailWindow.Parent = ScreenGui
 
 local FileDetailCorner = Instance.new("UICorner")
@@ -669,6 +740,7 @@ DeleteConfirmWindow.Position = UDim2.new(0.5, -140, 0.5, -75)
 DeleteConfirmWindow.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 DeleteConfirmWindow.BorderSizePixel = 0
 DeleteConfirmWindow.Visible = false
+DeleteConfirmWindow.ZIndex = 95
 DeleteConfirmWindow.Parent = ScreenGui
 
 local DeleteConfirmCorner = Instance.new("UICorner")
@@ -734,6 +806,7 @@ EditorWindow.Position = UDim2.new(0.5, -170, 0.5, -225)
 EditorWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 EditorWindow.BorderSizePixel = 0
 EditorWindow.Visible = false
+EditorWindow.ZIndex = 80
 EditorWindow.Parent = ScreenGui
 
 local EditorCorner = Instance.new("UICorner")
@@ -949,6 +1022,7 @@ JoinerWindow.Position = UDim2.new(0.5, -170, 0.5, -225)
 JoinerWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 JoinerWindow.BorderSizePixel = 0
 JoinerWindow.Visible = false
+JoinerWindow.ZIndex = 80
 JoinerWindow.Parent = ScreenGui
 
 local JoinerCorner = Instance.new("UICorner")
@@ -1120,6 +1194,7 @@ end
 local function startRecording()
     PathData = {}
     isRecording = true
+    hasUnsavedData = true
     recordStartTime = tick()
     totalDistance = 0
     lastPosition = nil
@@ -1166,10 +1241,25 @@ local function stopRecording()
     StatusText.Text = "⏹ STOPPED - Ready to Save"
     StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
     
-    -- Update Save Info
     local duration = #PathData > 0 and PathData[#PathData].timestamp or 0
     SaveInfo.Text = string.format("Duration: %s | Distance: %.1fm | Points: %d", 
         formatTime(duration), totalDistance, #PathData)
+end
+
+local function discardRecording()
+    isRecording = false
+    hasUnsavedData = false
+    PathData = {}
+    totalDistance = 0
+    lastPosition = nil
+    RecordIcon.Text = "⏺"
+    RecordIcon.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    StatusText.Text = "🗑 DISCARDED"
+    StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+    task.delay(2, function()
+        StatusText.Text = "Ready to Record"
+        StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+    end)
 end
 
 local function playReplay(dataToPlay, startIndex, endIndex)
@@ -1196,14 +1286,12 @@ local function playReplay(dataToPlay, startIndex, endIndex)
         return
     end
     
-    -- Anti-Collision
     for _, v in pairs(char:GetChildren()) do
         if v:IsA("BasePart") then 
             v.CanCollide = false 
         end
     end
     
-    -- Loop Replay
     local i = startIndex
     while i <= endIndex and isPlaying do
         local data = dataToPlay[i]
@@ -1214,7 +1302,6 @@ local function playReplay(dataToPlay, startIndex, endIndex)
         hrp.CFrame = targetCF
         hrp.Velocity = Vector3.new(unpack(data.velocity)) * currentSpeed
         
-        -- Terrain Viewer - Show marker at current position
         if TerrainViewer.Enabled and i % 10 == 0 then
             local marker = Instance.new("Part")
             marker.Size = Vector3.new(2, 2, 2)
@@ -1226,7 +1313,6 @@ local function playReplay(dataToPlay, startIndex, endIndex)
             marker.CanCollide = false
             marker.Parent = Workspace
             
-            -- Add timestamp label
             local billboard = Instance.new("BillboardGui")
             billboard.Size = UDim2.new(0, 100, 0, 30)
             billboard.StudsOffset = Vector3.new(0, 3, 0)
@@ -1242,13 +1328,11 @@ local function playReplay(dataToPlay, startIndex, endIndex)
             
             table.insert(TerrainViewer.Markers, marker)
             
-            -- Remove old markers
             if #TerrainViewer.Markers > 20 then
                 TerrainViewer.Markers[1]:Destroy()
                 table.remove(TerrainViewer.Markers, 1)
             end
             
-            -- Fade out
             task.delay(3, function()
                 if marker and marker.Parent then
                     TweenService:Create(marker, TweenInfo.new(1), {Transparency = 1}):Play()
@@ -1261,7 +1345,6 @@ local function playReplay(dataToPlay, startIndex, endIndex)
             end)
         end
         
-        -- Speed sync
         local waitFrames = math.max(1, math.floor(1/currentSpeed))
         for _ = 1, waitFrames do
             if not isPlaying then break end
@@ -1271,7 +1354,6 @@ local function playReplay(dataToPlay, startIndex, endIndex)
         i = i + math.max(1, math.floor(currentSpeed))
     end
     
-    -- Restore collision
     for _, v in pairs(char:GetChildren()) do
         if v:IsA("BasePart") then 
             v.CanCollide = true 
@@ -1328,15 +1410,14 @@ local function refreshFileList()
         local infoLabel = Instance.new("TextLabel")
         infoLabel.Size = UDim2.new(0.6, 0, 0.4, 0)
         infoLabel.Position = UDim2.new(0, 10, 0.6, 0)
-        local duration = data and #data > 0 and data[#data].timestamp or 0
-        infoLabel.Text = string.format("%s | %d pts", formatTime(duration), #data)
+        local duration = data and data.data and #data.data > 0 and data.data[#data.data].timestamp or 0
+        infoLabel.Text = string.format("%s | %d pts", formatTime(duration), #data.data)
         infoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
         infoLabel.TextSize = 10
         infoLabel.BackgroundTransparency = 1
         infoLabel.TextXAlignment = Enum.TextXAlignment.Left
         infoLabel.Parent = entry
         
-        -- Click to open detail
         entry.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or 
                input.UserInputType == Enum.UserInputType.Touch then
@@ -1344,18 +1425,20 @@ local function refreshFileList()
                 FileWindow.Visible = false
                 FileDetailWindow.Visible = true
                 
-                -- Update Detail Window
+                local fileData = saves[name]
+                local duration = fileData and fileData.data and #fileData.data > 0 and fileData.data[#fileData.data].timestamp or 0
+                local distance = fileData and fileData.totalDistance or 0
+                
                 DetailName.Text = "Name: " .. name
                 DetailDuration.Text = "⏱ Duration: " .. formatTime(duration)
-                DetailDistance.Text = "📏 Distance: " .. (data and data.distance and string.format("%.1fm", data.distance) or "0m")
+                DetailDistance.Text = "📏 Distance: " .. string.format("%.1fm", distance)
                 DetailSpeed.Text = "⚡ Speed: " .. currentSpeed .. "x"
-                DetailPoints.Text = "📍 Waypoints: " .. #data
+                DetailPoints.Text = "📍 Waypoints: " .. #fileData.data
                 DetailSpeedDisplay.Text = tostring(currentSpeed)
             end
         end)
     end
     
-    -- Update canvas size
     local contentHeight = #sortedNames * 55
     FileScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(contentHeight, 200))
 end
@@ -1363,7 +1446,7 @@ end
 -- === EDITOR FUNCTIONS === --
 local function refreshEditorFiles()
     for _, v in pairs(AvailableScroll:GetChildren()) do
-        if v:IsA("Frame") then v:Destroy() end
+        if v:IsA("TextButton") then v:Destroy() end
     end
     
     local saves = loadFromDisk()
@@ -1386,13 +1469,13 @@ local function refreshEditorFiles()
         entry.MouseButton1Click:Connect(function()
             EditorFileDropdown.Text = name
             local data = saves[name]
-            currentEditorData = data
+            currentEditorData = data and data.data or nil
             
-            local duration = data and #data > 0 and data[#data].timestamp or 0
-            TimelineInfo.Text = string.format("Duration: %s | Points: %d", formatTime(duration), #data)
-            
-            -- Set default end trim
-            EndTrimInput.Text = string.format("%.2f", duration)
+            if currentEditorData then
+                local duration = #currentEditorData > 0 and currentEditorData[#currentEditorData].timestamp or 0
+                TimelineInfo.Text = string.format("Duration: %s | Points: %d", formatTime(duration), #currentEditorData)
+                EndTrimInput.Text = string.format("%.2f", duration)
+            end
         end)
     end
     
@@ -1401,7 +1484,7 @@ end
 
 local function refreshJoinerFiles()
     for _, v in pairs(AvailableScroll:GetChildren()) do
-        if v:IsA("Frame") then v:Destroy() end
+        if v:IsA("TextButton") then v:Destroy() end
     end
     
     local saves = loadFromDisk()
@@ -1422,10 +1505,8 @@ local function refreshJoinerFiles()
         entry.Parent = AvailableScroll
         
         entry.MouseButton1Click:Connect(function()
-            -- Add to queue
             table.insert(joinQueue, name)
             
-            -- Refresh queue display
             for _, v in pairs(QueueScroll:GetChildren()) do
                 if v:IsA("Frame") then v:Destroy() end
             end
@@ -1445,7 +1526,6 @@ local function refreshJoinerFiles()
                 queueLabel.BackgroundTransparency = 1
                 queueLabel.Parent = queueEntry
                 
-                -- Connector line (except for last)
                 if i < #joinQueue then
                     local connector = Instance.new("Frame")
                     connector.Size = UDim2.new(0, 2, 0, 10)
@@ -1464,10 +1544,28 @@ end
 
 -- === BUTTON CONNECTIONS === --
 
+-- Unsaved Warning
+YesSaveBtn.MouseButton1Click:Connect(function()
+    UnsavedWarningWindow.Visible = false
+    local duration = #PathData > 0 and PathData[#PathData].timestamp or 0
+    SaveInfo.Text = string.format("Duration: %s | Distance: %.1fm | Points: %d", 
+        formatTime(duration), totalDistance, #PathData)
+    SavePrompt.Visible = true
+end)
+
+NoDiscardBtn.MouseButton1Click:Connect(function()
+    UnsavedWarningWindow.Visible = false
+    discardRecording()
+end)
+
 -- Record Icon
 RecordIcon.MouseButton1Click:Connect(function()
     if isRecording then
-        stopRecording()
+        if hasUnsavedData and #PathData > 0 then
+            UnsavedWarningWindow.Visible = true
+        else
+            stopRecording()
+        end
     else
         startRecording()
     end
@@ -1538,6 +1636,7 @@ SaveConfirmBtn.MouseButton1Click:Connect(function()
     
     SavePrompt.Visible = false
     SaveInput.Text = ""
+    hasUnsavedData = false
     StatusText.Text = "💾 SAVED: " .. name
     StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
     PathData = {}
@@ -1855,7 +1954,7 @@ SaveQueueBtn.MouseButton1Click:Connect(function()
     JoinerWindow.Visible = false
 end)
 
--- Initialize
+-- Initialize GUI State
 MainFrame.Visible = true
 MinimizedIcon.Visible = false
 SavePrompt.Visible = false
@@ -1864,6 +1963,7 @@ FileDetailWindow.Visible = false
 DeleteConfirmWindow.Visible = false
 EditorWindow.Visible = false
 JoinerWindow.Visible = false
+UnsavedWarningWindow.Visible = false
 
 StatusText.Text = "Ready to Record"
 print("[[ RECORDER AUTO WALK - SHHHHNAYY05 EDITION ]] Loaded Successfully!")
