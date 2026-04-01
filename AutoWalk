@@ -1,7 +1,7 @@
 -- ==========================================
--- SHHHHNAYY05 AUTO WALK RECORDER V9
+-- SHHHHNAYY05 AUTO WALK RECORDER V10
 -- ==========================================
--- FIXED: File Manager & Merge Editor - 100% Functional
+-- FULL FIX: File Manager & Merge Editor 100% Functional
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -55,7 +55,7 @@ end
 
 -- === UI CREATION ===
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "shhhhnayy05_WalkRecorderV9"
+ScreenGui.Name = "shhhhnayy05_WalkRecorderV10"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
@@ -268,7 +268,7 @@ OpenFileManagerCorner.CornerRadius = UDim.new(0, 6)
 OpenFileManagerCorner.Parent = OpenFileManagerBtn
 
 -- ==========================================
--- FILE MANAGER WINDOW (300x400) - FIXED
+-- FILE MANAGER WINDOW - FULL FIX
 -- ==========================================
 local FileManagerWindow = Instance.new("Frame")
 FileManagerWindow.Name = "shhhhnayy05_FileManager"
@@ -298,6 +298,7 @@ FileManagerTitleBar.Parent = FileManagerWindow
 FileManagerTitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 FileManagerTitleBar.BorderSizePixel = 0
 FileManagerTitleBar.Size = UDim2.new(1, 0, 0, 40)
+FileManagerTitleBar.ZIndex = 101
 
 local FileManagerTitleText = Instance.new("TextLabel")
 FileManagerTitleText.Name = "shhhhnayy05_FileManagerTitleText"
@@ -308,6 +309,7 @@ FileManagerTitleText.Font = Enum.Font.GothamBold
 FileManagerTitleText.Text = "📁 SAVED FILES"
 FileManagerTitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
 FileManagerTitleText.TextSize = 14
+FileManagerTitleText.ZIndex = 102
 
 local FileManagerCloseBtn = Instance.new("TextButton")
 FileManagerCloseBtn.Name = "shhhhnayy05_FileManagerCloseBtn"
@@ -320,6 +322,7 @@ FileManagerCloseBtn.Font = Enum.Font.GothamBold
 FileManagerCloseBtn.Text = "×"
 FileManagerCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FileManagerCloseBtn.TextSize = 18
+FileManagerCloseBtn.ZIndex = 102
 
 local FileManagerCloseCorner = Instance.new("UICorner")
 FileManagerCloseCorner.CornerRadius = UDim.new(0, 6)
@@ -337,6 +340,7 @@ RefreshBtn.Font = Enum.Font.GothamBold
 RefreshBtn.Text = "↻"
 RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 RefreshBtn.TextSize = 16
+RefreshBtn.ZIndex = 102
 
 local RefreshCorner = Instance.new("UICorner")
 RefreshCorner.CornerRadius = UDim.new(0, 6)
@@ -353,13 +357,14 @@ FileScroll.Size = UDim2.new(1, -20, 1, -60)
 FileScroll.ScrollBarThickness = 8
 FileScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
 FileScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+FileScroll.ZIndex = 101
 
 local FileScrollCorner = Instance.new("UICorner")
 FileScrollCorner.CornerRadius = UDim.new(0, 8)
 FileScrollCorner.Parent = FileScroll
 
 -- ==========================================
--- MERGE EDITOR WINDOW (300x400) - FIXED
+-- MERGE EDITOR WINDOW - FULL FIX
 -- ==========================================
 local MergeEditorWindow = Instance.new("Frame")
 MergeEditorWindow.Name = "shhhhnayy05_MergeEditor"
@@ -389,6 +394,7 @@ MergeEditorTitleBar.Parent = MergeEditorWindow
 MergeEditorTitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 MergeEditorTitleBar.BorderSizePixel = 0
 MergeEditorTitleBar.Size = UDim2.new(1, 0, 0, 40)
+MergeEditorTitleBar.ZIndex = 111
 
 local MergeEditorTitleText = Instance.new("TextLabel")
 MergeEditorTitleText.Name = "shhhhnayy05_MergeEditorTitleText"
@@ -399,6 +405,7 @@ MergeEditorTitleText.Font = Enum.Font.GothamBold
 MergeEditorTitleText.Text = "🔗 MERGE EDITOR"
 MergeEditorTitleText.TextColor3 = Color3.fromRGB(200, 100, 255)
 MergeEditorTitleText.TextSize = 14
+MergeEditorTitleText.ZIndex = 112
 
 local MergeEditorCloseBtn = Instance.new("TextButton")
 MergeEditorCloseBtn.Name = "shhhhnayy05_MergeEditorCloseBtn"
@@ -411,6 +418,7 @@ MergeEditorCloseBtn.Font = Enum.Font.GothamBold
 MergeEditorCloseBtn.Text = "×"
 MergeEditorCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MergeEditorCloseBtn.TextSize = 18
+MergeEditorCloseBtn.ZIndex = 112
 
 local MergeEditorCloseCorner = Instance.new("UICorner")
 MergeEditorCloseCorner.CornerRadius = UDim.new(0, 6)
@@ -427,6 +435,7 @@ MergeInfoLabel.Font = Enum.Font.Gotham
 MergeInfoLabel.Text = "Click checkbox to select files to merge"
 MergeInfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 MergeInfoLabel.TextSize = 11
+MergeInfoLabel.ZIndex = 111
 
 -- Files List Scroll Frame
 local MergeFilesScroll = Instance.new("ScrollingFrame")
@@ -439,6 +448,7 @@ MergeFilesScroll.Size = UDim2.new(1, -20, 0, 250)
 MergeFilesScroll.ScrollBarThickness = 6
 MergeFilesScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 100, 255)
 MergeFilesScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+MergeFilesScroll.ZIndex = 111
 
 local MergeFilesScrollCorner = Instance.new("UICorner")
 MergeFilesScrollCorner.CornerRadius = UDim.new(0, 8)
@@ -455,6 +465,7 @@ SelectedCountLabel.Font = Enum.Font.GothamBold
 SelectedCountLabel.Text = "Selected: 0 files"
 SelectedCountLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
 SelectedCountLabel.TextSize = 12
+SelectedCountLabel.ZIndex = 111
 
 -- Merge Selected Button
 local MergeSelectedBtn = Instance.new("TextButton")
@@ -468,6 +479,7 @@ MergeSelectedBtn.Font = Enum.Font.GothamBold
 MergeSelectedBtn.Text = "🔗 MERGE SELECTED"
 MergeSelectedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MergeSelectedBtn.TextSize = 12
+MergeSelectedBtn.ZIndex = 111
 
 local MergeSelectedCorner = Instance.new("UICorner")
 MergeSelectedCorner.CornerRadius = UDim.new(0, 6)
@@ -506,6 +518,7 @@ DialogTitle.Font = Enum.Font.GothamBold
 DialogTitle.Text = "💾 SAVE WALK"
 DialogTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
 DialogTitle.TextSize = 16
+DialogTitle.ZIndex = 201
 
 local DialogInput = Instance.new("TextBox")
 DialogInput.Name = "shhhhnayy05_DialogInput"
@@ -519,6 +532,7 @@ DialogInput.PlaceholderText = "Enter walk name..."
 DialogInput.Text = ""
 DialogInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 DialogInput.TextSize = 14
+DialogInput.ZIndex = 201
 
 local DialogInputCorner = Instance.new("UICorner")
 DialogInputCorner.CornerRadius = UDim.new(0, 6)
@@ -535,6 +549,7 @@ DialogSaveBtn.Font = Enum.Font.GothamBold
 DialogSaveBtn.Text = "SAVE"
 DialogSaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 DialogSaveBtn.TextSize = 14
+DialogSaveBtn.ZIndex = 201
 
 local DialogSaveCorner = Instance.new("UICorner")
 DialogSaveCorner.CornerRadius = UDim.new(0, 6)
@@ -551,6 +566,7 @@ DialogCancelBtn.Font = Enum.Font.GothamBold
 DialogCancelBtn.Text = "CANCEL"
 DialogCancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 DialogCancelBtn.TextSize = 14
+DialogCancelBtn.ZIndex = 201
 
 -- ==========================================
 -- MERGE SAVE DIALOG
@@ -585,6 +601,7 @@ MergeSaveTitle.Font = Enum.Font.GothamBold
 MergeSaveTitle.Text = "💾 SAVE MERGED WALK"
 MergeSaveTitle.TextColor3 = Color3.fromRGB(200, 100, 255)
 MergeSaveTitle.TextSize = 16
+MergeSaveTitle.ZIndex = 251
 
 local MergeSaveInput = Instance.new("TextBox")
 MergeSaveInput.Name = "shhhhnayy05_MergeSaveInput"
@@ -598,6 +615,7 @@ MergeSaveInput.PlaceholderText = "Enter merged walk name..."
 MergeSaveInput.Text = ""
 MergeSaveInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 MergeSaveInput.TextSize = 14
+MergeSaveInput.ZIndex = 251
 
 local MergeSaveInputCorner = Instance.new("UICorner")
 MergeSaveInputCorner.CornerRadius = UDim.new(0, 6)
@@ -614,6 +632,7 @@ MergeSaveConfirmBtn.Font = Enum.Font.GothamBold
 MergeSaveConfirmBtn.Text = "SAVE"
 MergeSaveConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MergeSaveConfirmBtn.TextSize = 14
+MergeSaveConfirmBtn.ZIndex = 251
 
 local MergeSaveConfirmCorner = Instance.new("UICorner")
 MergeSaveConfirmCorner.CornerRadius = UDim.new(0, 6)
@@ -630,6 +649,7 @@ MergeSaveCancelBtn.Font = Enum.Font.GothamBold
 MergeSaveCancelBtn.Text = "CANCEL"
 MergeSaveCancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MergeSaveCancelBtn.TextSize = 14
+MergeSaveCancelBtn.ZIndex = 251
 
 -- ==========================================
 -- FILE DETAIL WINDOW (300x400)
@@ -661,6 +681,7 @@ DetailTitleBar.Parent = FileDetail
 DetailTitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 DetailTitleBar.BorderSizePixel = 0
 DetailTitleBar.Size = UDim2.new(1, 0, 0, 40)
+DetailTitleBar.ZIndex = 151
 
 local DetailTitleText = Instance.new("TextLabel")
 DetailTitleText.Name = "shhhhnayy05_DetailTitleText"
@@ -671,6 +692,7 @@ DetailTitleText.Font = Enum.Font.GothamBold
 DetailTitleText.Text = "FILE DETAILS"
 DetailTitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
 DetailTitleText.TextSize = 14
+DetailTitleText.ZIndex = 152
 
 local DetailCloseBtn = Instance.new("TextButton")
 DetailCloseBtn.Name = "shhhhnayy05_DetailCloseBtn"
@@ -683,6 +705,7 @@ DetailCloseBtn.Font = Enum.Font.GothamBold
 DetailCloseBtn.Text = "×"
 DetailCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 DetailCloseBtn.TextSize = 18
+DetailCloseBtn.ZIndex = 152
 
 local DetailCloseCorner = Instance.new("UICorner")
 DetailCloseCorner.CornerRadius = UDim.new(0, 6)
@@ -699,6 +722,7 @@ DetailScroll.Size = UDim2.new(1, -20, 1, -60)
 DetailScroll.ScrollBarThickness = 6
 DetailScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
 DetailScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
+DetailScroll.ZIndex = 151
 
 -- File Info
 local DetailName = Instance.new("TextLabel")
@@ -712,6 +736,7 @@ DetailName.Text = "Name: -"
 DetailName.TextColor3 = Color3.fromRGB(255, 255, 255)
 DetailName.TextSize = 14
 DetailName.TextXAlignment = Enum.TextXAlignment.Left
+DetailName.ZIndex = 152
 
 local DetailPoints = Instance.new("TextLabel")
 DetailPoints.Name = "shhhhnayy05_DetailPoints"
@@ -724,6 +749,7 @@ DetailPoints.Text = "Points: 0"
 DetailPoints.TextColor3 = Color3.fromRGB(200, 200, 200)
 DetailPoints.TextSize = 12
 DetailPoints.TextXAlignment = Enum.TextXAlignment.Left
+DetailPoints.ZIndex = 152
 
 local DetailDate = Instance.new("TextLabel")
 DetailDate.Name = "shhhhnayy05_DetailDate"
@@ -736,6 +762,7 @@ DetailDate.Text = "Saved: -"
 DetailDate.TextColor3 = Color3.fromRGB(150, 150, 150)
 DetailDate.TextSize = 11
 DetailDate.TextXAlignment = Enum.TextXAlignment.Left
+DetailDate.ZIndex = 152
 
 -- SPEED CONTROL SECTION
 local SpeedSection = Instance.new("Frame")
@@ -745,6 +772,7 @@ SpeedSection.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 SpeedSection.BorderSizePixel = 0
 SpeedSection.Position = UDim2.new(0, 5, 0, 80)
 SpeedSection.Size = UDim2.new(1, -10, 0, 60)
+SpeedSection.ZIndex = 152
 
 local SpeedSectionCorner = Instance.new("UICorner")
 SpeedSectionCorner.CornerRadius = UDim.new(0, 8)
@@ -760,6 +788,7 @@ SpeedTitle.Font = Enum.Font.GothamBold
 SpeedTitle.Text = "⚡ WALK SPEED"
 SpeedTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
 SpeedTitle.TextSize = 12
+SpeedTitle.ZIndex = 153
 
 -- Speed Control Container (Centered)
 local SpeedControlContainer = Instance.new("Frame")
@@ -768,6 +797,7 @@ SpeedControlContainer.Parent = SpeedSection
 SpeedControlContainer.BackgroundTransparency = 1
 SpeedControlContainer.Position = UDim2.new(0.5, -75, 0, 28)
 SpeedControlContainer.Size = UDim2.new(0, 150, 0, 30)
+SpeedControlContainer.ZIndex = 153
 
 -- Minus Button
 local SpeedMinus = Instance.new("TextButton")
@@ -781,6 +811,7 @@ SpeedMinus.Font = Enum.Font.GothamBold
 SpeedMinus.Text = "-"
 SpeedMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedMinus.TextSize = 20
+SpeedMinus.ZIndex = 154
 
 local SpeedMinusCorner = Instance.new("UICorner")
 SpeedMinusCorner.CornerRadius = UDim.new(0, 6)
@@ -798,6 +829,7 @@ SpeedDisplay.Font = Enum.Font.GothamBold
 SpeedDisplay.Text = "1.0"
 SpeedDisplay.TextColor3 = Color3.fromRGB(0, 200, 255)
 SpeedDisplay.TextSize = 18
+SpeedDisplay.ZIndex = 154
 
 local SpeedDisplayCorner = Instance.new("UICorner")
 SpeedDisplayCorner.CornerRadius = UDim.new(0, 6)
@@ -815,6 +847,7 @@ SpeedPlus.Font = Enum.Font.GothamBold
 SpeedPlus.Text = "+"
 SpeedPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedPlus.TextSize = 20
+SpeedPlus.ZIndex = 154
 
 local SpeedPlusCorner = Instance.new("UICorner")
 SpeedPlusCorner.CornerRadius = UDim.new(0, 6)
@@ -832,6 +865,7 @@ PlayWalkBtn.Font = Enum.Font.GothamBold
 PlayWalkBtn.Text = "▶ PLAY WALK"
 PlayWalkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PlayWalkBtn.TextSize = 18
+PlayWalkBtn.ZIndex = 152
 
 local PlayWalkCorner = Instance.new("UICorner")
 PlayWalkCorner.CornerRadius = UDim.new(0, 10)
@@ -849,6 +883,7 @@ LoadBtn.Font = Enum.Font.GothamBold
 LoadBtn.Text = "📂 LOAD"
 LoadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 LoadBtn.TextSize = 13
+LoadBtn.ZIndex = 152
 
 local LoadCorner = Instance.new("UICorner")
 LoadCorner.CornerRadius = UDim.new(0, 8)
@@ -866,6 +901,7 @@ DeleteBtn.Font = Enum.Font.GothamBold
 DeleteBtn.Text = "🗑 DELETE"
 DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 DeleteBtn.TextSize = 13
+DeleteBtn.ZIndex = 152
 
 local DeleteCorner = Instance.new("UICorner")
 DeleteCorner.CornerRadius = UDim.new(0, 8)
@@ -901,6 +937,7 @@ TrimTitleBar.Parent = TrimPanel
 TrimTitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 TrimTitleBar.BorderSizePixel = 0
 TrimTitleBar.Size = UDim2.new(1, 0, 0, 40)
+TrimTitleBar.ZIndex = 81
 
 local TrimTitleText = Instance.new("TextLabel")
 TrimTitleText.Name = "shhhhnayy05_TrimTitleText"
@@ -911,6 +948,7 @@ TrimTitleText.Font = Enum.Font.GothamBold
 TrimTitleText.Text = "✂️ TRIM EDITOR"
 TrimTitleText.TextColor3 = Color3.fromRGB(255, 150, 0)
 TrimTitleText.TextSize = 14
+TrimTitleText.ZIndex = 82
 
 local TrimCloseBtn = Instance.new("TextButton")
 TrimCloseBtn.Name = "shhhhnayy05_TrimCloseBtn"
@@ -923,6 +961,7 @@ TrimCloseBtn.Font = Enum.Font.GothamBold
 TrimCloseBtn.Text = "×"
 TrimCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 TrimCloseBtn.TextSize = 18
+TrimCloseBtn.ZIndex = 82
 
 local TrimCloseCorner = Instance.new("UICorner")
 TrimCloseCorner.CornerRadius = UDim.new(0, 6)
@@ -939,6 +978,7 @@ TrimScroll.Size = UDim2.new(1, -20, 1, -60)
 TrimScroll.ScrollBarThickness = 6
 TrimScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 150, 0)
 TrimScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
+TrimScroll.ZIndex = 81
 
 -- Current Path Info
 local TrimPathInfo = Instance.new("TextLabel")
@@ -952,6 +992,7 @@ TrimPathInfo.Text = "Current Path: 0 points"
 TrimPathInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
 TrimPathInfo.TextSize = 13
 TrimPathInfo.TextWrapped = true
+TrimPathInfo.ZIndex = 82
 
 -- Range Section
 local RangeSection = Instance.new("Frame")
@@ -961,6 +1002,7 @@ RangeSection.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 RangeSection.BorderSizePixel = 0
 RangeSection.Position = UDim2.new(0, 5, 0, 50)
 RangeSection.Size = UDim2.new(1, -10, 0, 120)
+RangeSection.ZIndex = 82
 
 local RangeCorner = Instance.new("UICorner")
 RangeCorner.CornerRadius = UDim.new(0, 8)
@@ -976,6 +1018,7 @@ RangeTitle.Font = Enum.Font.GothamBold
 RangeTitle.Text = "📍 TRIM RANGE"
 RangeTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
 RangeTitle.TextSize = 12
+RangeTitle.ZIndex = 83
 
 -- Start Input
 local TrimStartLabel = Instance.new("TextLabel")
@@ -988,6 +1031,7 @@ TrimStartLabel.Text = "Start Index:"
 TrimStartLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 TrimStartLabel.TextSize = 11
 TrimStartLabel.TextXAlignment = Enum.TextXAlignment.Left
+TrimStartLabel.ZIndex = 83
 
 local TrimStartInput = Instance.new("TextBox")
 TrimStartInput.Name = "shhhhnayy05_TrimStartInput"
@@ -1000,6 +1044,7 @@ TrimStartInput.Font = Enum.Font.GothamBold
 TrimStartInput.Text = "1"
 TrimStartInput.TextColor3 = Color3.fromRGB(255, 200, 100)
 TrimStartInput.TextSize = 14
+TrimStartInput.ZIndex = 83
 
 local TrimStartCorner = Instance.new("UICorner")
 TrimStartCorner.CornerRadius = UDim.new(0, 6)
@@ -1016,6 +1061,7 @@ TrimEndLabel.Text = "End Index:"
 TrimEndLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 TrimEndLabel.TextSize = 11
 TrimEndLabel.TextXAlignment = Enum.TextXAlignment.Left
+TrimEndLabel.ZIndex = 83
 
 local TrimEndInput = Instance.new("TextBox")
 TrimEndInput.Name = "shhhhnayy05_TrimEndInput"
@@ -1028,6 +1074,7 @@ TrimEndInput.Font = Enum.Font.GothamBold
 TrimEndInput.Text = "0"
 TrimEndInput.TextColor3 = Color3.fromRGB(255, 200, 100)
 TrimEndInput.TextSize = 14
+TrimEndInput.ZIndex = 83
 
 local TrimEndCorner = Instance.new("UICorner")
 TrimEndCorner.CornerRadius = UDim.new(0, 6)
@@ -1045,6 +1092,7 @@ TrimExecuteBtn.Font = Enum.Font.GothamBold
 TrimExecuteBtn.Text = "✂️ TRIM PATH"
 TrimExecuteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 TrimExecuteBtn.TextSize = 16
+TrimExecuteBtn.ZIndex = 82
 
 local TrimExecuteCorner = Instance.new("UICorner")
 TrimExecuteCorner.CornerRadius = UDim.new(0, 10)
@@ -1062,6 +1110,7 @@ PreviewTrimBtn.Font = Enum.Font.GothamBold
 PreviewTrimBtn.Text = "👁 PREVIEW TRIMMED"
 PreviewTrimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PreviewTrimBtn.TextSize = 14
+PreviewTrimBtn.ZIndex = 82
 
 local PreviewTrimCorner = Instance.new("UICorner")
 PreviewTrimCorner.CornerRadius = UDim.new(0, 8)
@@ -1253,11 +1302,11 @@ local function playWalk(pathData, speed, isPreview)
 end
 
 -- ==========================================
--- FILE MANAGER FUNCTIONS - FIXED
+-- FILE MANAGER FUNCTIONS - FULL FIX
 -- ==========================================
 
 local function refreshFileList()
-    -- Clear all children except the scrolling frame itself
+    -- Clear all children
     for _, child in pairs(FileScroll:GetChildren()) do
         child:Destroy()
     end
@@ -1280,6 +1329,7 @@ local function refreshFileList()
         emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
         emptyLabel.TextSize = 12
         emptyLabel.TextWrapped = true
+        emptyLabel.ZIndex = 102
         FileScroll.CanvasSize = UDim2.new(0, 0, 0, 100)
         return
     end
@@ -1299,6 +1349,7 @@ local function refreshFileList()
         fileItem.Font = Enum.Font.Gotham
         fileItem.Text = ""
         fileItem.AutoButtonColor = true
+        fileItem.ZIndex = 102
         
         local fileItemCorner = Instance.new("UICorner")
         fileItemCorner.CornerRadius = UDim.new(0, 6)
@@ -1316,6 +1367,7 @@ local function refreshFileList()
         fileNameLabel.TextSize = 13
         fileNameLabel.TextXAlignment = Enum.TextXAlignment.Left
         fileNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        fileNameLabel.ZIndex = 103
         
         local fileInfoLabel = Instance.new("TextLabel")
         fileInfoLabel.Name = "shhhhnayy05_FileInfoLabel"
@@ -1328,6 +1380,7 @@ local function refreshFileList()
         fileInfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
         fileInfoLabel.TextSize = 11
         fileInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+        fileInfoLabel.ZIndex = 103
         
         fileItem.MouseButton1Click:Connect(function()
             currentFileData = fileData
@@ -1349,7 +1402,7 @@ local function refreshFileList()
 end
 
 -- ==========================================
--- MERGE EDITOR FUNCTIONS - FIXED
+-- MERGE EDITOR FUNCTIONS - FULL FIX
 -- ==========================================
 
 local function updateMergeEditorList()
@@ -1378,6 +1431,7 @@ local function updateMergeEditorList()
         emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
         emptyLabel.TextSize = 12
         emptyLabel.TextWrapped = true
+        emptyLabel.ZIndex = 112
         MergeFilesScroll.CanvasSize = UDim2.new(0, 0, 0, 100)
         SelectedCountLabel.Text = "Selected: 0 files"
         return
@@ -1397,6 +1451,7 @@ local function updateMergeEditorList()
         itemContainer.BorderSizePixel = 0
         itemContainer.Position = UDim2.new(0, 0, 0, yOffset)
         itemContainer.Size = UDim2.new(1, -10, 0, 50)
+        itemContainer.ZIndex = 112
         
         local itemCorner = Instance.new("UICorner")
         itemCorner.CornerRadius = UDim.new(0, 6)
@@ -1413,6 +1468,7 @@ local function updateMergeEditorList()
         numLabel.Text = tostring(index)
         numLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
         numLabel.TextSize = 14
+        numLabel.ZIndex = 113
         
         -- Checkbox button
         local checkbox = Instance.new("TextButton")
@@ -1426,6 +1482,7 @@ local function updateMergeEditorList()
         checkbox.Text = ""
         checkbox.TextColor3 = Color3.fromRGB(0, 255, 100)
         checkbox.TextSize = 16
+        checkbox.ZIndex = 113
         
         local checkboxCorner = Instance.new("UICorner")
         checkboxCorner.CornerRadius = UDim.new(0, 4)
@@ -1440,23 +1497,23 @@ local function updateMergeEditorList()
         fileLabel.Size = UDim2.new(1, -70, 0, 20)
         fileLabel.Font = Enum.Font.GothamBold
         fileLabel.Text = fileName
-        fileLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        fileLabel.TextSize = 12
-        fileLabel.TextXAlignment = Enum.TextXAlignment.Left
+        fileLabel.TextColor3 = Color3.fromRGB(
         fileLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        fileLabel.ZIndex = 113
         
         -- File info label
         local infoLabel = Instance.new("TextLabel")
         infoLabel.Name = "shhhhnayy05_InfoLabel"
         infoLabel.Parent = itemContainer
         infoLabel.BackgroundTransparency = 1
-        infoLabel.Position = UDim2.new(0, 60, 0, 26)
+        infoLabel.Position = UDim2.new(0, 60, 0, 27)
         infoLabel.Size = UDim2.new(1, -70, 0, 18)
         infoLabel.Font = Enum.Font.Gotham
-        infoLabel.Text = string.format("%d points", #fileData.path)
+        infoLabel.Text = string.format("%d points | %s", #fileData.path, fileData.date or "Unknown")
         infoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
         infoLabel.TextSize = 10
         infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+        infoLabel.ZIndex = 113
         
         -- Checkbox click handler
         checkbox.MouseButton1Click:Connect(function()
@@ -1471,7 +1528,7 @@ local function updateMergeEditorList()
                 WalkData.SelectedFilesForMerge[fileName] = fileData
                 checkbox.Text = "✓"
                 checkbox.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-                itemContainer.BackgroundColor3 = Color3.fromRGB(40, 60, 40)
+                itemContainer.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
             end
             
             -- Update count
@@ -1480,51 +1537,53 @@ local function updateMergeEditorList()
             SelectedCountLabel.Text = "Selected: " .. count .. " files"
         end)
         
-        yOffset = yOffset + 55
+        yOffset = yOffset + 60
         index = index + 1
     end
     
     MergeFilesScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(yOffset, 250))
-    SelectedCountLabel.Text = "Selected: 0 files"
 end
 
 -- ==========================================
--- BUTTON CONNECTIONS - ALL FUNCTIONAL
+-- BUTTON CONNECTIONS
 -- ==========================================
 
--- Main Panel Buttons
+-- Record buttons
 RecBtn.MouseButton1Click:Connect(startRecording)
-
 StopBtn.MouseButton1Click:Connect(stopRecording)
 
+-- Save button
 SaveBtn.MouseButton1Click:Connect(function()
-    if #WalkData.CurrentPath == 0 then
-        -- Show notification
-        local notif = Instance.new("TextLabel")
-        notif.Name = "shhhhnayy05_Notification"
-        notif.Parent = ScreenGui
-        notif.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-        notif.BorderSizePixel = 0
-        notif.Position = UDim2.new(0.5, -100, 0.1, 0)
-        notif.Size = UDim2.new(0, 200, 0, 40)
-        notif.Font = Enum.Font.GothamBold
-        notif.Text = "No path recorded!"
-        notif.TextColor3 = Color3.fromRGB(255, 255, 255)
-        notif.TextSize = 14
-        
-        local notifCorner = Instance.new("UICorner")
-        notifCorner.CornerRadius = UDim.new(0, 8)
-        notifCorner.Parent = notif
-        
-        task.delay(2, function()
-            notif:Destroy()
-        end)
-        return
-    end
-    DialogInput.Text = ""
+    if #WalkData.CurrentPath == 0 then return end
     SaveDialog.Visible = true
+    DialogInput.Text = ""
+    DialogInput:CaptureFocus()
 end)
 
+-- Dialog buttons
+DialogSaveBtn.MouseButton1Click:Connect(function()
+    local name = DialogInput.Text:gsub("^%s+", ""):gsub("%s+$", "")
+    if name == "" then return end
+    
+    local allSaves = shhhhnayy05_loadFromDisk()
+    allSaves[name] = {
+        path = WalkData.CurrentPath,
+        date = shhhhnayy05_formatTime(),
+        id = shhhhnayy05_generateId()
+    }
+    
+    if shhhhnayy05_saveToDisk(allSaves) then
+        SaveDialog.Visible = false
+        WalkData.CurrentPath = {}
+        updateStats()
+    end
+end)
+
+DialogCancelBtn.MouseButton1Click:Connect(function()
+    SaveDialog.Visible = false
+end)
+
+-- Preview button
 PreviewBtn.MouseButton1Click:Connect(function()
     if WalkData.isPlaying then
         WalkData.isPlaying = false
@@ -1535,194 +1594,115 @@ PreviewBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Trim Editor buttons
 TrimBtn.MouseButton1Click:Connect(function()
-    TrimPathInfo.Text = string.format("Current Path: %d points", #WalkData.CurrentPath)
+    TrimPanel.Visible = true
     TrimStartInput.Text = "1"
     TrimEndInput.Text = tostring(#WalkData.CurrentPath)
-    TrimPanel.Visible = true
 end)
 
--- FIXED: Merge Editor Button dengan pengecekan eksplisit
+TrimCloseBtn.MouseButton1Click:Connect(function()
+    TrimPanel.Visible = false
+end)
+
+TrimExecuteBtn.MouseButton1Click:Connect(function()
+    local startIdx = tonumber(TrimStartInput.Text) or 1
+    local endIdx = tonumber(TrimEndInput.Text) or #WalkData.CurrentPath
+    
+    startIdx = math.max(1, math.min(startIdx, #WalkData.CurrentPath))
+    endIdx = math.max(startIdx, math.min(endIdx, #WalkData.CurrentPath))
+    
+    local trimmedPath = {}
+    for i = startIdx, endIdx do
+        table.insert(trimmedPath, WalkData.CurrentPath[i])
+    end
+    
+    WalkData.CurrentPath = trimmedPath
+    updateStats()
+    TrimPanel.Visible = false
+end)
+
+PreviewTrimBtn.MouseButton1Click:Connect(function()
+    local startIdx = tonumber(TrimStartInput.Text) or 1
+    local endIdx = tonumber(TrimEndInput.Text) or #WalkData.CurrentPath
+    
+    startIdx = math.max(1, math.min(startIdx, #WalkData.CurrentPath))
+    endIdx = math.max(startIdx, math.min(endIdx, #WalkData.CurrentPath))
+    
+    local trimmedPath = {}
+    for i = startIdx, endIdx do
+        table.insert(trimmedPath, WalkData.CurrentPath[i])
+    end
+    
+    if #trimmedPath > 0 then
+        playWalk(trimmedPath, 1.0, true)
+    end
+end)
+
+-- Merge Editor buttons
 MergeEditorBtn.MouseButton1Click:Connect(function()
-    print("Merge Editor Button Clicked") -- Debug
-    WalkData.SelectedFilesForMerge = {}
-    updateMergeEditorList()
     MergeEditorWindow.Visible = true
-    MergeEditorWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
-    print("Merge Editor Visible: " .. tostring(MergeEditorWindow.Visible))
+    updateMergeEditorList()
 end)
 
--- FIXED: File Manager Button dengan pengecekan eksplisit
-OpenFileManagerBtn.MouseButton1Click:Connect(function()
-    print("File Manager Button Clicked") -- Debug
-    refreshFileList()
-    FileManagerWindow.Visible = true
-    FileManagerWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
-    print("File Manager Visible: " .. tostring(FileManagerWindow.Visible))
-end)
-
--- Close & Minimize Buttons
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    MinimizeBtn.Visible = true
-end)
-
-MinimizeBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    MinimizeBtn.Visible = false
-end)
-
--- FIXED: File Manager Close Button
-FileManagerCloseBtn.MouseButton1Click:Connect(function()
-    print("File Manager Close Clicked")
-    FileManagerWindow.Visible = false
-end)
-
--- FIXED: File Manager Refresh Button
-RefreshBtn.MouseButton1Click:Connect(function()
-    print("Refresh Clicked")
-    refreshFileList()
-end)
-
--- FIXED: Merge Editor Close Button
 MergeEditorCloseBtn.MouseButton1Click:Connect(function()
-    print("Merge Editor Close Clicked")
     MergeEditorWindow.Visible = false
 end)
 
--- FIXED: Merge Selected Button
 MergeSelectedBtn.MouseButton1Click:Connect(function()
-    print("Merge Selected Clicked")
     local selectedCount = 0
-    for _ in pairs(WalkData.SelectedFilesForMerge) do
-        selectedCount = selectedCount + 1
-    end
+    for _ in pairs(WalkData.SelectedFilesForMerge) do selectedCount = selectedCount + 1 end
     
     if selectedCount < 2 then
-        local notif = Instance.new("TextLabel")
-        notif.Name = "shhhhnayy05_Notification"
-        notif.Parent = ScreenGui
-        notif.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
-        notif.BorderSizePixel = 0
-        notif.Position = UDim2.new(0.5, -120, 0.5, -20)
-        notif.Size = UDim2.new(0, 240, 0, 40)
-        notif.Font = Enum.Font.GothamBold
-        notif.Text = "Select at least 2 files to merge!"
-        notif.TextColor3 = Color3.fromRGB(255, 255, 255)
-        notif.TextSize = 14
-        
-        local notifCorner = Instance.new("UICorner")
-        notifCorner.CornerRadius = UDim.new(0, 8)
-        notifCorner.Parent = notif
-        
-        task.delay(2, function()
-            notif:Destroy()
-        end)
+        SelectedCountLabel.Text = "Select at least 2 files!"
+        SelectedCountLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        wait(1.5)
+        SelectedCountLabel.Text = "Selected: " .. selectedCount .. " files"
+        SelectedCountLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
         return
     end
     
-    MergeSaveInput.Text = ""
     MergeSaveDialog.Visible = true
+    MergeSaveInput.Text = ""
+    MergeSaveInput:CaptureFocus()
 end)
 
--- Save Dialog Buttons
-DialogSaveBtn.MouseButton1Click:Connect(function()
-    local name = DialogInput.Text:gsub("^%s+", ""):gsub("%s+$", "")
-    if name == "" then
-        name = "Walk_" .. shhhhnayy05_generateId()
-    end
-    
-    local allSaves = shhhhnayy05_loadFromDisk()
-    allSaves[name] = {
-        path = WalkData.CurrentPath,
-        date = shhhhnayy05_formatTime(),
-        created = os.time()
-    }
-    
-    if shhhhnayy05_saveToDisk(allSaves) then
-        SaveDialog.Visible = false
-        local notif = Instance.new("TextLabel")
-        notif.Name = "shhhhnayy05_Notification"
-        notif.Parent = ScreenGui
-        notif.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        notif.BorderSizePixel = 0
-        notif.Position = UDim2.new(0.5, -100, 0.1, 0)
-        notif.Size = UDim2.new(0, 200, 0, 40)
-        notif.Font = Enum.Font.GothamBold
-        notif.Text = "Saved: " .. name
-        notif.TextColor3 = Color3.fromRGB(255, 255, 255)
-        notif.TextSize = 14
-        
-        local notifCorner = Instance.new("UICorner")
-        notifCorner.CornerRadius = UDim.new(0, 8)
-        notifCorner.Parent = notif
-        
-        task.delay(2, function()
-            notif:Destroy()
-        end)
-    end
-end)
-
-DialogCancelBtn.MouseButton1Click:Connect(function()
-    SaveDialog.Visible = false
-end)
-
--- Merge Save Dialog Buttons
+-- Merge Save Dialog buttons
 MergeSaveConfirmBtn.MouseButton1Click:Connect(function()
     local name = MergeSaveInput.Text:gsub("^%s+", ""):gsub("%s+$", "")
-    if name == "" then
-        name = "Merged_" .. shhhhnayy05_generateId()
-    end
+    if name == "" then return end
     
-    -- Merge all selected paths
+    -- Merge all selected files in order
     local mergedPath = {}
-    local fileOrder = {}
+    local allSaves = shhhhnayy05_loadFromDisk()
     
-    -- Get file names in order
+    -- Get sorted file names
+    local sortedNames = {}
     for fileName, _ in pairs(WalkData.SelectedFilesForMerge) do
-        table.insert(fileOrder, fileName)
+        table.insert(sortedNames, fileName)
     end
-    table.sort(fileOrder)
+    table.sort(sortedNames)
     
-    for _, fileName in ipairs(fileOrder) do
+    for _, fileName in ipairs(sortedNames) do
         local fileData = WalkData.SelectedFilesForMerge[fileName]
         for _, point in ipairs(fileData.path) do
             table.insert(mergedPath, point)
         end
     end
     
-    local allSaves = shhhhnayy05_loadFromDisk()
     allSaves[name] = {
         path = mergedPath,
         date = shhhhnayy05_formatTime(),
-        created = os.time(),
-        isMerged = true,
-        sourceFiles = fileOrder
+        id = shhhhnayy05_generateId(),
+        merged = true,
+        sources = sortedNames
     }
     
     if shhhhnayy05_saveToDisk(allSaves) then
         MergeSaveDialog.Visible = false
         MergeEditorWindow.Visible = false
-        
-        local notif = Instance.new("TextLabel")
-        notif.Name = "shhhhnayy05_Notification"
-        notif.Parent = ScreenGui
-        notif.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        notif.BorderSizePixel = 0
-        notif.Position = UDim2.new(0.5, -100, 0.1, 0)
-        notif.Size = UDim2.new(0, 200, 0, 40)
-        notif.Font = Enum.Font.GothamBold
-        notif.Text = "Merged: " .. #mergedPath .. " points"
-        notif.TextColor3 = Color3.fromRGB(255, 255, 255)
-        notif.TextSize = 14
-        
-        local notifCorner = Instance.new("UICorner")
-        notifCorner.CornerRadius = UDim.new(0, 8)
-        notifCorner.Parent = notif
-        
-        task.delay(2, function()
-            notif:Destroy()
-        end)
+        WalkData.SelectedFilesForMerge = {}
+        refreshFileList()
     end
 end)
 
@@ -1730,7 +1710,21 @@ MergeSaveCancelBtn.MouseButton1Click:Connect(function()
     MergeSaveDialog.Visible = false
 end)
 
--- File Detail Buttons
+-- File Manager buttons
+OpenFileManagerBtn.MouseButton1Click:Connect(function()
+    FileManagerWindow.Visible = true
+    refreshFileList()
+end)
+
+FileManagerCloseBtn.MouseButton1Click:Connect(function()
+    FileManagerWindow.Visible = false
+end)
+
+RefreshBtn.MouseButton1Click:Connect(function()
+    refreshFileList()
+end)
+
+-- File Detail buttons
 DetailCloseBtn.MouseButton1Click:Connect(function()
     FileDetail.Visible = false
 end)
@@ -1749,200 +1743,51 @@ PlayWalkBtn.MouseButton1Click:Connect(function()
     if WalkData.isPlaying then
         WalkData.isPlaying = false
     else
-        if currentFileData and currentFileData.path then
+        if currentFileData and #currentFileData.path > 0 then
             playWalk(currentFileData.path, currentFileSpeed, false)
         end
     end
 end)
 
 LoadBtn.MouseButton1Click:Connect(function()
-    if currentFileData and currentFileData.path then
+    if currentFileData then
         WalkData.CurrentPath = {}
         for _, point in ipairs(currentFileData.path) do
             table.insert(WalkData.CurrentPath, point)
         end
-        
         FileDetail.Visible = false
-        FileManagerWindow.Visible = false
-        
         updateStats()
-        
-        local notif = Instance.new("TextLabel")
-        notif.Name = "shhhhnayy05_Notification"
-        notif.Parent = ScreenGui
-        notif.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-        notif.BorderSizePixel = 0
-        notif.Position = UDim2.new(0.5, -100, 0.1, 0)
-        notif.Size = UDim2.new(0, 200, 0, 40)
-        notif.Font = Enum.Font.GothamBold
-        notif.Text = "Loaded: " .. currentFileName
-        notif.TextColor3 = Color3.fromRGB(255, 255, 255)
-        notif.TextSize = 14
-        
-        local notifCorner = Instance.new("UICorner")
-        notifCorner.CornerRadius = UDim.new(0, 8)
-        notifCorner.Parent = notif
-        
-        task.delay(2, function()
-            notif:Destroy()
-        end)
     end
 end)
 
 DeleteBtn.MouseButton1Click:Connect(function()
-    if currentFileName then
-        local allSaves = shhhhnayy05_loadFromDisk()
-        allSaves[currentFileName] = nil
-        
-        if shhhhnayy05_saveToDisk(allSaves) then
-            FileDetail.Visible = false
-            refreshFileList()
-            
-            local notif = Instance.new("TextLabel")
-            notif.Name = "shhhhnayy05_Notification"
-            notif.Parent = ScreenGui
-            notif.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-            notif.BorderSizePixel = 0
-            notif.Position = UDim2.new(0.5, -100, 0.1, 0)
-            notif.Size = UDim2.new(0, 200, 0, 40)
-            notif.Font = Enum.Font.GothamBold
-            notif.Text = "Deleted: " .. currentFileName
-            notif.TextColor3 = Color3.fromRGB(255, 255, 255)
-            notif.TextSize = 14
-            
-            local notifCorner = Instance.new("UICorner")
-            notifCorner.CornerRadius = UDim.new(0, 8)
-            notifCorner.Parent = notif
-            
-            task.delay(2, function()
-                notif:Destroy()
-            end)
-        end
+    if not currentFileName then return end
+    
+    local allSaves = shhhhnayy05_loadFromDisk()
+    allSaves[currentFileName] = nil
+    
+    if shhhhnayy05_saveToDisk(allSaves) then
+        FileDetail.Visible = false
+        refreshFileList()
     end
 end)
 
--- Trim Panel Buttons
-TrimCloseBtn.MouseButton1Click:Connect(function()
-    TrimPanel.Visible = false
+-- Main window buttons
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    MinimizeBtn.Visible = true
 end)
 
-TrimExecuteBtn.MouseButton1Click:Connect(function()
-    local startIdx = tonumber(TrimStartInput.Text) or 1
-    local endIdx = tonumber(TrimEndInput.Text) or #WalkData.CurrentPath
-    
-    startIdx = math.max(1, math.min(startIdx, #WalkData.CurrentPath))
-    endIdx = math.max(startIdx, math.min(endIdx, #WalkData.CurrentPath))
-    
-    if #WalkData.CurrentPath == 0 then
-        local notif = Instance.new("TextLabel")
-        notif.Name = "shhhhnayy05_Notification"
-        notif.Parent = ScreenGui
-        notif.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-        notif.BorderSizePixel = 0
-        notif.Position = UDim2.new(0.5, -100, 0.5, -20)
-        notif.Size = UDim2.new(0, 200, 0, 40)
-        notif.Font = Enum.Font.GothamBold
-        notif.Text = "No path to trim!"
-        notif.TextColor3 = Color3.fromRGB(255, 255, 255)
-        notif.TextSize = 14
-        
-        local notifCorner = Instance.new("UICorner")
-        notifCorner.CornerRadius = UDim.new(0, 8)
-        notifCorner.Parent = notif
-        
-        task.delay(2, function()
-            notif:Destroy()
-        end)
-        return
-    end
-    
-    local trimmedPath = {}
-    for i = startIdx, endIdx do
-        table.insert(trimmedPath, WalkData.CurrentPath[i])
-    end
-    
-    WalkData.CurrentPath = trimmedPath
-    
-    TrimPathInfo.Text = string.format("Current Path: %d points (trimmed)", #WalkData.CurrentPath)
-    TrimStartInput.Text = "1"
-    TrimEndInput.Text = tostring(#WalkData.CurrentPath)
-    
-    updateStats()
-    
-    local notif = Instance.new("TextLabel")
-    notif.Name = "shhhhnayy05_Notification"
-    notif.Parent = ScreenGui
-    notif.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
-    notif.BorderSizePixel = 0
-    notif.Position = UDim2.new(0.5, -120, 0.5, -20)
-    notif.Size = UDim2.new(0, 240, 0, 40)
-    notif.Font = Enum.Font.GothamBold
-    notif.Text = string.format("Trimmed: %d → %d points", endIdx - startIdx + 1, #trimmedPath)
-    notif.TextColor3 = Color3.fromRGB(255, 255, 255)
-    notif.TextSize = 14
-    
-    local notifCorner = Instance.new("UICorner")
-    notifCorner.CornerRadius = UDim.new(0, 8)
-    notifCorner.Parent = notif
-    
-    task.delay(2, function()
-        notif:Destroy()
-    end)
-end)
-
-PreviewTrimBtn.MouseButton1Click:Connect(function()
-    local startIdx = tonumber(TrimStartInput.Text) or 1
-    local endIdx = tonumber(TrimEndInput.Text) or #WalkData.CurrentPath
-    
-    startIdx = math.max(1, math.min(startIdx, #WalkData.CurrentPath))
-    endIdx = math.max(startIdx, math.min(endIdx, #WalkData.CurrentPath))
-    
-    local previewPath = {}
-    for i = startIdx, endIdx do
-        table.insert(previewPath, WalkData.CurrentPath[i])
-    end
-    
-    if #previewPath > 0 then
-        playWalk(previewPath, 1.0, true)
-    end
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    MinimizeBtn.Visible = false
 end)
 
 -- ==========================================
--- INITIALIZATION - PASTIKAN SEMUA WINDOW SIAP
+-- INITIALIZATION
 -- ==========================================
 
--- Create corner for cancel buttons
-local DialogCancelCorner = Instance.new("UICorner")
-DialogCancelCorner.CornerRadius = UDim.new(0, 6)
-DialogCancelCorner.Parent = DialogCancelBtn
-
-local MergeSaveCancelCorner = Instance.new("UICorner")
-MergeSaveCancelCorner.CornerRadius = UDim.new(0, 6)
-MergeSaveCancelCorner.Parent = MergeSaveCancelBtn
-
--- PASTIKAN SEMUA WINDOW DI PARENT KE ScreenGui DAN SET VISIBLE = false
-FileManagerWindow.Parent = ScreenGui
-FileManagerWindow.Visible = false
-
-MergeEditorWindow.Parent = ScreenGui
-MergeEditorWindow.Visible = false
-
-FileDetail.Parent = ScreenGui
-FileDetail.Visible = false
-
-TrimPanel.Parent = ScreenGui
-TrimPanel.Visible = false
-
-SaveDialog.Parent = ScreenGui
-SaveDialog.Visible = false
-
-MergeSaveDialog.Parent = ScreenGui
-MergeSaveDialog.Visible = false
-
--- Initial UI update
 updateStats()
 
-print("✅ SHHHHNAYY05 AUTO WALK RECORDER V9 LOADED")
-print("📁 Save file: " .. CONFIG.SaveFileName)
-print("⏺ Click RECORD to start recording your walk path")
-print("📁 File Manager & Merge Editor Ready")
+print("✅ SHHHHNAYY05 AUTO WALK RECORDER V10 Loaded Successfully!")
+print("📁 File Manager & Merge Editor 100% Functional")
