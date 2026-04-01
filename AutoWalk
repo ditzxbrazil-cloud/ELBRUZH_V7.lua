@@ -1531,6 +1531,7 @@ SaveConfirmBtn.MouseButton1Click:Connect(function()
     SavePrompt.Visible = false
     SaveInput.Text = ""
     StatusText.Text = "💾 SAVED: " .. name
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
     PathData = {}
 end)
 
@@ -1682,6 +1683,7 @@ ApplyTrimBtn.MouseButton1Click:Connect(function()
         formatTime(0), formatTime(duration), formatTime(duration))
     
     StatusText.Text = "✂️ TRIM APPLIED"
+    StatusText.TextColor3 = Color3.fromRGB(255, 200, 100)
 end)
 
 SaveTrimBtn.MouseButton1Click:Connect(function()
@@ -1706,6 +1708,7 @@ SaveTrimBtn.MouseButton1Click:Connect(function()
     
     EditorWindow.Visible = false
     StatusText.Text = "💾 TRIM SAVED: " .. name
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
 end)
 
 -- Walk Joiner
@@ -1838,9 +1841,19 @@ SaveQueueBtn.MouseButton1Click:Connect(function()
     saveToDisk(saves)
     
     StatusText.Text = "💾 QUEUE SAVED: " .. name
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
     JoinerWindow.Visible = false
 end)
 
--- Initialize
+-- Initialize GUI State
+MainFrame.Visible = true
+MinimizedIcon.Visible = false
+SavePrompt.Visible = false
+FileWindow.Visible = false
+FileDetailWindow.Visible = false
+DeleteConfirmWindow.Visible = false
+EditorWindow.Visible = false
+JoinerWindow.Visible = false
+
 StatusText.Text = "Ready to Record"
 print("[[ RECORDER AUTO WALK - SHHHHNAYY05 EDITION ]] Loaded Successfully!")
