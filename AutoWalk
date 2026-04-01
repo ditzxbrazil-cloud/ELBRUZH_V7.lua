@@ -1542,14 +1542,23 @@ TrimBtn.MouseButton1Click:Connect(function()
     TrimPanel.Visible = true
 end)
 
+-- FIXED: Merge Editor Button dengan pengecekan eksplisit
 MergeEditorBtn.MouseButton1Click:Connect(function()
+    print("Merge Editor Button Clicked") -- Debug
+    WalkData.SelectedFilesForMerge = {}
     updateMergeEditorList()
     MergeEditorWindow.Visible = true
+    MergeEditorWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
+    print("Merge Editor Visible: " .. tostring(MergeEditorWindow.Visible))
 end)
 
+-- FIXED: File Manager Button dengan pengecekan eksplisit
 OpenFileManagerBtn.MouseButton1Click:Connect(function()
+    print("File Manager Button Clicked") -- Debug
     refreshFileList()
     FileManagerWindow.Visible = true
+    FileManagerWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
+    print("File Manager Visible: " .. tostring(FileManagerWindow.Visible))
 end)
 
 -- Close & Minimize Buttons
@@ -1563,21 +1572,27 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     MinimizeBtn.Visible = false
 end)
 
--- File Manager Buttons
+-- FIXED: File Manager Close Button
 FileManagerCloseBtn.MouseButton1Click:Connect(function()
+    print("File Manager Close Clicked")
     FileManagerWindow.Visible = false
 end)
 
+-- FIXED: File Manager Refresh Button
 RefreshBtn.MouseButton1Click:Connect(function()
+    print("Refresh Clicked")
     refreshFileList()
 end)
 
--- Merge Editor Buttons
+-- FIXED: Merge Editor Close Button
 MergeEditorCloseBtn.MouseButton1Click:Connect(function()
+    print("Merge Editor Close Clicked")
     MergeEditorWindow.Visible = false
 end)
 
+-- FIXED: Merge Selected Button
 MergeSelectedBtn.MouseButton1Click:Connect(function()
+    print("Merge Selected Clicked")
     local selectedCount = 0
     for _ in pairs(WalkData.SelectedFilesForMerge) do
         selectedCount = selectedCount + 1
@@ -1893,7 +1908,7 @@ PreviewTrimBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- INITIALIZATION
+-- INITIALIZATION - PASTIKAN SEMUA WINDOW SIAP
 -- ==========================================
 
 -- Create corner for cancel buttons
@@ -1905,9 +1920,29 @@ local MergeSaveCancelCorner = Instance.new("UICorner")
 MergeSaveCancelCorner.CornerRadius = UDim.new(0, 6)
 MergeSaveCancelCorner.Parent = MergeSaveCancelBtn
 
+-- PASTIKAN SEMUA WINDOW DI PARENT KE ScreenGui DAN SET VISIBLE = false
+FileManagerWindow.Parent = ScreenGui
+FileManagerWindow.Visible = false
+
+MergeEditorWindow.Parent = ScreenGui
+MergeEditorWindow.Visible = false
+
+FileDetail.Parent = ScreenGui
+FileDetail.Visible = false
+
+TrimPanel.Parent = ScreenGui
+TrimPanel.Visible = false
+
+SaveDialog.Parent = ScreenGui
+SaveDialog.Visible = false
+
+MergeSaveDialog.Parent = ScreenGui
+MergeSaveDialog.Visible = false
+
 -- Initial UI update
 updateStats()
 
 print("✅ SHHHHNAYY05 AUTO WALK RECORDER V9 LOADED")
 print("📁 Save file: " .. CONFIG.SaveFileName)
 print("⏺ Click RECORD to start recording your walk path")
+print("📁 File Manager & Merge Editor Ready")
