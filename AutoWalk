@@ -1,1239 +1,1190 @@
--- ==========================================
--- SHHHHNAYY05 AUTO WALK RECORDER V10
--- ==========================================
--- FULL FIX: File Manager & Merge Editor 100% Functional
+-- [[ RECORDER AUTO WALK - SHHHHNAYY05 EDITION ]] --
+-- Created by: shhhhnayy05
+-- Support: Executor Level 7-8
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
 local LP = Players.LocalPlayer
-local CoreGui = game:GetService("CoreGui")
+local PlayerGui = LP:WaitForChild("PlayerGui")
 
--- === CONFIGURATION ===
-local CONFIG = {
-    SaveFileName = "shhhhnayy05_WalkSaves.json",
-    MinSpeed = 0.1,
-    MaxSpeed = 5.0,
-    SpeedStep = 0.1,
-    DefaultSpeed = 1.0
-}
+-- === DATA VARIABLES === --
+local PathData = {}
+local isRecording = false
+local isPlaying = false
+local currentSpeed = 1
+local speedIncrement = 0.1
+local SAVE_FILE_NAME = "shhhhnayy05_WalkSaves.json"
+local recordStartTime = 0
+local totalDistance = 0
+local lastPosition = nil
 
--- === DATA STORAGE ===
-local WalkData = {
-    CurrentPath = {},
-    isRecording = false,
-    isPlaying = false,
-    SelectedFilesForMerge = {}
-}
-
--- === UTILITY FUNCTIONS ===
-local function shhhhnayy05_generateId()
-    return tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999))
+-- === DATA MANAGEMENT === --
+local function saveToDisk(allSaves)
+    writefile(SAVE_FILE_NAME, HttpService:JSONEncode(allSaves))
 end
 
-local function shhhhnayy05_formatTime()
-    return os.date("%H:%M:%S")
-end
-
-local function shhhhnayy05_saveToDisk(allSaves)
-    local success = pcall(function()
-        writefile(CONFIG.SaveFileName, HttpService:JSONEncode(allSaves))
-    end)
-    return success
-end
-
-local function shhhhnayy05_loadFromDisk()
-    local success, result = pcall(function()
-        if isfile(CONFIG.SaveFileName) then
-            return HttpService:JSONDecode(readfile(CONFIG.SaveFileName))
-        end
-        return {}
-    end)
-    if success then return result end
+local function loadFromDisk()
+    if isfile(SAVE_FILE_NAME) then
+        return HttpService:JSONDecode(readfile(SAVE_FILE_NAME))
+    end
     return {}
 end
 
--- === UI CREATION ===
+-- === MAIN GUI === --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "shhhhnayy05_WalkRecorderV10"
-ScreenGui.Parent = CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Name = "shhhhnayy05_AutoWalk"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
 
--- ==========================================
--- MAIN PANEL (300x400)
--- ==========================================
+-- Main Frame
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "shhhhnayy05_MainFrame"
-MainFrame.Parent = ScreenGui
+MainFrame.Name = "MainPanel"
+MainFrame.Size = UDim2.new(0, 350, 0, 420)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -210)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 300, 0, 400)
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
 
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 8)
-Corner.Parent = MainFrame
+-- Rounded corners
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
 
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(0, 200, 255)
-Stroke.Thickness = 2
-Stroke.Parent = MainFrame
+-- Gradient Background
+local MainGradient = Instance.new("UIGradient")
+MainGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
+})
+MainGradient.Rotation = 45
+MainGradient.Parent = MainFrame
 
 -- Title Bar
 local TitleBar = Instance.new("Frame")
-TitleBar.Name = "shhhhnayy05_TitleBar"
-TitleBar.Parent = MainFrame
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
 TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 TitleBar.BorderSizePixel = 0
-TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = TitleBar
 
 local TitleText = Instance.new("TextLabel")
-TitleText.Name = "shhhhnayy05_TitleText"
-TitleText.Parent = TitleBar
-TitleText.BackgroundTransparency = 1
+TitleText.Size = UDim2.new(1, -80, 1, 0)
 TitleText.Position = UDim2.new(0, 10, 0, 0)
-TitleText.Size = UDim2.new(0.7, 0, 1, 0)
-TitleText.Font = Enum.Font.GothamBold
-TitleText.Text = "🎬 SHHHHNAYY05 REC"
-TitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
+TitleText.Text = "🎬 AUTO WALK - SHHHHNAYY05"
+TitleText.TextColor3 = Color3.fromRGB(0, 255, 255)
 TitleText.TextSize = 14
+TitleText.Font = Enum.Font.GothamBold
+TitleText.BackgroundTransparency = 1
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
 
+-- Minimize Button
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -70, 0, 5)
+MinimizeBtn.Text = "−"
+MinimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+MinimizeBtn.TextSize = 20
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+MinimizeBtn.Parent = TitleBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 6)
+MinCorner.Parent = MinimizeBtn
+
+-- Close Button
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Name = "shhhhnayy05_CloseBtn"
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseBtn.TextSize = 20
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseBtn.Parent = TitleBar
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-CloseBtn.BorderSizePixel = 0
-CloseBtn.Position = UDim2.new(1, -30, 0.5, -10)
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.TextSize = 12
 
 local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 4)
+CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseBtn
 
--- Content Container
-local Content = Instance.new("Frame")
-Content.Name = "shhhhnayy05_Content"
-Content.Parent = MainFrame
-Content.BackgroundTransparency = 1
-Content.Position = UDim2.new(0, 10, 0, 40)
-Content.Size = UDim2.new(1, -20, 1, -50)
-
--- Record Section
-local RecSection = Instance.new("Frame")
-RecSection.Name = "shhhhnayy05_RecSection"
-RecSection.Parent = Content
-RecSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-RecSection.BorderSizePixel = 0
-RecSection.Position = UDim2.new(0, 0, 0, 0)
-RecSection.Size = UDim2.new(1, 0, 0, 85)
-
-local RecSectionCorner = Instance.new("UICorner")
-RecSectionCorner.CornerRadius = UDim.new(0, 6)
-RecSectionCorner.Parent = RecSection
-
-local RecBtn = Instance.new("TextButton")
-RecBtn.Name = "shhhhnayy05_RecBtn"
-RecBtn.Parent = RecSection
-RecBtn.BackgroundColor3 = Color3.fromRGB(50, 0, 0)
-RecBtn.BorderSizePixel = 0
-RecBtn.Position = UDim2.new(0.03, 0, 0.1, 0)
-RecBtn.Size = UDim2.new(0.44, 0, 0.55, 0)
-RecBtn.Font = Enum.Font.GothamBold
-RecBtn.Text = "⏺ RECORD"
-RecBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RecBtn.TextSize = 12
-
-local RecBtnCorner = Instance.new("UICorner")
-RecBtnCorner.CornerRadius = UDim.new(0, 6)
-RecBtnCorner.Parent = RecBtn
-
-local StopBtn = Instance.new("TextButton")
-StopBtn.Name = "shhhhnayy05_StopBtn"
-StopBtn.Parent = RecSection
-StopBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-StopBtn.BorderSizePixel = 0
-StopBtn.Position = UDim2.new(0.53, 0, 0.1, 0)
-StopBtn.Size = UDim2.new(0.44, 0, 0.55, 0)
-StopBtn.Font = Enum.Font.GothamBold
-StopBtn.Text = "⏹ STOP"
-StopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-StopBtn.TextSize = 12
-StopBtn.Visible = false
-
-local StopBtnCorner = Instance.new("UICorner")
-StopBtnCorner.CornerRadius = UDim.new(0, 6)
-StopBtnCorner.Parent = StopBtn
-
-local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Name = "shhhhnayy05_StatsLabel"
-StatsLabel.Parent = RecSection
-StatsLabel.BackgroundTransparency = 1
-StatsLabel.Position = UDim2.new(0, 0, 0.72, 0)
-StatsLabel.Size = UDim2.new(1, 0, 0.28, 0)
-StatsLabel.Font = Enum.Font.Gotham
-StatsLabel.Text = "Points: 0 | Time: 0s"
-StatsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-StatsLabel.TextSize = 11
-
--- Action Buttons
-local SaveBtn = Instance.new("TextButton")
-SaveBtn.Name = "shhhhnayy05_SaveBtn"
-SaveBtn.Parent = Content
-SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
-SaveBtn.BorderSizePixel = 0
-SaveBtn.Position = UDim2.new(0, 0, 0, 95)
-SaveBtn.Size = UDim2.new(0.48, 0, 0, 38)
-SaveBtn.Font = Enum.Font.GothamBold
-SaveBtn.Text = "💾 SAVE"
-SaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SaveBtn.TextSize = 12
-
-local SaveBtnCorner = Instance.new("UICorner")
-SaveBtnCorner.CornerRadius = UDim.new(0, 6)
-SaveBtnCorner.Parent = SaveBtn
-
-local PreviewBtn = Instance.new("TextButton")
-PreviewBtn.Name = "shhhhnayy05_PreviewBtn"
-PreviewBtn.Parent = Content
-PreviewBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-PreviewBtn.BorderSizePixel = 0
-PreviewBtn.Position = UDim2.new(0.52, 0, 0, 95)
-PreviewBtn.Size = UDim2.new(0.48, 0, 0, 38)
-PreviewBtn.Font = Enum.Font.GothamBold
-PreviewBtn.Text = "👁 PREVIEW"
-PreviewBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PreviewBtn.TextSize = 12
-
-local PreviewBtnCorner = Instance.new("UICorner")
-PreviewBtnCorner.CornerRadius = UDim.new(0, 6)
-PreviewBtnCorner.Parent = PreviewBtn
-
--- Trim Button
-local TrimBtn = Instance.new("TextButton")
-TrimBtn.Name = "shhhhnayy05_TrimBtn"
-TrimBtn.Parent = Content
-TrimBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
-TrimBtn.BorderSizePixel = 0
-TrimBtn.Position = UDim2.new(0, 0, 0, 140)
-TrimBtn.Size = UDim2.new(1, 0, 0, 35)
-TrimBtn.Font = Enum.Font.GothamBold
-TrimBtn.Text = "✂️ OPEN TRIM EDITOR"
-TrimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrimBtn.TextSize = 11
-
-local TrimBtnCorner = Instance.new("UICorner")
-TrimBtnCorner.CornerRadius = UDim.new(0, 6)
-TrimBtnCorner.Parent = TrimBtn
-
--- MERGE EDITOR BUTTON
-local MergeEditorBtn = Instance.new("TextButton")
-MergeEditorBtn.Name = "shhhhnayy05_MergeEditorBtn"
-MergeEditorBtn.Parent = Content
-MergeEditorBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
-MergeEditorBtn.BorderSizePixel = 0
-MergeEditorBtn.Position = UDim2.new(0, 0, 0, 182)
-MergeEditorBtn.Size = UDim2.new(1, 0, 0, 35)
-MergeEditorBtn.Font = Enum.Font.GothamBold
-MergeEditorBtn.Text = "🔗 OPEN MERGE EDITOR"
-MergeEditorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MergeEditorBtn.TextSize = 11
-
-local MergeEditorCorner = Instance.new("UICorner")
-MergeEditorCorner.CornerRadius = UDim.new(0, 6)
-MergeEditorCorner.Parent = MergeEditorBtn
-
--- Open File Manager Button
-local OpenFileManagerBtn = Instance.new("TextButton")
-OpenFileManagerBtn.Name = "shhhhnayy05_OpenFileManagerBtn"
-OpenFileManagerBtn.Parent = Content
-OpenFileManagerBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
-OpenFileManagerBtn.BorderSizePixel = 0
-OpenFileManagerBtn.Position = UDim2.new(0, 0, 0, 224)
-OpenFileManagerBtn.Size = UDim2.new(1, 0, 0, 35)
-OpenFileManagerBtn.Font = Enum.Font.GothamBold
-OpenFileManagerBtn.Text = "📁 OPEN FILE MANAGER"
-OpenFileManagerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenFileManagerBtn.TextSize = 12
-
-local OpenFileManagerCorner = Instance.new("UICorner")
-OpenFileManagerCorner.CornerRadius = UDim.new(0, 6)
-OpenFileManagerCorner.Parent = OpenFileManagerBtn
-
--- ==========================================
--- FILE MANAGER WINDOW - FULL FIX
--- ==========================================
-local FileManagerWindow = Instance.new("Frame")
-FileManagerWindow.Name = "shhhhnayy05_FileManager"
-FileManagerWindow.Parent = ScreenGui
-FileManagerWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-FileManagerWindow.BorderSizePixel = 0
-FileManagerWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
-FileManagerWindow.Size = UDim2.new(0, 300, 0, 400)
-FileManagerWindow.ZIndex = 100
-FileManagerWindow.Visible = false
-FileManagerWindow.Active = true
-FileManagerWindow.Draggable = true
-
-local FileManagerCorner = Instance.new("UICorner")
-FileManagerCorner.CornerRadius = UDim.new(0, 10)
-FileManagerCorner.Parent = FileManagerWindow
-
-local FileManagerStroke = Instance.new("UIStroke")
-FileManagerStroke.Color = Color3.fromRGB(0, 150, 255)
-FileManagerStroke.Thickness = 2
-FileManagerStroke.Parent = FileManagerWindow
-
--- File Manager Title Bar
-local FileManagerTitleBar = Instance.new("Frame")
-FileManagerTitleBar.Name = "shhhhnayy05_FileManagerTitleBar"
-FileManagerTitleBar.Parent = FileManagerWindow
-FileManagerTitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-FileManagerTitleBar.BorderSizePixel = 0
-FileManagerTitleBar.Size = UDim2.new(1, 0, 0, 40)
-FileManagerTitleBar.ZIndex = 101
-
-local FileManagerTitleText = Instance.new("TextLabel")
-FileManagerTitleText.Name = "shhhhnayy05_FileManagerTitleText"
-FileManagerTitleText.Parent = FileManagerTitleBar
-FileManagerTitleText.BackgroundTransparency = 1
-FileManagerTitleText.Size = UDim2.new(1, 0, 1, 0)
-FileManagerTitleText.Font = Enum.Font.GothamBold
-FileManagerTitleText.Text = "📁 SAVED FILES"
-FileManagerTitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
-FileManagerTitleText.TextSize = 14
-FileManagerTitleText.ZIndex = 102
-
-local FileManagerCloseBtn = Instance.new("TextButton")
-FileManagerCloseBtn.Name = "shhhhnayy05_FileManagerCloseBtn"
-FileManagerCloseBtn.Parent = FileManagerTitleBar
-FileManagerCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-FileManagerCloseBtn.BorderSizePixel = 0
-FileManagerCloseBtn.Position = UDim2.new(1, -35, 0.5, -12)
-FileManagerCloseBtn.Size = UDim2.new(0, 24, 0, 24)
-FileManagerCloseBtn.Font = Enum.Font.GothamBold
-FileManagerCloseBtn.Text = "×"
-FileManagerCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-FileManagerCloseBtn.TextSize = 18
-FileManagerCloseBtn.ZIndex = 102
-
-local FileManagerCloseCorner = Instance.new("UICorner")
-FileManagerCloseCorner.CornerRadius = UDim.new(0, 6)
-FileManagerCloseCorner.Parent = FileManagerCloseBtn
-
--- Refresh Button
-local RefreshBtn = Instance.new("TextButton")
-RefreshBtn.Name = "shhhhnayy05_RefreshBtn"
-RefreshBtn.Parent = FileManagerTitleBar
-RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-RefreshBtn.BorderSizePixel = 0
-RefreshBtn.Position = UDim2.new(1, -65, 0.5, -12)
-RefreshBtn.Size = UDim2.new(0, 24, 0, 24)
-RefreshBtn.Font = Enum.Font.GothamBold
-RefreshBtn.Text = "↻"
-RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RefreshBtn.TextSize = 16
-RefreshBtn.ZIndex = 102
-
-local RefreshCorner = Instance.new("UICorner")
-RefreshCorner.CornerRadius = UDim.new(0, 6)
-RefreshCorner.Parent = RefreshBtn
-
--- File Scroll Frame
-local FileScroll = Instance.new("ScrollingFrame")
-FileScroll.Name = "shhhhnayy05_FileScroll"
-FileScroll.Parent = FileManagerWindow
-FileScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-FileScroll.BorderSizePixel = 0
-FileScroll.Position = UDim2.new(0, 10, 0, 50)
-FileScroll.Size = UDim2.new(1, -20, 1, -60)
-FileScroll.ScrollBarThickness = 8
-FileScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
-FileScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-FileScroll.ZIndex = 101
-
-local FileScrollCorner = Instance.new("UICorner")
-FileScrollCorner.CornerRadius = UDim.new(0, 8)
-FileScrollCorner.Parent = FileScroll
-
--- ==========================================
--- MERGE EDITOR WINDOW - FULL FIX
--- ==========================================
-local MergeEditorWindow = Instance.new("Frame")
-MergeEditorWindow.Name = "shhhhnayy05_MergeEditor"
-MergeEditorWindow.Parent = ScreenGui
-MergeEditorWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MergeEditorWindow.BorderSizePixel = 0
-MergeEditorWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
-MergeEditorWindow.Size = UDim2.new(0, 300, 0, 400)
-MergeEditorWindow.ZIndex = 110
-MergeEditorWindow.Visible = false
-MergeEditorWindow.Active = true
-MergeEditorWindow.Draggable = true
-
-local MergeEditorCorner = Instance.new("UICorner")
-MergeEditorCorner.CornerRadius = UDim.new(0, 10)
-MergeEditorCorner.Parent = MergeEditorWindow
-
-local MergeEditorStroke = Instance.new("UIStroke")
-MergeEditorStroke.Color = Color3.fromRGB(150, 50, 200)
-MergeEditorStroke.Thickness = 2
-MergeEditorStroke.Parent = MergeEditorWindow
-
--- Merge Editor Title Bar
-local MergeEditorTitleBar = Instance.new("Frame")
-MergeEditorTitleBar.Name = "shhhhnayy05_MergeEditorTitleBar"
-MergeEditorTitleBar.Parent = MergeEditorWindow
-MergeEditorTitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-MergeEditorTitleBar.BorderSizePixel = 0
-MergeEditorTitleBar.Size = UDim2.new(1, 0, 0, 40)
-MergeEditorTitleBar.ZIndex = 111
-
-local MergeEditorTitleText = Instance.new("TextLabel")
-MergeEditorTitleText.Name = "shhhhnayy05_MergeEditorTitleText"
-MergeEditorTitleText.Parent = MergeEditorTitleBar
-MergeEditorTitleText.BackgroundTransparency = 1
-MergeEditorTitleText.Size = UDim2.new(1, 0, 1, 0)
-MergeEditorTitleText.Font = Enum.Font.GothamBold
-MergeEditorTitleText.Text = "🔗 MERGE EDITOR"
-MergeEditorTitleText.TextColor3 = Color3.fromRGB(200, 100, 255)
-MergeEditorTitleText.TextSize = 14
-MergeEditorTitleText.ZIndex = 112
-
-local MergeEditorCloseBtn = Instance.new("TextButton")
-MergeEditorCloseBtn.Name = "shhhhnayy05_MergeEditorCloseBtn"
-MergeEditorCloseBtn.Parent = MergeEditorTitleBar
-MergeEditorCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-MergeEditorCloseBtn.BorderSizePixel = 0
-MergeEditorCloseBtn.Position = UDim2.new(1, -35, 0.5, -12)
-MergeEditorCloseBtn.Size = UDim2.new(0, 24, 0, 24)
-MergeEditorCloseBtn.Font = Enum.Font.GothamBold
-MergeEditorCloseBtn.Text = "×"
-MergeEditorCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MergeEditorCloseBtn.TextSize = 18
-MergeEditorCloseBtn.ZIndex = 112
-
-local MergeEditorCloseCorner = Instance.new("UICorner")
-MergeEditorCloseCorner.CornerRadius = UDim.new(0, 6)
-MergeEditorCloseCorner.Parent = MergeEditorCloseBtn
-
--- Info Label
-local MergeInfoLabel = Instance.new("TextLabel")
-MergeInfoLabel.Name = "shhhhnayy05_MergeInfoLabel"
-MergeInfoLabel.Parent = MergeEditorWindow
-MergeInfoLabel.BackgroundTransparency = 1
-MergeInfoLabel.Position = UDim2.new(0, 10, 0, 45)
-MergeInfoLabel.Size = UDim2.new(1, -20, 0, 25)
-MergeInfoLabel.Font = Enum.Font.Gotham
-MergeInfoLabel.Text = "Click checkbox to select files to merge"
-MergeInfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-MergeInfoLabel.TextSize = 11
-MergeInfoLabel.ZIndex = 111
-
--- Files List Scroll Frame
-local MergeFilesScroll = Instance.new("ScrollingFrame")
-MergeFilesScroll.Name = "shhhhnayy05_MergeFilesScroll"
-MergeFilesScroll.Parent = MergeEditorWindow
-MergeFilesScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-MergeFilesScroll.BorderSizePixel = 0
-MergeFilesScroll.Position = UDim2.new(0, 10, 0, 75)
-MergeFilesScroll.Size = UDim2.new(1, -20, 0, 250)
-MergeFilesScroll.ScrollBarThickness = 6
-MergeFilesScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 100, 255)
-MergeFilesScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-MergeFilesScroll.ZIndex = 111
-
-local MergeFilesScrollCorner = Instance.new("UICorner")
-MergeFilesScrollCorner.CornerRadius = UDim.new(0, 8)
-MergeFilesScrollCorner.Parent = MergeFilesScroll
-
--- Selected Count Label
-local SelectedCountLabel = Instance.new("TextLabel")
-SelectedCountLabel.Name = "shhhhnayy05_SelectedCountLabel"
-SelectedCountLabel.Parent = MergeEditorWindow
-SelectedCountLabel.BackgroundTransparency = 1
-SelectedCountLabel.Position = UDim2.new(0, 10, 0, 330)
-SelectedCountLabel.Size = UDim2.new(1, -20, 0, 20)
-SelectedCountLabel.Font = Enum.Font.GothamBold
-SelectedCountLabel.Text = "Selected: 0 files"
-SelectedCountLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
-SelectedCountLabel.TextSize = 12
-SelectedCountLabel.ZIndex = 111
-
--- Merge Selected Button
-local MergeSelectedBtn = Instance.new("TextButton")
-MergeSelectedBtn.Name = "shhhhnayy05_MergeSelectedBtn"
-MergeSelectedBtn.Parent = MergeEditorWindow
-MergeSelectedBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-MergeSelectedBtn.BorderSizePixel = 0
-MergeSelectedBtn.Position = UDim2.new(0, 10, 0, 355)
-MergeSelectedBtn.Size = UDim2.new(1, -20, 0, 35)
-MergeSelectedBtn.Font = Enum.Font.GothamBold
-MergeSelectedBtn.Text = "🔗 MERGE SELECTED"
-MergeSelectedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MergeSelectedBtn.TextSize = 12
-MergeSelectedBtn.ZIndex = 111
-
-local MergeSelectedCorner = Instance.new("UICorner")
-MergeSelectedCorner.CornerRadius = UDim.new(0, 6)
-MergeSelectedCorner.Parent = MergeSelectedBtn
-
--- ==========================================
--- SAVE DIALOG
--- ==========================================
-local SaveDialog = Instance.new("Frame")
-SaveDialog.Name = "shhhhnayy05_SaveDialog"
-SaveDialog.Parent = ScreenGui
-SaveDialog.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-SaveDialog.BorderSizePixel = 0
-SaveDialog.Position = UDim2.new(0.5, -150, 0.5, -75)
-SaveDialog.Size = UDim2.new(0, 300, 0, 150)
-SaveDialog.ZIndex = 200
-SaveDialog.Visible = false
-SaveDialog.Active = true
-
-local DialogCorner = Instance.new("UICorner")
-DialogCorner.CornerRadius = UDim.new(0, 10)
-DialogCorner.Parent = SaveDialog
-
-local DialogStroke = Instance.new("UIStroke")
-DialogStroke.Color = Color3.fromRGB(0, 200, 255)
-DialogStroke.Thickness = 2
-DialogStroke.Parent = SaveDialog
-
-local DialogTitle = Instance.new("TextLabel")
-DialogTitle.Name = "shhhhnayy05_DialogTitle"
-DialogTitle.Parent = SaveDialog
-DialogTitle.BackgroundTransparency = 1
-DialogTitle.Position = UDim2.new(0, 0, 0, 10)
-DialogTitle.Size = UDim2.new(1, 0, 0, 25)
-DialogTitle.Font = Enum.Font.GothamBold
-DialogTitle.Text = "💾 SAVE WALK"
-DialogTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-DialogTitle.TextSize = 16
-DialogTitle.ZIndex = 201
-
-local DialogInput = Instance.new("TextBox")
-DialogInput.Name = "shhhhnayy05_DialogInput"
-DialogInput.Parent = SaveDialog
-DialogInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-DialogInput.BorderSizePixel = 0
-DialogInput.Position = UDim2.new(0.1, 0, 0.35, 0)
-DialogInput.Size = UDim2.new(0.8, 0, 0, 35)
-DialogInput.Font = Enum.Font.Gotham
-DialogInput.PlaceholderText = "Enter walk name..."
-DialogInput.Text = ""
-DialogInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-DialogInput.TextSize = 14
-DialogInput.ZIndex = 201
-
-local DialogInputCorner = Instance.new("UICorner")
-DialogInputCorner.CornerRadius = UDim.new(0, 6)
-DialogInputCorner.Parent = DialogInput
-
-local DialogSaveBtn = Instance.new("TextButton")
-DialogSaveBtn.Name = "shhhhnayy05_DialogSaveBtn"
-DialogSaveBtn.Parent = SaveDialog
-DialogSaveBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-DialogSaveBtn.BorderSizePixel = 0
-DialogSaveBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
-DialogSaveBtn.Size = UDim2.new(0.35, 0, 0, 35)
-DialogSaveBtn.Font = Enum.Font.GothamBold
-DialogSaveBtn.Text = "SAVE"
-DialogSaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DialogSaveBtn.TextSize = 14
-DialogSaveBtn.ZIndex = 201
-
-local DialogSaveCorner = Instance.new("UICorner")
-DialogSaveCorner.CornerRadius = UDim.new(0, 6)
-DialogSaveCorner.Parent = DialogSaveBtn
-
-local DialogCancelBtn = Instance.new("TextButton")
-DialogCancelBtn.Name = "shhhhnayy05_DialogCancelBtn"
-DialogCancelBtn.Parent = SaveDialog
-DialogCancelBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-DialogCancelBtn.BorderSizePixel = 0
-DialogCancelBtn.Position = UDim2.new(0.55, 0, 0.65, 0)
-DialogCancelBtn.Size = UDim2.new(0.35, 0, 0, 35)
-DialogCancelBtn.Font = Enum.Font.GothamBold
-DialogCancelBtn.Text = "CANCEL"
-DialogCancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DialogCancelBtn.TextSize = 14
-DialogCancelBtn.ZIndex = 201
-
--- ==========================================
--- MERGE SAVE DIALOG
--- ==========================================
-local MergeSaveDialog = Instance.new("Frame")
-MergeSaveDialog.Name = "shhhhnayy05_MergeSaveDialog"
-MergeSaveDialog.Parent = ScreenGui
-MergeSaveDialog.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-MergeSaveDialog.BorderSizePixel = 0
-MergeSaveDialog.Position = UDim2.new(0.5, -150, 0.5, -75)
-MergeSaveDialog.Size = UDim2.new(0, 300, 0, 150)
-MergeSaveDialog.ZIndex = 250
-MergeSaveDialog.Visible = false
-MergeSaveDialog.Active = true
-
-local MergeSaveCorner = Instance.new("UICorner")
-MergeSaveCorner.CornerRadius = UDim.new(0, 10)
-MergeSaveCorner.Parent = MergeSaveDialog
-
-local MergeSaveStroke = Instance.new("UIStroke")
-MergeSaveStroke.Color = Color3.fromRGB(150, 50, 200)
-MergeSaveStroke.Thickness = 2
-MergeSaveStroke.Parent = MergeSaveDialog
-
-local MergeSaveTitle = Instance.new("TextLabel")
-MergeSaveTitle.Name = "shhhhnayy05_MergeSaveTitle"
-MergeSaveTitle.Parent = MergeSaveDialog
-MergeSaveTitle.BackgroundTransparency = 1
-MergeSaveTitle.Position = UDim2.new(0, 0, 0, 10)
-MergeSaveTitle.Size = UDim2.new(1, 0, 0, 25)
-MergeSaveTitle.Font = Enum.Font.GothamBold
-MergeSaveTitle.Text = "💾 SAVE MERGED WALK"
-MergeSaveTitle.TextColor3 = Color3.fromRGB(200, 100, 255)
-MergeSaveTitle.TextSize = 16
-MergeSaveTitle.ZIndex = 251
-
-local MergeSaveInput = Instance.new("TextBox")
-MergeSaveInput.Name = "shhhhnayy05_MergeSaveInput"
-MergeSaveInput.Parent = MergeSaveDialog
-MergeSaveInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-MergeSaveInput.BorderSizePixel = 0
-MergeSaveInput.Position = UDim2.new(0.1, 0, 0.35, 0)
-MergeSaveInput.Size = UDim2.new(0.8, 0, 0, 35)
-MergeSaveInput.Font = Enum.Font.Gotham
-MergeSaveInput.PlaceholderText = "Enter merged walk name..."
-MergeSaveInput.Text = ""
-MergeSaveInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-MergeSaveInput.TextSize = 14
-MergeSaveInput.ZIndex = 251
-
-local MergeSaveInputCorner = Instance.new("UICorner")
-MergeSaveInputCorner.CornerRadius = UDim.new(0, 6)
-MergeSaveInputCorner.Parent = MergeSaveInput
-
-local MergeSaveConfirmBtn = Instance.new("TextButton")
-MergeSaveConfirmBtn.Name = "shhhhnayy05_MergeSaveConfirmBtn"
-MergeSaveConfirmBtn.Parent = MergeSaveDialog
-MergeSaveConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-MergeSaveConfirmBtn.BorderSizePixel = 0
-MergeSaveConfirmBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
-MergeSaveConfirmBtn.Size = UDim2.new(0.35, 0, 0, 35)
-MergeSaveConfirmBtn.Font = Enum.Font.GothamBold
-MergeSaveConfirmBtn.Text = "SAVE"
-MergeSaveConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MergeSaveConfirmBtn.TextSize = 14
-MergeSaveConfirmBtn.ZIndex = 251
-
-local MergeSaveConfirmCorner = Instance.new("UICorner")
-MergeSaveConfirmCorner.CornerRadius = UDim.new(0, 6)
-MergeSaveConfirmCorner.Parent = MergeSaveConfirmBtn
-
-local MergeSaveCancelBtn = Instance.new("TextButton")
-MergeSaveCancelBtn.Name = "shhhhnayy05_MergeSaveCancelBtn"
-MergeSaveCancelBtn.Parent = MergeSaveDialog
-MergeSaveCancelBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-MergeSaveCancelBtn.BorderSizePixel = 0
-MergeSaveCancelBtn.Position = UDim2.new(0.55, 0, 0.65, 0)
-MergeSaveCancelBtn.Size = UDim2.new(0.35, 0, 0, 35)
-MergeSaveCancelBtn.Font = Enum.Font.GothamBold
-MergeSaveCancelBtn.Text = "CANCEL"
-MergeSaveCancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MergeSaveCancelBtn.TextSize = 14
-MergeSaveCancelBtn.ZIndex = 251
-
--- ==========================================
--- FILE DETAIL WINDOW (300x400)
--- ==========================================
-local FileDetail = Instance.new("Frame")
-FileDetail.Name = "shhhhnayy05_FileDetail"
-FileDetail.Parent = ScreenGui
-FileDetail.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-FileDetail.BorderSizePixel = 0
-FileDetail.Position = UDim2.new(0.5, -150, 0.5, -200)
-FileDetail.Size = UDim2.new(0, 300, 0, 400)
-FileDetail.ZIndex = 150
-FileDetail.Visible = false
-FileDetail.Active = true
-FileDetail.Draggable = true
-
-local DetailCorner = Instance.new("UICorner")
-DetailCorner.CornerRadius = UDim.new(0, 10)
-DetailCorner.Parent = FileDetail
-
-local DetailStroke = Instance.new("UIStroke")
-DetailStroke.Color = Color3.fromRGB(0, 200, 255)
-DetailStroke.Thickness = 2
-DetailStroke.Parent = FileDetail
-
-local DetailTitleBar = Instance.new("Frame")
-DetailTitleBar.Name = "shhhhnayy05_DetailTitleBar"
-DetailTitleBar.Parent = FileDetail
-DetailTitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-DetailTitleBar.BorderSizePixel = 0
-DetailTitleBar.Size = UDim2.new(1, 0, 0, 40)
-DetailTitleBar.ZIndex = 151
-
-local DetailTitleText = Instance.new("TextLabel")
-DetailTitleText.Name = "shhhhnayy05_DetailTitleText"
-DetailTitleText.Parent = DetailTitleBar
-DetailTitleText.BackgroundTransparency = 1
-DetailTitleText.Size = UDim2.new(1, 0, 1, 0)
-DetailTitleText.Font = Enum.Font.GothamBold
-DetailTitleText.Text = "FILE DETAILS"
-DetailTitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
-DetailTitleText.TextSize = 14
-DetailTitleText.ZIndex = 152
-
-local DetailCloseBtn = Instance.new("TextButton")
-DetailCloseBtn.Name = "shhhhnayy05_DetailCloseBtn"
-DetailCloseBtn.Parent = DetailTitleBar
-DetailCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-DetailCloseBtn.BorderSizePixel = 0
-DetailCloseBtn.Position = UDim2.new(1, -35, 0.5, -12)
-DetailCloseBtn.Size = UDim2.new(0, 24, 0, 24)
-DetailCloseBtn.Font = Enum.Font.GothamBold
-DetailCloseBtn.Text = "×"
-DetailCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DetailCloseBtn.TextSize = 18
-DetailCloseBtn.ZIndex = 152
-
-local DetailCloseCorner = Instance.new("UICorner")
-DetailCloseCorner.CornerRadius = UDim.new(0, 6)
-DetailCloseCorner.Parent = DetailCloseBtn
-
--- Detail Content Scrollable
-local DetailScroll = Instance.new("ScrollingFrame")
-DetailScroll.Name = "shhhhnayy05_DetailScroll"
-DetailScroll.Parent = FileDetail
-DetailScroll.BackgroundTransparency = 1
-DetailScroll.BorderSizePixel = 0
-DetailScroll.Position = UDim2.new(0, 10, 0, 50)
-DetailScroll.Size = UDim2.new(1, -20, 1, -60)
-DetailScroll.ScrollBarThickness = 6
-DetailScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
-DetailScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
-DetailScroll.ZIndex = 151
-
--- File Info
-local DetailName = Instance.new("TextLabel")
-DetailName.Name = "shhhhnayy05_DetailName"
-DetailName.Parent = DetailScroll
-DetailName.BackgroundTransparency = 1
-DetailName.Position = UDim2.new(0, 5, 0, 0)
-DetailName.Size = UDim2.new(1, -10, 0, 25)
-DetailName.Font = Enum.Font.GothamBold
-DetailName.Text = "Name: -"
-DetailName.TextColor3 = Color3.fromRGB(255, 255, 255)
-DetailName.TextSize = 14
-DetailName.TextXAlignment = Enum.TextXAlignment.Left
-DetailName.ZIndex = 152
-
-local DetailPoints = Instance.new("TextLabel")
-DetailPoints.Name = "shhhhnayy05_DetailPoints"
-DetailPoints.Parent = DetailScroll
-DetailPoints.BackgroundTransparency = 1
-DetailPoints.Position = UDim2.new(0, 5, 0, 28)
-DetailPoints.Size = UDim2.new(1, -10, 0, 20)
-DetailPoints.Font = Enum.Font.Gotham
-DetailPoints.Text = "Points: 0"
-DetailPoints.TextColor3 = Color3.fromRGB(200, 200, 200)
-DetailPoints.TextSize = 12
-DetailPoints.TextXAlignment = Enum.TextXAlignment.Left
-DetailPoints.ZIndex = 152
-
-local DetailDate = Instance.new("TextLabel")
-DetailDate.Name = "shhhhnayy05_DetailDate"
-DetailDate.Parent = DetailScroll
-DetailDate.BackgroundTransparency = 1
-DetailDate.Position = UDim2.new(0, 5, 0, 50)
-DetailDate.Size = UDim2.new(1, -10, 0, 20)
-DetailDate.Font = Enum.Font.Gotham
-DetailDate.Text = "Saved: -"
-DetailDate.TextColor3 = Color3.fromRGB(150, 150, 150)
-DetailDate.TextSize = 11
-DetailDate.TextXAlignment = Enum.TextXAlignment.Left
-DetailDate.ZIndex = 152
-
--- SPEED CONTROL SECTION
+-- Timer Display (Center Top)
+local TimerFrame = Instance.new("Frame")
+TimerFrame.Size = UDim2.new(0, 120, 0, 30)
+TimerFrame.Position = UDim2.new(0.5, -60, 0, 50)
+TimerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+TimerFrame.BorderSizePixel = 0
+TimerFrame.Parent = MainFrame
+
+local TimerCorner = Instance.new("UICorner")
+TimerCorner.CornerRadius = UDim.new(0, 6)
+TimerCorner.Parent = TimerFrame
+
+local TimerLabel = Instance.new("TextLabel")
+TimerLabel.Size = UDim2.new(1, 0, 1, 0)
+TimerLabel.Text = "00:00"
+TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+TimerLabel.TextSize = 16
+TimerLabel.Font = Enum.Font.GothamBold
+TimerLabel.BackgroundTransparency = 1
+TimerLabel.Parent = TimerFrame
+
+-- Content Frame
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -20, 1, -100)
+ContentFrame.Position = UDim2.new(0, 10, 0, 90)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+-- Speed Control Section
 local SpeedSection = Instance.new("Frame")
-SpeedSection.Name = "shhhhnayy05_SpeedSection"
-SpeedSection.Parent = DetailScroll
-SpeedSection.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+SpeedSection.Size = UDim2.new(1, 0, 0, 80)
+SpeedSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 SpeedSection.BorderSizePixel = 0
-SpeedSection.Position = UDim2.new(0, 5, 0, 80)
-SpeedSection.Size = UDim2.new(1, -10, 0, 60)
-SpeedSection.ZIndex = 152
+SpeedSection.Parent = ContentFrame
 
-local SpeedSectionCorner = Instance.new("UICorner")
-SpeedSectionCorner.CornerRadius = UDim.new(0, 8)
-SpeedSectionCorner.Parent = SpeedSection
+local SpeedCorner = Instance.new("UICorner")
+SpeedCorner.CornerRadius = UDim.new(0, 8)
+SpeedCorner.Parent = SpeedSection
 
 local SpeedTitle = Instance.new("TextLabel")
-SpeedTitle.Name = "shhhhnayy05_SpeedTitle"
-SpeedTitle.Parent = SpeedSection
-SpeedTitle.BackgroundTransparency = 1
-SpeedTitle.Position = UDim2.new(0, 0, 0, 5)
-SpeedTitle.Size = UDim2.new(1, 0, 0, 18)
-SpeedTitle.Font = Enum.Font.GothamBold
-SpeedTitle.Text = "⚡ WALK SPEED"
+SpeedTitle.Size = UDim2.new(1, 0, 0, 25)
+SpeedTitle.Text = "⚡ SPEED CONTROL"
 SpeedTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
 SpeedTitle.TextSize = 12
-SpeedTitle.ZIndex = 153
+SpeedTitle.Font = Enum.Font.GothamBold
+SpeedTitle.BackgroundTransparency = 1
+SpeedTitle.Parent = SpeedSection
 
--- Speed Control Container (Centered)
-local SpeedControlContainer = Instance.new("Frame")
-SpeedControlContainer.Name = "shhhhnayy05_SpeedControlContainer"
-SpeedControlContainer.Parent = SpeedSection
-SpeedControlContainer.BackgroundTransparency = 1
-SpeedControlContainer.Position = UDim2.new(0.5, -75, 0, 28)
-SpeedControlContainer.Size = UDim2.new(0, 150, 0, 30)
-SpeedControlContainer.ZIndex = 153
-
--- Minus Button
-local SpeedMinus = Instance.new("TextButton")
-SpeedMinus.Name = "shhhhnayy05_SpeedMinus"
-SpeedMinus.Parent = SpeedControlContainer
-SpeedMinus.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-SpeedMinus.BorderSizePixel = 0
-SpeedMinus.Position = UDim2.new(0, 0, 0, 0)
-SpeedMinus.Size = UDim2.new(0, 40, 1, 0)
-SpeedMinus.Font = Enum.Font.GothamBold
-SpeedMinus.Text = "-"
-SpeedMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedMinus.TextSize = 20
-SpeedMinus.ZIndex = 154
-
-local SpeedMinusCorner = Instance.new("UICorner")
-SpeedMinusCorner.CornerRadius = UDim.new(0, 6)
-SpeedMinusCorner.Parent = SpeedMinus
-
--- Speed Display (Tengah)
 local SpeedDisplay = Instance.new("TextLabel")
-SpeedDisplay.Name = "shhhhnayy05_SpeedDisplay"
-SpeedDisplay.Parent = SpeedControlContainer
-SpeedDisplay.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-SpeedDisplay.BorderSizePixel = 0
-SpeedDisplay.Position = UDim2.new(0.5, -30, 0, 0)
-SpeedDisplay.Size = UDim2.new(0, 60, 1, 0)
-SpeedDisplay.Font = Enum.Font.GothamBold
-SpeedDisplay.Text = "1.0"
-SpeedDisplay.TextColor3 = Color3.fromRGB(0, 200, 255)
+SpeedDisplay.Size = UDim2.new(0, 80, 0, 30)
+SpeedDisplay.Position = UDim2.new(0.5, -40, 0, 30)
+SpeedDisplay.Text = "1.0x"
+SpeedDisplay.TextColor3 = Color3.fromRGB(0, 255, 255)
 SpeedDisplay.TextSize = 18
-SpeedDisplay.ZIndex = 154
+SpeedDisplay.Font = Enum.Font.GothamBold
+SpeedDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+SpeedDisplay.Parent = SpeedSection
 
 local SpeedDisplayCorner = Instance.new("UICorner")
 SpeedDisplayCorner.CornerRadius = UDim.new(0, 6)
 SpeedDisplayCorner.Parent = SpeedDisplay
 
--- Plus Button
-local SpeedPlus = Instance.new("TextButton")
-SpeedPlus.Name = "shhhhnayy05_SpeedPlus"
-SpeedPlus.Parent = SpeedControlContainer
-SpeedPlus.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-SpeedPlus.BorderSizePixel = 0
-SpeedPlus.Position = UDim2.new(1, -40, 0, 0)
-SpeedPlus.Size = UDim2.new(0, 40, 1, 0)
-SpeedPlus.Font = Enum.Font.GothamBold
-SpeedPlus.Text = "+"
-SpeedPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedPlus.TextSize = 20
-SpeedPlus.ZIndex = 154
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Size = UDim2.new(0, 40, 0, 30)
+MinusBtn.Position = UDim2.new(0.15, 0, 0, 30)
+MinusBtn.Text = "-"
+MinusBtn.TextColor3 = Color3.new(1, 1, 1)
+MinusBtn.TextSize = 20
+MinusBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+MinusBtn.Parent = SpeedSection
 
-local SpeedPlusCorner = Instance.new("UICorner")
-SpeedPlusCorner.CornerRadius = UDim.new(0, 6)
-SpeedPlusCorner.Parent = SpeedPlus
+local MinusCorner = Instance.new("UICorner")
+MinusCorner.CornerRadius = UDim.new(0, 6)
+MinusCorner.Parent = MinusBtn
 
--- Play Walk Button
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Size = UDim2.new(0, 40, 0, 30)
+PlusBtn.Position = UDim2.new(0.75, 0, 0, 30)
+PlusBtn.Text = "+"
+PlusBtn.TextColor3 = Color3.new(1, 1, 1)
+PlusBtn.TextSize = 20
+PlusBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+PlusBtn.Parent = SpeedSection
+
+local PlusCorner = Instance.new("UICorner")
+PlusCorner.CornerRadius = UDim.new(0, 6)
+PlusCorner.Parent = PlusBtn
+
+-- Action Buttons Section
+local ActionSection = Instance.new("Frame")
+ActionSection.Size = UDim2.new(1, 0, 0, 120)
+ActionSection.Position = UDim2.new(0, 0, 0, 90)
+ActionSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+ActionSection.BorderSizePixel = 0
+ActionSection.Parent = ContentFrame
+
+local ActionCorner = Instance.new("UICorner")
+ActionCorner.CornerRadius = UDim.new(0, 8)
+ActionCorner.Parent = ActionSection
+
+local ActionTitle = Instance.new("TextLabel")
+ActionTitle.Size = UDim2.new(1, 0, 0, 25)
+ActionTitle.Text = "🎮 ACTIONS"
+ActionTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+ActionTitle.TextSize = 12
+ActionTitle.Font = Enum.Font.GothamBold
+ActionTitle.BackgroundTransparency = 1
+ActionTitle.Parent = ActionSection
+
+local SaveBtn = Instance.new("TextButton")
+SaveBtn.Size = UDim2.new(0.48, 0, 0, 35)
+SaveBtn.Position = UDim2.new(0.01, 0, 0, 35)
+SaveBtn.Text = "💾 SAVE WALK"
+SaveBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveBtn.TextSize = 12
+SaveBtn.Font = Enum.Font.GothamBold
+SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+SaveBtn.Parent = ActionSection
+
+local SaveCorner = Instance.new("UICorner")
+SaveCorner.CornerRadius = UDim.new(0, 6)
+SaveCorner.Parent = SaveBtn
+
+local FileManagerBtn = Instance.new("TextButton")
+FileManagerBtn.Size = UDim2.new(0.48, 0, 0, 35)
+FileManagerBtn.Position = UDim2.new(0.51, 0, 0, 35)
+FileManagerBtn.Text = "📁 FILE MANAGER"
+FileManagerBtn.TextColor3 = Color3.new(1, 1, 1)
+FileManagerBtn.TextSize = 12
+FileManagerBtn.Font = Enum.Font.GothamBold
+FileManagerBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+FileManagerBtn.Parent = ActionSection
+
+local FileCorner = Instance.new("UICorner")
+FileCorner.CornerRadius = UDim.new(0, 6)
+FileCorner.Parent = FileManagerBtn
+
+local EditorBtn = Instance.new("TextButton")
+EditorBtn.Size = UDim2.new(0.48, 0, 0, 35)
+EditorBtn.Position = UDim2.new(0.01, 0, 0, 75)
+EditorBtn.Text = "✂️ WALK EDITOR"
+EditorBtn.TextColor3 = Color3.new(1, 1, 1)
+EditorBtn.TextSize = 12
+EditorBtn.Font = Enum.Font.GothamBold
+EditorBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
+EditorBtn.Parent = ActionSection
+
+local EditorCorner = Instance.new("UICorner")
+EditorCorner.CornerRadius = UDim.new(0, 6)
+EditorCorner.Parent = EditorBtn
+
+local JoinerBtn = Instance.new("TextButton")
+JoinerBtn.Size = UDim2.new(0.48, 0, 0, 35)
+JoinerBtn.Position = UDim2.new(0.51, 0, 0, 75)
+JoinerBtn.Text = "🔗 JOIN WALKS"
+JoinerBtn.TextColor3 = Color3.new(1, 1, 1)
+JoinerBtn.TextSize = 12
+JoinerBtn.Font = Enum.Font.GothamBold
+JoinerBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
+JoinerBtn.Parent = ActionSection
+
+local JoinerCorner = Instance.new("UICorner")
+JoinerCorner.CornerRadius = UDim.new(0, 6)
+JoinerCorner.Parent = JoinerBtn
+
+-- Status Section
+local StatusSection = Instance.new("Frame")
+StatusSection.Size = UDim2.new(1, 0, 0, 60)
+StatusSection.Position = UDim2.new(0, 0, 0, 220)
+StatusSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+StatusSection.BorderSizePixel = 0
+StatusSection.Parent = ContentFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 8)
+StatusCorner.Parent = StatusSection
+
+local StatusTitle = Instance.new("TextLabel")
+StatusTitle.Size = UDim2.new(1, 0, 0, 20)
+StatusTitle.Text = "📊 STATUS"
+StatusTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusTitle.TextSize = 12
+StatusTitle.Font = Enum.Font.GothamBold
+StatusTitle.BackgroundTransparency = 1
+StatusTitle.Parent = StatusSection
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(1, 0, 0, 35)
+StatusText.Position = UDim2.new(0, 0, 0, 20)
+StatusText.Text = "Ready to Record"
+StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+StatusText.TextSize = 14
+StatusText.Font = Enum.Font.GothamBold
+StatusText.BackgroundTransparency = 1
+StatusText.Parent = StatusSection
+
+-- === FLOATING ICONS === --
+-- Record Icon (Top Left)
+local RecordIcon = Instance.new("TextButton")
+RecordIcon.Name = "RecordIcon"
+RecordIcon.Size = UDim2.new(0, 50, 0, 50)
+RecordIcon.Position = UDim2.new(0, 10, 0, 10)
+RecordIcon.Text = "⏺"
+RecordIcon.TextColor3 = Color3.new(1, 1, 1)
+RecordIcon.TextSize = 24
+RecordIcon.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+RecordIcon.Parent = ScreenGui
+RecordIcon.Visible = true
+
+local RecIconCorner = Instance.new("UICorner")
+RecIconCorner.CornerRadius = UDim.new(1, 0)
+RecIconCorner.Parent = RecordIcon
+
+-- Minimized Icon (Below Record)
+local MinimizedIcon = Instance.new("TextButton")
+MinimizedIcon.Name = "MinimizedIcon"
+MinimizedIcon.Size = UDim2.new(0, 50, 0, 50)
+MinimizedIcon.Position = UDim2.new(0, 10, 0, 70)
+MinimizedIcon.Text = "🎬"
+MinimizedIcon.TextColor3 = Color3.new(1, 1, 1)
+MinimizedIcon.TextSize = 24
+MinimizedIcon.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+MinimizedIcon.Parent = ScreenGui
+MinimizedIcon.Visible = false
+
+local MinIconCorner = Instance.new("UICorner")
+MinIconCorner.CornerRadius = UDim.new(1, 0)
+MinIconCorner.Parent = MinimizedIcon
+
+-- === SAVE PROMPT WINDOW === --
+local SavePrompt = Instance.new("Frame")
+SavePrompt.Name = "SavePrompt"
+SavePrompt.Size = UDim2.new(0, 300, 0, 180)
+SavePrompt.Position = UDim2.new(0.5, -150, 0.5, -90)
+SavePrompt.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+SavePrompt.BorderSizePixel = 0
+SavePrompt.Visible = false
+SavePrompt.Parent = ScreenGui
+
+local SavePromptCorner = Instance.new("UICorner")
+SavePromptCorner.CornerRadius = UDim.new(0, 12)
+SavePromptCorner.Parent = SavePrompt
+
+local SavePromptTitle = Instance.new("TextLabel")
+SavePromptTitle.Size = UDim2.new(1, 0, 0, 40)
+SavePromptTitle.Text = "💾 SAVE WALK"
+SavePromptTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+SavePromptTitle.TextSize = 16
+SavePromptTitle.Font = Enum.Font.GothamBold
+SavePromptTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+SavePromptTitle.Parent = SavePrompt
+
+local SavePromptTitleCorner = Instance.new("UICorner")
+SavePromptTitleCorner.CornerRadius = UDim.new(0, 12)
+SavePromptTitleCorner.Parent = SavePromptTitle
+
+local SaveInput = Instance.new("TextBox")
+SaveInput.Size = UDim2.new(0.9, 0, 0, 35)
+SaveInput.Position = UDim2.new(0.05, 0, 0, 55)
+SaveInput.PlaceholderText = "Enter walk title/name..."
+SaveInput.Text = ""
+SaveInput.TextColor3 = Color3.new(1, 1, 1)
+SaveInput.TextSize = 14
+SaveInput.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+SaveInput.Parent = SavePrompt
+
+local SaveInputCorner = Instance.new("UICorner")
+SaveInputCorner.CornerRadius = UDim.new(0, 8)
+SaveInputCorner.Parent = SaveInput
+
+local SaveConfirmBtn = Instance.new("TextButton")
+SaveConfirmBtn.Size = UDim2.new(0.43, 0, 0, 35)
+SaveConfirmBtn.Position = UDim2.new(0.05, 0, 0, 110)
+SaveConfirmBtn.Text = "✅ SAVE"
+SaveConfirmBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveConfirmBtn.TextSize = 14
+SaveConfirmBtn.Font = Enum.Font.GothamBold
+SaveConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+SaveConfirmBtn.Parent = SavePrompt
+
+local SaveConfirmCorner = Instance.new("UICorner")
+SaveConfirmCorner.CornerRadius = UDim.new(0, 8)
+SaveConfirmCorner.Parent = SaveConfirmBtn
+
+local SaveCancelBtn = Instance.new("TextButton")
+SaveCancelBtn.Size = UDim2.new(0.43, 0, 0, 35)
+SaveCancelBtn.Position = UDim2.new(0.52, 0, 0, 110)
+SaveCancelBtn.Text = "❌ CANCEL"
+SaveCancelBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveCancelBtn.TextSize = 14
+SaveCancelBtn.Font = Enum.Font.GothamBold
+SaveCancelBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+SaveCancelBtn.Parent = SavePrompt
+
+local SaveCancelCorner = Instance.new("UICorner")
+SaveCancelCorner.CornerRadius = UDim.new(0, 8)
+SaveCancelCorner.Parent = SaveCancelBtn
+
+-- Info Display
+local SaveInfo = Instance.new("TextLabel")
+SaveInfo.Size = UDim2.new(0.9, 0, 0, 20)
+SaveInfo.Position = UDim2.new(0.05, 0, 0, 150)
+SaveInfo.Text = "Duration: 00:00 | Distance: 0m"
+SaveInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+SaveInfo.TextSize = 11
+SaveInfo.BackgroundTransparency = 1
+SaveInfo.Parent = SavePrompt
+
+-- === FILE MANAGER WINDOW === --
+local FileWindow = Instance.new("Frame")
+FileWindow.Name = "FileManager"
+FileWindow.Size = UDim2.new(0, 320, 0, 400)
+FileWindow.Position = UDim2.new(0.5, -160, 0.5, -200)
+FileWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+FileWindow.BorderSizePixel = 0
+FileWindow.Visible = false
+FileWindow.Parent = ScreenGui
+
+local FileWindowCorner = Instance.new("UICorner")
+FileWindowCorner.CornerRadius = UDim.new(0, 12)
+FileWindowCorner.Parent = FileWindow
+
+local FileWindowTitle = Instance.new("TextLabel")
+FileWindowTitle.Size = UDim2.new(1, 0, 0, 40)
+FileWindowTitle.Text = "📁 FILE MANAGER"
+FileWindowTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+FileWindowTitle.TextSize = 16
+FileWindowTitle.Font = Enum.Font.GothamBold
+FileWindowTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+FileWindowTitle.Parent = FileWindow
+
+local FileWindowTitleCorner = Instance.new("UICorner")
+FileWindowTitleCorner.CornerRadius = UDim.new(0, 12)
+FileWindowTitleCorner.Parent = FileWindowTitle
+
+local CloseFileBtn = Instance.new("TextButton")
+CloseFileBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseFileBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseFileBtn.Text = "×"
+CloseFileBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseFileBtn.TextSize = 20
+CloseFileBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseFileBtn.Parent = FileWindow
+
+local CloseFileCorner = Instance.new("UICorner")
+CloseFileCorner.CornerRadius = UDim.new(0, 6)
+CloseFileCorner.Parent = CloseFileBtn
+
+local FileScroll = Instance.new("ScrollingFrame")
+FileScroll.Size = UDim2.new(1, -20, 1, -60)
+FileScroll.Position = UDim2.new(0, 10, 0, 50)
+FileScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+FileScroll.BorderSizePixel = 0
+FileScroll.ScrollBarThickness = 6
+FileScroll.Parent = FileWindow
+
+local FileScrollCorner = Instance.new("UICorner")
+FileScrollCorner.CornerRadius = UDim.new(0, 8)
+FileScrollCorner.Parent = FileScroll
+
+local FileListLayout = Instance.new("UIListLayout")
+FileListLayout.Padding = UDim.new(0, 8)
+FileListLayout.Parent = FileScroll
+
+-- === FILE DETAIL WINDOW === --
+local FileDetailWindow = Instance.new("Frame")
+FileDetailWindow.Name = "FileDetail"
+FileDetailWindow.Size = UDim2.new(0, 300, 0, 350)
+FileDetailWindow.Position = UDim2.new(0.5, -150, 0.5, -175)
+FileDetailWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+FileDetailWindow.BorderSizePixel = 0
+FileDetailWindow.Visible = false
+FileDetailWindow.Parent = ScreenGui
+
+local FileDetailCorner = Instance.new("UICorner")
+FileDetailCorner.CornerRadius = UDim.new(0, 12)
+FileDetailCorner.Parent = FileDetailWindow
+
+local FileDetailTitle = Instance.new("TextLabel")
+FileDetailTitle.Size = UDim2.new(1, 0, 0, 40)
+FileDetailTitle.Text = "📄 WALK DETAILS"
+FileDetailTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+FileDetailTitle.TextSize = 16
+FileDetailTitle.Font = Enum.Font.GothamBold
+FileDetailTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+FileDetailTitle.Parent = FileDetailWindow
+
+local FileDetailTitleCorner = Instance.new("UICorner")
+FileDetailTitleCorner.CornerRadius = UDim.new(0, 12)
+FileDetailTitleCorner.Parent = FileDetailTitle
+
+local CloseDetailBtn = Instance.new("TextButton")
+CloseDetailBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseDetailBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseDetailBtn.Text = "×"
+CloseDetailBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseDetailBtn.TextSize = 20
+CloseDetailBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseDetailBtn.Parent = FileDetailWindow
+
+local CloseDetailCorner = Instance.new("UICorner")
+CloseDetailCorner.CornerRadius = UDim.new(0, 6)
+CloseDetailCorner.Parent = CloseDetailBtn
+
+local DetailContent = Instance.new("Frame")
+DetailContent.Size = UDim2.new(1, -20, 1, -60)
+DetailContent.Position = UDim2.new(0, 10, 0, 50)
+DetailContent.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+DetailContent.BorderSizePixel = 0
+DetailContent.Parent = FileDetailWindow
+
+local DetailContentCorner = Instance.new("UICorner")
+DetailContentCorner.CornerRadius = UDim.new(0, 8)
+DetailContentCorner.Parent = DetailContent
+
+local DetailName = Instance.new("TextLabel")
+DetailName.Size = UDim2.new(1, -20, 0, 30)
+DetailName.Position = UDim2.new(0, 10, 0, 10)
+DetailName.Text = "Name: -"
+DetailName.TextColor3 = Color3.fromRGB(255, 255, 255)
+DetailName.TextSize = 14
+DetailName.Font = Enum.Font.GothamBold
+DetailName.BackgroundTransparency = 1
+DetailName.TextXAlignment = Enum.TextXAlignment.Left
+DetailName.Parent = DetailContent
+
+local DetailDuration = Instance.new("TextLabel")
+DetailDuration.Size = UDim2.new(1, -20, 0, 25)
+DetailDuration.Position = UDim2.new(0, 10, 0, 45)
+DetailDuration.Text = "⏱ Duration: 00:00"
+DetailDuration.TextColor3 = Color3.fromRGB(200, 200, 200)
+DetailDuration.TextSize = 12
+DetailDuration.BackgroundTransparency = 1
+DetailDuration.TextXAlignment = Enum.TextXAlignment.Left
+DetailDuration.Parent = DetailContent
+
+local DetailDistance = Instance.new("TextLabel")
+DetailDistance.Size = UDim2.new(1, -20, 0, 25)
+DetailDistance.Position = UDim2.new(0, 10, 0, 70)
+DetailDistance.Text = "📏 Distance: 0m"
+DetailDistance.TextColor3 = Color3.fromRGB(200, 200, 200)
+DetailDistance.TextSize = 12
+DetailDistance.BackgroundTransparency = 1
+DetailDistance.TextXAlignment = Enum.TextXAlignment.Left
+DetailDistance.Parent = DetailContent
+
+local DetailSpeed = Instance.new("TextLabel")
+DetailSpeed.Size = UDim2.new(1, -20, 0, 25)
+DetailSpeed.Position = UDim2.new(0, 10, 0, 95)
+DetailSpeed.Text = "⚡ Speed: 1.0x"
+DetailSpeed.TextColor3 = Color3.fromRGB(200, 200, 200)
+DetailSpeed.TextSize = 12
+DetailSpeed.BackgroundTransparency = 1
+DetailSpeed.TextXAlignment = Enum.TextXAlignment.Left
+DetailSpeed.Parent = DetailContent
+
+local DetailPoints = Instance.new("TextLabel")
+DetailPoints.Size = UDim2.new(1, -20, 0, 25)
+DetailPoints.Position = UDim2.new(0, 10, 0, 120)
+DetailPoints.Text = "📍 Waypoints: 0"
+DetailPoints.TextColor3 = Color3.fromRGB(200, 200, 200)
+DetailPoints.TextSize = 12
+DetailPoints.BackgroundTransparency = 1
+DetailPoints.TextXAlignment = Enum.TextXAlignment.Left
+DetailPoints.Parent = DetailContent
+
+-- Speed Adjuster in Detail
+local DetailSpeedLabel = Instance.new("TextLabel")
+DetailSpeedLabel.Size = UDim2.new(0.5, 0, 0, 25)
+DetailSpeedLabel.Position = UDim2.new(0, 10, 0, 155)
+DetailSpeedLabel.Text = "Speed:"
+DetailSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+DetailSpeedLabel.TextSize = 12
+DetailSpeedLabel.BackgroundTransparency = 1
+DetailSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+DetailSpeedLabel.Parent = DetailContent
+
+local DetailSpeedMinus = Instance.new("TextButton")
+DetailSpeedMinus.Size = UDim2.new(0, 30, 0, 25)
+DetailSpeedMinus.Position = UDim2.new(0.4, 0, 0, 155)
+DetailSpeedMinus.Text = "-"
+DetailSpeedMinus.TextColor3 = Color3.new(1, 1, 1)
+DetailSpeedMinus.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+DetailSpeedMinus.Parent = DetailContent
+
+local DetailSpeedDisplay = Instance.new("TextLabel")
+DetailSpeedDisplay.Size = UDim2.new(0, 50, 0, 25)
+DetailSpeedDisplay.Position = UDim2.new(0.55, 0, 0, 155)
+DetailSpeedDisplay.Text = "1.0"
+DetailSpeedDisplay.TextColor3 = Color3.fromRGB(0, 255, 255)
+DetailSpeedDisplay.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+DetailSpeedDisplay.Parent = DetailContent
+
+local DetailSpeedPlus = Instance.new("TextButton")
+DetailSpeedPlus.Size = UDim2.new(0, 30, 0, 25)
+DetailSpeedPlus.Position = UDim2.new(0.75, 0, 0, 155)
+DetailSpeedPlus.Text = "+"
+DetailSpeedPlus.TextColor3 = Color3.new(1, 1, 1)
+DetailSpeedPlus.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+DetailSpeedPlus.Parent = DetailContent
+
+-- Action Buttons
 local PlayWalkBtn = Instance.new("TextButton")
-PlayWalkBtn.Name = "shhhhnayy05_PlayWalkBtn"
-PlayWalkBtn.Parent = DetailScroll
-PlayWalkBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-PlayWalkBtn.BorderSizePixel = 0
-PlayWalkBtn.Position = UDim2.new(0, 5, 0, 150)
-PlayWalkBtn.Size = UDim2.new(1, -10, 0, 50)
-PlayWalkBtn.Font = Enum.Font.GothamBold
+PlayWalkBtn.Size = UDim2.new(0.9, 0, 0, 40)
+PlayWalkBtn.Position = UDim2.new(0.05, 0, 0, 200)
 PlayWalkBtn.Text = "▶ PLAY WALK"
-PlayWalkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PlayWalkBtn.TextSize = 18
-PlayWalkBtn.ZIndex = 152
+PlayWalkBtn.TextColor3 = Color3.new(1, 1, 1)
+PlayWalkBtn.TextSize = 14
+PlayWalkBtn.Font = Enum.Font.GothamBold
+PlayWalkBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+PlayWalkBtn.Parent = DetailContent
 
 local PlayWalkCorner = Instance.new("UICorner")
-PlayWalkCorner.CornerRadius = UDim.new(0, 10)
+PlayWalkCorner.CornerRadius = UDim.new(0, 8)
 PlayWalkCorner.Parent = PlayWalkBtn
 
--- Load Button
-local LoadBtn = Instance.new("TextButton")
-LoadBtn.Name = "shhhhnayy05_LoadBtn"
-LoadBtn.Parent = DetailScroll
-LoadBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-LoadBtn.BorderSizePixel = 0
-LoadBtn.Position = UDim2.new(0, 5, 0, 210)
-LoadBtn.Size = UDim2.new(0.48, -5, 0, 45)
-LoadBtn.Font = Enum.Font.GothamBold
-LoadBtn.Text = "📂 LOAD"
-LoadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-LoadBtn.TextSize = 13
-LoadBtn.ZIndex = 152
+local DeleteFileBtn = Instance.new("TextButton")
+DeleteFileBtn.Size = UDim2.new(0.43, 0, 0, 35)
+DeleteFileBtn.Position = UDim2.new(0.05, 0, 0, 250)
+DeleteFileBtn.Text = "🗑 DELETE"
+DeleteFileBtn.TextColor3 = Color3.new(1, 1, 1)
+DeleteFileBtn.TextSize = 12
+DeleteFileBtn.Font = Enum.Font.GothamBold
+DeleteFileBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+DeleteFileBtn.Parent = DetailContent
 
-local LoadCorner = Instance.new("UICorner")
-LoadCorner.CornerRadius = UDim.new(0, 8)
-LoadCorner.Parent = LoadBtn
+local DeleteFileCorner = Instance.new("UICorner")
+DeleteFileCorner.CornerRadius = UDim.new(0, 8)
+DeleteFileCorner.Parent = DeleteFileBtn
 
--- Delete Button
-local DeleteBtn = Instance.new("TextButton")
-DeleteBtn.Name = "shhhhnayy05_DeleteBtn"
-DeleteBtn.Parent = DetailScroll
-DeleteBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-DeleteBtn.BorderSizePixel = 0
-DeleteBtn.Position = UDim2.new(0.52, 0, 0, 210)
-DeleteBtn.Size = UDim2.new(0.48, -5, 0, 45)
-DeleteBtn.Font = Enum.Font.GothamBold
-DeleteBtn.Text = "🗑 DELETE"
-DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DeleteBtn.TextSize = 13
-DeleteBtn.ZIndex = 152
+local CloseDetailBtn2 = Instance.new("TextButton")
+CloseDetailBtn2.Size = UDim2.new(0.43, 0, 0, 35)
+CloseDetailBtn2.Position = UDim2.new(0.52, 0, 0, 250)
+CloseDetailBtn2.Text = "✖ CLOSE"
+CloseDetailBtn2.TextColor3 = Color3.new(1, 1, 1)
+CloseDetailBtn2.TextSize = 12
+CloseDetailBtn2.Font = Enum.Font.GothamBold
+CloseDetailBtn2.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+CloseDetailBtn2.Parent = DetailContent
 
-local DeleteCorner = Instance.new("UICorner")
-DeleteCorner.CornerRadius = UDim.new(0, 8)
-DeleteCorner.Parent = DeleteBtn
+local CloseDetail2Corner = Instance.new("UICorner")
+CloseDetail2Corner.CornerRadius = UDim.new(0, 8)
+CloseDetail2Corner.Parent = CloseDetailBtn2
 
--- ==========================================
--- TRIM PANEL (300x400)
--- ==========================================
-local TrimPanel = Instance.new("Frame")
-TrimPanel.Name = "shhhhnayy05_TrimPanel"
-TrimPanel.Parent = ScreenGui
-TrimPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-TrimPanel.BorderSizePixel = 0
-TrimPanel.Position = UDim2.new(0.5, -150, 0.5, -200)
-TrimPanel.Size = UDim2.new(0, 300, 0, 400)
-TrimPanel.ZIndex = 80
-TrimPanel.Visible = false
-TrimPanel.Active = true
-TrimPanel.Draggable = true
+-- === DELETE CONFIRMATION === --
+local DeleteConfirmWindow = Instance.new("Frame")
+DeleteConfirmWindow.Name = "DeleteConfirm"
+DeleteConfirmWindow.Size = UDim2.new(0, 280, 0, 150)
+DeleteConfirmWindow.Position = UDim2.new(0.5, -140, 0.5, -75)
+DeleteConfirmWindow.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+DeleteConfirmWindow.BorderSizePixel = 0
+DeleteConfirmWindow.Visible = false
+DeleteConfirmWindow.Parent = ScreenGui
 
-local TrimPanelCorner = Instance.new("UICorner")
-TrimPanelCorner.CornerRadius = UDim.new(0, 10)
-TrimPanelCorner.Parent = TrimPanel
+local DeleteConfirmCorner = Instance.new("UICorner")
+DeleteConfirmCorner.CornerRadius = UDim.new(0, 12)
+DeleteConfirmCorner.Parent = DeleteConfirmWindow
 
-local TrimPanelStroke = Instance.new("UIStroke")
-TrimPanelStroke.Color = Color3.fromRGB(255, 150, 0)
-TrimPanelStroke.Thickness = 2
-TrimPanelStroke.Parent = TrimPanel
+local DeleteConfirmTitle = Instance.new("TextLabel")
+DeleteConfirmTitle.Size = UDim2.new(1, 0, 0, 40)
+DeleteConfirmTitle.Text = "⚠️ CONFIRM DELETE"
+DeleteConfirmTitle.TextColor3 = Color3.fromRGB(255, 200, 0)
+DeleteConfirmTitle.TextSize = 16
+DeleteConfirmTitle.Font = Enum.Font.GothamBold
+DeleteConfirmTitle.BackgroundColor3 = Color3.fromRGB(40, 30, 20)
+DeleteConfirmTitle.Parent = DeleteConfirmWindow
 
-local TrimTitleBar = Instance.new("Frame")
-TrimTitleBar.Name = "shhhhnayy05_TrimTitleBar"
-TrimTitleBar.Parent = TrimPanel
-TrimTitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-TrimTitleBar.BorderSizePixel = 0
-TrimTitleBar.Size = UDim2.new(1, 0, 0, 40)
-TrimTitleBar.ZIndex = 81
+local DeleteConfirmTitleCorner = Instance.new("UICorner")
+DeleteConfirmTitleCorner.CornerRadius = UDim.new(0, 12)
+DeleteConfirmTitleCorner.Parent = DeleteConfirmTitle
 
-local TrimTitleText = Instance.new("TextLabel")
-TrimTitleText.Name = "shhhhnayy05_TrimTitleText"
-TrimTitleText.Parent = TrimTitleBar
-TrimTitleText.BackgroundTransparency = 1
-TrimTitleText.Size = UDim2.new(1, 0, 1, 0)
-TrimTitleText.Font = Enum.Font.GothamBold
-TrimTitleText.Text = "✂️ TRIM EDITOR"
-TrimTitleText.TextColor3 = Color3.fromRGB(255, 150, 0)
-TrimTitleText.TextSize = 14
-TrimTitleText.ZIndex = 82
+local DeleteConfirmText = Instance.new("TextLabel")
+DeleteConfirmText.Size = UDim2.new(0.9, 0, 0, 50)
+DeleteConfirmText.Position = UDim2.new(0.05, 0, 0, 50)
+DeleteConfirmText.Text = "Are you sure you want to delete this file?\nThis action cannot be undone."
+DeleteConfirmText.TextColor3 = Color3.fromRGB(255, 255, 255)
+DeleteConfirmText.TextSize = 12
+DeleteConfirmText.BackgroundTransparency = 1
+DeleteConfirmText.TextWrapped = true
+DeleteConfirmText.Parent = DeleteConfirmWindow
 
-local TrimCloseBtn = Instance.new("TextButton")
-TrimCloseBtn.Name = "shhhhnayy05_TrimCloseBtn"
-TrimCloseBtn.Parent = TrimTitleBar
-TrimCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-TrimCloseBtn.BorderSizePixel = 0
-TrimCloseBtn.Position = UDim2.new(1, -35, 0.5, -12)
-TrimCloseBtn.Size = UDim2.new(0, 24, 0, 24)
-TrimCloseBtn.Font = Enum.Font.GothamBold
-TrimCloseBtn.Text = "×"
-TrimCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrimCloseBtn.TextSize = 18
-TrimCloseBtn.ZIndex = 82
+local YesDeleteBtn = Instance.new("TextButton")
+YesDeleteBtn.Size = UDim2.new(0.4, 0, 0, 35)
+YesDeleteBtn.Position = UDim2.new(0.08, 0, 0, 105)
+YesDeleteBtn.Text = "✅ YES"
+YesDeleteBtn.TextColor3 = Color3.new(1, 1, 1)
+YesDeleteBtn.TextSize = 14
+YesDeleteBtn.Font = Enum.Font.GothamBold
+YesDeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+YesDeleteBtn.Parent = DeleteConfirmWindow
 
-local TrimCloseCorner = Instance.new("UICorner")
-TrimCloseCorner.CornerRadius = UDim.new(0, 6)
-TrimCloseCorner.Parent = TrimCloseBtn
+local YesDeleteCorner = Instance.new("UICorner")
+YesDeleteCorner.CornerRadius = UDim.new(0, 8)
+YesDeleteCorner.Parent = YesDeleteBtn
 
--- Trim Content Scrollable
-local TrimScroll = Instance.new("ScrollingFrame")
-TrimScroll.Name = "shhhhnayy05_TrimScroll"
-TrimScroll.Parent = TrimPanel
-TrimScroll.BackgroundTransparency = 1
-TrimScroll.BorderSizePixel = 0
-TrimScroll.Position = UDim2.new(0, 10, 0, 50)
-TrimScroll.Size = UDim2.new(1, -20, 1, -60)
-TrimScroll.ScrollBarThickness = 6
-TrimScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 150, 0)
-TrimScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
-TrimScroll.ZIndex = 81
+local NoDeleteBtn = Instance.new("TextButton")
+NoDeleteBtn.Size = UDim2.new(0.4, 0, 0, 35)
+NoDeleteBtn.Position = UDim2.new(0.52, 0, 0, 105)
+NoDeleteBtn.Text = "❌ NO"
+NoDeleteBtn.TextColor3 = Color3.new(1, 1, 1)
+NoDeleteBtn.TextSize = 14
+NoDeleteBtn.Font = Enum.Font.GothamBold
+NoDeleteBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+NoDeleteBtn.Parent = DeleteConfirmWindow
 
--- Current Path Info
-local TrimPathInfo = Instance.new("TextLabel")
-TrimPathInfo.Name = "shhhhnayy05_TrimPathInfo"
-TrimPathInfo.Parent = TrimScroll
-TrimPathInfo.BackgroundTransparency = 1
-TrimPathInfo.Position = UDim2.new(0, 5, 0, 0)
-TrimPathInfo.Size = UDim2.new(1, -10, 0, 40)
-TrimPathInfo.Font = Enum.Font.GothamBold
-TrimPathInfo.Text = "Current Path: 0 points"
-TrimPathInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
-TrimPathInfo.TextSize = 13
-TrimPathInfo.TextWrapped = true
-TrimPathInfo.ZIndex = 82
+local NoDeleteCorner = Instance.new("UICorner")
+NoDeleteCorner.CornerRadius = UDim.new(0, 8)
+NoDeleteCorner.Parent = NoDeleteBtn
 
--- Range Section
-local RangeSection = Instance.new("Frame")
-RangeSection.Name = "shhhhnayy05_RangeSection"
-RangeSection.Parent = TrimScroll
-RangeSection.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-RangeSection.BorderSizePixel = 0
-RangeSection.Position = UDim2.new(0, 5, 0, 50)
-RangeSection.Size = UDim2.new(1, -10, 0, 120)
-RangeSection.ZIndex = 82
+-- === WALK EDITOR WINDOW === --
+local EditorWindow = Instance.new("Frame")
+EditorWindow.Name = "WalkEditor"
+EditorWindow.Size = UDim2.new(0, 340, 0, 450)
+EditorWindow.Position = UDim2.new(0.5, -170, 0.5, -225)
+EditorWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+EditorWindow.BorderSizePixel = 0
+EditorWindow.Visible = false
+EditorWindow.Parent = ScreenGui
 
-local RangeCorner = Instance.new("UICorner")
-RangeCorner.CornerRadius = UDim.new(0, 8)
-RangeCorner.Parent = RangeSection
+local EditorCorner = Instance.new("UICorner")
+EditorCorner.CornerRadius = UDim.new(0, 12)
+EditorCorner.Parent = EditorWindow
 
-local RangeTitle = Instance.new("TextLabel")
-RangeTitle.Name = "shhhhnayy05_RangeTitle"
-RangeTitle.Parent = RangeSection
-RangeTitle.BackgroundTransparency = 1
-RangeTitle.Position = UDim2.new(0, 10, 0, 5)
-RangeTitle.Size = UDim2.new(1, -20, 0, 20)
-RangeTitle.Font = Enum.Font.GothamBold
-RangeTitle.Text = "📍 TRIM RANGE"
-RangeTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
-RangeTitle.TextSize = 12
-RangeTitle.ZIndex = 83
+local EditorTitle = Instance.new("TextLabel")
+EditorTitle.Size = UDim2.new(1, 0, 0, 40)
+EditorTitle.Text = "✂️ WALK EDITOR"
+EditorTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+EditorTitle.TextSize = 16
+EditorTitle.Font = Enum.Font.GothamBold
+EditorTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+EditorTitle.Parent = EditorWindow
 
--- Start Input
-local TrimStartLabel = Instance.new("TextLabel")
-TrimStartLabel.Parent = RangeSection
-TrimStartLabel.BackgroundTransparency = 1
-TrimStartLabel.Position = UDim2.new(0, 10, 0, 35)
-TrimStartLabel.Size = UDim2.new(0.3, 0, 0, 30)
-TrimStartLabel.Font = Enum.Font.Gotham
-TrimStartLabel.Text = "Start Index:"
-TrimStartLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TrimStartLabel.TextSize = 11
-TrimStartLabel.TextXAlignment = Enum.TextXAlignment.Left
-TrimStartLabel.ZIndex = 83
+local EditorTitleCorner = Instance.new("UICorner")
+EditorTitleCorner.CornerRadius = UDim.new(0, 12)
+EditorTitleCorner.Parent = EditorTitle
 
-local TrimStartInput = Instance.new("TextBox")
-TrimStartInput.Name = "shhhhnayy05_TrimStartInput"
-TrimStartInput.Parent = RangeSection
-TrimStartInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-TrimStartInput.BorderSizePixel = 0
-TrimStartInput.Position = UDim2.new(0.35, 0, 0, 35)
-TrimStartInput.Size = UDim2.new(0.6, -10, 0, 30)
-TrimStartInput.Font = Enum.Font.GothamBold
-TrimStartInput.Text = "1"
-TrimStartInput.TextColor3 = Color3.fromRGB(255, 200, 100)
-TrimStartInput.TextSize = 14
-TrimStartInput.ZIndex = 83
+local CloseEditorBtn = Instance.new("TextButton")
+CloseEditorBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseEditorBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseEditorBtn.Text = "×"
+CloseEditorBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseEditorBtn.TextSize = 20
+CloseEditorBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseEditorBtn.Parent = EditorWindow
 
-local TrimStartCorner = Instance.new("UICorner")
-TrimStartCorner.CornerRadius = UDim.new(0, 6)
-TrimStartCorner.Parent = TrimStartInput
+-- Editor Content
+local EditorContent = Instance.new("Frame")
+EditorContent.Size = UDim2.new(1, -20, 1, -60)
+EditorContent.Position = UDim2.new(0, 10, 0, 50)
+EditorContent.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+EditorContent.BorderSizePixel = 0
+EditorContent.Parent = EditorWindow
 
--- End Input
-local TrimEndLabel = Instance.new("TextLabel")
-TrimEndLabel.Parent = RangeSection
-TrimEndLabel.BackgroundTransparency = 1
-TrimEndLabel.Position = UDim2.new(0, 10, 0, 75)
-TrimEndLabel.Size = UDim2.new(0.3, 0, 0, 30)
-TrimEndLabel.Font = Enum.Font.Gotham
-TrimEndLabel.Text = "End Index:"
-TrimEndLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TrimEndLabel.TextSize = 11
-TrimEndLabel.TextXAlignment = Enum.TextXAlignment.Left
-TrimEndLabel.ZIndex = 83
+local EditorContentCorner = Instance.new("UICorner")
+EditorContentCorner.CornerRadius = UDim.new(0, 8)
+EditorContentCorner.Parent = EditorContent
 
-local TrimEndInput = Instance.new("TextBox")
-TrimEndInput.Name = "shhhhnayy05_TrimEndInput"
-TrimEndInput.Parent = RangeSection
-TrimEndInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-TrimEndInput.BorderSizePixel = 0
-TrimEndInput.Position = UDim2.new(0.35, 0, 0, 75)
-TrimEndInput.Size = UDim2.new(0.6, -10, 0, 30)
-TrimEndInput.Font = Enum.Font.GothamBold
-TrimEndInput.Text = "0"
-TrimEndInput.TextColor3 = Color3.fromRGB(255, 200, 100)
-TrimEndInput.TextSize = 14
-TrimEndInput.ZIndex = 83
+-- File Selector
+local EditorFileLabel = Instance.new("TextLabel")
+EditorFileLabel.Size = UDim2.new(0.3, 0, 0, 25)
+EditorFileLabel.Position = UDim2.new(0, 10, 0, 10)
+EditorFileLabel.Text = "Select File:"
+EditorFileLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+EditorFileLabel.TextSize = 12
+EditorFileLabel.BackgroundTransparency = 1
+EditorFileLabel.Parent = EditorContent
 
-local TrimEndCorner = Instance.new("UICorner")
-TrimEndCorner.CornerRadius = UDim.new(0, 6)
-TrimEndCorner.Parent = TrimEndInput
+local EditorFileDropdown = Instance.new("TextButton")
+EditorFileDropdown.Size = UDim2.new(0.6, 0, 0, 25)
+EditorFileDropdown.Position = UDim2.new(0.35, 0, 0, 10)
+EditorFileDropdown.Text = "Select a walk..."
+EditorFileDropdown.TextColor3 = Color3.fromRGB(200, 200, 200)
+EditorFileDropdown.TextSize = 12
+EditorFileDropdown.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+EditorFileDropdown.Parent = EditorContent
 
--- Trim Execute Button
-local TrimExecuteBtn = Instance.new("TextButton")
-TrimExecuteBtn.Name = "shhhhnayy05_TrimExecuteBtn"
-TrimExecuteBtn.Parent = TrimScroll
-TrimExecuteBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
-TrimExecuteBtn.BorderSizePixel = 0
-TrimExecuteBtn.Position = UDim2.new(0, 5, 0, 180)
-TrimExecuteBtn.Size = UDim2.new(1, -10, 0, 45)
-TrimExecuteBtn.Font = Enum.Font.GothamBold
-TrimExecuteBtn.Text = "✂️ TRIM PATH"
-TrimExecuteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrimExecuteBtn.TextSize = 16
-TrimExecuteBtn.ZIndex = 82
+-- Timeline Info
+local TimelineInfo = Instance.new("TextLabel")
+TimelineInfo.Size = UDim2.new(1, -20, 0, 20)
+TimelineInfo.Position = UDim2.new(0, 10, 0, 45)
+TimelineInfo.Text = "Duration: 00:00 | Points: 0"
+TimelineInfo.TextColor3 = Color3.fromRGB(0, 255, 255)
+TimelineInfo.TextSize = 11
+TimelineInfo.BackgroundTransparency = 1
+TimelineInfo.Parent = EditorContent
 
-local TrimExecuteCorner = Instance.new("UICorner")
-TrimExecuteCorner.CornerRadius = UDim.new(0, 10)
-TrimExecuteCorner.Parent = TrimExecuteBtn
+-- Trim Controls
+local TrimSection = Instance.new("Frame")
+TrimSection.Size = UDim2.new(1, -20, 0, 140)
+TrimSection.Position = UDim2.new(0, 10, 0, 75)
+TrimSection.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+TrimSection.BorderSizePixel = 0
+TrimSection.Parent = EditorContent
 
--- Preview Trim Button
+local TrimCorner = Instance.new("UICorner")
+TrimCorner.CornerRadius = UDim.new(0, 8)
+TrimCorner.Parent = TrimSection
+
+local TrimTitle = Instance.new("TextLabel")
+TrimTitle.Size = UDim2.new(1, 0, 0, 25)
+TrimTitle.Text = "✂️ TRIM WALK"
+TrimTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
+TrimTitle.TextSize = 12
+TrimTitle.Font = Enum.Font.GothamBold
+TrimTitle.BackgroundTransparency = 1
+TrimTitle.Parent = TrimSection
+
+-- Start Trim
+local StartTrimLabel = Instance.new("TextLabel")
+StartTrimLabel.Size = UDim2.new(0.4, 0, 0, 25)
+StartTrimLabel.Position = UDim2.new(0, 10, 0, 35)
+StartTrimLabel.Text = "Start Trim:"
+StartTrimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+StartTrimLabel.TextSize = 11
+StartTrimLabel.BackgroundTransparency = 1
+StartTrimLabel.Parent = TrimSection
+
+local StartTrimInput = Instance.new("TextBox")
+StartTrimInput.Size = UDim2.new(0.5, 0, 0, 25)
+StartTrimInput.Position = UDim2.new(0.45, 0, 0, 35)
+StartTrimInput.PlaceholderText = "0.00"
+StartTrimInput.Text = ""
+StartTrimInput.TextColor3 = Color3.new(1, 1, 1)
+StartTrimInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+StartTrimInput.Parent = TrimSection
+
+-- End Trim
+local EndTrimLabel = Instance.new("TextLabel")
+EndTrimLabel.Size = UDim2.new(0.4, 0, 0, 25)
+EndTrimLabel.Position = UDim2.new(0, 10, 0, 70)
+EndTrimLabel.Text = "End Trim:"
+EndTrimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+EndTrimLabel.TextSize = 11
+EndTrimLabel.BackgroundTransparency = 1
+EndTrimLabel.Parent = TrimSection
+
+local EndTrimInput = Instance.new("TextBox")
+EndTrimInput.Size = UDim2.new(0.5, 0, 0, 25)
+EndTrimInput.Position = UDim2.new(0.45, 0, 0, 70)
+EndTrimInput.PlaceholderText = "End time..."
+EndTrimInput.Text = ""
+EndTrimInput.TextColor3 = Color3.new(1, 1, 1)
+EndTrimInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+EndTrimInput.Parent = TrimSection
+
+-- Review Section
+local ReviewLabel = Instance.new("TextLabel")
+ReviewLabel.Size = UDim2.new(0.4, 0, 0, 25)
+ReviewLabel.Position = UDim2.new(0, 10, 0, 105)
+ReviewLabel.Text = "Review From:"
+ReviewLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ReviewLabel.TextSize = 11
+ReviewLabel.BackgroundTransparency = 1
+ReviewLabel.Parent = TrimSection
+
+local ReviewInput = Instance.new("TextBox")
+ReviewInput.Size = UDim2.new(0.3, 0, 0, 25)
+ReviewInput.Position = UDim2.new(0.45, 0, 0, 105)
+ReviewInput.PlaceholderText = "0.00"
+ReviewInput.Text = ""
+ReviewInput.TextColor3 = Color3.new(1, 1, 1)
+ReviewInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+ReviewInput.Parent = TrimSection
+
+local ReviewBtn = Instance.new("TextButton")
+ReviewBtn.Size = UDim2.new(0.2, 0, 0, 25)
+ReviewBtn.Position = UDim2.new(0.78, 0, 0, 105)
+ReviewBtn.Text = "👁"
+ReviewBtn.TextColor3 = Color3.new(1, 1, 1)
+ReviewBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+ReviewBtn.Parent = TrimSection
+
+-- Editor Action Buttons
 local PreviewTrimBtn = Instance.new("TextButton")
-PreviewTrimBtn.Name = "shhhhnayy05_PreviewTrimBtn"
-PreviewTrimBtn.Parent = TrimScroll
-PreviewTrimBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-PreviewTrimBtn.BorderSizePixel = 0
-PreviewTrimBtn.Position = UDim2.new(0, 5, 0, 235)
-PreviewTrimBtn.Size = UDim2.new(1, -10, 0, 40)
+PreviewTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
+PreviewTrimBtn.Position = UDim2.new(0.025, 0, 0, 225)
+PreviewTrimBtn.Text = "👁 PREVIEW TRIM"
+PreviewTrimBtn.TextColor3 = Color3.new(1, 1, 1)
+PreviewTrimBtn.TextSize = 12
 PreviewTrimBtn.Font = Enum.Font.GothamBold
-PreviewTrimBtn.Text = "👁 PREVIEW TRIMMED"
-PreviewTrimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PreviewTrimBtn.TextSize = 14
-PreviewTrimBtn.ZIndex = 82
+PreviewTrimBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+PreviewTrimBtn.Parent = EditorContent
 
-local PreviewTrimCorner = Instance.new("UICorner")
-PreviewTrimCorner.CornerRadius = UDim.new(0, 8)
-PreviewTrimCorner.Parent = PreviewTrimBtn
+local ApplyTrimBtn = Instance.new("TextButton")
+ApplyTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
+ApplyTrimBtn.Position = UDim2.new(0.525, 0, 0, 225)
+ApplyTrimBtn.Text = "✂️ APPLY TRIM"
+ApplyTrimBtn.TextColor3 = Color3.new(1, 1, 1)
+ApplyTrimBtn.TextSize = 12
+ApplyTrimBtn.Font = Enum.Font.GothamBold
+ApplyTrimBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
+ApplyTrimBtn.Parent = EditorContent
 
--- ==========================================
--- MINIMIZE BUTTON
--- ==========================================
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Name = "shhhhnayy05_MinimizeBtn"
-MinimizeBtn.Parent = ScreenGui
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
-MinimizeBtn.BorderSizePixel = 0
-MinimizeBtn.Position = UDim2.new(0.1, 0, 0.1, 0)
-MinimizeBtn.Size = UDim2.new(0, 50, 0, 50)
-MinimizeBtn.Visible = false
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.Text = "🎬"
-MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeBtn.TextSize = 24
+local SaveTrimBtn = Instance.new("TextButton")
+SaveTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
+SaveTrimBtn.Position = UDim2.new(0.025, 0, 0, 270)
+SaveTrimBtn.Text = "💾 SAVE AS NEW"
+SaveTrimBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveTrimBtn.TextSize = 12
+SaveTrimBtn.Font = Enum.Font.GothamBold
+SaveTrimBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+SaveTrimBtn.Parent = EditorContent
 
-local MinimizeCorner = Instance.new("UICorner")
-MinimizeCorner.CornerRadius = UDim.new(1, 0)
-MinimizeCorner.Parent = MinimizeBtn
+local CancelTrimBtn = Instance.new("TextButton")
+CancelTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
+CancelTrimBtn.Position = UDim2.new(0.525, 0, 0, 270)
+CancelTrimBtn.Text = "❌ CANCEL"
+CancelTrimBtn.TextColor3 = Color3.new(1, 1, 1)
+CancelTrimBtn.TextSize = 12
+CancelTrimBtn.Font = Enum.Font.GothamBold
+CancelTrimBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+CancelTrimBtn.Parent = EditorContent
 
-local MinimizeStroke = Instance.new("UIStroke")
-MinimizeStroke.Color = Color3.fromRGB(0, 200, 255)
-MinimizeStroke.Thickness = 3
-MinimizeStroke.Parent = MinimizeBtn
+-- Trim Preview Info
+local TrimPreviewInfo = Instance.new("TextLabel")
+TrimPreviewInfo.Size = UDim2.new(1, -20, 0, 50)
+TrimPreviewInfo.Position = UDim2.new(0, 10, 0, 315)
+TrimPreviewInfo.Text = "Trim Preview: Start 00:00 - End 00:00\nDuration: 00:00"
+TrimPreviewInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+TrimPreviewInfo.TextSize = 11
+TrimPreviewInfo.BackgroundTransparency = 1
+TrimPreviewInfo.TextWrapped = true
+TrimPreviewInfo.Parent = EditorContent
 
--- ==========================================
--- CORE LOGIC & FUNCTIONS
--- ==========================================
+-- === WALK JOINER WINDOW === --
+local JoinerWindow = Instance.new("Frame")
+JoinerWindow.Name = "WalkJoiner"
+JoinerWindow.Size = UDim2.new(0, 340, 0, 450)
+JoinerWindow.Position = UDim2.new(0.5, -170, 0.5, -225)
+JoinerWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+JoinerWindow.BorderSizePixel = 0
+JoinerWindow.Visible = false
+JoinerWindow.Parent = ScreenGui
 
-local recordingConnection = nil
-local startTime = 0
-local currentFileSpeed = CONFIG.DefaultSpeed
-local currentFileData = nil
-local currentFileName = nil
+local JoinerCorner = Instance.new("UICorner")
+JoinerCorner.CornerRadius = UDim.new(0, 12)
+JoinerCorner.Parent = JoinerWindow
 
-local function updateStats()
-    local duration = 0
-    if WalkData.isRecording then
-        duration = tick() - startTime
-    end
-    StatsLabel.Text = string.format("Points: %d | Time: %.1fs", #WalkData.CurrentPath, duration)
-    
-    local trimInfo = TrimScroll:FindFirstChild("shhhhnayy05_TrimPathInfo")
-    if trimInfo then
-        trimInfo.Text = string.format("Current Path: %d points", #WalkData.CurrentPath)
+local JoinerTitle = Instance.new("TextLabel")
+JoinerTitle.Size = UDim2.new(1, 0, 0, 40)
+JoinerTitle.Text = "🔗 WALK JOINER"
+JoinerTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+JoinerTitle.TextSize = 16
+JoinerTitle.Font = Enum.Font.GothamBold
+JoinerTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+JoinerTitle.Parent = JoinerWindow
+
+local JoinerTitleCorner = Instance.new("UICorner")
+JoinerTitleCorner.CornerRadius = UDim.new(0, 12)
+JoinerTitleCorner.Parent = JoinerTitle
+
+local CloseJoinerBtn = Instance.new("TextButton")
+CloseJoinerBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseJoinerBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseJoinerBtn.Text = "×"
+CloseJoinerBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseJoinerBtn.TextSize = 20
+CloseJoinerBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseJoinerBtn.Parent = JoinerWindow
+
+-- Joiner Content
+local JoinerContent = Instance.new("Frame")
+JoinerContent.Size = UDim2.new(1, -20, 1, -60)
+JoinerContent.Position = UDim2.new(0, 10, 0, 50)
+JoinerContent.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+JoinerContent.BorderSizePixel = 0
+JoinerContent.Parent = JoinerWindow
+
+local JoinerContentCorner = Instance.new("UICorner")
+JoinerContentCorner.CornerRadius = UDim.new(0, 8)
+JoinerContentCorner.Parent = JoinerContent
+
+-- Available Walks List
+local AvailableLabel = Instance.new("TextLabel")
+AvailableLabel.Size = UDim2.new(1, 0, 0, 25)
+AvailableLabel.Text = "📁 AVAILABLE WALKS"
+AvailableLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+AvailableLabel.TextSize = 12
+AvailableLabel.Font = Enum.Font.GothamBold
+AvailableLabel.BackgroundTransparency = 1
+AvailableLabel.Parent = JoinerContent
+
+local AvailableScroll = Instance.new("ScrollingFrame")
+AvailableScroll.Size = UDim2.new(1, -20, 0, 120)
+AvailableScroll.Position = UDim2.new(0, 10, 0, 30)
+AvailableScroll.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+AvailableScroll.BorderSizePixel = 0
+AvailableScroll.ScrollBarThickness = 4
+AvailableScroll.Parent = JoinerContent
+
+local AvailableLayout = Instance.new("UIListLayout")
+AvailableLayout.Padding = UDim.new(0, 5)
+AvailableLayout.Parent = AvailableScroll
+
+-- Selected Walks (Queue)
+local QueueLabel = Instance.new("TextLabel")
+QueueLabel.Size = UDim2.new(1, 0, 0, 25)
+QueueLabel.Position = UDim2.new(0, 0, 0, 160)
+QueueLabel.Text = "🔗 JOIN QUEUE"
+QueueLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+QueueLabel.TextSize = 12
+QueueLabel.Font = Enum.Font.GothamBold
+QueueLabel.BackgroundTransparency = 1
+QueueLabel.Parent = JoinerContent
+
+local QueueScroll = Instance.new("ScrollingFrame")
+QueueScroll.Size = UDim2.new(1, -20, 0, 100)
+QueueScroll.Position = UDim2.new(0, 10, 0, 190)
+QueueScroll.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+QueueScroll.BorderSizePixel = 0
+QueueScroll.ScrollBarThickness = 4
+QueueScroll.Parent = JoinerContent
+
+local QueueLayout = Instance.new("UIListLayout")
+QueueLayout.Padding = UDim.new(0, 5)
+QueueLayout.Parent = QueueScroll
+
+-- Joiner Buttons
+local AddToQueueBtn = Instance.new("TextButton")
+AddToQueueBtn.Size = UDim2.new(0.45, 0, 0, 30)
+AddToQueueBtn.Position = UDim2.new(0.025, 0, 0, 300)
+AddToQueueBtn.Text = "➕ ADD TO QUEUE"
+AddToQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+AddToQueueBtn.TextSize = 11
+AddToQueueBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+AddToQueueBtn.Parent = JoinerContent
+
+local RemoveFromQueueBtn = Instance.new("TextButton")
+RemoveFromQueueBtn.Size = UDim2.new(0.45, 0, 0, 30)
+RemoveFromQueueBtn.Position = UDim2.new(0.525, 0, 0, 300)
+RemoveFromQueueBtn.Text = "➖ REMOVE"
+RemoveFromQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+RemoveFromQueueBtn.TextSize = 11
+RemoveFromQueueBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+RemoveFromQueueBtn.Parent = JoinerContent
+
+local PlayQueueBtn = Instance.new("TextButton")
+PlayQueueBtn.Size = UDim2.new(0.45, 0, 0, 35)
+PlayQueueBtn.Position = UDim2.new(0.025, 0, 0, 340)
+PlayQueueBtn.Text = "▶ PLAY QUEUE"
+PlayQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+PlayQueueBtn.TextSize = 12
+PlayQueueBtn.Font = Enum.Font.GothamBold
+PlayQueueBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+PlayQueueBtn.Parent = JoinerContent
+
+local SaveQueueBtn = Instance.new("TextButton")
+SaveQueueBtn.Size = UDim2.new(0.45, 0, 0, 35)
+SaveQueueBtn.Position = UDim2.new(0.525, 0, 0, 340)
+SaveQueueBtn.Text = "💾 SAVE QUEUE"
+SaveQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveQueueBtn.TextSize = 12
+SaveQueueBtn.Font = Enum.Font.GothamBold
+SaveQueueBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
+SaveQueueBtn.Parent = JoinerContent
+
+local ClearQueueBtn = Instance.new("TextButton")
+ClearQueueBtn.Size = UDim2.new(0.45, 0, 0, 30)
+ClearQueueBtn.Position = UDim2.new(0.025, 0, 0, 385)
+ClearQueueBtn.Text = "🗑 CLEAR QUEUE"
+ClearQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+ClearQueueBtn.TextSize = 11
+ClearQueueBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+ClearQueueBtn.Parent = JoinerContent
+
+local CloseJoinerBtn2 = Instance.new("TextButton")
+CloseJoinerBtn2.Size = UDim2.new(0.45, 0, 0, 30)
+CloseJoinerBtn2.Position = UDim2.new(0.525, 0, 0, 385)
+CloseJoinerBtn2.Text = "✖ CLOSE"
+CloseJoinerBtn2.TextColor3 = Color3.new(1, 1, 1)
+CloseJoinerBtn2.TextSize = 11
+CloseJoinerBtn2.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+CloseJoinerBtn2.Parent = JoinerContent
+
+-- === TERRAIN VIEWER SYSTEM === --
+local TerrainViewer = {
+    Enabled = false,
+    Markers = {},
+    CurrentIndex = 1
+}
+
+local function formatTime(seconds)
+    local mins = math.floor(seconds / 60)
+    local secs = math.floor(seconds % 60)
+    return string.format("%02d:%02d", mins, secs)
+end
+
+local function calculateDistance(pos1, pos2)
+    return (pos1 - pos2).Magnitude
+end
+
+-- === CORE FUNCTIONS === --
+
+local function updateTimer()
+    if isRecording then
+        local elapsed = tick() - recordStartTime
+        TimerLabel.Text = formatTime(elapsed)
     end
 end
 
 local function startRecording()
-    if WalkData.isRecording then return end
+    PathData = {}
+    isRecording = true
+    recordStartTime = tick()
+    totalDistance = 0
+    lastPosition = nil
     
-    WalkData.CurrentPath = {}
-    WalkData.isRecording = true
-    startTime = tick()
+    RecordIcon.Text = "⏹"
+    RecordIcon.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+    StatusText.Text = "🔴 RECORDING..."
+    StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
     
-    RecBtn.Visible = false
-    StopBtn.Visible = true
-    
-    recordingConnection = RunService.Heartbeat:Connect(function()
-        if not WalkData.isRecording then return end
-        
-        local char = LP.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChild("Humanoid")
-        
-        if hrp and hum then
-            local cf = hrp.CFrame
-            table.insert(WalkData.CurrentPath, {
-                cf_raw = {cf:GetComponents()},
-                velocity = {hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z},
-                state = hum:GetState().Value,
-                time = tick() - startTime
-            })
+    task.spawn(function()
+        while isRecording do
+            local char = LP.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
+            
+            if hrp and hum then
+                local currentPos = hrp.Position
+                
+                if lastPosition then
+                    totalDistance = totalDistance + calculateDistance(lastPosition, currentPos)
+                end
+                lastPosition = currentPos
+                
+                table.insert(PathData, {
+                    cf_raw = {hrp.CFrame:GetComponents()},
+                    position = {currentPos.X, currentPos.Y, currentPos.Z},
+                    velocity = {hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z},
+                    state = hum:GetState().Value,
+                    timestamp = tick() - recordStartTime,
+                    distance = totalDistance
+                })
+            end
+            
+            updateTimer()
+            RunService.Heartbeat:Wait()
         end
-        
-        updateStats()
     end)
 end
 
 local function stopRecording()
-    WalkData.isRecording = false
-    if recordingConnection then
-        recordingConnection:Disconnect()
-        recordingConnection = nil
-    end
+    isRecording = false
+    RecordIcon.Text = "⏺"
+    RecordIcon.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    StatusText.Text = "⏹ STOPPED - Ready to Save"
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
     
-    RecBtn.Visible = true
-    StopBtn.Visible = false
-    
-    updateStats()
-    TrimStartInput.Text = "1"
-    TrimEndInput.Text = tostring(#WalkData.CurrentPath)
+    -- Update Save Info
+    local duration = #PathData > 0 and PathData[#PathData].timestamp or 0
+    SaveInfo.Text = string.format("Duration: %s | Distance: %.1fm | Points: %d", 
+        formatTime(duration), totalDistance, #PathData)
 end
 
--- === PLAY WALK SYSTEM ===
-local function playWalk(pathData, speed, isPreview)
-    if WalkData.isPlaying or #pathData == 0 then return end
+local function playReplay(dataToPlay, startIndex, endIndex)
+    if not dataToPlay or #dataToPlay == 0 or isPlaying then return end
     
-    WalkData.isPlaying = true
+    startIndex = startIndex or 1
+    endIndex = endIndex or #dataToPlay
     
-    if isPreview then
-        PreviewBtn.Text = "⏹ STOP"
-        PreviewBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-    else
-        PlayWalkBtn.Text = "⏹ STOP WALK"
-        PlayWalkBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-    end
+    isPlaying = true
+    StatusText.Text = "▶ PLAYING..."
+    StatusText.TextColor3 = Color3.fromRGB(100, 200, 255)
     
     local char = LP.Character
     if not char then 
-        WalkData.isPlaying = false
-        if isPreview then
-            PreviewBtn.Text = "👁 PREVIEW"
-            PreviewBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-        else
-            PlayWalkBtn.Text = "▶ PLAY WALK"
-            PlayWalkBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        end
+        isPlaying = false
         return 
     end
     
@@ -1241,555 +1192,655 @@ local function playWalk(pathData, speed, isPreview)
     local hum = char:FindFirstChild("Humanoid")
     
     if not hrp or not hum then
-        WalkData.isPlaying = false
-        if isPreview then
-            PreviewBtn.Text = "👁 PREVIEW"
-            PreviewBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-        else
-            PlayWalkBtn.Text = "▶ PLAY WALK"
-            PlayWalkBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        end
+        isPlaying = false
         return
     end
     
+    -- Anti-Collision
     for _, v in pairs(char:GetChildren()) do
         if v:IsA("BasePart") then 
             v.CanCollide = false 
         end
     end
-
-    local baseWalkSpeed = 16
-    hum.WalkSpeed = baseWalkSpeed * speed
-
-    local i = 1
-    while i <= #pathData and WalkData.isPlaying do
-        local data = pathData[i]
+    
+    -- Loop Replay
+    local i = startIndex
+    while i <= endIndex and isPlaying do
+        local data = dataToPlay[i]
+        if not data then break end
+        
         local targetCF = CFrame.new(unpack(data.cf_raw))
         
         hrp.CFrame = targetCF
-        hrp.Velocity = Vector3.new(unpack(data.velocity)) * speed
+        hrp.Velocity = Vector3.new(unpack(data.velocity)) * currentSpeed
         
-        if hum:GetState().Value ~= data.state then
-            hum:ChangeState(data.state)
-        end
-        
-        local waitFrames = math.max(1, math.floor(1/speed))
-        for _ = 1, waitFrames do
-             RunService.Heartbeat:Wait()
-        end
-        
-        i = i + math.max(1, math.round(speed))
-    end
-
-    if char then
-        for _, v in pairs(char:GetChildren()) do
-            if v:IsA("BasePart") then 
-                v.CanCollide = true 
+        -- Terrain Viewer - Show marker at current position
+        if TerrainViewer.Enabled and i % 10 == 0 then
+            local marker = Instance.new("Part")
+            marker.Size = Vector3.new(2, 2, 2)
+            marker.Shape = Enum.PartType.Ball
+            marker.BrickColor = BrickColor.new("Bright yellow")
+            marker.Material = Enum.Material.Neon
+            marker.Position = hrp.Position + Vector3.new(0, 5, 0)
+            marker.Anchored = true
+            marker.CanCollide = false
+            marker.Parent = Workspace
+            
+            -- Add timestamp label
+            local billboard = Instance.new("BillboardGui")
+            billboard.Size = UDim2.new(0, 100, 0, 30)
+            billboard.StudsOffset = Vector3.new(0, 3, 0)
+            billboard.AlwaysOnTop = true
+            billboard.Parent = marker
+            
+            local timeLabel = Instance.new("TextLabel")
+            timeLabel.Size = UDim2.new(1, 0, 1, 0)
+            timeLabel.Text = formatTime(data.timestamp or 0)
+            timeLabel.TextColor3 = Color3.new(1, 1, 0)
+            timeLabel.BackgroundTransparency = 1
+            timeLabel.Parent = billboard
+            
+            table.insert(TerrainViewer.Markers, marker)
+            
+            -- Remove old markers
+            if #TerrainViewer.Markers > 20 then
+                TerrainViewer.Markers[1]:Destroy()
+                table.remove(TerrainViewer.Markers, 1)
             end
+            
+            -- Fade out
+            task.delay(3, function()
+                if marker and marker.Parent then
+                    TweenService:Create(marker, TweenInfo.new(1), {Transparency = 1}):Play()
+                    task.delay(1, function()
+                        if marker and marker.Parent then
+                            marker:Destroy()
+                        end
+                    end)
+                end
+            end)
+        end
+        
+        -- Speed sync
+        local waitFrames = math.max(1, math.floor(1/currentSpeed))
+        for _ = 1, waitFrames do
+            if not isPlaying then break end
+            RunService.Heartbeat:Wait()
+        end
+        
+        i = i + math.max(1, math.floor(currentSpeed))
+    end
+    
+    -- Restore collision
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then 
+            v.CanCollide = true 
         end
     end
     
-    hum.WalkSpeed = baseWalkSpeed
-    WalkData.isPlaying = false
-    
-    if isPreview then
-        PreviewBtn.Text = "👁 PREVIEW"
-        PreviewBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-    else
-        PlayWalkBtn.Text = "▶ PLAY WALK"
-        PlayWalkBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-    end
+    isPlaying = false
+    StatusText.Text = "✅ PLAYBACK COMPLETE"
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
 end
 
--- ==========================================
--- FILE MANAGER FUNCTIONS - FULL FIX
--- ==========================================
+-- === FILE MANAGER FUNCTIONS === --
+local selectedFileForDetail = nil
+local selectedFileForDelete = nil
+local currentEditorData = nil
+local joinQueue = {}
 
 local function refreshFileList()
-    -- Clear all children
-    for _, child in pairs(FileScroll:GetChildren()) do
-        child:Destroy()
+    for _, v in pairs(FileScroll:GetChildren()) do
+        if v:IsA("Frame") then v:Destroy() end
     end
     
-    local allSaves = shhhhnayy05_loadFromDisk()
-    local fileNames = {}
-    for name, _ in pairs(allSaves) do
-        table.insert(fileNames, name)
-    end
-    table.sort(fileNames)
-    
-    if #fileNames == 0 then
-        local emptyLabel = Instance.new("TextLabel")
-        emptyLabel.Name = "shhhhnayy05_EmptyLabel"
-        emptyLabel.Parent = FileScroll
-        emptyLabel.BackgroundTransparency = 1
-        emptyLabel.Size = UDim2.new(1, 0, 0, 100)
-        emptyLabel.Font = Enum.Font.Gotham
-        emptyLabel.Text = "No saved files yet.\nRecord and save a walk!"
-        emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
-        emptyLabel.TextSize = 12
-        emptyLabel.TextWrapped = true
-        emptyLabel.ZIndex = 102
-        FileScroll.CanvasSize = UDim2.new(0, 0, 0, 100)
-        return
-    end
-    
-    local yOffset = 0
-    
-    for _, fileName in ipairs(fileNames) do
-        local fileData = allSaves[fileName]
-        
-        local fileItem = Instance.new("TextButton")
-        fileItem.Name = "shhhhnayy05_FileItem_" .. fileName
-        fileItem.Parent = FileScroll
-        fileItem.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-        fileItem.BorderSizePixel = 0
-        fileItem.Position = UDim2.new(0, 0, 0, yOffset)
-        fileItem.Size = UDim2.new(1, -10, 0, 60)
-        fileItem.Font = Enum.Font.Gotham
-        fileItem.Text = ""
-        fileItem.AutoButtonColor = true
-        fileItem.ZIndex = 102
-        
-        local fileItemCorner = Instance.new("UICorner")
-        fileItemCorner.CornerRadius = UDim.new(0, 6)
-        fileItemCorner.Parent = fileItem
-        
-        local fileNameLabel = Instance.new("TextLabel")
-        fileNameLabel.Name = "shhhhnayy05_FileNameLabel"
-        fileNameLabel.Parent = fileItem
-        fileNameLabel.BackgroundTransparency = 1
-        fileNameLabel.Position = UDim2.new(0, 10, 0, 5)
-        fileNameLabel.Size = UDim2.new(1, -20, 0, 25)
-        fileNameLabel.Font = Enum.Font.GothamBold
-        fileNameLabel.Text = fileName
-        fileNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        fileNameLabel.TextSize = 13
-        fileNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        fileNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
-        fileNameLabel.ZIndex = 103
-        
-        local fileInfoLabel = Instance.new("TextLabel")
-        fileInfoLabel.Name = "shhhhnayy05_FileInfoLabel"
-        fileInfoLabel.Parent = fileItem
-        fileInfoLabel.BackgroundTransparency = 1
-        fileInfoLabel.Position = UDim2.new(0, 10, 0, 32)
-        fileInfoLabel.Size = UDim2.new(1, -20, 0, 20)
-        fileInfoLabel.Font = Enum.Font.Gotham
-        fileInfoLabel.Text = string.format("%d points | %s", #fileData.path, fileData.date or "Unknown")
-        fileInfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-        fileInfoLabel.TextSize = 11
-        fileInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
-        fileInfoLabel.ZIndex = 103
-        
-        fileItem.MouseButton1Click:Connect(function()
-            currentFileData = fileData
-            currentFileName = fileName
-            currentFileSpeed = CONFIG.DefaultSpeed
-            
-            DetailName.Text = "Name: " .. fileName
-            DetailPoints.Text = string.format("Points: %d", #fileData.path)
-            DetailDate.Text = "Saved: " .. (fileData.date or "Unknown")
-            SpeedDisplay.Text = string.format("%.1f", currentFileSpeed)
-            
-            FileDetail.Visible = true
-        end)
-        
-        yOffset = yOffset + 70
-    end
-    
-    FileScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(yOffset, 300))
-end
-
--- ==========================================
--- MERGE EDITOR FUNCTIONS - FULL FIX
--- ==========================================
-
-local function updateMergeEditorList()
-    -- Clear all children
-    for _, child in pairs(MergeFilesScroll:GetChildren()) do
-        child:Destroy()
-    end
-    
-    WalkData.SelectedFilesForMerge = {}
-    
-    local allSaves = shhhhnayy05_loadFromDisk()
-    local fileNames = {}
-    for name, _ in pairs(allSaves) do
-        table.insert(fileNames, name)
-    end
-    table.sort(fileNames)
-    
-    if #fileNames == 0 then
-        local emptyLabel = Instance.new("TextLabel")
-        emptyLabel.Name = "shhhhnayy05_MergeEmptyLabel"
-        emptyLabel.Parent = MergeFilesScroll
-        emptyLabel.BackgroundTransparency = 1
-        emptyLabel.Size = UDim2.new(1, 0, 0, 100)
-        emptyLabel.Font = Enum.Font.Gotham
-        emptyLabel.Text = "No saved files to merge.\nSave some walks first!"
-        emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
-        emptyLabel.TextSize = 12
-        emptyLabel.TextWrapped = true
-        emptyLabel.ZIndex = 112
-        MergeFilesScroll.CanvasSize = UDim2.new(0, 0, 0, 100)
-        SelectedCountLabel.Text = "Selected: 0 files"
-        return
-    end
-    
-    local yOffset = 0
-    local index = 1
-    
-    for _, fileName in ipairs(fileNames) do
-        local fileData = allSaves[fileName]
-        
-        -- Create container for each item
-        local itemContainer = Instance.new("Frame")
-        itemContainer.Name = "shhhhnayy05_MergeItem_" .. index
-        itemContainer.Parent = MergeFilesScroll
-        itemContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-        itemContainer.BorderSizePixel = 0
-        itemContainer.Position = UDim2.new(0, 0, 0, yOffset)
-        itemContainer.Size = UDim2.new(1, -10, 0, 50)
-        itemContainer.ZIndex = 112
-        
-        local itemCorner = Instance.new("UICorner")
-        itemCorner.CornerRadius = UDim.new(0, 6)
-        itemCorner.Parent = itemContainer
-        
-        -- Number label (1, 2, 3, etc)
-        local numLabel = Instance.new("TextLabel")
-        numLabel.Name = "shhhhnayy05_NumLabel"
-        numLabel.Parent = itemContainer
-        numLabel.BackgroundTransparency = 1
-        numLabel.Position = UDim2.new(0, 5, 0, 0)
-        numLabel.Size = UDim2.new(0, 25, 1, 0)
-        numLabel.Font = Enum.Font.GothamBold
-        numLabel.Text = tostring(index)
-        numLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
-        numLabel.TextSize = 14
-        numLabel.ZIndex = 113
-        
-        -- Checkbox button
-        local checkbox = Instance.new("TextButton")
-        checkbox.Name = "shhhhnayy05_Checkbox_" .. fileName
-        checkbox.Parent = itemContainer
-        checkbox.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-        checkbox.BorderSizePixel = 0
-        checkbox.Position = UDim2.new(0, 30, 0.5, -12)
-        checkbox.Size = UDim2.new(0, 24, 0, 24)
-        checkbox.Font = Enum.Font.GothamBold
-        checkbox.Text = ""
-        checkbox.TextColor3 = Color3.fromRGB(0, 255, 100)
-        checkbox.TextSize = 16
-        checkbox.ZIndex = 113
-        
-        local checkboxCorner = Instance.new("UICorner")
-        checkboxCorner.CornerRadius = UDim.new(0, 4)
-        checkboxCorner.Parent = checkbox
-        
-        -- File name label
-        local fileLabel = Instance.new("TextLabel")
-        fileLabel.Name = "shhhhnayy05_FileLabel"
-        fileLabel.Parent = itemContainer
-        fileLabel.BackgroundTransparency = 1
-        fileLabel.Position = UDim2.new(0, 60, 0, 5)
-        fileLabel.Size = UDim2.new(1, -70, 0, 20)
-        fileLabel.Font = Enum.Font.GothamBold
-        fileLabel.Text = fileName
-                fileLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        fileLabel.TextSize = 13
-        fileLabel.TextXAlignment = Enum.TextXAlignment.Left
-        fileLabel.TextTruncate = Enum.TextTruncate.AtEnd
-        fileLabel.ZIndex = 113
-        
-        -- File info label
-        local infoLabel = Instance.new("TextLabel")
-        infoLabel.Name = "shhhhnayy05_InfoLabel"
-        infoLabel.Parent = itemContainer
-        infoLabel.BackgroundTransparency = 1
-        infoLabel.Position = UDim2.new(0, 60, 0, 27)
-        infoLabel.Size = UDim2.new(1, -70, 0, 18)
-        infoLabel.Font = Enum.Font.Gotham
-        infoLabel.Text = string.format("%d points | %s", #fileData.path, fileData.date or "Unknown")
-        infoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-        infoLabel.TextSize = 10
-        infoLabel.TextXAlignment = Enum.TextXAlignment.Left
-        infoLabel.ZIndex = 113
-        
-        -- Checkbox click handler
-        checkbox.MouseButton1Click:Connect(function()
-            if WalkData.SelectedFilesForMerge[fileName] then
-                -- Deselect
-                WalkData.SelectedFilesForMerge[fileName] = nil
-                checkbox.Text = ""
-                checkbox.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-                itemContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-            else
-                -- Select
-                WalkData.SelectedFilesForMerge[fileName] = fileData
-                checkbox.Text = "✓"
-                checkbox.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-                itemContainer.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-            end
-            
-            -- Update count
-            local count = 0
-            for _ in pairs(WalkData.SelectedFilesForMerge) do count = count + 1 end
-            SelectedCountLabel.Text = "Selected: " .. count .. " files"
-        end)
-        
-        yOffset = yOffset + 60
-        index = index + 1
-    end
-    
-    MergeFilesScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(yOffset, 250))
-end
-
--- ==========================================
--- BUTTON CONNECTIONS
--- ==========================================
-
--- Record buttons
-RecBtn.MouseButton1Click:Connect(startRecording)
-StopBtn.MouseButton1Click:Connect(stopRecording)
-
--- Save button
-SaveBtn.MouseButton1Click:Connect(function()
-    if #WalkData.CurrentPath == 0 then return end
-    SaveDialog.Visible = true
-    DialogInput.Text = ""
-    DialogInput:CaptureFocus()
-end)
-
--- Dialog buttons
-DialogSaveBtn.MouseButton1Click:Connect(function()
-    local name = DialogInput.Text:gsub("^%s+", ""):gsub("%s+$", "")
-    if name == "" then return end
-    
-    local allSaves = shhhhnayy05_loadFromDisk()
-    allSaves[name] = {
-        path = WalkData.CurrentPath,
-        date = shhhhnayy05_formatTime(),
-        id = shhhhnayy05_generateId()
-    }
-    
-    if shhhhnayy05_saveToDisk(allSaves) then
-        SaveDialog.Visible = false
-        WalkData.CurrentPath = {}
-        updateStats()
-    end
-end)
-
-DialogCancelBtn.MouseButton1Click:Connect(function()
-    SaveDialog.Visible = false
-end)
-
--- Preview button
-PreviewBtn.MouseButton1Click:Connect(function()
-    if WalkData.isPlaying then
-        WalkData.isPlaying = false
-    else
-        if #WalkData.CurrentPath > 0 then
-            playWalk(WalkData.CurrentPath, 1.0, true)
-        end
-    end
-end)
-
--- Trim Editor buttons
-TrimBtn.MouseButton1Click:Connect(function()
-    TrimPanel.Visible = true
-    TrimStartInput.Text = "1"
-    TrimEndInput.Text = tostring(#WalkData.CurrentPath)
-end)
-
-TrimCloseBtn.MouseButton1Click:Connect(function()
-    TrimPanel.Visible = false
-end)
-
-TrimExecuteBtn.MouseButton1Click:Connect(function()
-    local startIdx = tonumber(TrimStartInput.Text) or 1
-    local endIdx = tonumber(TrimEndInput.Text) or #WalkData.CurrentPath
-    
-    startIdx = math.max(1, math.min(startIdx, #WalkData.CurrentPath))
-    endIdx = math.max(startIdx, math.min(endIdx, #WalkData.CurrentPath))
-    
-    local trimmedPath = {}
-    for i = startIdx, endIdx do
-        table.insert(trimmedPath, WalkData.CurrentPath[i])
-    end
-    
-    WalkData.CurrentPath = trimmedPath
-    updateStats()
-    TrimPanel.Visible = false
-end)
-
-PreviewTrimBtn.MouseButton1Click:Connect(function()
-    local startIdx = tonumber(TrimStartInput.Text) or 1
-    local endIdx = tonumber(TrimEndInput.Text) or #WalkData.CurrentPath
-    
-    startIdx = math.max(1, math.min(startIdx, #WalkData.CurrentPath))
-    endIdx = math.max(startIdx, math.min(endIdx, #WalkData.CurrentPath))
-    
-    local trimmedPath = {}
-    for i = startIdx, endIdx do
-        table.insert(trimmedPath, WalkData.CurrentPath[i])
-    end
-    
-    if #trimmedPath > 0 then
-        playWalk(trimmedPath, 1.0, true)
-    end
-end)
-
--- Merge Editor buttons
-MergeEditorBtn.MouseButton1Click:Connect(function()
-    MergeEditorWindow.Visible = true
-    updateMergeEditorList()
-end)
-
-MergeEditorCloseBtn.MouseButton1Click:Connect(function()
-    MergeEditorWindow.Visible = false
-end)
-
-MergeSelectedBtn.MouseButton1Click:Connect(function()
-    local selectedCount = 0
-    for _ in pairs(WalkData.SelectedFilesForMerge) do selectedCount = selectedCount + 1 end
-    
-    if selectedCount < 2 then
-        SelectedCountLabel.Text = "Select at least 2 files!"
-        SelectedCountLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        wait(1.5)
-        SelectedCountLabel.Text = "Selected: " .. selectedCount .. " files"
-        SelectedCountLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
-        return
-    end
-    
-    MergeSaveDialog.Visible = true
-    MergeSaveInput.Text = ""
-    MergeSaveInput:CaptureFocus()
-end)
-
--- Merge Save Dialog buttons
-MergeSaveConfirmBtn.MouseButton1Click:Connect(function()
-    local name = MergeSaveInput.Text:gsub("^%s+", ""):gsub("%s+$", "")
-    if name == "" then return end
-    
-    -- Merge all selected files in order
-    local mergedPath = {}
-    local allSaves = shhhhnayy05_loadFromDisk()
-    
-    -- Get sorted file names
+    local saves = loadFromDisk()
     local sortedNames = {}
-    for fileName, _ in pairs(WalkData.SelectedFilesForMerge) do
-        table.insert(sortedNames, fileName)
+    
+    for name, _ in pairs(saves) do
+        table.insert(sortedNames, name)
     end
     table.sort(sortedNames)
     
-    for _, fileName in ipairs(sortedNames) do
-        local fileData = WalkData.SelectedFilesForMerge[fileName]
-        for _, point in ipairs(fileData.path) do
-            table.insert(mergedPath, point)
-        end
+    for _, name in ipairs(sortedNames) do
+        local data = saves[name]
+        local entry = Instance.new("Frame")
+        entry.Size = UDim2.new(1, -10, 0, 50)
+        entry.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        entry.BorderSizePixel = 0
+        entry.Parent = FileScroll
+        
+        local entryCorner = Instance.new("UICorner")
+        entryCorner.CornerRadius = UDim.new(0, 6)
+        entryCorner.Parent = entry
+        
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(0.6, 0, 1, 0)
+        nameLabel.Position = UDim2.new(0, 10, 0, 0)
+        nameLabel.Text = name
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.TextSize = 12
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.Parent = entry
+        
+        local infoLabel = Instance.new("TextLabel")
+        infoLabel.Size = UDim2.new(0.6, 0, 0.4, 0)
+        infoLabel.Position = UDim2.new(0, 10, 0.6, 0)
+        local duration = data and #data > 0 and data[#data].timestamp or 0
+        infoLabel.Text = string.format("%s | %d pts", formatTime(duration), #data)
+        infoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        infoLabel.TextSize = 10
+        infoLabel.BackgroundTransparency = 1
+        infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+        infoLabel.Parent = entry
+        
+        -- Click to open detail
+        entry.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+               input.UserInputType == Enum.UserInputType.Touch then
+                selectedFileForDetail = name
+                FileWindow.Visible = false
+                FileDetailWindow.Visible = true
+                
+                -- Update Detail Window
+                DetailName.Text = "Name: " .. name
+                DetailDuration.Text = "⏱ Duration: " .. formatTime(duration)
+                DetailDistance.Text = "📏 Distance: " .. (data and data.distance and string.format("%.1fm", data.distance) or "0m")
+                DetailSpeed.Text = "⚡ Speed: " .. currentSpeed .. "x"
+                DetailPoints.Text = "📍 Waypoints: " .. #data
+                DetailSpeedDisplay.Text = tostring(currentSpeed)
+            end
+        end)
     end
     
-    allSaves[name] = {
-        path = mergedPath,
-        date = shhhhnayy05_formatTime(),
-        id = shhhhnayy05_generateId(),
-        merged = true,
-        sources = sortedNames
+    -- Update canvas size
+    local contentHeight = #sortedNames * 55
+    FileScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(contentHeight, 200))
+end
+
+-- === EDITOR FUNCTIONS === --
+local function refreshEditorFiles()
+    for _, v in pairs(AvailableScroll:GetChildren()) do
+        if v:IsA("Frame") then v:Destroy() end
+    end
+    
+    local saves = loadFromDisk()
+    local sortedNames = {}
+    
+    for name, _ in pairs(saves) do
+        table.insert(sortedNames, name)
+    end
+    table.sort(sortedNames)
+    
+    for _, name in ipairs(sortedNames) do
+        local entry = Instance.new("TextButton")
+        entry.Size = UDim2.new(1, -10, 0, 30)
+        entry.Text = name
+        entry.TextColor3 = Color3.fromRGB(255, 255, 255)
+        entry.TextSize = 11
+        entry.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        entry.Parent = AvailableScroll
+        
+        entry.MouseButton1Click:Connect(function()
+            EditorFileDropdown.Text = name
+            local data = saves[name]
+            currentEditorData = data
+            
+            local duration = data and #data > 0 and data[#data].timestamp or 0
+            TimelineInfo.Text = string.format("Duration: %s | Points: %d", formatTime(duration), #data)
+            
+            -- Set default end trim
+            EndTrimInput.Text = string.format("%.2f", duration)
+        end)
+    end
+    
+    AvailableScroll.CanvasSize = UDim2.new(0, 0, 0, #sortedNames * 35)
+end
+
+local function refreshJoinerFiles()
+    for _, v in pairs(AvailableScroll:GetChildren()) do
+        if v:IsA("Frame") then v:Destroy() end
+    end
+    
+    local saves = loadFromDisk()
+    local sortedNames = {}
+    
+    for name, _ in pairs(saves) do
+        table.insert(sortedNames, name)
+    end
+    table.sort(sortedNames)
+    
+    for _, name in ipairs(sortedNames) do
+        local entry = Instance.new("TextButton")
+        entry.Size = UDim2.new(1, -10, 0, 30)
+        entry.Text = name
+        entry.TextColor3 = Color3.fromRGB(255, 255, 255)
+        entry.TextSize = 11
+        entry.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        entry.Parent = AvailableScroll
+        
+        entry.MouseButton1Click:Connect(function()
+            -- Add to queue
+            table.insert(joinQueue, name)
+            
+            -- Refresh queue display
+            for _, v in pairs(QueueScroll:GetChildren()) do
+                if v:IsA("Frame") then v:Destroy() end
+            end
+            
+            for i, queueName in ipairs(joinQueue) do
+                local queueEntry = Instance.new("Frame")
+                queueEntry.Size = UDim2.new(1, -10, 0, 35)
+                queueEntry.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+                queueEntry.Parent = QueueScroll
+                
+                local queueLabel = Instance.new("TextLabel")
+                queueLabel.Size = UDim2.new(0.8, 0, 1, 0)
+                queueLabel.Position = UDim2.new(0, 10, 0, 0)
+                queueLabel.Text = i .. ". " .. queueName
+                queueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                queueLabel.TextSize = 11
+                queueLabel.BackgroundTransparency = 1
+                queueLabel.Parent = queueEntry
+                
+                -- Connector line (except for last)
+                if i < #joinQueue then
+                    local connector = Instance.new("Frame")
+                    connector.Size = UDim2.new(0, 2, 0, 10)
+                    connector.Position = UDim2.new(0, 20, 1, 0)
+                    connector.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+                    connector.Parent = queueEntry
+                end
+            end
+            
+            QueueScroll.CanvasSize = UDim2.new(0, 0, 0, #joinQueue * 40)
+        end)
+    end
+    
+    AvailableScroll.CanvasSize = UDim2.new(0, 0, 0, #sortedNames * 35)
+end
+
+-- === BUTTON CONNECTIONS === --
+
+-- Record Icon
+RecordIcon.MouseButton1Click:Connect(function()
+    if isRecording then
+        stopRecording()
+    else
+        startRecording()
+    end
+end)
+
+-- Minimize
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    MinimizedIcon.Visible = true
+end)
+
+MinimizedIcon.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    MinimizedIcon.Visible = false
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    MinimizedIcon.Visible = true
+end)
+
+-- Speed Control
+MinusBtn.MouseButton1Click:Connect(function()
+    currentSpeed = math.max(0.1, currentSpeed - speedIncrement)
+    SpeedDisplay.Text = string.format("%.1fx", currentSpeed)
+end)
+
+PlusBtn.MouseButton1Click:Connect(function()
+    currentSpeed = currentSpeed + speedIncrement
+    SpeedDisplay.Text = string.format("%.1fx", currentSpeed)
+end)
+
+-- Save Walk
+SaveBtn.MouseButton1Click:Connect(function()
+    if #PathData > 0 then
+        local duration = PathData[#PathData].timestamp or 0
+    SaveInfo.Text = string.format("Duration: %s | Distance: %.1fm | Points: %d", 
+        formatTime(duration), totalDistance, #PathData)
+    SavePrompt.Visible = true
+end)
+
+SaveCancelBtn.MouseButton1Click:Connect(function()
+    SavePrompt.Visible = false
+    SaveInput.Text = ""
+end)
+
+SaveConfirmBtn.MouseButton1Click:Connect(function()
+    local name = SaveInput.Text:gsub("^%s+", ""):gsub("%s+$", "")
+    if name == "" then
+        name = "Walk_" .. os.date("%Y%m%d_%H%M%S")
+    end
+    
+    local saves = loadFromDisk()
+    saves[name] = {
+        data = PathData,
+        totalDistance = totalDistance,
+        savedAt = os.date("%Y-%m-%d %H:%M:%S")
     }
+    saveToDisk(saves)
     
-    if shhhhnayy05_saveToDisk(allSaves) then
-        MergeSaveDialog.Visible = false
-        MergeEditorWindow.Visible = false
-        WalkData.SelectedFilesForMerge = {}
-        refreshFileList()
-    end
+    SavePrompt.Visible = false
+    SaveInput.Text = ""
+    StatusText.Text = "💾 SAVED: " .. name
+    PathData = {}
 end)
 
-MergeSaveCancelBtn.MouseButton1Click:Connect(function()
-    MergeSaveDialog.Visible = false
-end)
-
--- File Manager buttons
-OpenFileManagerBtn.MouseButton1Click:Connect(function()
-    FileManagerWindow.Visible = true
+-- File Manager
+FileManagerBtn.MouseButton1Click:Connect(function()
     refreshFileList()
+    FileWindow.Visible = true
 end)
 
-FileManagerCloseBtn.MouseButton1Click:Connect(function()
-    FileManagerWindow.Visible = false
+CloseFileBtn.MouseButton1Click:Connect(function()
+    FileWindow.Visible = false
 end)
 
-RefreshBtn.MouseButton1Click:Connect(function()
-    refreshFileList()
+-- File Detail Window
+CloseDetailBtn.MouseButton1Click:Connect(function()
+    FileDetailWindow.Visible = false
+    FileWindow.Visible = true
 end)
 
--- File Detail buttons
-DetailCloseBtn.MouseButton1Click:Connect(function()
-    FileDetail.Visible = false
+CloseDetailBtn2.MouseButton1Click:Connect(function()
+    FileDetailWindow.Visible = false
+    FileWindow.Visible = true
 end)
 
-SpeedMinus.MouseButton1Click:Connect(function()
-    currentFileSpeed = math.max(CONFIG.MinSpeed, currentFileSpeed - CONFIG.SpeedStep)
-    SpeedDisplay.Text = string.format("%.1f", currentFileSpeed)
+DetailSpeedMinus.MouseButton1Click:Connect(function()
+    currentSpeed = math.max(0.1, currentSpeed - speedIncrement)
+    DetailSpeedDisplay.Text = string.format("%.1f", currentSpeed)
+    DetailSpeed.Text = "⚡ Speed: " .. currentSpeed .. "x"
 end)
 
-SpeedPlus.MouseButton1Click:Connect(function()
-    currentFileSpeed = math.min(CONFIG.MaxSpeed, currentFileSpeed + CONFIG.SpeedStep)
-    SpeedDisplay.Text = string.format("%.1f", currentFileSpeed)
+DetailSpeedPlus.MouseButton1Click:Connect(function()
+    currentSpeed = currentSpeed + speedIncrement
+    DetailSpeedDisplay.Text = string.format("%.1f", currentSpeed)
+    DetailSpeed.Text = "⚡ Speed: " .. currentSpeed .. "x"
 end)
 
 PlayWalkBtn.MouseButton1Click:Connect(function()
-    if WalkData.isPlaying then
-        WalkData.isPlaying = false
-    else
-        if currentFileData and #currentFileData.path > 0 then
-            playWalk(currentFileData.path, currentFileSpeed, false)
+    if selectedFileForDetail then
+        local saves = loadFromDisk()
+        local fileData = saves[selectedFileForDetail]
+        if fileData and fileData.data then
+            FileDetailWindow.Visible = false
+            playReplay(fileData.data)
         end
     end
 end)
 
-LoadBtn.MouseButton1Click:Connect(function()
-    if currentFileData then
-        WalkData.CurrentPath = {}
-        for _, point in ipairs(currentFileData.path) do
-            table.insert(WalkData.CurrentPath, point)
+DeleteFileBtn.MouseButton1Click:Connect(function()
+    DeleteConfirmWindow.Visible = true
+end)
+
+YesDeleteBtn.MouseButton1Click:Connect(function()
+    if selectedFileForDetail then
+        local saves = loadFromDisk()
+        saves[selectedFileForDetail] = nil
+        saveToDisk(saves)
+        
+        DeleteConfirmWindow.Visible = false
+        FileDetailWindow.Visible = false
+        FileWindow.Visible = true
+        selectedFileForDetail = nil
+    end
+end)
+
+NoDeleteBtn.MouseButton1Click:Connect(function()
+    DeleteConfirmWindow.Visible = false
+end)
+
+-- Walk Editor
+EditorBtn.MouseButton1Click:Connect(function()
+    refreshEditorFiles()
+    EditorWindow.Visible = true
+end)
+
+CloseEditorBtn.MouseButton1Click:Connect(function()
+    EditorWindow.Visible = false
+end)
+
+CancelTrimBtn.MouseButton1Click:Connect(function()
+    EditorWindow.Visible = false
+    StartTrimInput.Text = ""
+    EndTrimInput.Text = ""
+    ReviewInput.Text = ""
+    currentEditorData = nil
+end)
+
+PreviewTrimBtn.MouseButton1Click:Connect(function()
+    if not currentEditorData then return end
+    
+    local startTime = tonumber(StartTrimInput.Text) or 0
+    local endTime = tonumber(EndTrimInput.Text) or (currentEditorData[#currentEditorData] and currentEditorData[#currentEditorData].timestamp or 0)
+    
+    local startIndex, endIndex = 1, #currentEditorData
+    
+    for i, point in ipairs(currentEditorData) do
+        if point.timestamp >= startTime and startIndex == 1 then
+            startIndex = i
         end
-        FileDetail.Visible = false
-        updateStats()
+        if point.timestamp <= endTime then
+            endIndex = i
+        end
+    end
+    
+    local reviewTime = tonumber(ReviewInput.Text) or startTime
+    local reviewIndex = startIndex
+    
+    for i = startIndex, endIndex do
+        if currentEditorData[i] and currentEditorData[i].timestamp >= reviewTime then
+            reviewIndex = i
+            break
+        end
+    end
+    
+    playReplay(currentEditorData, reviewIndex, endIndex)
+end)
+
+ApplyTrimBtn.MouseButton1Click:Connect(function()
+    if not currentEditorData then return end
+    
+    local startTime = tonumber(StartTrimInput.Text) or 0
+    local endTime = tonumber(EndTrimInput.Text) or (currentEditorData[#currentEditorData] and currentEditorData[#currentEditorData].timestamp or 0)
+    
+    local newData = {}
+    local newDistance = 0
+    local lastPos = nil
+    
+    for _, point in ipairs(currentEditorData) do
+        if point.timestamp >= startTime and point.timestamp <= endTime then
+            local newPoint = {}
+            for k, v in pairs(point) do
+                newPoint[k] = v
+            end
+            newPoint.timestamp = point.timestamp - startTime
+            
+            if lastPos then
+                newDistance = newDistance + calculateDistance(Vector3.new(unpack(lastPos)), Vector3.new(unpack(point.position)))
+            end
+            lastPos = point.position
+            
+            table.insert(newData, newPoint)
+        end
+    end
+    
+    currentEditorData = newData
+    
+    local duration = #newData > 0 and newData[#newData].timestamp or 0
+    TimelineInfo.Text = string.format("Duration: %s | Points: %d", formatTime(duration), #newData)
+    TrimPreviewInfo.Text = string.format("Trim Preview: Start %s - End %s\nDuration: %s", 
+        formatTime(0), formatTime(duration), formatTime(duration))
+    
+    StatusText.Text = "✂️ TRIM APPLIED"
+end)
+
+SaveTrimBtn.MouseButton1Click:Connect(function()
+    if not currentEditorData or #currentEditorData == 0 then return end
+    
+    local name = EditorFileDropdown.Text .. "_Trimmed"
+    local saves = loadFromDisk()
+    
+    local counter = 1
+    local originalName = name
+    while saves[name] do
+        name = originalName .. "_" .. counter
+        counter = counter + 1
+    end
+    
+    saves[name] = {
+        data = currentEditorData,
+        totalDistance = totalDistance,
+        savedAt = os.date("%Y-%m-%d %H:%M:%S")
+    }
+    saveToDisk(saves)
+    
+    EditorWindow.Visible = false
+    StatusText.Text = "💾 TRIM SAVED: " .. name
+end)
+
+-- Walk Joiner
+JoinerBtn.MouseButton1Click:Connect(function()
+    refreshJoinerFiles()
+    joinQueue = {}
+    
+    for _, v in pairs(QueueScroll:GetChildren()) do
+        if v:IsA("Frame") then v:Destroy() end
+    end
+    
+    JoinerWindow.Visible = true
+end)
+
+CloseJoinerBtn.MouseButton1Click:Connect(function()
+    JoinerWindow.Visible = false
+end)
+
+CloseJoinerBtn2.MouseButton1Click:Connect(function()
+    JoinerWindow.Visible = false
+end)
+
+RemoveFromQueueBtn.MouseButton1Click:Connect(function()
+    if #joinQueue > 0 then
+        table.remove(joinQueue, #joinQueue)
+        
+        for _, v in pairs(QueueScroll:GetChildren()) do
+            if v:IsA("Frame") then v:Destroy() end
+        end
+        
+        for i, queueName in ipairs(joinQueue) do
+            local queueEntry = Instance.new("Frame")
+            queueEntry.Size = UDim2.new(1, -10, 0, 35)
+            queueEntry.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+            queueEntry.Parent = QueueScroll
+            
+            local queueLabel = Instance.new("TextLabel")
+            queueLabel.Size = UDim2.new(0.8, 0, 1, 0)
+            queueLabel.Position = UDim2.new(0, 10, 0, 0)
+            queueLabel.Text = i .. ". " .. queueName
+            queueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            queueLabel.TextSize = 11
+            queueLabel.BackgroundTransparency = 1
+            queueLabel.Parent = queueEntry
+            
+            if i < #joinQueue then
+                local connector = Instance.new("Frame")
+                connector.Size = UDim2.new(0, 2, 0, 10)
+                connector.Position = UDim2.new(0, 20, 1, 0)
+                connector.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+                connector.Parent = queueEntry
+            end
+        end
+        
+        QueueScroll.CanvasSize = UDim2.new(0, 0, 0, #joinQueue * 40)
     end
 end)
 
-DeleteBtn.MouseButton1Click:Connect(function()
-    if not currentFileName then return end
-    
-    local allSaves = shhhhnayy05_loadFromDisk()
-    allSaves[currentFileName] = nil
-    
-    if shhhhnayy05_saveToDisk(allSaves) then
-        FileDetail.Visible = false
-        refreshFileList()
+ClearQueueBtn.MouseButton1Click:Connect(function()
+    joinQueue = {}
+    for _, v in pairs(QueueScroll:GetChildren()) do
+        if v:IsA("Frame") then v:Destroy() end
     end
+    QueueScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 end)
 
--- Main window buttons
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    MinimizeBtn.Visible = true
+PlayQueueBtn.MouseButton1Click:Connect(function()
+    if #joinQueue == 0 then return end
+    
+    local saves = loadFromDisk()
+    local combinedData = {}
+    local timeOffset = 0
+    
+    for _, name in ipairs(joinQueue) do
+        local fileData = saves[name]
+        if fileData and fileData.data then
+            for _, point in ipairs(fileData.data) do
+                local newPoint = {}
+                for k, v in pairs(point) do
+                    newPoint[k] = v
+                end
+                newPoint.timestamp = point.timestamp + timeOffset
+                table.insert(combinedData, newPoint)
+            end
+            
+            if #fileData.data > 0 then
+                timeOffset = timeOffset + (fileData.data[#fileData.data].timestamp or 0)
+            end
+        end
+    end
+    
+    JoinerWindow.Visible = false
+    playReplay(combinedData)
 end)
 
-MinimizeBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    MinimizeBtn.Visible = false
+SaveQueueBtn.MouseButton1Click:Connect(function()
+    if #joinQueue == 0 then return end
+    
+    local saves = loadFromDisk()
+    local combinedData = {}
+    local timeOffset = 0
+    local totalDist = 0
+    
+    for _, name in ipairs(joinQueue) do
+        local fileData = saves[name]
+        if fileData and fileData.data then
+            for _, point in ipairs(fileData.data) do
+                local newPoint = {}
+                for k, v in pairs(point) do
+                    newPoint[k] = v
+                end
+                newPoint.timestamp = point.timestamp + timeOffset
+                table.insert(combinedData, newPoint)
+            end
+            
+            if #fileData.data > 0 then
+                timeOffset = timeOffset + (fileData.data[#fileData.data].timestamp or 0)
+                totalDist = totalDist + (fileData.totalDistance or 0)
+            end
+        end
+    end
+    
+    local name = "Joined_Walk_" .. os.date("%Y%m%d_%H%M%S")
+    saves[name] = {
+        data = combinedData,
+        totalDistance = totalDist,
+        savedAt = os.date("%Y-%m-%d %H:%M:%S"),
+        joinedFrom = joinQueue
+    }
+    saveToDisk(saves)
+    
+    StatusText.Text = "💾 QUEUE SAVED: " .. name
+    JoinerWindow.Visible = false
 end)
 
--- ==========================================
--- INITIALIZATION
--- ==========================================
-
-updateStats()
-
-print("✅ SHHHHNAYY05 AUTO WALK RECORDER V10 Loaded Successfully!")
-print("📁 File Manager & Merge Editor 100% Functional")
+-- Initialize
+StatusText.Text = "Ready to Record"
+print("[[ RECORDER AUTO WALK - SHHHHNAYY05 EDITION ]] Loaded Successfully!")
