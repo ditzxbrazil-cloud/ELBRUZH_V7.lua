@@ -1,7 +1,7 @@
 -- ==========================================
--- SHHHHNAYY05 AUTO WALK RECORDER V7
+-- SHHHHNAYY05 AUTO WALK RECORDER V8
 -- ==========================================
--- Jendela besar + Speed control fixed + 0.1 increment
+-- Fixed File Manager + New Merge Editor System
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -24,7 +24,8 @@ local WalkData = {
     isRecording = false,
     isPlaying = false,
     MergeSlots = {},
-    ActiveMergeSlot = 1
+    ActiveMergeSlot = 1,
+    SelectedFilesForMerge = {} -- For new merge system
 }
 
 -- === UTILITY FUNCTIONS ===
@@ -56,7 +57,7 @@ end
 
 -- === UI CREATION ===
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "shhhhnayy05_WalkRecorderV7"
+ScreenGui.Name = "shhhhnayy05_WalkRecorderV8"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
@@ -234,22 +235,22 @@ local TrimBtnCorner = Instance.new("UICorner")
 TrimBtnCorner.CornerRadius = UDim.new(0, 6)
 TrimBtnCorner.Parent = TrimBtn
 
--- Merge Manager Button
-local MergeManagerBtn = Instance.new("TextButton")
-MergeManagerBtn.Name = "shhhhnayy05_MergeManagerBtn"
-MergeManagerBtn.Parent = Content
-MergeManagerBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
-MergeManagerBtn.BorderSizePixel = 0
-MergeManagerBtn.Position = UDim2.new(0, 0, 0, 182)
-MergeManagerBtn.Size = UDim2.new(1, 0, 0, 35)
-MergeManagerBtn.Font = Enum.Font.GothamBold
-MergeManagerBtn.Text = "🔗 OPEN MERGE MANAGER"
-MergeManagerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MergeManagerBtn.TextSize = 11
+-- MERGE EDITOR BUTTON (NEW)
+local MergeEditorBtn = Instance.new("TextButton")
+MergeEditorBtn.Name = "shhhhnayy05_MergeEditorBtn"
+MergeEditorBtn.Parent = Content
+MergeEditorBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
+MergeEditorBtn.BorderSizePixel = 0
+MergeEditorBtn.Position = UDim2.new(0, 0, 0, 182)
+MergeEditorBtn.Size = UDim2.new(1, 0, 0, 35)
+MergeEditorBtn.Font = Enum.Font.GothamBold
+MergeEditorBtn.Text = "🔗 OPEN MERGE EDITOR"
+MergeEditorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MergeEditorBtn.TextSize = 11
 
-local MergeManagerCorner = Instance.new("UICorner")
-MergeManagerCorner.CornerRadius = UDim.new(0, 6)
-MergeManagerCorner.Parent = MergeManagerBtn
+local MergeEditorCorner = Instance.new("UICorner")
+MergeEditorCorner.CornerRadius = UDim.new(0, 6)
+MergeEditorCorner.Parent = MergeEditorBtn
 
 -- Open File Manager Button
 local OpenFileManagerBtn = Instance.new("TextButton")
@@ -269,7 +270,7 @@ OpenFileManagerCorner.CornerRadius = UDim.new(0, 6)
 OpenFileManagerCorner.Parent = OpenFileManagerBtn
 
 -- ==========================================
--- FILE MANAGER WINDOW (300x400 - Sama dengan panel)
+-- FILE MANAGER WINDOW (300x400) - FIXED
 -- ==========================================
 local FileManagerWindow = Instance.new("Frame")
 FileManagerWindow.Name = "shhhhnayy05_FileManager"
@@ -347,7 +348,7 @@ local RefreshCorner = Instance.new("UICorner")
 RefreshCorner.CornerRadius = UDim.new(0, 6)
 RefreshCorner.Parent = RefreshBtn
 
--- File Scroll Frame (Besar dan scrollable)
+-- File Scroll Frame
 local FileScroll = Instance.new("ScrollingFrame")
 FileScroll.Name = "shhhhnayy05_FileScroll"
 FileScroll.Parent = FileManagerWindow
@@ -381,286 +382,129 @@ EmptyLabel.TextSize = 12
 EmptyLabel.TextWrapped = true
 
 -- ==========================================
--- MERGE MANAGER WINDOW (300x400 - Sama dengan panel)
+-- MERGE EDITOR WINDOW (300x400) - NEW SYSTEM
 -- ==========================================
-local MergeWindow = Instance.new("Frame")
-MergeWindow.Name = "shhhhnayy05_MergeWindow"
-MergeWindow.Parent = ScreenGui
-MergeWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MergeWindow.BorderSizePixel = 0
-MergeWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
-MergeWindow.Size = UDim2.new(0, 300, 0, 400)
-MergeWindow.ZIndex = 110
-MergeWindow.Visible = false
-MergeWindow.Active = true
-MergeWindow.Draggable = true
+local MergeEditorWindow = Instance.new("Frame")
+MergeEditorWindow.Name = "shhhhnayy05_MergeEditor"
+MergeEditorWindow.Parent = ScreenGui
+MergeEditorWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MergeEditorWindow.BorderSizePixel = 0
+MergeEditorWindow.Position = UDim2.new(0.5, -150, 0.5, -200)
+MergeEditorWindow.Size = UDim2.new(0, 300, 0, 400)
+MergeEditorWindow.ZIndex = 110
+MergeEditorWindow.Visible = false
+MergeEditorWindow.Active = true
+MergeEditorWindow.Draggable = true
 
-local MergeWindowCorner = Instance.new("UICorner")
-MergeWindowCorner.CornerRadius = UDim.new(0, 10)
-MergeWindowCorner.Parent = MergeWindow
+local MergeEditorCorner = Instance.new("UICorner")
+MergeEditorCorner.CornerRadius = UDim.new(0, 10)
+MergeEditorCorner.Parent = MergeEditorWindow
 
-local MergeWindowStroke = Instance.new("UIStroke")
-MergeWindowStroke.Color = Color3.fromRGB(150, 50, 200)
-MergeWindowStroke.Thickness = 2
-MergeWindowStroke.Parent = MergeWindow
+local MergeEditorStroke = Instance.new("UIStroke")
+MergeEditorStroke.Color = Color3.fromRGB(150, 50, 200)
+MergeEditorStroke.Thickness = 2
+MergeEditorStroke.Parent = MergeEditorWindow
 
--- Merge Title Bar
-local MergeTitleBar = Instance.new("Frame")
-MergeTitleBar.Name = "shhhhnayy05_MergeTitleBar"
-MergeTitleBar.Parent = MergeWindow
-MergeTitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-MergeTitleBar.BorderSizePixel = 0
-MergeTitleBar.Size = UDim2.new(1, 0, 0, 40)
+-- Merge Editor Title Bar
+local MergeEditorTitleBar = Instance.new("Frame")
+MergeEditorTitleBar.Name = "shhhhnayy05_MergeEditorTitleBar"
+MergeEditorTitleBar.Parent = MergeEditorWindow
+MergeEditorTitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+MergeEditorTitleBar.BorderSizePixel = 0
+MergeEditorTitleBar.Size = UDim2.new(1, 0, 0, 40)
 
-local MergeTitleCorner = Instance.new("UICorner")
-MergeTitleCorner.CornerRadius = UDim.new(0, 8)
-MergeTitleCorner.Parent = MergeTitleBar
+local MergeEditorTitleCorner = Instance.new("UICorner")
+MergeEditorTitleCorner.CornerRadius = UDim.new(0, 8)
+MergeEditorTitleCorner.Parent = MergeEditorTitleBar
 
-local MergeTitleText = Instance.new("TextLabel")
-MergeTitleText.Name = "shhhhnayy05_MergeTitleText"
-MergeTitleText.Parent = MergeTitleBar
-MergeTitleText.BackgroundTransparency = 1
-MergeTitleText.Size = UDim2.new(1, 0, 1, 0)
-MergeTitleText.Font = Enum.Font.GothamBold
-MergeTitleText.Text = "🔗 MERGE MANAGER"
-MergeTitleText.TextColor3 = Color3.fromRGB(200, 100, 255)
-MergeTitleText.TextSize = 14
+local MergeEditorTitleText = Instance.new("TextLabel")
+MergeEditorTitleText.Name = "shhhhnayy05_MergeEditorTitleText"
+MergeEditorTitleText.Parent = MergeEditorTitleBar
+MergeEditorTitleText.BackgroundTransparency = 1
+MergeEditorTitleText.Size = UDim2.new(1, 0, 1, 0)
+MergeEditorTitleText.Font = Enum.Font.GothamBold
+MergeEditorTitleText.Text = "🔗 MERGE EDITOR"
+MergeEditorTitleText.TextColor3 = Color3.fromRGB(200, 100, 255)
+MergeEditorTitleText.TextSize = 14
 
-local MergeCloseBtn = Instance.new("TextButton")
-MergeCloseBtn.Name = "shhhhnayy05_MergeCloseBtn"
-MergeCloseBtn.Parent = MergeTitleBar
-MergeCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-MergeCloseBtn.BorderSizePixel = 0
-MergeCloseBtn.Position = UDim2.new(1, -35, 0.5, -12)
-MergeCloseBtn.Size = UDim2.new(0, 24, 0, 24)
-MergeCloseBtn.Font = Enum.Font.GothamBold
-MergeCloseBtn.Text = "×"
-MergeCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MergeCloseBtn.TextSize = 18
+local MergeEditorCloseBtn = Instance.new("TextButton")
+MergeEditorCloseBtn.Name = "shhhhnayy05_MergeEditorCloseBtn"
+MergeEditorCloseBtn.Parent = MergeEditorTitleBar
+MergeEditorCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+MergeEditorCloseBtn.BorderSizePixel = 0
+MergeEditorCloseBtn.Position = UDim2.new(1, -35, 0.5, -12)
+MergeEditorCloseBtn.Size = UDim2.new(0, 24, 0, 24)
+MergeEditorCloseBtn.Font = Enum.Font.GothamBold
+MergeEditorCloseBtn.Text = "×"
+MergeEditorCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MergeEditorCloseBtn.TextSize = 18
 
-local MergeCloseCorner = Instance.new("UICorner")
-MergeCloseCorner.CornerRadius = UDim.new(0, 6)
-MergeCloseCorner.Parent = MergeCloseBtn
+local MergeEditorCloseCorner = Instance.new("UICorner")
+MergeEditorCloseCorner.CornerRadius = UDim.new(0, 6)
+MergeEditorCloseCorner.Parent = MergeEditorCloseBtn
 
--- Merge Content Scrollable
-local MergeScroll = Instance.new("ScrollingFrame")
-MergeScroll.Name = "shhhhnayy05_MergeScroll"
-MergeScroll.Parent = MergeWindow
-MergeScroll.BackgroundTransparency = 1
-MergeScroll.BorderSizePixel = 0
-MergeScroll.Position = UDim2.new(0, 10, 0, 50)
-MergeScroll.Size = UDim2.new(1, -20, 1, -60)
-MergeScroll.ScrollBarThickness = 6
-MergeScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 100, 255)
-MergeScroll.CanvasSize = UDim2.new(0, 0, 0, 350)
+-- Info Label
+local MergeInfoLabel = Instance.new("TextLabel")
+MergeInfoLabel.Name = "shhhhnayy05_MergeInfoLabel"
+MergeInfoLabel.Parent = MergeEditorWindow
+MergeInfoLabel.BackgroundTransparency = 1
+MergeInfoLabel.Position = UDim2.new(0, 10, 0, 45)
+MergeInfoLabel.Size = UDim2.new(1, -20, 0, 30)
+MergeInfoLabel.Font = Enum.Font.Gotham
+MergeInfoLabel.Text = "Click checkbox to select files to merge"
+MergeInfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+MergeInfoLabel.TextSize = 11
+MergeInfoLabel.TextWrapped = true
 
-local MergeScrollCorner = Instance.new("UICorner")
-MergeScrollCorner.CornerRadius = UDim.new(0, 8)
-MergeScrollCorner.Parent = MergeScroll
+-- Files List Scroll Frame
+local MergeFilesScroll = Instance.new("ScrollingFrame")
+MergeFilesScroll.Name = "shhhhnayy05_MergeFilesScroll"
+MergeFilesScroll.Parent = MergeEditorWindow
+MergeFilesScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MergeFilesScroll.BorderSizePixel = 0
+MergeFilesScroll.Position = UDim2.new(0, 10, 0, 80)
+MergeFilesScroll.Size = UDim2.new(1, -20, 0, 250)
+MergeFilesScroll.ScrollBarThickness = 6
+MergeFilesScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 100, 255)
+MergeFilesScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 
--- Current Path Section
-local CurrentPathSection = Instance.new("Frame")
-CurrentPathSection.Name = "shhhhnayy05_CurrentPathSection"
-CurrentPathSection.Parent = MergeScroll
-CurrentPathSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-CurrentPathSection.BorderSizePixel = 0
-CurrentPathSection.Position = UDim2.new(0, 0, 0, 0)
-CurrentPathSection.Size = UDim2.new(1, -10, 0, 80)
+local MergeFilesScrollCorner = Instance.new("UICorner")
+MergeFilesScrollCorner.CornerRadius = UDim.new(0, 8)
+MergeFilesScrollCorner.Parent = MergeFilesScroll
 
-local CurrentPathCorner = Instance.new("UICorner")
-CurrentPathCorner.CornerRadius = UDim.new(0, 6)
-CurrentPathCorner.Parent = CurrentPathSection
+local MergeFilesLayout = Instance.new("UIListLayout")
+MergeFilesLayout.Parent = MergeFilesScroll
+MergeFilesLayout.Padding = UDim.new(0, 5)
+MergeFilesLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-local CurrentPathTitle = Instance.new("TextLabel")
-CurrentPathTitle.Name = "shhhhnayy05_CurrentPathTitle"
-CurrentPathTitle.Parent = CurrentPathSection
-CurrentPathTitle.BackgroundTransparency = 1
-CurrentPathTitle.Position = UDim2.new(0, 10, 0, 5)
-CurrentPathTitle.Size = UDim2.new(1, -20, 0, 20)
-CurrentPathTitle.Font = Enum.Font.GothamBold
-CurrentPathTitle.Text = "📍 CURRENT PATH"
-CurrentPathTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-CurrentPathTitle.TextSize = 12
-CurrentPathTitle.TextXAlignment = Enum.TextXAlignment.Left
+-- Selected Count Label
+local SelectedCountLabel = Instance.new("TextLabel")
+SelectedCountLabel.Name = "shhhhnayy05_SelectedCountLabel"
+SelectedCountLabel.Parent = MergeEditorWindow
+SelectedCountLabel.BackgroundTransparency = 1
+SelectedCountLabel.Position = UDim2.new(0, 10, 0, 335)
+SelectedCountLabel.Size = UDim2.new(1, -20, 0, 20)
+SelectedCountLabel.Font = Enum.Font.GothamBold
+SelectedCountLabel.Text = "Selected: 0 files"
+SelectedCountLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
+SelectedCountLabel.TextSize = 12
 
-local CurrentPathInfo = Instance.new("TextLabel")
-CurrentPathInfo.Name = "shhhhnayy05_CurrentPathInfo"
-CurrentPathInfo.Parent = CurrentPathSection
-CurrentPathInfo.BackgroundTransparency = 1
-CurrentPathInfo.Position = UDim2.new(0, 10, 0, 28)
-CurrentPathInfo.Size = UDim2.new(1, -20, 0, 18)
-CurrentPathInfo.Font = Enum.Font.Gotham
-CurrentPathInfo.Text = "Points: 0 | Duration: 0s"
-CurrentPathInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
-CurrentPathInfo.TextSize = 11
-CurrentPathInfo.TextXAlignment = Enum.TextXAlignment.Left
+-- Merge Selected Button
+local MergeSelectedBtn = Instance.new("TextButton")
+MergeSelectedBtn.Name = "shhhhnayy05_MergeSelectedBtn"
+MergeSelectedBtn.Parent = MergeEditorWindow
+MergeSelectedBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+MergeSelectedBtn.BorderSizePixel = 0
+MergeSelectedBtn.Position = UDim2.new(0, 10, 0, 360)
+MergeSelectedBtn.Size = UDim2.new(1, -20, 0, 30)
+MergeSelectedBtn.Font = Enum.Font.GothamBold
+MergeSelectedBtn.Text = "🔗 MERGE SELECTED"
+MergeSelectedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MergeSelectedBtn.TextSize = 12
 
-local StoreCurrentBtn = Instance.new("TextButton")
-StoreCurrentBtn.Name = "shhhhnayy05_StoreCurrentBtn"
-StoreCurrentBtn.Parent = CurrentPathSection
-StoreCurrentBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-StoreCurrentBtn.BorderSizePixel = 0
-StoreCurrentBtn.Position = UDim2.new(0.03, 0, 0.55, 0)
-StoreCurrentBtn.Size = UDim2.new(0.44, 0, 0, 30)
-StoreCurrentBtn.Font = Enum.Font.GothamBold
-StoreCurrentBtn.Text = "📥 STORE"
-StoreCurrentBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-StoreCurrentBtn.TextSize = 10
-
-local StoreCurrentCorner = Instance.new("UICorner")
-StoreCurrentCorner.CornerRadius = UDim.new(0, 4)
-StoreCurrentCorner.Parent = StoreCurrentBtn
-
-local ClearCurrentBtn = Instance.new("TextButton")
-ClearCurrentBtn.Name = "shhhhnayy05_ClearCurrentBtn"
-ClearCurrentBtn.Parent = CurrentPathSection
-ClearCurrentBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-ClearCurrentBtn.BorderSizePixel = 0
-ClearCurrentBtn.Position = UDim2.new(0.53, 0, 0.55, 0)
-ClearCurrentBtn.Size = UDim2.new(0.44, 0, 0, 30)
-ClearCurrentBtn.Font = Enum.Font.GothamBold
-ClearCurrentBtn.Text = "🗑 CLEAR"
-ClearCurrentBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ClearCurrentBtn.TextSize = 10
-
-local ClearCurrentCorner = Instance.new("UICorner")
-ClearCurrentCorner.CornerRadius = UDim.new(0, 4)
-ClearCurrentCorner.Parent = ClearCurrentBtn
-
--- Slots Section
-local SlotsSection = Instance.new("Frame")
-SlotsSection.Name = "shhhhnayy05_SlotsSection"
-SlotsSection.Parent = MergeScroll
-SlotsSection.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-SlotsSection.BorderSizePixel = 0
-SlotsSection.Position = UDim2.new(0, 0, 0, 90)
-SlotsSection.Size = UDim2.new(1, -10, 0, 180)
-
-local SlotsCorner = Instance.new("UICorner")
-SlotsCorner.CornerRadius = UDim.new(0, 6)
-SlotsCorner.Parent = SlotsSection
-
-local SlotsTitle = Instance.new("TextLabel")
-SlotsTitle.Name = "shhhhnayy05_SlotsTitle"
-SlotsTitle.Parent = SlotsSection
-SlotsTitle.BackgroundTransparency = 1
-SlotsTitle.Position = UDim2.new(0, 10, 0, 5)
-SlotsTitle.Size = UDim2.new(1, -20, 0, 20)
-SlotsTitle.Font = Enum.Font.GothamBold
-SlotsTitle.Text = "🗄 MERGE SLOTS"
-SlotsTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
-SlotsTitle.TextSize = 12
-SlotsTitle.TextXAlignment = Enum.TextXAlignment.Left
-
--- Slots Container
-local SlotsContainer = Instance.new("Frame")
-SlotsContainer.Name = "shhhhnayy05_SlotsContainer"
-SlotsContainer.Parent = SlotsSection
-SlotsContainer.BackgroundTransparency = 1
-SlotsContainer.Position = UDim2.new(0, 10, 0, 30)
-SlotsContainer.Size = UDim2.new(1, -20, 0, 140)
-
--- Merge Operations Section
-local MergeOpsSection = Instance.new("Frame")
-MergeOpsSection.Name = "shhhhnayy05_MergeOpsSection"
-MergeOpsSection.Parent = MergeScroll
-MergeOpsSection.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-MergeOpsSection.BorderSizePixel = 0
-MergeOpsSection.Position = UDim2.new(0, 0, 0, 280)
-MergeOpsSection.Size = UDim2.new(1, -10, 0, 120)
-
-local MergeOpsCorner = Instance.new("UICorner")
-MergeOpsCorner.CornerRadius = UDim.new(0, 6)
-MergeOpsCorner.Parent = MergeOpsSection
-
-local MergeOpsTitle = Instance.new("TextLabel")
-MergeOpsTitle.Name = "shhhhnayy05_MergeOpsTitle"
-MergeOpsTitle.Parent = MergeOpsSection
-MergeOpsTitle.BackgroundTransparency = 1
-MergeOpsTitle.Position = UDim2.new(0, 10, 0, 5)
-MergeOpsTitle.Size = UDim2.new(1, -20, 0, 20)
-MergeOpsTitle.Font = Enum.Font.GothamBold
-MergeOpsTitle.Text = "⚙ OPERATIONS"
-MergeOpsTitle.TextColor3 = Color3.fromRGB(100, 255, 150)
-MergeOpsTitle.TextSize = 12
-MergeOpsTitle.TextXAlignment = Enum.TextXAlignment.Left
-
--- Slot Selector
-local SlotSelectorLabel = Instance.new("TextLabel")
-SlotSelectorLabel.Name = "shhhhnayy05_SlotSelectorLabel"
-SlotSelectorLabel.Parent = MergeOpsSection
-SlotSelectorLabel.BackgroundTransparency = 1
-SlotSelectorLabel.Position = UDim2.new(0, 10, 0, 30)
-SlotSelectorLabel.Size = UDim2.new(0.3, 0, 0, 25)
-SlotSelectorLabel.Font = Enum.Font.Gotham
-SlotSelectorLabel.Text = "Slot:"
-SlotSelectorLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-SlotSelectorLabel.TextSize = 11
-SlotSelectorLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local SlotSelector = Instance.new("TextBox")
-SlotSelector.Name = "shhhhnayy05_SlotSelector"
-SlotSelector.Parent = MergeOpsSection
-SlotSelector.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-SlotSelector.BorderSizePixel = 0
-SlotSelector.Position = UDim2.new(0.35, 0, 0, 30)
-SlotSelector.Size = UDim2.new(0.2, 0, 0, 25)
-SlotSelector.Font = Enum.Font.GothamBold
-SlotSelector.Text = "1"
-SlotSelector.TextColor3 = Color3.fromRGB(0, 200, 255)
-SlotSelector.TextSize = 14
-
-local SlotSelectorCorner = Instance.new("UICorner")
-SlotSelectorCorner.CornerRadius = UDim.new(0, 4)
-SlotSelectorCorner.Parent = SlotSelector
-
-local AppendSlotBtn = Instance.new("TextButton")
-AppendSlotBtn.Name = "shhhhnayy05_AppendSlotBtn"
-AppendSlotBtn.Parent = MergeOpsSection
-AppendSlotBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-AppendSlotBtn.BorderSizePixel = 0
-AppendSlotBtn.Position = UDim2.new(0.6, 0, 0, 28)
-AppendSlotBtn.Size = UDim2.new(0.35, 0, 0, 30)
-AppendSlotBtn.Font = Enum.Font.GothamBold
-AppendSlotBtn.Text = "🔗 APPEND"
-AppendSlotBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AppendSlotBtn.TextSize = 11
-
-local AppendSlotCorner = Instance.new("UICorner")
-AppendSlotCorner.CornerRadius = UDim.new(0, 4)
-AppendSlotCorner.Parent = AppendSlotBtn
-
-local MergeAllBtn = Instance.new("TextButton")
-MergeAllBtn.Name = "shhhhnayy05_MergeAllBtn"
-MergeAllBtn.Parent = MergeOpsSection
-MergeAllBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-MergeAllBtn.BorderSizePixel = 0
-MergeAllBtn.Position = UDim2.new(0.03, 0, 0, 65)
-MergeAllBtn.Size = UDim2.new(0.44, 0, 0, 25)
-MergeAllBtn.Font = Enum.Font.GothamBold
-MergeAllBtn.Text = "🔗 MERGE ALL"
-MergeAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MergeAllBtn.TextSize = 10
-
-local MergeAllCorner = Instance.new("UICorner")
-MergeAllCorner.CornerRadius = UDim.new(0, 4)
-MergeAllCorner.Parent = MergeAllBtn
-
-local ClearAllSlotsBtn = Instance.new("TextButton")
-ClearAllSlotsBtn.Name = "shhhhnayy05_ClearAllSlotsBtn"
-ClearAllSlotsBtn.Parent = MergeOpsSection
-ClearAllSlotsBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-ClearAllSlotsBtn.BorderSizePixel = 0
-ClearAllSlotsBtn.Position = UDim2.new(0.53, 0, 0, 65)
-ClearAllSlotsBtn.Size = UDim2.new(0.44, 0, 0, 25)
-ClearAllSlotsBtn.Font = Enum.Font.GothamBold
-ClearAllSlotsBtn.Text = "🗑 CLEAR ALL"
-ClearAllSlotsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ClearAllSlotsBtn.TextSize = 10
-
-local ClearAllSlotsCorner = Instance.new("UICorner")
-ClearAllSlotsCorner.CornerRadius = UDim.new(0, 4)
-ClearAllSlotsCorner.Parent = ClearAllSlotsBtn
+local MergeSelectedCorner = Instance.new("UICorner")
+MergeSelectedCorner.CornerRadius = UDim.new(0, 6)
+MergeSelectedCorner.Parent = MergeSelectedBtn
 
 -- ==========================================
 -- SAVE DIALOG
@@ -742,7 +586,86 @@ DialogCancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 DialogCancelBtn.TextSize = 14
 
 -- ==========================================
--- FILE DETAIL WINDOW (300x400 - Sama dengan panel)
+-- MERGE SAVE DIALOG (NEW)
+-- ==========================================
+local MergeSaveDialog = Instance.new("Frame")
+MergeSaveDialog.Name = "shhhhnayy05_MergeSaveDialog"
+MergeSaveDialog.Parent = ScreenGui
+MergeSaveDialog.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+MergeSaveDialog.BorderSizePixel = 0
+MergeSaveDialog.Position = UDim2.new(0.5, -150, 0.5, -75)
+MergeSaveDialog.Size = UDim2.new(0, 300, 0, 150)
+MergeSaveDialog.ZIndex = 250
+MergeSaveDialog.Visible = false
+MergeSaveDialog.Active = true
+
+local MergeSaveCorner = Instance.new("UICorner")
+MergeSaveCorner.CornerRadius = UDim.new(0, 10)
+MergeSaveCorner.Parent = MergeSaveDialog
+
+local MergeSaveStroke = Instance.new("UIStroke")
+MergeSaveStroke.Color = Color3.fromRGB(150, 50, 200)
+MergeSaveStroke.Thickness = 2
+MergeSaveStroke.Parent = MergeSaveDialog
+
+local MergeSaveTitle = Instance.new("TextLabel")
+MergeSaveTitle.Name = "shhhhnayy05_MergeSaveTitle"
+MergeSaveTitle.Parent = MergeSaveDialog
+MergeSaveTitle.BackgroundTransparency = 1
+MergeSaveTitle.Position = UDim2.new(0, 0, 0, 10)
+MergeSaveTitle.Size = UDim2.new(1, 0, 0, 25)
+MergeSaveTitle.Font = Enum.Font.GothamBold
+MergeSaveTitle.Text = "💾 SAVE MERGED WALK"
+MergeSaveTitle.TextColor3 = Color3.fromRGB(200, 100, 255)
+MergeSaveTitle.TextSize = 16
+
+local MergeSaveInput = Instance.new("TextBox")
+MergeSaveInput.Name = "shhhhnayy05_MergeSaveInput"
+MergeSaveInput.Parent = MergeSaveDialog
+MergeSaveInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+MergeSaveInput.BorderSizePixel = 0
+MergeSaveInput.Position = UDim2.new(0.1, 0, 0.35, 0)
+MergeSaveInput.Size = UDim2.new(0.8, 0, 0, 35)
+MergeSaveInput.Font = Enum.Font.Gotham
+MergeSaveInput.PlaceholderText = "Enter merged walk name..."
+MergeSaveInput.Text = ""
+MergeSaveInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+MergeSaveInput.TextSize = 14
+
+local MergeSaveInputCorner = Instance.new("UICorner")
+MergeSaveInputCorner.CornerRadius = UDim.new(0, 6)
+MergeSaveInputCorner.Parent = MergeSaveInput
+
+local MergeSaveConfirmBtn = Instance.new("TextButton")
+MergeSaveConfirmBtn.Name = "shhhhnayy05_MergeSaveConfirmBtn"
+MergeSaveConfirmBtn.Parent = MergeSaveDialog
+MergeSaveConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+MergeSaveConfirmBtn.BorderSizePixel = 0
+MergeSaveConfirmBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
+MergeSaveConfirmBtn.Size = UDim2.new(0.35, 0, 0, 35)
+MergeSaveConfirmBtn.Font = Enum.Font.GothamBold
+MergeSaveConfirmBtn.Text = "SAVE"
+MergeSaveConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MergeSaveConfirmBtn.TextSize = 14
+
+local MergeSaveConfirmCorner = Instance.new("UICorner")
+MergeSaveConfirmCorner.CornerRadius = UDim.new(0, 6)
+MergeSaveConfirmCorner.Parent = MergeSaveConfirmBtn
+
+local MergeSaveCancelBtn = Instance.new("TextButton")
+MergeSaveCancelBtn.Name = "shhhhnayy05_MergeSaveCancelBtn"
+MergeSaveCancelBtn.Parent = MergeSaveDialog
+MergeSaveCancelBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+MergeSaveCancelBtn.BorderSizePixel = 0
+MergeSaveCancelBtn.Position = UDim2.new(0.55, 0, 0.65, 0)
+MergeSaveCancelBtn.Size = UDim2.new(0.35, 0, 0, 35)
+MergeSaveCancelBtn.Font = Enum.Font.GothamBold
+MergeSaveCancelBtn.Text = "CANCEL"
+MergeSaveCancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MergeSaveCancelBtn.TextSize = 14
+
+-- ==========================================
+-- FILE DETAIL WINDOW (300x400)
 -- ==========================================
 local FileDetail = Instance.new("Frame")
 FileDetail.Name = "shhhhnayy05_FileDetail"
@@ -855,7 +778,7 @@ DetailDate.TextColor3 = Color3.fromRGB(150, 150, 150)
 DetailDate.TextSize = 11
 DetailDate.TextXAlignment = Enum.TextXAlignment.Left
 
--- SPEED CONTROL SECTION (Fixed - Angka di tengah)
+-- SPEED CONTROL SECTION (FIXED - Centered)
 local SpeedSection = Instance.new("Frame")
 SpeedSection.Name = "shhhhnayy05_SpeedSection"
 SpeedSection.Parent = DetailScroll
@@ -990,7 +913,7 @@ DeleteCorner.CornerRadius = UDim.new(0, 8)
 DeleteCorner.Parent = DeleteBtn
 
 -- ==========================================
--- TRIM PANEL (300x400 - Sama dengan panel)
+-- TRIM PANEL (300x400)
 -- ==========================================
 local TrimPanel = Instance.new("Frame")
 TrimPanel.Name = "shhhhnayy05_TrimPanel"
@@ -1235,13 +1158,6 @@ local function updateStats()
     end
     StatsLabel.Text = string.format("Points: %d | Time: %.1fs", #WalkData.CurrentPath, duration)
     
-    -- Update merge window
-    local mergeInfo = MergeScroll:FindFirstChild("shhhhnayy05_CurrentPathInfo")
-    if mergeInfo then
-        mergeInfo.Text = string.format("Points: %d | Duration: %.1fs", #WalkData.CurrentPath, duration)
-    end
-    
-    -- Update trim window
     local trimInfo = TrimScroll:FindFirstChild("shhhhnayy05_TrimPathInfo")
     if trimInfo then
         trimInfo.Text = string.format("Current Path: %d points", #WalkData.CurrentPath)
@@ -1294,7 +1210,7 @@ local function stopRecording()
     TrimEndInput.Text = tostring(#WalkData.CurrentPath)
 end
 
--- === PLAY WALK SYSTEM (Speed yang benar) ===
+-- === PLAY WALK SYSTEM ===
 local function playWalk(pathData, speed, isPreview)
     if WalkData.isPlaying or #pathData == 0 then return end
     
@@ -1336,43 +1252,35 @@ local function playWalk(pathData, speed, isPreview)
         return
     end
     
-    -- Disable collisions
     for _, v in pairs(char:GetChildren()) do
         if v:IsA("BasePart") then 
             v.CanCollide = false 
         end
     end
 
-    -- Set walk speed untuk animasi (semakin tinggi speed = semakin cepat jalan/berlari)
     local baseWalkSpeed = 16
     hum.WalkSpeed = baseWalkSpeed * speed
 
-    -- Loop dengan frame skipping berdasarkan speed
     local i = 1
     while i <= #pathData and WalkData.isPlaying do
         local data = pathData[i]
         local targetCF = CFrame.new(unpack(data.cf_raw))
         
-        -- Apply CFrame dan Velocity
         hrp.CFrame = targetCF
         hrp.Velocity = Vector3.new(unpack(data.velocity)) * speed
         
-        -- Apply State
         if hum:GetState().Value ~= data.state then
             hum:ChangeState(data.state)
         end
         
-        -- Tunggu berdasarkan speed (semakin tinggi speed = semakin cepat loop)
         local waitFrames = math.max(1, math.floor(1/speed))
         for _ = 1, waitFrames do
              RunService.Heartbeat:Wait()
         end
         
-        -- Advance index berdasarkan speed (semakin tinggi = loncat lebih banyak frame)
         i = i + math.max(1, math.round(speed))
     end
 
-    -- Restore
     if char then
         for _, v in pairs(char:GetChildren()) do
             if v:IsA("BasePart") then 
@@ -1394,205 +1302,16 @@ local function playWalk(pathData, speed, isPreview)
 end
 
 -- ==========================================
--- MERGE SYSTEM
--- ==========================================
-
-local function updateMergeSlotsDisplay()
-    for _, child in pairs(SlotsContainer:GetChildren()) do
-        if child:IsA("Frame") then
-            child:Destroy()
-        end
-    end
-    
-    for i = 1, 5 do
-        local slot = WalkData.MergeSlots[i]
-        
-        local slotFrame = Instance.new("Frame")
-        slotFrame.Name = "shhhhnayy05_Slot_" .. i
-        slotFrame.Parent = SlotsContainer
-        slotFrame.BackgroundColor3 = slot and Color3.fromRGB(60, 80, 60) or Color3.fromRGB(50, 50, 60)
-        slotFrame.BorderSizePixel = 0
-        slotFrame.Position = UDim2.new(0, 0, 0, (i-1) * 28)
-        slotFrame.Size = UDim2.new(1, 0, 0, 25)
-        
-        local slotCorner = Instance.new("UICorner")
-        slotCorner.CornerRadius = UDim.new(0, 4)
-        slotCorner.Parent = slotFrame
-        
-        local slotNum = Instance.new("TextLabel")
-        slotNum.Name = "shhhhnayy05_SlotNum"
-        slotNum.Parent = slotFrame
-        slotNum.BackgroundTransparency = 1
-        slotNum.Position = UDim2.new(0, 8, 0, 0)
-        slotNum.Size = UDim2.new(0, 25, 1, 0)
-        slotNum.Font = Enum.Font.GothamBold
-        slotNum.Text = "#" .. i
-        slotNum.TextColor3 = slot and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(150, 150, 150)
-        slotNum.TextSize = 12
-        
-        local slotInfo = Instance.new("TextLabel")
-        slotInfo.Name = "shhhhnayy05_SlotInfo"
-        slotInfo.Parent = slotFrame
-        slotInfo.BackgroundTransparency = 1
-        slotInfo.Position = UDim2.new(0, 35, 0, 0)
-        slotInfo.Size = UDim2.new(0.5, 0, 1, 0)
-        slotInfo.Font = Enum.Font.Gotham
-        slotInfo.Text = slot and (#slot .. " pts") or "Empty"
-        slotInfo.TextColor3 = slot and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 120, 120)
-        slotInfo.TextSize = 11
-        slotInfo.TextXAlignment = Enum.TextXAlignment.Left
-        
-        local useBtn = Instance.new("TextButton")
-        useBtn.Name = "shhhhnayy05_UseBtn"
-        useBtn.Parent = slotFrame
-        useBtn.BackgroundColor3 = slot and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(80, 80, 80)
-        useBtn.BorderSizePixel = 0
-        useBtn.Position = UDim2.new(0.75, 0, 0.1, 0)
-        useBtn.Size = UDim2.new(0.22, 0, 0.8, 0)
-        useBtn.Font = Enum.Font.GothamBold
-        useBtn.Text = slot and "USE" or "-"
-        useBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        useBtn.TextSize = 10
-        useBtn.AutoButtonColor = slot ~= nil
-        
-        local useCorner = Instance.new("UICorner")
-        useCorner.CornerRadius = UDim.new(0, 3)
-        useCorner.Parent = useBtn
-        
-        if slot then
-            useBtn.MouseButton1Click:Connect(function()
-                SlotSelector.Text = tostring(i)
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                                    Title = "Slot Selected",
-                    Text = "Slot " .. i .. " selected for merge operations",
-                    Duration = 2
-                })
-            end)
-        end
-    end
-end
-
--- Store current path to slot
-StoreCurrentBtn.MouseButton1Click:Connect(function()
-    if #WalkData.CurrentPath == 0 then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Empty Path",
-            Text = "No path to store. Record first!",
-            Duration = 3
-        })
-        return
-    end
-    
-    local slotNum = tonumber(SlotSelector.Text) or 1
-    slotNum = math.clamp(slotNum, 1, 5)
-    
-    WalkData.MergeSlots[slotNum] = {}
-    for _, point in ipairs(WalkData.CurrentPath) do
-        table.insert(WalkData.MergeSlots[slotNum], {
-            cf_raw = {unpack(point.cf_raw)},
-            velocity = {unpack(point.velocity)},
-            state = point.state,
-            time = point.time
-        })
-    end
-    
-    WalkData.ActiveMergeSlot = slotNum
-    updateMergeSlotsDisplay()
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Path Stored",
-        Text = "Current path stored in slot " .. slotNum,
-        Duration = 2
-    })
-end)
-
--- Clear current path
-ClearCurrentBtn.MouseButton1Click:Connect(function()
-    WalkData.CurrentPath = {}
-    updateStats()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Path Cleared",
-        Text = "Current path has been cleared",
-        Duration = 2
-    })
-end)
-
--- Append slot to current path
-AppendSlotBtn.MouseButton1Click:Connect(function()
-    local slotNum = tonumber(SlotSelector.Text) or 1
-    slotNum = math.clamp(slotNum, 1, 5)
-    
-    local slotData = WalkData.MergeSlots[slotNum]
-    if not slotData or #slotData == 0 then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Empty Slot",
-            Text = "Slot " .. slotNum .. " is empty!",
-            Duration = 2
-        })
-        return
-    end
-    
-    for _, point in ipairs(slotData) do
-        table.insert(WalkData.CurrentPath, {
-            cf_raw = {unpack(point.cf_raw)},
-            velocity = {unpack(point.velocity)},
-            state = point.state,
-            time = point.time
-        })
-    end
-    
-    updateStats()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Slot Appended",
-        Text = "Added " .. #slotData .. " points from slot " .. slotNum,
-        Duration = 2
-    })
-end)
-
--- Merge all slots
-MergeAllBtn.MouseButton1Click:Connect(function()
-    local totalPoints = 0
-    for i = 1, 5 do
-        if WalkData.MergeSlots[i] then
-            for _, point in ipairs(WalkData.MergeSlots[i]) do
-                table.insert(WalkData.CurrentPath, {
-                    cf_raw = {unpack(point.cf_raw)},
-                    velocity = {unpack(point.velocity)},
-                    state = point.state,
-                    time = point.time
-                })
-                totalPoints = totalPoints + 1
-            end
-        end
-    end
-    
-    updateStats()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Merge Complete",
-        Text = "Merged " .. totalPoints .. " points from all slots",
-        Duration = 3
-    })
-end)
-
--- Clear all slots
-ClearAllSlotsBtn.MouseButton1Click:Connect(function()
-    WalkData.MergeSlots = {}
-    updateMergeSlotsDisplay()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Slots Cleared",
-        Text = "All merge slots have been cleared",
-        Duration = 2
-    })
-end)
-
--- ==========================================
--- FILE MANAGER FUNCTIONS
+-- FILE MANAGER FUNCTIONS (FIXED)
 -- ==========================================
 
 local function refreshFileList()
+    -- Clear existing items
     for _, child in pairs(FileScroll:GetChildren()) do
-        if child:IsA("Frame") or child:IsA("TextButton") then
-            child:Destroy()
+        if child:IsA("Frame") or child:IsA("TextButton") or child:IsA("TextLabel") then
+            if child.Name ~= "UIListLayout" then
+                child:Destroy()
+            end
         end
     end
     
@@ -1604,13 +1323,20 @@ local function refreshFileList()
     table.sort(fileNames)
     
     if #fileNames == 0 then
-        EmptyLabel.Parent = FileScroll
-        EmptyLabel.Visible = true
+        local emptyLabel = Instance.new("TextLabel")
+        emptyLabel.Name = "shhhhnayy05_EmptyLabel"
+        emptyLabel.Parent = FileScroll
+        emptyLabel.BackgroundTransparency = 1
+        emptyLabel.Size = UDim2.new(1, 0, 0, 100)
+        emptyLabel.Font = Enum.Font.Gotham
+        emptyLabel.Text = "No saved files yet.\nRecord and save a walk!"
+        emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+        emptyLabel.TextSize = 12
+        emptyLabel.TextWrapped = true
         FileScroll.CanvasSize = UDim2.new(0, 0, 0, 100)
         return
     end
     
-    EmptyLabel.Visible = false
     local yOffset = 0
     
     for _, fileName in ipairs(fileNames) do
@@ -1676,7 +1402,151 @@ local function refreshFileList()
 end
 
 -- ==========================================
--- SPEED CONTROL FUNCTIONS (FIXED - Centered)
+-- MERGE EDITOR FUNCTIONS (NEW SYSTEM)
+-- ==========================================
+
+local function updateMergeEditorList()
+    -- Clear existing items
+    for _, child in pairs(MergeFilesScroll:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextButton") or child:IsA("TextLabel") then
+            if child.Name ~= "UIListLayout" then
+                child:Destroy()
+            end
+        end
+    end
+    
+    WalkData.SelectedFilesForMerge = {}
+    
+    local allSaves = shhhhnayy05_loadFromDisk()
+    local fileNames = {}
+    for name, _ in pairs(allSaves) do
+        table.insert(fileNames, name)
+    end
+    table.sort(fileNames)
+    
+    if #fileNames == 0 then
+        local emptyLabel = Instance.new("TextLabel")
+        emptyLabel.Name = "shhhhnayy05_MergeEmptyLabel"
+        emptyLabel.Parent = MergeFilesScroll
+        emptyLabel.BackgroundTransparency = 1
+        emptyLabel.Size = UDim2.new(1, 0, 0, 100)
+        emptyLabel.Font = Enum.Font.Gotham
+        emptyLabel.Text = "No saved files to merge.\nSave some walks first!"
+        emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+        emptyLabel.TextSize = 12
+        emptyLabel.TextWrapped = true
+        MergeFilesScroll.CanvasSize = UDim2.new(0, 0, 0, 100)
+        SelectedCountLabel.Text = "Selected: 0 files"
+        return
+    end
+    
+    local yOffset = 0
+    local index = 1
+    
+    for _, fileName in ipairs(fileNames) do
+        local fileData = allSaves[fileName]
+        
+        -- Create container for each item
+        local itemContainer = Instance.new("Frame")
+        itemContainer.Name = "shhhhnayy05_MergeItem_" .. index
+        itemContainer.Parent = MergeFilesScroll
+        itemContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        itemContainer.BorderSizePixel = 0
+        itemContainer.Position = UDim2.new(0, 0, 0, yOffset)
+        itemContainer.Size = UDim2.new(1, -10, 0, 50)
+        
+        local itemCorner = Instance.new("UICorner")
+        itemCorner.CornerRadius = UDim.new(0, 6)
+        itemCorner.Parent = itemContainer
+        
+        -- Number label (1, 2, 3, etc)
+        local numLabel = Instance.new("TextLabel")
+        numLabel.Name = "shhhhnayy05_NumLabel"
+        numLabel.Parent = itemContainer
+        numLabel.BackgroundTransparency = 1
+        numLabel.Position = UDim2.new(0, 5, 0, 0)
+        numLabel.Size = UDim2.new(0, 25, 1, 0)
+        numLabel.Font = Enum.Font.GothamBold
+        numLabel.Text = tostring(index)
+        numLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
+        numLabel.TextSize = 14
+        
+        -- Checkbox button
+        local checkbox = Instance.new("TextButton")
+        checkbox.Name = "shhhhnayy05_Checkbox_" .. fileName
+        checkbox.Parent = itemContainer
+        checkbox.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        checkbox.BorderSizePixel = 0
+        checkbox.Position = UDim2.new(0, 30, 0.5, -12)
+        checkbox.Size = UDim2.new(0, 24, 0, 24)
+        checkbox.Font = Enum.Font.GothamBold
+        checkbox.Text = ""
+        checkbox.TextColor3 = Color3.fromRGB(0, 255, 100)
+        checkbox.TextSize = 16
+        
+        local checkboxCorner = Instance.new("UICorner")
+        checkboxCorner.CornerRadius = UDim.new(0, 4)
+        checkboxCorner.Parent = checkbox
+        
+        -- File name label
+        local fileLabel = Instance.new("TextLabel")
+        fileLabel.Name = "shhhhnayy05_FileLabel"
+        fileLabel.Parent = itemContainer
+        fileLabel.BackgroundTransparency = 1
+        fileLabel.Position = UDim2.new(0, 60, 0, 5)
+        fileLabel.Size = UDim2.new(1, -70, 0, 20)
+        fileLabel.Font = Enum.Font.GothamBold
+        fileLabel.Text = fileName
+        fileLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        fileLabel.TextSize = 12
+        fileLabel.TextXAlignment = Enum.TextXAlignment.Left
+        fileLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        
+        -- File info label
+        local infoLabel = Instance.new("TextLabel")
+        infoLabel.Name = "shhhhnayy05_InfoLabel"
+        infoLabel.Parent = itemContainer
+        infoLabel.BackgroundTransparency = 1
+        infoLabel.Position = UDim2.new(0, 60, 0, 26)
+        infoLabel.Size = UDim2.new(1, -70, 0, 18)
+        infoLabel.Font = Enum.Font.Gotham
+        infoLabel.Text = string.format("%d points", #fileData.path)
+        infoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        infoLabel.TextSize = 10
+        infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+        
+        -- Checkbox click handler
+        checkbox.MouseButton1Click:Connect(function()
+            if WalkData.SelectedFilesForMerge[fileName] then
+                -- Deselect
+                WalkData.SelectedFilesForMerge[fileName] = nil
+                checkbox.Text = ""
+                checkbox.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+                itemContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+            else
+                -- Select
+                WalkData.SelectedFilesForMerge[fileName] = fileData
+                checkbox.Text = "✓"
+                checkbox.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+                itemContainer.BackgroundColor3 = Color3.fromRGB(40, 60, 40)
+            end
+            
+            -- Update count
+            local count = 0
+            for _ in pairs(WalkData.SelectedFilesForMerge) do count = count + 1 end
+            SelectedCountLabel.Text = "Selected: " .. count .. " files"
+        end)
+        
+        yOffset = yOffset + 55
+        index = index + 1
+    end
+    
+    MergeFilesScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(yOffset, 250))
+    SelectedCountLabel.Text = "Selected: 0 files"
+end
+
+-- ==========================================
+-- SPEED CONTROL FUNCTIONS
 -- ==========================================
 
 local function updateSpeedDisplay()
@@ -1762,7 +1632,7 @@ DialogCancelBtn.MouseButton1Click:Connect(function()
     SaveDialog.Visible = false
 end)
 
--- File Manager Buttons
+-- File Manager Buttons - FIXED
 OpenFileManagerBtn.MouseButton1Click:Connect(function()
     refreshFileList()
     FileManagerWindow.Visible = true
@@ -1781,14 +1651,101 @@ RefreshBtn.MouseButton1Click:Connect(function()
     })
 end)
 
--- Merge Manager Buttons
-MergeManagerBtn.MouseButton1Click:Connect(function()
-    MergeWindow.Visible = true
-    updateMergeSlotsDisplay()
+-- Merge Editor Buttons (NEW SYSTEM)
+MergeEditorBtn.MouseButton1Click:Connect(function()
+    updateMergeEditorList()
+    MergeEditorWindow.Visible = true
 end)
 
-MergeCloseBtn.MouseButton1Click:Connect(function()
-    MergeWindow.Visible = false
+MergeEditorCloseBtn.MouseButton1Click:Connect(function()
+    MergeEditorWindow.Visible = false
+end)
+
+MergeSelectedBtn.MouseButton1Click:Connect(function()
+    local selectedCount = 0
+    for _ in pairs(WalkData.SelectedFilesForMerge) do selectedCount = selectedCount + 1 end
+    
+    if selectedCount < 2 then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Select More",
+            Text = "Please select at least 2 files to merge",
+            Duration = 3
+        })
+        return
+    end
+    
+    -- Show save dialog for merged file
+    MergeSaveDialog.Visible = true
+    MergeSaveInput.Text = ""
+    MergeSaveInput:CaptureFocus()
+end)
+
+-- Merge Save Dialog
+MergeSaveConfirmBtn.MouseButton1Click:Connect(function()
+    local name = MergeSaveInput.Text:gsub("^%s+", ""):gsub("%s+$", "")
+    if name == "" then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Invalid Name",
+            Text = "Please enter a valid name",
+            Duration = 2
+        })
+        return
+    end
+    
+    -- Merge all selected files
+    local mergedPath = {}
+    local allSaves = shhhhnayy05_loadFromDisk()
+    
+    -- Get sorted list of selected files to maintain order
+    local selectedNames = {}
+    for fileName, _ in pairs(WalkData.SelectedFilesForMerge) do
+        table.insert(selectedNames, fileName)
+    end
+    table.sort(selectedNames)
+    
+    for _, fileName in ipairs(selectedNames) do
+        local fileData = WalkData.SelectedFilesForMerge[fileName]
+        if fileData and fileData.path then
+            for _, point in ipairs(fileData.path) do
+                table.insert(mergedPath, {
+                    cf_raw = {unpack(point.cf_raw)},
+                    velocity = {unpack(point.velocity)},
+                    state = point.state,
+                    time = point.time
+                })
+            end
+        end
+    end
+    
+    -- Save merged file
+    allSaves[name] = {
+        path = mergedPath,
+        date = shhhhnayy05_formatTime(),
+        id = shhhhnayy05_generateId(),
+        isMerged = true,
+        sourceFiles = selectedNames
+    }
+    
+    if shhhhnayy05_saveToDisk(allSaves) then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Merged & Saved!",
+            Text = string.format("Saved '%s' with %d points", name, #mergedPath),
+            Duration = 3
+        })
+        MergeSaveDialog.Visible = false
+        MergeEditorWindow.Visible = false
+        WalkData.SelectedFilesForMerge = {}
+    else
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Error",
+            Text = "Failed to save merged file",
+            Duration = 3
+        })
+    end
+end)
+
+MergeSaveCancelBtn.MouseButton1Click:Connect(function()
+    MergeSaveDialog.Visible = false
 end)
 
 -- Detail Window Buttons
@@ -1915,13 +1872,11 @@ end)
 
 -- Initialize
 updateStats()
-updateMergeSlotsDisplay()
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "SHHHHNAYY05 Walk Recorder V7",
-    Text = "Loaded successfully! Click Record to start.",
+    Title = "SHHHHNAYY05 Walk Recorder V8",
+    Text = "Fixed File Manager + New Merge Editor Loaded!",
     Duration = 5
 })
 
-print("SHHHHNAYY05 Walk Recorder V7 Loaded - Big Windows + Fixed Speed Control")
-
+print("SHHHHNAYY05 Walk Recorder V8 Loaded - File Manager Fixed + Merge Editor System")
