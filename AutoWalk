@@ -71,14 +71,6 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
-local MainGradient = Instance.new("UIGradient")
-MainGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
-})
-MainGradient.Rotation = 45
-MainGradient.Parent = MainFrame
-
 -- Bar Judul
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
@@ -130,7 +122,7 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseBtn
 
--- Tampilan Timer (Tengah Atas)
+-- Tampilan Timer
 local TimerFrame = Instance.new("Frame")
 TimerFrame.Size = UDim2.new(0, 120, 0, 30)
 TimerFrame.Position = UDim2.new(0.5, -60, 0, 50)
@@ -327,7 +319,6 @@ StatusText.BackgroundTransparency = 1
 StatusText.Parent = StatusSection
 
 -- === IKON MENGAMBANG === --
--- Ikon Rekam (Kiri Atas)
 local RecordIcon = Instance.new("TextButton")
 RecordIcon.Name = "RecordIcon"
 RecordIcon.Size = UDim2.new(0, 50, 0, 50)
@@ -343,7 +334,6 @@ local RecIconCorner = Instance.new("UICorner")
 RecIconCorner.CornerRadius = UDim.new(1, 0)
 RecIconCorner.Parent = RecordIcon
 
--- Ikon Minimize (Bawah Rekam)
 local MinimizedIcon = Instance.new("TextButton")
 MinimizedIcon.Name = "MinimizedIcon"
 MinimizedIcon.Size = UDim2.new(0, 50, 0, 50)
@@ -579,6 +569,8 @@ FileWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 FileWindow.BorderSizePixel = 0
 FileWindow.Visible = false
 FileWindow.ZIndex = 80
+FileWindow.Active = true
+FileWindow.Draggable = true
 FileWindow.Parent = ScreenGui
 
 local FileWindowCorner = Instance.new("UICorner")
@@ -636,6 +628,8 @@ FileDetailWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 FileDetailWindow.BorderSizePixel = 0
 FileDetailWindow.Visible = false
 FileDetailWindow.ZIndex = 85
+FileDetailWindow.Active = true
+FileDetailWindow.Draggable = true
 FileDetailWindow.Parent = ScreenGui
 
 local FileDetailCorner = Instance.new("UICorner")
@@ -906,6 +900,8 @@ EditorWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 EditorWindow.BorderSizePixel = 0
 EditorWindow.Visible = false
 EditorWindow.ZIndex = 80
+EditorWindow.Active = true
+EditorWindow.Draggable = true
 EditorWindow.Parent = ScreenGui
 
 local EditorCorner = Instance.new("UICorner")
@@ -963,6 +959,10 @@ EditorFileDropdown.TextSize = 12
 EditorFileDropdown.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 EditorFileDropdown.Parent = EditorContent
 
+local EditorFileDropdownCorner = Instance.new("UICorner")
+EditorFileDropdownCorner.CornerRadius = UDim.new(0, 6)
+EditorFileDropdownCorner.Parent = EditorFileDropdown
+
 local TimelineInfo = Instance.new("TextLabel")
 TimelineInfo.Size = UDim2.new(1, -20, 0, 20)
 TimelineInfo.Position = UDim2.new(0, 10, 0, 45)
@@ -1010,6 +1010,10 @@ StartTrimInput.TextColor3 = Color3.new(1, 1, 1)
 StartTrimInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 StartTrimInput.Parent = TrimSection
 
+local StartTrimInputCorner = Instance.new("UICorner")
+StartTrimInputCorner.CornerRadius = UDim.new(0, 6)
+StartTrimInputCorner.Parent = StartTrimInput
+
 local EndTrimLabel = Instance.new("TextLabel")
 EndTrimLabel.Size = UDim2.new(0.4, 0, 0, 25)
 EndTrimLabel.Position = UDim2.new(0, 10, 0, 70)
@@ -1027,6 +1031,10 @@ EndTrimInput.Text = ""
 EndTrimInput.TextColor3 = Color3.new(1, 1, 1)
 EndTrimInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 EndTrimInput.Parent = TrimSection
+
+local EndTrimInputCorner = Instance.new("UICorner")
+EndTrimInputCorner.CornerRadius = UDim.new(0, 6)
+EndTrimInputCorner.Parent = EndTrimInput
 
 local ReviewLabel = Instance.new("TextLabel")
 ReviewLabel.Size = UDim2.new(0.4, 0, 0, 25)
@@ -1046,6 +1054,10 @@ ReviewInput.TextColor3 = Color3.new(1, 1, 1)
 ReviewInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 ReviewInput.Parent = TrimSection
 
+local ReviewInputCorner = Instance.new("UICorner")
+ReviewInputCorner.CornerRadius = UDim.new(0, 6)
+ReviewInputCorner.Parent = ReviewInput
+
 local ReviewBtn = Instance.new("TextButton")
 ReviewBtn.Size = UDim2.new(0.2, 0, 0, 25)
 ReviewBtn.Position = UDim2.new(0.78, 0, 0, 105)
@@ -1053,6 +1065,10 @@ ReviewBtn.Text = "👁"
 ReviewBtn.TextColor3 = Color3.new(1, 1, 1)
 ReviewBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
 ReviewBtn.Parent = TrimSection
+
+local ReviewBtnCorner = Instance.new("UICorner")
+ReviewBtnCorner.CornerRadius = UDim.new(0, 6)
+ReviewBtnCorner.Parent = ReviewBtn
 
 local PreviewTrimBtn = Instance.new("TextButton")
 PreviewTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
@@ -1064,6 +1080,10 @@ PreviewTrimBtn.Font = Enum.Font.GothamBold
 PreviewTrimBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
 PreviewTrimBtn.Parent = EditorContent
 
+local PreviewTrimCorner = Instance.new("UICorner")
+PreviewTrimCorner.CornerRadius = UDim.new(0, 8)
+PreviewTrimCorner.Parent = PreviewTrimBtn
+
 local ApplyTrimBtn = Instance.new("TextButton")
 ApplyTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
 ApplyTrimBtn.Position = UDim2.new(0.525, 0, 0, 225)
@@ -1073,6 +1093,10 @@ ApplyTrimBtn.TextSize = 12
 ApplyTrimBtn.Font = Enum.Font.GothamBold
 ApplyTrimBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
 ApplyTrimBtn.Parent = EditorContent
+
+local ApplyTrimCorner = Instance.new("UICorner")
+ApplyTrimCorner.CornerRadius = UDim.new(0, 8)
+ApplyTrimCorner.Parent = ApplyTrimBtn
 
 local SaveTrimBtn = Instance.new("TextButton")
 SaveTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
@@ -1084,6 +1108,10 @@ SaveTrimBtn.Font = Enum.Font.GothamBold
 SaveTrimBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
 SaveTrimBtn.Parent = EditorContent
 
+local SaveTrimCorner = Instance.new("UICorner")
+SaveTrimCorner.CornerRadius = UDim.new(0, 8)
+SaveTrimCorner.Parent = SaveTrimBtn
+
 local CancelTrimBtn = Instance.new("TextButton")
 CancelTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
 CancelTrimBtn.Position = UDim2.new(0.525, 0, 0, 270)
@@ -1093,6 +1121,10 @@ CancelTrimBtn.TextSize = 12
 CancelTrimBtn.Font = Enum.Font.GothamBold
 CancelTrimBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 CancelTrimBtn.Parent = EditorContent
+
+local CancelTrimCorner = Instance.new("UICorner")
+CancelTrimCorner.CornerRadius = UDim.new(0, 8)
+CancelTrimCorner.Parent = CancelTrimBtn
 
 local TrimPreviewInfo = Instance.new("TextLabel")
 TrimPreviewInfo.Size = UDim2.new(1, -20, 0, 50)
@@ -1113,6 +1145,8 @@ JoinerWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 JoinerWindow.BorderSizePixel = 0
 JoinerWindow.Visible = false
 JoinerWindow.ZIndex = 80
+JoinerWindow.Active = true
+JoinerWindow.Draggable = true
 JoinerWindow.Parent = ScreenGui
 
 local JoinerCorner = Instance.new("UICorner")
@@ -1169,6 +1203,10 @@ AvailableScroll.BorderSizePixel = 0
 AvailableScroll.ScrollBarThickness = 4
 AvailableScroll.Parent = JoinerContent
 
+local AvailableScrollCorner = Instance.new("UICorner")
+AvailableScrollCorner.CornerRadius = UDim.new(0, 8)
+AvailableScrollCorner.Parent = AvailableScroll
+
 local AvailableLayout = Instance.new("UIListLayout")
 AvailableLayout.Padding = UDim.new(0, 5)
 AvailableLayout.Parent = AvailableScroll
@@ -1191,6 +1229,10 @@ QueueScroll.BorderSizePixel = 0
 QueueScroll.ScrollBarThickness = 4
 QueueScroll.Parent = JoinerContent
 
+local QueueScrollCorner = Instance.new("UICorner")
+QueueScrollCorner.CornerRadius = UDim.new(0, 8)
+QueueScrollCorner.Parent = QueueScroll
+
 local QueueLayout = Instance.new("UIListLayout")
 QueueLayout.Padding = UDim.new(0, 5)
 QueueLayout.Parent = QueueScroll
@@ -1204,6 +1246,10 @@ AddToQueueBtn.TextSize = 11
 AddToQueueBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
 AddToQueueBtn.Parent = JoinerContent
 
+local AddToQueueCorner = Instance.new("UICorner")
+AddToQueueCorner.CornerRadius = UDim.new(0, 6)
+AddToQueueCorner.Parent = AddToQueueBtn
+
 local RemoveFromQueueBtn = Instance.new("TextButton")
 RemoveFromQueueBtn.Size = UDim2.new(0.45, 0, 0, 30)
 RemoveFromQueueBtn.Position = UDim2.new(0.525, 0, 0, 300)
@@ -1212,6 +1258,10 @@ RemoveFromQueueBtn.TextColor3 = Color3.new(1, 1, 1)
 RemoveFromQueueBtn.TextSize = 11
 RemoveFromQueueBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 RemoveFromQueueBtn.Parent = JoinerContent
+
+local RemoveFromQueueCorner = Instance.new("UICorner")
+RemoveFromQueueCorner.CornerRadius = UDim.new(0, 6)
+RemoveFromQueueCorner.Parent = RemoveFromQueueBtn
 
 local PlayQueueBtn = Instance.new("TextButton")
 PlayQueueBtn.Size = UDim2.new(0.45, 0, 0, 35)
@@ -1223,6 +1273,10 @@ PlayQueueBtn.Font = Enum.Font.GothamBold
 PlayQueueBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
 PlayQueueBtn.Parent = JoinerContent
 
+local PlayQueueCorner = Instance.new("UICorner")
+PlayQueueCorner.CornerRadius = UDim.new(0, 8)
+PlayQueueCorner.Parent = PlayQueueBtn
+
 local SaveQueueBtn = Instance.new("TextButton")
 SaveQueueBtn.Size = UDim2.new(0.45, 0, 0, 35)
 SaveQueueBtn.Position = UDim2.new(0.525, 0, 0, 340)
@@ -1233,6 +1287,10 @@ SaveQueueBtn.Font = Enum.Font.GothamBold
 SaveQueueBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
 SaveQueueBtn.Parent = JoinerContent
 
+local SaveQueueCorner = Instance.new("UICorner")
+SaveQueueCorner.CornerRadius = UDim.new(0, 8)
+SaveQueueCorner.Parent = SaveQueueBtn
+
 local ClearQueueBtn = Instance.new("TextButton")
 ClearQueueBtn.Size = UDim2.new(0.45, 0, 0, 30)
 ClearQueueBtn.Position = UDim2.new(0.025, 0, 0, 385)
@@ -1242,6 +1300,10 @@ ClearQueueBtn.TextSize = 11
 ClearQueueBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 ClearQueueBtn.Parent = JoinerContent
 
+local ClearQueueCorner = Instance.new("UICorner")
+ClearQueueCorner.CornerRadius = UDim.new(0, 6)
+ClearQueueCorner.Parent = ClearQueueBtn
+
 local CloseJoinerBtn2 = Instance.new("TextButton")
 CloseJoinerBtn2.Size = UDim2.new(0.45, 0, 0, 30)
 CloseJoinerBtn2.Position = UDim2.new(0.525, 0, 0, 385)
@@ -1250,6 +1312,10 @@ CloseJoinerBtn2.TextColor3 = Color3.new(1, 1, 1)
 CloseJoinerBtn2.TextSize = 11
 CloseJoinerBtn2.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 CloseJoinerBtn2.Parent = JoinerContent
+
+local CloseJoiner2Corner = Instance.new("UICorner")
+CloseJoiner2Corner.CornerRadius = UDim.new(0, 6)
+CloseJoiner2Corner.Parent = CloseJoinerBtn2
 
 -- === SISTEM PENANDA === --
 local TerrainViewer = {
