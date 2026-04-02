@@ -71,14 +71,6 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
-local MainGradient = Instance.new("UIGradient")
-MainGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
-})
-MainGradient.Rotation = 45
-MainGradient.Parent = MainFrame
-
 -- Bar Judul
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
@@ -130,7 +122,7 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseBtn
 
--- Tampilan Timer (Tengah Atas)
+-- Tampilan Timer
 local TimerFrame = Instance.new("Frame")
 TimerFrame.Size = UDim2.new(0, 120, 0, 30)
 TimerFrame.Position = UDim2.new(0.5, -60, 0, 50)
@@ -327,7 +319,6 @@ StatusText.BackgroundTransparency = 1
 StatusText.Parent = StatusSection
 
 -- === IKON MENGAMBANG === --
--- Ikon Rekam (Kiri Atas)
 local RecordIcon = Instance.new("TextButton")
 RecordIcon.Name = "RecordIcon"
 RecordIcon.Size = UDim2.new(0, 50, 0, 50)
@@ -343,7 +334,6 @@ local RecIconCorner = Instance.new("UICorner")
 RecIconCorner.CornerRadius = UDim.new(1, 0)
 RecIconCorner.Parent = RecordIcon
 
--- Ikon Minimize (Bawah Rekam)
 local MinimizedIcon = Instance.new("TextButton")
 MinimizedIcon.Name = "MinimizedIcon"
 MinimizedIcon.Size = UDim2.new(0, 50, 0, 50)
