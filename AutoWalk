@@ -56,7 +56,12 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999
-ScreenGui.Parent = game:GetService("CoreGui")
+-- Kompatibel semua executor (Synapse, KRNL, Fluxus, dll)
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+end
+local guiParent = (typeof(gethui) == "function" and gethui()) or game:GetService("CoreGui")
+ScreenGui.Parent = guiParent
 
 -- Frame Utama
 local MainFrame = Instance.new("Frame")
