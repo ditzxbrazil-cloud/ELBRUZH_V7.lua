@@ -1,1339 +1,1974 @@
---[[
-    ╔═══════════════════════════════════════════════════════════════════════════════╗
-    ║                    AUTO WALK PRO - COMPLEX EDITION (2000+ lines)              ║
-    ║                    Fitur: Record, Save/Load, Editor Potong/Sambung,           ║
-    ║                    Timeline Visual, Keyframe, Undo/Redo, Pathfinding,         ║
-    ║                    Multi-walk playback queue, Gravity adjustment,             ║
-    ║                    Auto-jump, Anti-stuck, Waypoint system, dll.               ║
-    ╚═══════════════════════════════════════════════════════════════════════════════╝
---]]
+-- [[ RECORDER AUTO WALK - SHHHHNAYY05 EDITION ]] --
+-- Dibuat oleh: shhhhnayy05
+-- Support: Executor Level 7-8
+-- [DIPERBAIKI] - Penyimpanan file & preview potongan berfungsi
 
--- ================================ KONFIGURASI ====================================
-local CONFIG = {
-    StorageFolder = "AutoWalkPro_Saves",
-    GUI_Size = {Width = 380, Height = 500},
-    RecordInterval = 0.05,        -- detik antar frame record
-    WalkSpeedDefault = 1.0,
-    MinSpeed = -2.0,
-    MaxSpeed = 5.0,
-    SpeedStep = 0.1,
-    AutoJumpThreshold = 5,        -- studs ke depan untuk auto jump
-    AntiStuckTimeout = 3,         -- detik tanpa pergerakan -> reset
-    MaxUndoSteps = 50,
-    TimelineZoom = 100,           -- piksel per detik
-}
-
--- ================================ UTILITY FUNCTIONS ===============================
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
+local Workspace = game:GetService("Workspace")
 
-local function jsonEncode(data) return HttpService:JSONEncode(data) end
-local function jsonDecode(data) return HttpService:JSONDecode(data) end
+local LP = Players.LocalPlayer
+local PlayerGui = LP:WaitForChild("PlayerGui")
 
--- File I/O (executor support)
-local function fileExists(path)
-    if isfile then return isfile(path) end
-    return false
+-- === VARIABEL DATA === --
+local PathData = {}
+local isRecording = false
+local isPlaying = false
+local currentSpeed = 1
+local speedIncrement = 0.1
+local SAVE_FILE_NAME = "shhhhnayy05_WalkSaves.json"
+local recordStartTime = 0
+local totalDistance = 0
+local lastPosition = nil
+local hasUnsavedData = false
+
+-- === FUNGSI CLONE MANUAL (PERBAIKAN) === --
+local function cloneTable(original)
+    local copy = {}
+    for k, v in pairs(original) do
+        if type(v) == "table" then
+            copy[k] = cloneTable(v)
+        else
+            copy[k] = v
+        end
+    end
+    return copy
 end
 
-local function writeFile(path, content)
-    if writefile then writefile(path, content) end
+-- === MANAJEMEN DATA === --
+local function saveToDisk(allSaves)
+    writefile(SAVE_FILE_NAME, HttpService:JSONEncode(allSaves))
 end
 
-local function readFile(path)
-    if readfile then return readfile(path) end
-    return nil
-end
-
-local function listFiles(folder)
-    if listfiles then return listfiles(folder) end
+local function loadFromDisk()
+    if isfile(SAVE_FILE_NAME) then
+        return HttpService:JSONDecode(readfile(SAVE_FILE_NAME))
+    end
     return {}
 end
 
-local function deleteFile(path)
-    if delfile then delfile(path) end
+-- === PENYIMPANAN DENGAN CALLBACK (PERBAIKAN) === --
+local pendingSaveCallback = nil
+local pendingSaveData = nil
+
+-- === GUI UTAMA === --
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "shhhhnayy05_AutoWalk"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = PlayerGui
+
+-- Frame Utama
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainPanel"
+MainFrame.Size = UDim2.new(0, 350, 0, 420)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -210)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local MainGradient = Instance.new("UIGradient")
+MainGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
+})
+MainGradient.Rotation = 45
+MainGradient.Parent = MainFrame
+
+-- Bar Judul
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = TitleBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -80, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.Text = "🎬 AUTO JALAN - SHHHHNAYY05"
+TitleText.TextColor3 = Color3.fromRGB(0, 255, 255)
+TitleText.TextSize = 14
+TitleText.Font = Enum.Font.GothamBold
+TitleText.BackgroundTransparency = 1
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+-- Tombol Minimize
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -70, 0, 5)
+MinimizeBtn.Text = "−"
+MinimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+MinimizeBtn.TextSize = 20
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+MinimizeBtn.Parent = TitleBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 6)
+MinCorner.Parent = MinimizeBtn
+
+-- Tombol Tutup
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseBtn.TextSize = 20
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Parent = TitleBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseBtn
+
+-- Tampilan Timer (Tengah Atas)
+local TimerFrame = Instance.new("Frame")
+TimerFrame.Size = UDim2.new(0, 120, 0, 30)
+TimerFrame.Position = UDim2.new(0.5, -60, 0, 50)
+TimerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+TimerFrame.BorderSizePixel = 0
+TimerFrame.Parent = MainFrame
+
+local TimerCorner = Instance.new("UICorner")
+TimerCorner.CornerRadius = UDim.new(0, 6)
+TimerCorner.Parent = TimerFrame
+
+local TimerLabel = Instance.new("TextLabel")
+TimerLabel.Size = UDim2.new(1, 0, 1, 0)
+TimerLabel.Text = "00:00"
+TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+TimerLabel.TextSize = 16
+TimerLabel.Font = Enum.Font.GothamBold
+TimerLabel.BackgroundTransparency = 1
+TimerLabel.Parent = TimerFrame
+
+-- Frame Konten
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -20, 1, -100)
+ContentFrame.Position = UDim2.new(0, 10, 0, 90)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+-- Bagian Kontrol Kecepatan
+local SpeedSection = Instance.new("Frame")
+SpeedSection.Size = UDim2.new(1, 0, 0, 80)
+SpeedSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+SpeedSection.BorderSizePixel = 0
+SpeedSection.Parent = ContentFrame
+
+local SpeedCorner = Instance.new("UICorner")
+SpeedCorner.CornerRadius = UDim.new(0, 8)
+SpeedCorner.Parent = SpeedSection
+
+local SpeedTitle = Instance.new("TextLabel")
+SpeedTitle.Size = UDim2.new(1, 0, 0, 25)
+SpeedTitle.Text = "⚡ KONTROL KECEPATAN"
+SpeedTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+SpeedTitle.TextSize = 12
+SpeedTitle.Font = Enum.Font.GothamBold
+SpeedTitle.BackgroundTransparency = 1
+SpeedTitle.Parent = SpeedSection
+
+local SpeedDisplay = Instance.new("TextLabel")
+SpeedDisplay.Size = UDim2.new(0, 80, 0, 30)
+SpeedDisplay.Position = UDim2.new(0.5, -40, 0, 30)
+SpeedDisplay.Text = "1.0x"
+SpeedDisplay.TextColor3 = Color3.fromRGB(0, 255, 255)
+SpeedDisplay.TextSize = 18
+SpeedDisplay.Font = Enum.Font.GothamBold
+SpeedDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+SpeedDisplay.Parent = SpeedSection
+
+local SpeedDisplayCorner = Instance.new("UICorner")
+SpeedDisplayCorner.CornerRadius = UDim.new(0, 6)
+SpeedDisplayCorner.Parent = SpeedDisplay
+
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Size = UDim2.new(0, 40, 0, 30)
+MinusBtn.Position = UDim2.new(0.15, 0, 0, 30)
+MinusBtn.Text = "-"
+MinusBtn.TextColor3 = Color3.new(1, 1, 1)
+MinusBtn.TextSize = 20
+MinusBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+MinusBtn.Parent = SpeedSection
+
+local MinusCorner = Instance.new("UICorner")
+MinusCorner.CornerRadius = UDim.new(0, 6)
+MinusCorner.Parent = MinusBtn
+
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Size = UDim2.new(0, 40, 0, 30)
+PlusBtn.Position = UDim2.new(0.75, 0, 0, 30)
+PlusBtn.Text = "+"
+PlusBtn.TextColor3 = Color3.new(1, 1, 1)
+PlusBtn.TextSize = 20
+PlusBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+PlusBtn.Parent = SpeedSection
+
+local PlusCorner = Instance.new("UICorner")
+PlusCorner.CornerRadius = UDim.new(0, 6)
+PlusCorner.Parent = PlusBtn
+
+-- Bagian Tombol Aksi
+local ActionSection = Instance.new("Frame")
+ActionSection.Size = UDim2.new(1, 0, 0, 120)
+ActionSection.Position = UDim2.new(0, 0, 0, 90)
+ActionSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+ActionSection.BorderSizePixel = 0
+ActionSection.Parent = ContentFrame
+
+local ActionCorner = Instance.new("UICorner")
+ActionCorner.CornerRadius = UDim.new(0, 8)
+ActionCorner.Parent = ActionSection
+
+local ActionTitle = Instance.new("TextLabel")
+ActionTitle.Size = UDim2.new(1, 0, 0, 25)
+ActionTitle.Text = "🎮 AKSI"
+ActionTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+ActionTitle.TextSize = 12
+ActionTitle.Font = Enum.Font.GothamBold
+ActionTitle.BackgroundTransparency = 1
+ActionTitle.Parent = ActionSection
+
+local SaveBtn = Instance.new("TextButton")
+SaveBtn.Size = UDim2.new(0.48, 0, 0, 35)
+SaveBtn.Position = UDim2.new(0.01, 0, 0, 35)
+SaveBtn.Text = "💾 SIMPAN JALAN"
+SaveBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveBtn.TextSize = 12
+SaveBtn.Font = Enum.Font.GothamBold
+SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+SaveBtn.Parent = ActionSection
+
+local SaveCorner = Instance.new("UICorner")
+SaveCorner.CornerRadius = UDim.new(0, 6)
+SaveCorner.Parent = SaveBtn
+
+local FileManagerBtn = Instance.new("TextButton")
+FileManagerBtn.Size = UDim2.new(0.48, 0, 0, 35)
+FileManagerBtn.Position = UDim2.new(0.51, 0, 0, 35)
+FileManagerBtn.Text = "📁 KELOLA FILE"
+FileManagerBtn.TextColor3 = Color3.new(1, 1, 1)
+FileManagerBtn.TextSize = 12
+FileManagerBtn.Font = Enum.Font.GothamBold
+FileManagerBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+FileManagerBtn.Parent = ActionSection
+
+local FileCorner = Instance.new("UICorner")
+FileCorner.CornerRadius = UDim.new(0, 6)
+FileCorner.Parent = FileManagerBtn
+
+local EditorBtn = Instance.new("TextButton")
+EditorBtn.Size = UDim2.new(0.48, 0, 0, 35)
+EditorBtn.Position = UDim2.new(0.01, 0, 0, 75)
+EditorBtn.Text = "✂️ EDITOR JALAN"
+EditorBtn.TextColor3 = Color3.new(1, 1, 1)
+EditorBtn.TextSize = 12
+EditorBtn.Font = Enum.Font.GothamBold
+EditorBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
+EditorBtn.Parent = ActionSection
+
+local EditorCorner = Instance.new("UICorner")
+EditorCorner.CornerRadius = UDim.new(0, 6)
+EditorCorner.Parent = EditorBtn
+
+local JoinerBtn = Instance.new("TextButton")
+JoinerBtn.Size = UDim2.new(0.48, 0, 0, 35)
+JoinerBtn.Position = UDim2.new(0.51, 0, 0, 75)
+JoinerBtn.Text = "🔗 SAMBUNG JALAN"
+JoinerBtn.TextColor3 = Color3.new(1, 1, 1)
+JoinerBtn.TextSize = 12
+JoinerBtn.Font = Enum.Font.GothamBold
+JoinerBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
+JoinerBtn.Parent = ActionSection
+
+local JoinerCorner = Instance.new("UICorner")
+JoinerCorner.CornerRadius = UDim.new(0, 6)
+JoinerCorner.Parent = JoinerBtn
+
+-- Bagian Status
+local StatusSection = Instance.new("Frame")
+StatusSection.Size = UDim2.new(1, 0, 0, 60)
+StatusSection.Position = UDim2.new(0, 0, 0, 220)
+StatusSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+StatusSection.BorderSizePixel = 0
+StatusSection.Parent = ContentFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 8)
+StatusCorner.Parent = StatusSection
+
+local StatusTitle = Instance.new("TextLabel")
+StatusTitle.Size = UDim2.new(1, 0, 0, 20)
+StatusTitle.Text = "📊 STATUS"
+StatusTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusTitle.TextSize = 12
+StatusTitle.Font = Enum.Font.GothamBold
+StatusTitle.BackgroundTransparency = 1
+StatusTitle.Parent = StatusSection
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(1, 0, 0, 35)
+StatusText.Position = UDim2.new(0, 0, 0, 20)
+StatusText.Text = "Siap Merekam"
+StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+StatusText.TextSize = 14
+StatusText.Font = Enum.Font.GothamBold
+StatusText.BackgroundTransparency = 1
+StatusText.Parent = StatusSection
+
+-- === IKON MENGAMBANG === --
+-- Ikon Rekam (Kiri Atas)
+local RecordIcon = Instance.new("TextButton")
+RecordIcon.Name = "RecordIcon"
+RecordIcon.Size = UDim2.new(0, 50, 0, 50)
+RecordIcon.Position = UDim2.new(0, 10, 0, 10)
+RecordIcon.Text = "⏺"
+RecordIcon.TextColor3 = Color3.new(1, 1, 1)
+RecordIcon.TextSize = 24
+RecordIcon.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+RecordIcon.Parent = ScreenGui
+RecordIcon.Visible = true
+
+local RecIconCorner = Instance.new("UICorner")
+RecIconCorner.CornerRadius = UDim.new(1, 0)
+RecIconCorner.Parent = RecordIcon
+
+-- Ikon Minimize (Bawah Rekam)
+local MinimizedIcon = Instance.new("TextButton")
+MinimizedIcon.Name = "MinimizedIcon"
+MinimizedIcon.Size = UDim2.new(0, 50, 0, 50)
+MinimizedIcon.Position = UDim2.new(0, 10, 0, 70)
+MinimizedIcon.Text = "🎬"
+MinimizedIcon.TextColor3 = Color3.new(1, 1, 1)
+MinimizedIcon.TextSize = 24
+MinimizedIcon.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+MinimizedIcon.Parent = ScreenGui
+MinimizedIcon.Visible = false
+
+local MinIconCorner = Instance.new("UICorner")
+MinIconCorner.CornerRadius = UDim.new(1, 0)
+MinIconCorner.Parent = MinimizedIcon
+
+-- === JENDELA PERINGATAN RECORD BARU === --
+local NewRecordWarningWindow = Instance.new("Frame")
+NewRecordWarningWindow.Name = "NewRecordWarning"
+NewRecordWarningWindow.Size = UDim2.new(0, 320, 0, 200)
+NewRecordWarningWindow.Position = UDim2.new(0.5, -160, 0.5, -100)
+NewRecordWarningWindow.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+NewRecordWarningWindow.BorderSizePixel = 0
+NewRecordWarningWindow.Visible = false
+NewRecordWarningWindow.ZIndex = 100
+NewRecordWarningWindow.Parent = ScreenGui
+
+local NewRecordWarningCorner = Instance.new("UICorner")
+NewRecordWarningCorner.CornerRadius = UDim.new(0, 12)
+NewRecordWarningCorner.Parent = NewRecordWarningWindow
+
+local NewRecordWarningTitle = Instance.new("TextLabel")
+NewRecordWarningTitle.Size = UDim2.new(1, 0, 0, 40)
+NewRecordWarningTitle.Text = "⚠️ PERINGATAN"
+NewRecordWarningTitle.TextColor3 = Color3.fromRGB(255, 200, 0)
+NewRecordWarningTitle.TextSize = 16
+NewRecordWarningTitle.Font = Enum.Font.GothamBold
+NewRecordWarningTitle.BackgroundColor3 = Color3.fromRGB(40, 30, 20)
+NewRecordWarningTitle.Parent = NewRecordWarningWindow
+
+local NewRecordWarningTitleCorner = Instance.new("UICorner")
+NewRecordWarningTitleCorner.CornerRadius = UDim.new(0, 12)
+NewRecordWarningTitleCorner.Parent = NewRecordWarningTitle
+
+local NewRecordWarningText = Instance.new("TextLabel")
+NewRecordWarningText.Size = UDim2.new(0.9, 0, 0, 80)
+NewRecordWarningText.Position = UDim2.new(0.05, 0, 0, 50)
+NewRecordWarningText.Text = "Anda memiliki data jalan yang belum disimpan!\nJika mulai merekam baru, data sebelumnya akan hilang.\n\nApakah Anda yakin ingin memulai rekaman baru?"
+NewRecordWarningText.TextColor3 = Color3.fromRGB(255, 255, 255)
+NewRecordWarningText.TextSize = 12
+NewRecordWarningText.BackgroundTransparency = 1
+NewRecordWarningText.TextWrapped = true
+NewRecordWarningText.Parent = NewRecordWarningWindow
+
+local YesNewRecordBtn = Instance.new("TextButton")
+YesNewRecordBtn.Size = UDim2.new(0.4, 0, 0, 35)
+YesNewRecordBtn.Position = UDim2.new(0.08, 0, 0, 145)
+YesNewRecordBtn.Text = "✅ YA, BARU"
+YesNewRecordBtn.TextColor3 = Color3.new(1, 1, 1)
+YesNewRecordBtn.TextSize = 12
+YesNewRecordBtn.Font = Enum.Font.GothamBold
+YesNewRecordBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+YesNewRecordBtn.Parent = NewRecordWarningWindow
+
+local YesNewRecordCorner = Instance.new("UICorner")
+YesNewRecordCorner.CornerRadius = UDim.new(0, 8)
+YesNewRecordCorner.Parent = YesNewRecordBtn
+
+local NoCancelRecordBtn = Instance.new("TextButton")
+NoCancelRecordBtn.Size = UDim2.new(0.4, 0, 0, 35)
+NoCancelRecordBtn.Position = UDim2.new(0.52, 0, 0, 145)
+NoCancelRecordBtn.Text = "❌ BATAL"
+NoCancelRecordBtn.TextColor3 = Color3.new(1, 1, 1)
+NoCancelRecordBtn.TextSize = 12
+NoCancelRecordBtn.Font = Enum.Font.GothamBold
+NoCancelRecordBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+NoCancelRecordBtn.Parent = NewRecordWarningWindow
+
+local NoCancelRecordCorner = Instance.new("UICorner")
+NoCancelRecordCorner.CornerRadius = UDim.new(0, 8)
+NoCancelRecordCorner.Parent = NoCancelRecordBtn
+
+-- === JENDELA PERINGATAN HAPUS DATA === --
+local UnsavedWarningWindow = Instance.new("Frame")
+UnsavedWarningWindow.Name = "UnsavedWarning"
+UnsavedWarningWindow.Size = UDim2.new(0, 300, 0, 180)
+UnsavedWarningWindow.Position = UDim2.new(0.5, -150, 0.5, -90)
+UnsavedWarningWindow.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+UnsavedWarningWindow.BorderSizePixel = 0
+UnsavedWarningWindow.Visible = false
+UnsavedWarningWindow.ZIndex = 100
+UnsavedWarningWindow.Parent = ScreenGui
+
+local UnsavedWarningCorner = Instance.new("UICorner")
+UnsavedWarningCorner.CornerRadius = UDim.new(0, 12)
+UnsavedWarningCorner.Parent = UnsavedWarningWindow
+
+local UnsavedWarningTitle = Instance.new("TextLabel")
+UnsavedWarningTitle.Size = UDim2.new(1, 0, 0, 40)
+UnsavedWarningTitle.Text = "⚠️ PERINGATAN"
+UnsavedWarningTitle.TextColor3 = Color3.fromRGB(255, 200, 0)
+UnsavedWarningTitle.TextSize = 16
+UnsavedWarningTitle.Font = Enum.Font.GothamBold
+UnsavedWarningTitle.BackgroundColor3 = Color3.fromRGB(40, 30, 20)
+UnsavedWarningTitle.Parent = UnsavedWarningWindow
+
+local UnsavedWarningTitleCorner = Instance.new("UICorner")
+UnsavedWarningTitleCorner.CornerRadius = UDim.new(0, 12)
+UnsavedWarningTitleCorner.Parent = UnsavedWarningTitle
+
+local UnsavedWarningText = Instance.new("TextLabel")
+UnsavedWarningText.Size = UDim2.new(0.9, 0, 0, 60)
+UnsavedWarningText.Position = UDim2.new(0.05, 0, 0, 50)
+UnsavedWarningText.Text = "Anda memiliki data jalan yang belum disimpan!\nSemua progress akan hilang jika tidak disimpan.\n\nApakah Anda ingin menyimpan terlebih dahulu?"
+UnsavedWarningText.TextColor3 = Color3.fromRGB(255, 255, 255)
+UnsavedWarningText.TextSize = 12
+UnsavedWarningText.BackgroundTransparency = 1
+UnsavedWarningText.TextWrapped = true
+UnsavedWarningText.Parent = UnsavedWarningWindow
+
+local YesSaveBtn = Instance.new("TextButton")
+YesSaveBtn.Size = UDim2.new(0.4, 0, 0, 35)
+YesSaveBtn.Position = UDim2.new(0.08, 0, 0, 125)
+YesSaveBtn.Text = "💾 YA, SIMPAN"
+YesSaveBtn.TextColor3 = Color3.new(1, 1, 1)
+YesSaveBtn.TextSize = 12
+YesSaveBtn.Font = Enum.Font.GothamBold
+YesSaveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+YesSaveBtn.Parent = UnsavedWarningWindow
+
+local YesSaveCorner = Instance.new("UICorner")
+YesSaveCorner.CornerRadius = UDim.new(0, 8)
+YesSaveCorner.Parent = YesSaveBtn
+
+local NoDiscardBtn = Instance.new("TextButton")
+NoDiscardBtn.Size = UDim2.new(0.4, 0, 0, 35)
+NoDiscardBtn.Position = UDim2.new(0.52, 0, 0, 125)
+NoDiscardBtn.Text = "🗑 TIDAK"
+NoDiscardBtn.TextColor3 = Color3.new(1, 1, 1)
+NoDiscardBtn.TextSize = 12
+NoDiscardBtn.Font = Enum.Font.GothamBold
+NoDiscardBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+NoDiscardBtn.Parent = UnsavedWarningWindow
+
+local NoDiscardCorner = Instance.new("UICorner")
+NoDiscardCorner.CornerRadius = UDim.new(0, 8)
+NoDiscardCorner.Parent = NoDiscardBtn
+
+-- === JENDELA SIMPAN === --
+local SavePrompt = Instance.new("Frame")
+SavePrompt.Name = "SavePrompt"
+SavePrompt.Size = UDim2.new(0, 300, 0, 180)
+SavePrompt.Position = UDim2.new(0.5, -150, 0.5, -90)
+SavePrompt.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+SavePrompt.BorderSizePixel = 0
+SavePrompt.Visible = false
+SavePrompt.ZIndex = 90
+SavePrompt.Parent = ScreenGui
+
+local SavePromptCorner = Instance.new("UICorner")
+SavePromptCorner.CornerRadius = UDim.new(0, 12)
+SavePromptCorner.Parent = SavePrompt
+
+local SavePromptTitle = Instance.new("TextLabel")
+SavePromptTitle.Size = UDim2.new(1, 0, 0, 40)
+SavePromptTitle.Text = "💾 SIMPAN JALAN"
+SavePromptTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+SavePromptTitle.TextSize = 16
+SavePromptTitle.Font = Enum.Font.GothamBold
+SavePromptTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+SavePromptTitle.Parent = SavePrompt
+
+local SavePromptTitleCorner = Instance.new("UICorner")
+SavePromptTitleCorner.CornerRadius = UDim.new(0, 12)
+SavePromptTitleCorner.Parent = SavePromptTitle
+
+local SaveInput = Instance.new("TextBox")
+SaveInput.Size = UDim2.new(0.9, 0, 0, 35)
+SaveInput.Position = UDim2.new(0.05, 0, 0, 55)
+SaveInput.PlaceholderText = "Masukkan nama/judul jalan..."
+SaveInput.Text = ""
+SaveInput.TextColor3 = Color3.new(1, 1, 1)
+SaveInput.TextSize = 14
+SaveInput.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+SaveInput.Parent = SavePrompt
+
+local SaveInputCorner = Instance.new("UICorner")
+SaveInputCorner.CornerRadius = UDim.new(0, 8)
+SaveInputCorner.Parent = SaveInput
+
+local SaveConfirmBtn = Instance.new("TextButton")
+SaveConfirmBtn.Size = UDim2.new(0.43, 0, 0, 35)
+SaveConfirmBtn.Position = UDim2.new(0.05, 0, 0, 110)
+SaveConfirmBtn.Text = "✅ SIMPAN"
+SaveConfirmBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveConfirmBtn.TextSize = 14
+SaveConfirmBtn.Font = Enum.Font.GothamBold
+SaveConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+SaveConfirmBtn.Parent = SavePrompt
+
+local SaveConfirmCorner = Instance.new("UICorner")
+SaveConfirmCorner.CornerRadius = UDim.new(0, 8)
+SaveConfirmCorner.Parent = SaveConfirmBtn
+
+local SaveCancelBtn = Instance.new("TextButton")
+SaveCancelBtn.Size = UDim2.new(0.43, 0, 0, 35)
+SaveCancelBtn.Position = UDim2.new(0.52, 0, 0, 110)
+SaveCancelBtn.Text = "❌ BATAL"
+SaveCancelBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveCancelBtn.TextSize = 14
+SaveCancelBtn.Font = Enum.Font.GothamBold
+SaveCancelBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+SaveCancelBtn.Parent = SavePrompt
+
+local SaveCancelCorner = Instance.new("UICorner")
+SaveCancelCorner.CornerRadius = UDim.new(0, 8)
+SaveCancelCorner.Parent = SaveCancelBtn
+
+local SaveInfo = Instance.new("TextLabel")
+SaveInfo.Size = UDim2.new(0.9, 0, 0, 20)
+SaveInfo.Position = UDim2.new(0.05, 0, 0, 150)
+SaveInfo.Text = "Durasi: 00:00 | Jarak: 0m"
+SaveInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+SaveInfo.TextSize = 11
+SaveInfo.BackgroundTransparency = 1
+SaveInfo.Parent = SavePrompt
+
+-- === JENDELA KELOLA FILE === --
+local FileWindow = Instance.new("Frame")
+FileWindow.Name = "FileManager"
+FileWindow.Size = UDim2.new(0, 320, 0, 400)
+FileWindow.Position = UDim2.new(0.5, -160, 0.5, -200)
+FileWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+FileWindow.BorderSizePixel = 0
+FileWindow.Visible = false
+FileWindow.ZIndex = 80
+FileWindow.Parent = ScreenGui
+
+local FileWindowCorner = Instance.new("UICorner")
+FileWindowCorner.CornerRadius = UDim.new(0, 12)
+FileWindowCorner.Parent = FileWindow
+
+local FileWindowTitle = Instance.new("TextLabel")
+FileWindowTitle.Size = UDim2.new(1, 0, 0, 40)
+FileWindowTitle.Text = "📁 KELOLA FILE"
+FileWindowTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+FileWindowTitle.TextSize = 16
+FileWindowTitle.Font = Enum.Font.GothamBold
+FileWindowTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+FileWindowTitle.Parent = FileWindow
+
+local FileWindowTitleCorner = Instance.new("UICorner")
+FileWindowTitleCorner.CornerRadius = UDim.new(0, 12)
+FileWindowTitleCorner.Parent = FileWindowTitle
+
+local CloseFileBtn = Instance.new("TextButton")
+CloseFileBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseFileBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseFileBtn.Text = "×"
+CloseFileBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseFileBtn.TextSize = 20
+CloseFileBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseFileBtn.Parent = FileWindow
+
+local CloseFileCorner = Instance.new("UICorner")
+CloseFileCorner.CornerRadius = UDim.new(0, 6)
+CloseFileCorner.Parent = CloseFileBtn
+
+local FileScroll = Instance.new("ScrollingFrame")
+FileScroll.Size = UDim2.new(1, -20, 1, -60)
+FileScroll.Position = UDim2.new(0, 10, 0, 50)
+FileScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+FileScroll.BorderSizePixel = 0
+FileScroll.ScrollBarThickness = 6
+FileScroll.Parent = FileWindow
+
+local FileScrollCorner = Instance.new("UICorner")
+FileScrollCorner.CornerRadius = UDim.new(0, 8)
+FileScrollCorner.Parent = FileScroll
+
+local FileListLayout = Instance.new("UIListLayout")
+FileListLayout.Padding = UDim.new(0, 8)
+FileListLayout.Parent = FileScroll
+
+-- === JENDELA DETAIL FILE (PERBAIKAN) === --
+local FileDetailWindow = Instance.new("Frame")
+FileDetailWindow.Name = "FileDetail"
+FileDetailWindow.Size = UDim2.new(0, 300, 0, 350)
+FileDetailWindow.Position = UDim2.new(0.5, -150, 0.5, -175)
+FileDetailWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+FileDetailWindow.BorderSizePixel = 0
+FileDetailWindow.Visible = false
+FileDetailWindow.ZIndex = 85
+FileDetailWindow.Parent = ScreenGui
+
+local FileDetailCorner = Instance.new("UICorner")
+FileDetailCorner.CornerRadius = UDim.new(0, 12)
+FileDetailCorner.Parent = FileDetailWindow
+
+local FileDetailTitle = Instance.new("TextLabel")
+FileDetailTitle.Size = UDim2.new(1, 0, 0, 40)
+FileDetailTitle.Text = "📄 DETAIL JALAN"
+FileDetailTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+FileDetailTitle.TextSize = 16
+FileDetailTitle.Font = Enum.Font.GothamBold
+FileDetailTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+FileDetailTitle.Parent = FileDetailWindow
+
+local FileDetailTitleCorner = Instance.new("UICorner")
+FileDetailTitleCorner.CornerRadius = UDim.new(0, 12)
+FileDetailTitleCorner.Parent = FileDetailTitle
+
+local CloseDetailBtn = Instance.new("TextButton")
+CloseDetailBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseDetailBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseDetailBtn.Text = "×"
+CloseDetailBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseDetailBtn.TextSize = 20
+CloseDetailBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseDetailBtn.Parent = FileDetailWindow
+
+local CloseDetailCorner = Instance.new("UICorner")
+CloseDetailCorner.CornerRadius = UDim.new(0, 6)
+CloseDetailCorner.Parent = CloseDetailBtn
+
+local DetailContent = Instance.new("Frame")
+DetailContent.Size = UDim2.new(1, -20, 1, -60)
+DetailContent.Position = UDim2.new(0, 10, 0, 50)
+DetailContent.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+DetailContent.BorderSizePixel = 0
+DetailContent.Parent = FileDetailWindow
+
+local DetailContentCorner = Instance.new("UICorner")
+DetailContentCorner.CornerRadius = UDim.new(0, 8)
+DetailContentCorner.Parent = DetailContent
+
+local DetailName = Instance.new("TextLabel")
+DetailName.Size = UDim2.new(1, -20, 0, 30)
+DetailName.Position = UDim2.new(0, 10, 0, 10)
+DetailName.Text = "Nama: -"
+DetailName.TextColor3 = Color3.fromRGB(255, 255, 255)
+DetailName.TextSize = 14
+DetailName.Font = Enum.Font.GothamBold
+DetailName.BackgroundTransparency = 1
+DetailName.TextXAlignment = Enum.TextXAlignment.Left
+DetailName.Parent = DetailContent
+
+local DetailDuration = Instance.new("TextLabel")
+DetailDuration.Size = UDim2.new(1, -20, 0, 25)
+DetailDuration.Position = UDim2.new(0, 10, 0, 45)
+DetailDuration.Text = "⏱ Durasi: 00:00"
+DetailDuration.TextColor3 = Color3.fromRGB(200, 200, 200)
+DetailDuration.TextSize = 12
+DetailDuration.BackgroundTransparency = 1
+DetailDuration.TextXAlignment = Enum.TextXAlignment.Left
+DetailDuration.Parent = DetailContent
+
+local DetailDistance = Instance.new("TextLabel")
+DetailDistance.Size = UDim2.new(1, -20, 0, 25)
+DetailDistance.Position = UDim2.new(0, 10, 0, 70)
+DetailDistance.Text = "📏 Jarak: 0m"
+DetailDistance.TextColor3 = Color3.fromRGB(200, 200, 200)
+DetailDistance.TextSize = 12
+DetailDistance.BackgroundTransparency = 1
+DetailDistance.TextXAlignment = Enum.TextXAlignment.Left
+DetailDistance.Parent = DetailContent
+
+local DetailPoints = Instance.new("TextLabel")
+DetailPoints.Size = UDim2.new(1, -20, 0, 25)
+DetailPoints.Position = UDim2.new(0, 10, 0, 95)
+DetailPoints.Text = "📍 Titik: 0"
+DetailPoints.TextColor3 = Color3.fromRGB(200, 200, 200)
+DetailPoints.TextSize = 12
+DetailPoints.BackgroundTransparency = 1
+DetailPoints.TextXAlignment = Enum.TextXAlignment.Left
+DetailPoints.Parent = DetailContent
+
+-- Speed Control di Detail
+local DetailSpeedLabel = Instance.new("TextLabel")
+DetailSpeedLabel.Size = UDim2.new(0.5, 0, 0, 25)
+DetailSpeedLabel.Position = UDim2.new(0, 10, 0, 130)
+DetailSpeedLabel.Text = "⚡ Kecepatan:"
+DetailSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+DetailSpeedLabel.TextSize = 12
+DetailSpeedLabel.BackgroundTransparency = 1
+DetailSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+DetailSpeedLabel.Parent = DetailContent
+
+local DetailSpeedMinus = Instance.new("TextButton")
+DetailSpeedMinus.Size = UDim2.new(0, 30, 0, 25)
+DetailSpeedMinus.Position = UDim2.new(0.55, 0, 0, 130)
+DetailSpeedMinus.Text = "-"
+DetailSpeedMinus.TextColor3 = Color3.new(1, 1, 1)
+DetailSpeedMinus.TextSize = 16
+DetailSpeedMinus.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+DetailSpeedMinus.Parent = DetailContent
+
+local DetailSpeedMinusCorner = Instance.new("UICorner")
+DetailSpeedMinusCorner.CornerRadius = UDim.new(0, 6)
+DetailSpeedMinusCorner.Parent = DetailSpeedMinus
+
+local DetailSpeedDisplay = Instance.new("TextLabel")
+DetailSpeedDisplay.Size = UDim2.new(0, 50, 0, 25)
+DetailSpeedDisplay.Position = UDim2.new(0.7, 0, 0, 130)
+DetailSpeedDisplay.Text = "1.0x"
+DetailSpeedDisplay.TextColor3 = Color3.fromRGB(0, 255, 255)
+DetailSpeedDisplay.TextSize = 14
+DetailSpeedDisplay.Font = Enum.Font.GothamBold
+DetailSpeedDisplay.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+DetailSpeedDisplay.Parent = DetailContent
+
+local DetailSpeedDisplayCorner = Instance.new("UICorner")
+DetailSpeedDisplayCorner.CornerRadius = UDim.new(0, 6)
+DetailSpeedDisplayCorner.Parent = DetailSpeedDisplay
+
+local DetailSpeedPlus = Instance.new("TextButton")
+DetailSpeedPlus.Size = UDim2.new(0, 30, 0, 25)
+DetailSpeedPlus.Position = UDim2.new(0.85, 0, 0, 130)
+DetailSpeedPlus.Text = "+"
+DetailSpeedPlus.TextColor3 = Color3.new(1, 1, 1)
+DetailSpeedPlus.TextSize = 16
+DetailSpeedPlus.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+DetailSpeedPlus.Parent = DetailContent
+
+local DetailSpeedPlusCorner = Instance.new("UICorner")
+DetailSpeedPlusCorner.CornerRadius = UDim.new(0, 6)
+DetailSpeedPlusCorner.Parent = DetailSpeedPlus
+
+-- Tombol Play Walk
+local PlayWalkBtn = Instance.new("TextButton")
+PlayWalkBtn.Size = UDim2.new(0.9, 0, 0, 40)
+PlayWalkBtn.Position = UDim2.new(0.05, 0, 0, 170)
+PlayWalkBtn.Text = "▶ MULAI JALAN"
+PlayWalkBtn.TextColor3 = Color3.new(1, 1, 1)
+PlayWalkBtn.TextSize = 14
+PlayWalkBtn.Font = Enum.Font.GothamBold
+PlayWalkBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+PlayWalkBtn.Parent = DetailContent
+
+local PlayWalkCorner = Instance.new("UICorner")
+PlayWalkCorner.CornerRadius = UDim.new(0, 8)
+PlayWalkCorner.Parent = PlayWalkBtn
+
+-- Tombol Review Walk
+local ReviewWalkBtn = Instance.new("TextButton")
+ReviewWalkBtn.Size = UDim2.new(0.9, 0, 0, 35)
+ReviewWalkBtn.Position = UDim2.new(0.05, 0, 0, 220)
+ReviewWalkBtn.Text = "👁 REVIEW JALAN"
+ReviewWalkBtn.TextColor3 = Color3.new(1, 1, 1)
+ReviewWalkBtn.TextSize = 13
+ReviewWalkBtn.Font = Enum.Font.GothamBold
+ReviewWalkBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+ReviewWalkBtn.Parent = DetailContent
+
+local ReviewWalkCorner = Instance.new("UICorner")
+ReviewWalkCorner.CornerRadius = UDim.new(0, 8)
+ReviewWalkCorner.Parent = ReviewWalkBtn
+
+-- Tombol Hapus
+local DeleteFileBtn = Instance.new("TextButton")
+DeleteFileBtn.Size = UDim2.new(0.43, 0, 0, 35)
+DeleteFileBtn.Position = UDim2.new(0.05, 0, 0, 265)
+DeleteFileBtn.Text = "🗑 HAPUS"
+DeleteFileBtn.TextColor3 = Color3.new(1, 1, 1)
+DeleteFileBtn.TextSize = 12
+DeleteFileBtn.Font = Enum.Font.GothamBold
+DeleteFileBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+DeleteFileBtn.Parent = DetailContent
+
+local DeleteFileCorner = Instance.new("UICorner")
+DeleteFileCorner.CornerRadius = UDim.new(0, 8)
+DeleteFileCorner.Parent = DeleteFileBtn
+
+-- Tombol Tutup
+local CloseDetailBtn2 = Instance.new("TextButton")
+CloseDetailBtn2.Size = UDim2.new(0.43, 0, 0, 35)
+CloseDetailBtn2.Position = UDim2.new(0.52, 0, 0, 265)
+CloseDetailBtn2.Text = "✖ TUTUP"
+CloseDetailBtn2.TextColor3 = Color3.new(1, 1, 1)
+CloseDetailBtn2.TextSize = 12
+CloseDetailBtn2.Font = Enum.Font.GothamBold
+CloseDetailBtn2.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+CloseDetailBtn2.Parent = DetailContent
+
+local CloseDetail2Corner = Instance.new("UICorner")
+CloseDetail2Corner.CornerRadius = UDim.new(0, 8)
+CloseDetail2Corner.Parent = CloseDetailBtn2
+
+-- === KONFIRMASI HAPUS === --
+local DeleteConfirmWindow = Instance.new("Frame")
+DeleteConfirmWindow.Name = "DeleteConfirm"
+DeleteConfirmWindow.Size = UDim2.new(0, 280, 0, 150)
+DeleteConfirmWindow.Position = UDim2.new(0.5, -140, 0.5, -75)
+DeleteConfirmWindow.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+DeleteConfirmWindow.BorderSizePixel = 0
+DeleteConfirmWindow.Visible = false
+DeleteConfirmWindow.ZIndex = 95
+DeleteConfirmWindow.Parent = ScreenGui
+
+local DeleteConfirmCorner = Instance.new("UICorner")
+DeleteConfirmCorner.CornerRadius = UDim.new(0, 12)
+DeleteConfirmCorner.Parent = DeleteConfirmWindow
+
+local DeleteConfirmTitle = Instance.new("TextLabel")
+DeleteConfirmTitle.Size = UDim2.new(1, 0, 0, 40)
+DeleteConfirmTitle.Text = "⚠️ KONFIRMASI HAPUS"
+DeleteConfirmTitle.TextColor3 = Color3.fromRGB(255, 200, 0)
+DeleteConfirmTitle.TextSize = 16
+DeleteConfirmTitle.Font = Enum.Font.GothamBold
+DeleteConfirmTitle.BackgroundColor3 = Color3.fromRGB(40, 30, 20)
+DeleteConfirmTitle.Parent = DeleteConfirmWindow
+
+local DeleteConfirmTitleCorner = Instance.new("UICorner")
+DeleteConfirmTitleCorner.CornerRadius = UDim.new(0, 12)
+DeleteConfirmTitleCorner.Parent = DeleteConfirmTitle
+
+local DeleteConfirmText = Instance.new("TextLabel")
+DeleteConfirmText.Size = UDim2.new(0.9, 0, 0, 50)
+DeleteConfirmText.Position = UDim2.new(0.05, 0, 0, 50)
+DeleteConfirmText.Text = "Apakah Anda yakin ingin menghapus file ini?\nTindakan ini tidak dapat dibatalkan."
+DeleteConfirmText.TextColor3 = Color3.fromRGB(255, 255, 255)
+DeleteConfirmText.TextSize = 12
+DeleteConfirmText.BackgroundTransparency = 1
+DeleteConfirmText.TextWrapped = true
+DeleteConfirmText.Parent = DeleteConfirmWindow
+
+local YesDeleteBtn = Instance.new("TextButton")
+YesDeleteBtn.Size = UDim2.new(0.4, 0, 0, 35)
+YesDeleteBtn.Position = UDim2.new(0.08, 0, 0, 105)
+YesDeleteBtn.Text = "✅ YA"
+YesDeleteBtn.TextColor3 = Color3.new(1, 1, 1)
+YesDeleteBtn.TextSize = 14
+YesDeleteBtn.Font = Enum.Font.GothamBold
+YesDeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+YesDeleteBtn.Parent = DeleteConfirmWindow
+
+local YesDeleteCorner = Instance.new("UICorner")
+YesDeleteCorner.CornerRadius = UDim.new(0, 8)
+YesDeleteCorner.Parent = YesDeleteBtn
+
+local NoDeleteBtn = Instance.new("TextButton")
+NoDeleteBtn.Size = UDim2.new(0.4, 0, 0, 35)
+NoDeleteBtn.Position = UDim2.new(0.52, 0, 0, 105)
+NoDeleteBtn.Text = "❌ TIDAK"
+NoDeleteBtn.TextColor3 = Color3.new(1, 1, 1)
+NoDeleteBtn.TextSize = 14
+NoDeleteBtn.Font = Enum.Font.GothamBold
+NoDeleteBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+NoDeleteBtn.Parent = DeleteConfirmWindow
+
+local NoDeleteCorner = Instance.new("UICorner")
+NoDeleteCorner.CornerRadius = UDim.new(0, 8)
+NoDeleteCorner.Parent = NoDeleteBtn
+
+-- === EDITOR JALAN === --
+local EditorWindow = Instance.new("Frame")
+EditorWindow.Name = "WalkEditor"
+EditorWindow.Size = UDim2.new(0, 340, 0, 450)
+EditorWindow.Position = UDim2.new(0.5, -170, 0.5, -225)
+EditorWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+EditorWindow.BorderSizePixel = 0
+EditorWindow.Visible = false
+EditorWindow.ZIndex = 80
+EditorWindow.Parent = ScreenGui
+
+local EditorCorner = Instance.new("UICorner")
+EditorCorner.CornerRadius = UDim.new(0, 12)
+EditorCorner.Parent = EditorWindow
+
+local EditorTitle = Instance.new("TextLabel")
+EditorTitle.Size = UDim2.new(1, 0, 0, 40)
+EditorTitle.Text = "✂️ EDITOR JALAN"
+EditorTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+EditorTitle.TextSize = 16
+EditorTitle.Font = Enum.Font.GothamBold
+EditorTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+EditorTitle.Parent = EditorWindow
+
+local EditorTitleCorner = Instance.new("UICorner")
+EditorTitleCorner.CornerRadius = UDim.new(0, 12)
+EditorTitleCorner.Parent = EditorTitle
+
+local CloseEditorBtn = Instance.new("TextButton")
+CloseEditorBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseEditorBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseEditorBtn.Text = "×"
+CloseEditorBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseEditorBtn.TextSize = 20
+CloseEditorBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseEditorBtn.Parent = EditorWindow
+
+local EditorContent = Instance.new("Frame")
+EditorContent.Size = UDim2.new(1, -20, 1, -60)
+EditorContent.Position = UDim2.new(0, 10, 0, 50)
+EditorContent.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+EditorContent.BorderSizePixel = 0
+EditorContent.Parent = EditorWindow
+
+local EditorContentCorner = Instance.new("UICorner")
+EditorContentCorner.CornerRadius = UDim.new(0, 8)
+EditorContentCorner.Parent = EditorContent
+
+local EditorFileLabel = Instance.new("TextLabel")
+EditorFileLabel.Size = UDim2.new(0.3, 0, 0, 25)
+EditorFileLabel.Position = UDim2.new(0, 10, 0, 10)
+EditorFileLabel.Text = "Pilih File:"
+EditorFileLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+EditorFileLabel.TextSize = 12
+EditorFileLabel.BackgroundTransparency = 1
+EditorFileLabel.Parent = EditorContent
+
+local EditorFileDropdown = Instance.new("TextButton")
+EditorFileDropdown.Size = UDim2.new(0.6, 0, 0, 25)
+EditorFileDropdown.Position = UDim2.new(0.35, 0, 0, 10)
+EditorFileDropdown.Text = "Pilih jalan..."
+EditorFileDropdown.TextColor3 = Color3.fromRGB(200, 200, 200)
+EditorFileDropdown.TextSize = 12
+EditorFileDropdown.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+EditorFileDropdown.Parent = EditorContent
+
+local TimelineInfo = Instance.new("TextLabel")
+TimelineInfo.Size = UDim2.new(1, -20, 0, 20)
+TimelineInfo.Position = UDim2.new(0, 10, 0, 45)
+TimelineInfo.Text = "Durasi: 00:00 | Titik: 0"
+TimelineInfo.TextColor3 = Color3.fromRGB(0, 255, 255)
+TimelineInfo.TextSize = 11
+TimelineInfo.BackgroundTransparency = 1
+TimelineInfo.Parent = EditorContent
+
+local TrimSection = Instance.new("Frame")
+TrimSection.Size = UDim2.new(1, -20, 0, 140)
+TrimSection.Position = UDim2.new(0, 10, 0, 75)
+TrimSection.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+TrimSection.BorderSizePixel = 0
+TrimSection.Parent = EditorContent
+
+local TrimCorner = Instance.new("UICorner")
+TrimCorner.CornerRadius = UDim.new(0, 8)
+TrimCorner.Parent = TrimSection
+
+local TrimTitle = Instance.new("TextLabel")
+TrimTitle.Size = UDim2.new(1, 0, 0, 25)
+TrimTitle.Text = "✂️ POTONG JALAN"
+TrimTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
+TrimTitle.TextSize = 12
+TrimTitle.Font = Enum.Font.GothamBold
+TrimTitle.BackgroundTransparency = 1
+TrimTitle.Parent = TrimSection
+
+local StartTrimLabel = Instance.new("TextLabel")
+StartTrimLabel.Size = UDim2.new(0.4, 0, 0, 25)
+StartTrimLabel.Position = UDim2.new(0, 10, 0, 35)
+StartTrimLabel.Text = "Mulai Potong:"
+StartTrimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+StartTrimLabel.TextSize = 11
+StartTrimLabel.BackgroundTransparency = 1
+StartTrimLabel.Parent = TrimSection
+
+local StartTrimInput = Instance.new("TextBox")
+StartTrimInput.Size = UDim2.new(0.5, 0, 0, 25)
+StartTrimInput.Position = UDim2.new(0.45, 0, 0, 35)
+StartTrimInput.PlaceholderText = "0.00"
+StartTrimInput.Text = ""
+StartTrimInput.TextColor3 = Color3.new(1, 1, 1)
+StartTrimInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+StartTrimInput.Parent = TrimSection
+
+local EndTrimLabel = Instance.new("TextLabel")
+EndTrimLabel.Size = UDim2.new(0.4, 0, 0, 25)
+EndTrimLabel.Position = UDim2.new(0, 10, 0, 70)
+EndTrimLabel.Text = "Akhir Potong:"
+EndTrimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+EndTrimLabel.TextSize = 11
+EndTrimLabel.BackgroundTransparency = 1
+EndTrimLabel.Parent = TrimSection
+
+local EndTrimInput = Instance.new("TextBox")
+EndTrimInput.Size = UDim2.new(0.5, 0, 0, 25)
+EndTrimInput.Position = UDim2.new(0.45, 0, 0, 70)
+EndTrimInput.PlaceholderText = "Waktu akhir..."
+EndTrimInput.Text = ""
+EndTrimInput.TextColor3 = Color3.new(1, 1, 1)
+EndTrimInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+EndTrimInput.Parent = TrimSection
+
+local ReviewLabel = Instance.new("TextLabel")
+ReviewLabel.Size = UDim2.new(0.4, 0, 0, 25)
+ReviewLabel.Position = UDim2.new(0, 10, 0, 105)
+ReviewLabel.Text = "Review Dari:"
+ReviewLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ReviewLabel.TextSize = 11
+ReviewLabel.BackgroundTransparency = 1
+ReviewLabel.Parent = TrimSection
+
+local ReviewInput = Instance.new("TextBox")
+ReviewInput.Size = UDim2.new(0.3, 0, 0, 25)
+ReviewInput.Position = UDim2.new(0.45, 0, 0, 105)
+ReviewInput.PlaceholderText = "0.00"
+ReviewInput.Text = ""
+ReviewInput.TextColor3 = Color3.new(1, 1, 1)
+ReviewInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+ReviewInput.Parent = TrimSection
+
+local ReviewBtn = Instance.new("TextButton")
+ReviewBtn.Size = UDim2.new(0.2, 0, 0, 25)
+ReviewBtn.Position = UDim2.new(0.78, 0, 0, 105)
+ReviewBtn.Text = "👁"
+ReviewBtn.TextColor3 = Color3.new(1, 1, 1)
+ReviewBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+ReviewBtn.Parent = TrimSection
+
+local PreviewTrimBtn = Instance.new("TextButton")
+PreviewTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
+PreviewTrimBtn.Position = UDim2.new(0.025, 0, 0, 225)
+PreviewTrimBtn.Text = "👁 LIHAT POTONGAN"
+PreviewTrimBtn.TextColor3 = Color3.new(1, 1, 1)
+PreviewTrimBtn.TextSize = 12
+PreviewTrimBtn.Font = Enum.Font.GothamBold
+PreviewTrimBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+PreviewTrimBtn.Parent = EditorContent
+
+local ApplyTrimBtn = Instance.new("TextButton")
+ApplyTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
+ApplyTrimBtn.Position = UDim2.new(0.525, 0, 0, 225)
+ApplyTrimBtn.Text = "✂️ TERAPKAN"
+ApplyTrimBtn.TextColor3 = Color3.new(1, 1, 1)
+ApplyTrimBtn.TextSize = 12
+ApplyTrimBtn.Font = Enum.Font.GothamBold
+ApplyTrimBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
+ApplyTrimBtn.Parent = EditorContent
+
+local SaveTrimBtn = Instance.new("TextButton")
+SaveTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
+SaveTrimBtn.Position = UDim2.new(0.025, 0, 0, 270)
+SaveTrimBtn.Text = "💾 SIMPAN BARU"
+SaveTrimBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveTrimBtn.TextSize = 12
+SaveTrimBtn.Font = Enum.Font.GothamBold
+SaveTrimBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+SaveTrimBtn.Parent = EditorContent
+
+local CancelTrimBtn = Instance.new("TextButton")
+CancelTrimBtn.Size = UDim2.new(0.45, 0, 0, 35)
+CancelTrimBtn.Position = UDim2.new(0.525, 0, 0, 270)
+CancelTrimBtn.Text = "❌ BATAL"
+CancelTrimBtn.TextColor3 = Color3.new(1, 1, 1)
+CancelTrimBtn.TextSize = 12
+CancelTrimBtn.Font = Enum.Font.GothamBold
+CancelTrimBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+CancelTrimBtn.Parent = EditorContent
+
+local TrimPreviewInfo = Instance.new("TextLabel")
+TrimPreviewInfo.Size = UDim2.new(1, -20, 0, 50)
+TrimPreviewInfo.Position = UDim2.new(0, 10, 0, 315)
+TrimPreviewInfo.Text = "Preview Potongan: Mulai 00:00 - Akhir 00:00\nDurasi: 00:00"
+TrimPreviewInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+TrimPreviewInfo.TextSize = 11
+TrimPreviewInfo.BackgroundTransparency = 1
+TrimPreviewInfo.TextWrapped = true
+TrimPreviewInfo.Parent = EditorContent
+
+-- === PENYAMBUNG JALAN === --
+local JoinerWindow = Instance.new("Frame")
+JoinerWindow.Name = "WalkJoiner"
+JoinerWindow.Size = UDim2.new(0, 340, 0, 450)
+JoinerWindow.Position = UDim2.new(0.5, -170, 0.5, -225)
+JoinerWindow.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+JoinerWindow.BorderSizePixel = 0
+JoinerWindow.Visible = false
+JoinerWindow.ZIndex = 80
+JoinerWindow.Parent = ScreenGui
+
+local JoinerCorner = Instance.new("UICorner")
+JoinerCorner.CornerRadius = UDim.new(0, 12)
+JoinerCorner.Parent = JoinerWindow
+
+local JoinerTitle = Instance.new("TextLabel")
+JoinerTitle.Size = UDim2.new(1, 0, 0, 40)
+JoinerTitle.Text = "🔗 PENYAMBUNG JALAN"
+JoinerTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+JoinerTitle.TextSize = 16
+JoinerTitle.Font = Enum.Font.GothamBold
+JoinerTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+JoinerTitle.Parent = JoinerWindow
+
+local JoinerTitleCorner = Instance.new("UICorner")
+JoinerTitleCorner.CornerRadius = UDim.new(0, 12)
+JoinerTitleCorner.Parent = JoinerTitle
+
+local CloseJoinerBtn = Instance.new("TextButton")
+CloseJoinerBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseJoinerBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseJoinerBtn.Text = "×"
+CloseJoinerBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseJoinerBtn.TextSize = 20
+CloseJoinerBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseJoinerBtn.Parent = JoinerWindow
+
+local JoinerContent = Instance.new("Frame")
+JoinerContent.Size = UDim2.new(1, -20, 1, -60)
+JoinerContent.Position = UDim2.new(0, 10, 0, 50)
+JoinerContent.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+JoinerContent.BorderSizePixel = 0
+JoinerContent.Parent = JoinerWindow
+
+local JoinerContentCorner = Instance.new("UICorner")
+JoinerContentCorner.CornerRadius = UDim.new(0, 8)
+JoinerContentCorner.Parent = JoinerContent
+
+local AvailableLabel = Instance.new("TextLabel")
+AvailableLabel.Size = UDim2.new(1, 0, 0, 25)
+AvailableLabel.Text = "📁 JALAN TERSEDIA"
+AvailableLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+AvailableLabel.TextSize = 12
+AvailableLabel.Font = Enum.Font.GothamBold
+AvailableLabel.BackgroundTransparency = 1
+AvailableLabel.Parent = JoinerContent
+
+local AvailableScroll = Instance.new("ScrollingFrame")
+AvailableScroll.Size = UDim2.new(1, -20, 0, 120)
+AvailableScroll.Position = UDim2.new(0, 10, 0, 30)
+AvailableScroll.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+AvailableScroll.BorderSizePixel = 0
+AvailableScroll.ScrollBarThickness = 4
+AvailableScroll.Parent = JoinerContent
+
+local AvailableLayout = Instance.new("UIListLayout")
+AvailableLayout.Padding = UDim.new(0, 5)
+AvailableLayout.Parent = AvailableScroll
+
+local QueueLabel = Instance.new("TextLabel")
+QueueLabel.Size = UDim2.new(1, 0, 0, 25)
+QueueLabel.Position = UDim2.new(0, 0, 0, 160)
+QueueLabel.Text = "🔗 ANTRIAN"
+QueueLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+QueueLabel.TextSize = 12
+QueueLabel.Font = Enum.Font.GothamBold
+QueueLabel.BackgroundTransparency = 1
+QueueLabel.Parent = JoinerContent
+
+local QueueScroll = Instance.new("ScrollingFrame")
+QueueScroll.Size = UDim2.new(1, -20, 0, 100)
+QueueScroll.Position = UDim2.new(0, 10, 0, 190)
+QueueScroll.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+QueueScroll.BorderSizePixel = 0
+QueueScroll.ScrollBarThickness = 4
+QueueScroll.Parent = JoinerContent
+
+local QueueLayout = Instance.new("UIListLayout")
+QueueLayout.Padding = UDim.new(0, 5)
+QueueLayout.Parent = QueueScroll
+
+local AddToQueueBtn = Instance.new("TextButton")
+AddToQueueBtn.Size = UDim2.new(0.45, 0, 0, 30)
+AddToQueueBtn.Position = UDim2.new(0.025, 0, 0, 300)
+AddToQueueBtn.Text = "➕ TAMBAH"
+AddToQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+AddToQueueBtn.TextSize = 11
+AddToQueueBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+AddToQueueBtn.Parent = JoinerContent
+
+local RemoveFromQueueBtn = Instance.new("TextButton")
+RemoveFromQueueBtn.Size = UDim2.new(0.45, 0, 0, 30)
+RemoveFromQueueBtn.Position = UDim2.new(0.525, 0, 0, 300)
+RemoveFromQueueBtn.Text = "➖ HAPUS"
+RemoveFromQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+RemoveFromQueueBtn.TextSize = 11
+RemoveFromQueueBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+RemoveFromQueueBtn.Parent = JoinerContent
+
+local PlayQueueBtn = Instance.new("TextButton")
+PlayQueueBtn.Size = UDim2.new(0.45, 0, 0, 35)
+PlayQueueBtn.Position = UDim2.new(0.025, 0, 0, 340)
+PlayQueueBtn.Text = "▶ MULAI"
+PlayQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+PlayQueueBtn.TextSize = 12
+PlayQueueBtn.Font = Enum.Font.GothamBold
+PlayQueueBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+PlayQueueBtn.Parent = JoinerContent
+
+local SaveQueueBtn = Instance.new("TextButton")
+SaveQueueBtn.Size = UDim2.new(0.45, 0, 0, 35)
+SaveQueueBtn.Position = UDim2.new(0.525, 0, 0, 340)
+SaveQueueBtn.Text = "💾 SIMPAN"
+SaveQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveQueueBtn.TextSize = 12
+SaveQueueBtn.Font = Enum.Font.GothamBold
+SaveQueueBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
+SaveQueueBtn.Parent = JoinerContent
+
+local ClearQueueBtn = Instance.new("TextButton")
+ClearQueueBtn.Size = UDim2.new(0.45, 0, 0, 30)
+ClearQueueBtn.Position = UDim2.new(0.025, 0, 0, 385)
+ClearQueueBtn.Text = "🗑 BERSIHKAN"
+ClearQueueBtn.TextColor3 = Color3.new(1, 1, 1)
+ClearQueueBtn.TextSize = 11
+ClearQueueBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+ClearQueueBtn.Parent = JoinerContent
+
+local CloseJoinerBtn2 = Instance.new("TextButton")
+CloseJoinerBtn2.Size = UDim2.new(0.45, 0, 0, 30)
+CloseJoinerBtn2.Position = UDim2.new(0.525, 0, 0, 385)
+CloseJoinerBtn2.Text = "✖ TUTUP"
+CloseJoinerBtn2.TextColor3 = Color3.new(1, 1, 1)
+CloseJoinerBtn2.TextSize = 11
+CloseJoinerBtn2.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+CloseJoinerBtn2.Parent = JoinerContent
+
+-- === SISTEM PENANDA === --
+local TerrainViewer = {
+    Enabled = false,
+    Markers = {},
+    CurrentIndex = 1
+}
+
+local function formatTime(seconds)
+    local mins = math.floor(seconds / 60)
+    local secs = math.floor(seconds % 60)
+    return string.format("%02d:%02d", mins, secs)
 end
 
-local function makeFolderIfNeeded(folder)
-    if makefolder and not isfolder then
-        pcall(makefolder, folder)
-    elseif isfolder and not isfolder(folder) then
-        pcall(makefolder, folder)
+local function calculateDistance(pos1, pos2)
+    return (pos1 - pos2).Magnitude
+end
+
+-- === FUNGSI UTAMA === --
+
+local function updateTimer()
+    if isRecording then
+        local elapsed = tick() - recordStartTime
+        TimerLabel.Text = formatTime(elapsed)
     end
 end
 
--- ================================ DATA MANAGER ===================================
-local DataManager = {}
-DataManager.__index = DataManager
-
-function DataManager:new()
-    local obj = setmetatable({}, self)
-    obj.folder = CONFIG.StorageFolder
-    makeFolderIfNeeded(obj.folder)
-    return obj
-end
-
-function DataManager:getPath(name)
-    return self.folder .. "/" .. name .. ".json"
-end
-
-function DataManager:save(name, data)
-    local path = self:getPath(name)
-    local json = jsonEncode(data)
-    writeFile(path, json)
-    return true
-end
-
-function DataManager:load(name)
-    local path = self:getPath(name)
-    if fileExists(path) then
-        local content = readFile(path)
-        if content then
-            return jsonDecode(content)
-        end
-    end
-    return nil
-end
-
-function DataManager:list()
-    local files = listFiles(self.folder)
-    local saves = {}
-    for _, file in ipairs(files) do
-        local name = file:match("([^/\\]+)%.json$")
-        if name then
-            table.insert(saves, name)
-        end
-    end
-    table.sort(saves)
-    return saves
-end
-
-function DataManager:delete(name)
-    local path = self:getPath(name)
-    if fileExists(path) then
-        deleteFile(path)
-    end
-end
-
--- ================================ WALK DATA STRUCTURE ============================
--- WalkData = {
---     name = string,
---     points = {{time=number, cframe=CFrame, velocity=Vector3?}},
---     duration = number,
---     speedMultiplier = number,
---     waypoints = {index=number, name=string}?,
---     created = os.time(),
---     version = 1
--- }
-
-local WalkUtils = {}
-
-function WalkUtils.createEmpty(name)
-    return {
-        name = name,
-        points = {},
-        duration = 0,
-        speedMultiplier = 1,
-        waypoints = {},
-        created = os.time(),
-        version = 1
-    }
-end
-
-function WalkUtils.addPoint(walk, time, cframe)
-    table.insert(walk.points, {time = time, cframe = cframe})
-    walk.duration = time
-end
-
-function WalkUtils.cut(walk, startTime, endTime)
-    local newPoints = {}
-    for _, p in ipairs(walk.points) do
-        if p.time >= startTime and p.time <= endTime then
-            table.insert(newPoints, {time = p.time - startTime, cframe = p.cframe})
-        end
-    end
-    local newWalk = WalkUtils.createEmpty(walk.name .. "_cut")
-    newWalk.points = newPoints
-    newWalk.duration = endTime - startTime
-    newWalk.speedMultiplier = walk.speedMultiplier
-    newWalk.waypoints = {}
-    for _, wp in ipairs(walk.waypoints or {}) do
-        if wp.time >= startTime and wp.time <= endTime then
-            table.insert(newWalk.waypoints, {time = wp.time - startTime, name = wp.name})
-        end
-    end
-    return newWalk
-end
-
-function WalkUtils.join(walks, useMount, mountSpeed)
-    local newPoints = {}
-    local timeOffset = 0
-    local newWaypoints = {}
-    for i, walk in ipairs(walks) do
-        for _, p in ipairs(walk.points) do
-            table.insert(newPoints, {time = p.time + timeOffset, cframe = p.cframe})
-        end
-        for _, wp in ipairs(walk.waypoints or {}) do
-            table.insert(newWaypoints, {time = wp.time + timeOffset, name = wp.name})
-        end
-        if useMount and i < #walks then
-            local lastCF = walk.points[#walk.points].cframe
-            local nextCF = walks[i+1].points[1].cframe
-            local distance = (nextCF.Position - lastCF.Position).Magnitude
-            local travelTime = distance / (mountSpeed or 16)
-            local steps = math.floor(travelTime / 0.1)
-            for step = 1, steps do
-                local t = step / steps
-                local cf = lastCF:Lerp(nextCF, t)
-                table.insert(newPoints, {time = timeOffset + walk.duration + t * travelTime, cframe = cf})
+local function startRecording()
+    PathData = {}
+    isRecording = true
+    hasUnsavedData = true
+    recordStartTime = tick()
+    totalDistance = 0
+    lastPosition = nil
+    
+    RecordIcon.Text = "⏹"
+    RecordIcon.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+    StatusText.Text = "🔴 SEDANG MEREKAM..."
+    StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+    
+    task.spawn(function()
+        while isRecording do
+            local char = LP.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
+            
+            if hrp and hum then
+                local currentPos = hrp.Position
+                
+                if lastPosition then
+                    totalDistance = totalDistance + calculateDistance(lastPosition, currentPos)
+                end
+                lastPosition = currentPos
+                
+                table.insert(PathData, {
+                    cf_raw = {hrp.CFrame:GetComponents()},
+                    position = {currentPos.X, currentPos.Y, currentPos.Z},
+                    velocity = {hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z},
+                    state = hum:GetState().Value,
+                    timestamp = tick() - recordStartTime,
+                    distance = totalDistance
+                })
             end
-            timeOffset = timeOffset + walk.duration + travelTime
-        else
-            timeOffset = timeOffset + walk.duration
+            
+            updateTimer()
+            RunService.Heartbeat:Wait()
+        end
+    end)
+end
+
+local function stopRecording()
+    isRecording = false
+    RecordIcon.Text = "⏺"
+    RecordIcon.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    StatusText.Text = "⏹ BERHENTI - Siap Disimpan"
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    local duration = #PathData > 0 and PathData[#PathData].timestamp or 0
+    SaveInfo.Text = string.format("Durasi: %s | Jarak: %.1fm | Titik: %d", 
+        formatTime(duration), totalDistance, #PathData)
+end
+
+local function discardRecording()
+    isRecording = false
+    hasUnsavedData = false
+    PathData = {}
+    totalDistance = 0
+    lastPosition = nil
+    RecordIcon.Text = "⏺"
+    RecordIcon.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    StatusText.Text = "🗑 DIBUANG"
+    StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+    task.delay(2, function()
+        StatusText.Text = "Siap Merekam"
+        StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+    end)
+end
+
+-- === PLAY WALK DENGAN LOGIKA ELBRUZH === --
+local function playReplay(dataToPlay, startIndex, endIndex)
+    if not dataToPlay or #dataToPlay == 0 or isPlaying then return end
+    
+    startIndex = startIndex or 1
+    endIndex = endIndex or #dataToPlay
+    
+    isPlaying = true
+    StatusText.Text = "▶ SEDANG BERJALAN..."
+    StatusText.TextColor3 = Color3.fromRGB(100, 200, 255)
+    
+    local char = LP.Character
+    if not char then 
+        isPlaying = false
+        return 
+    end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
+    
+    if not hrp or not hum then
+        isPlaying = false
+        return
+    end
+    
+    -- Anti-Collision (dari Elbruzh)
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then 
+            v.CanCollide = false 
         end
     end
-    local joined = WalkUtils.createEmpty("joined_" .. os.time())
-    joined.points = newPoints
-    joined.duration = newPoints[#newPoints].time
-    joined.waypoints = newWaypoints
-    return joined
-end
-
--- ================================ WALK PLAYER ENGINE ==============================
-local WalkPlayer = {}
-WalkPlayer.__index = WalkPlayer
-
-function WalkPlayer:new(walkData, character, speed)
-    local obj = setmetatable({}, self)
-    obj.walkData = walkData
-    obj.character = character
-    obj.rootPart = character:WaitForChild("HumanoidRootPart")
-    obj.humanoid = character:WaitForChild("Humanoid")
-    obj.speed = speed or walkData.speedMultiplier or 1
-    obj.isPlaying = false
-    obj.isPaused = false
-    obj.currentTime = 0
-    obj.lastIndex = 1
-    obj.connection = nil
-    obj.onComplete = nil
-    obj.onStuck = nil
-    obj.lastPosition = nil
-    obj.stuckTimer = 0
-    obj.autoJump = true
-    return obj
-end
-
-function WalkPlayer:play(fromTime)
-    if self.isPlaying then self:stop() end
-    self.isPlaying = true
-    self.isPaused = false
-    self.currentTime = fromTime or 0
-    self.lastIndex = 1
-    self.lastPosition = self.rootPart.Position
-    self.stuckTimer = 0
     
-    local points = self.walkData.points
-    local startTime = tick()
-    local speed = self.speed
-    
-    self.connection = RunService.Heartbeat:Connect(function(delta)
-        if not self.isPlaying or self.isPaused then return end
-        self.currentTime = self.currentTime + (delta * speed)
-        if self.currentTime >= self.walkData.duration then
-            self:stop()
-            if self.onComplete then self.onComplete() end
-            return
+    local i = startIndex
+    while i <= endIndex and isPlaying do
+        local data = dataToPlay[i]
+        if not data then break end
+        
+        local targetCF = CFrame.new(unpack(data.cf_raw))
+        
+        hrp.CFrame = targetCF
+        hrp.Velocity = Vector3.new(unpack(data.velocity)) * currentSpeed
+        
+        -- Sync State (dari Elbruzh)
+        if hum:GetState().Value ~= data.state then
+            hum:ChangeState(data.state)
         end
         
-        -- Interpolasi posisi
-        local targetIndex = #points
-        for i = self.lastIndex, #points do
-            if points[i].time >= self.currentTime then
-                targetIndex = i
+        -- Marker untuk Review Mode
+        if TerrainViewer.Enabled and i % 10 == 0 then
+            local marker = Instance.new("Part")
+            marker.Size = Vector3.new(2, 2, 2)
+            marker.Shape = Enum.PartType.Ball
+            marker.BrickColor = BrickColor.new("Bright yellow")
+            marker.Material = Enum.Material.Neon
+            marker.Position = hrp.Position + Vector3.new(0, 5, 0)
+            marker.Anchored = true
+            marker.CanCollide = false
+            marker.Parent = Workspace
+
+            local billboard = Instance.new("BillboardGui")
+            billboard.Size = UDim2.new(0, 100, 0, 30)
+            billboard.AlwaysOnTop = true
+            billboard.StudsOffset = Vector3.new(0, 3, 0)
+            billboard.Parent = marker
+
+            local markerText = Instance.new("TextLabel")
+            markerText.Size = UDim2.new(1, 0, 1, 0)
+            markerText.BackgroundTransparency = 1
+            markerText.Text = tostring(i)
+            markerText.TextColor3 = Color3.new(1, 1, 1)
+            markerText.TextStrokeTransparency = 0
+            markerText.Font = Enum.Font.GothamBold
+            markerText.TextSize = 14
+            markerText.Parent = billboard
+
+            table.insert(TerrainViewer.Markers, marker)
+            task.delay(2, function()
+                marker:Destroy()
+            end)
+        end
+        
+        local nextIndex = math.min(i + math.floor(10 * currentSpeed), endIndex)
+        local waitTime = (dataToPlay[nextIndex].timestamp - data.timestamp) / currentSpeed
+        task.wait(math.max(waitTime, 0.01))
+        i = nextIndex + 1
+    end
+    
+    -- Restore Collision
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then 
+            v.CanCollide = true 
+        end
+    end
+    
+    isPlaying = false
+    StatusText.Text = "✓ SELESAI"
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+end
+
+-- === FUNGSI PENYIMPANAN DENGAN CALLBACK === --
+local function showSavePromptWithCallback(callback, defaultName, infoText)
+    pendingSaveCallback = callback
+    if defaultName then
+        SaveInput.Text = defaultName
+    else
+        SaveInput.Text = ""
+    end
+    if infoText then
+        SaveInfo.Text = infoText
+    end
+    SavePrompt.Visible = true
+end
+
+-- === SISTEM UI EVENTS === --
+
+-- Toggle Record Icon
+RecordIcon.MouseButton1Click:Connect(function()
+    if isRecording then
+        stopRecording()
+    else
+        if hasUnsavedData then
+            NewRecordWarningWindow.Visible = true
+        else
+            startRecording()
+        end
+    end
+end)
+
+YesNewRecordBtn.MouseButton1Click:Connect(function()
+    NewRecordWarningWindow.Visible = false
+    discardRecording()
+    task.wait(0.1)
+    startRecording()
+end)
+
+NoCancelRecordBtn.MouseButton1Click:Connect(function()
+    NewRecordWarningWindow.Visible = false
+end)
+
+-- Minimize System
+local isMinimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = true
+    MainFrame.Visible = false
+    MinimizedIcon.Visible = true
+end)
+
+MinimizedIcon.MouseButton1Click:Connect(function()
+    isMinimized = false
+    MainFrame.Visible = true
+    MinimizedIcon.Visible = false
+end)
+
+-- Close Button
+CloseBtn.MouseButton1Click:Connect(function()
+    if hasUnsavedData then
+        UnsavedWarningWindow.Visible = true
+    else
+        ScreenGui:Destroy()
+    end
+end)
+
+YesSaveBtn.MouseButton1Click:Connect(function()
+    UnsavedWarningWindow.Visible = false
+    SavePrompt.Visible = true
+end)
+
+NoDiscardBtn.MouseButton1Click:Connect(function()
+    UnsavedWarningWindow.Visible = false
+    ScreenGui:Destroy()
+end)
+
+-- Speed Control
+PlusBtn.MouseButton1Click:Connect(function()
+    currentSpeed = math.min(currentSpeed + speedIncrement, 5.0)
+    SpeedDisplay.Text = string.format("%.1fx", currentSpeed)
+end)
+
+MinusBtn.MouseButton1Click:Connect(function()
+    currentSpeed = math.max(currentSpeed - speedIncrement, 0.1)
+    SpeedDisplay.Text = string.format("%.1fx", currentSpeed)
+end)
+
+-- Save System (Rekaman saat ini)
+SaveBtn.MouseButton1Click:Connect(function()
+    if #PathData > 0 then
+        -- Tampilkan prompt simpan dengan callback untuk menyimpan PathData
+        showSavePromptWithCallback(function(name)
+            local allSaves = loadFromDisk()
+            allSaves[name] = {
+                data = PathData,
+                timestamp = os.time(),
+                duration = PathData[#PathData].timestamp,
+                distance = totalDistance,
+                points = #PathData
+            }
+            saveToDisk(allSaves)
+            hasUnsavedData = false
+            StatusText.Text = "💾 TERSIMPAN!"
+            StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end, nil, string.format("Durasi: %s | Jarak: %.1fm | Titik: %d", 
+            formatTime(PathData[#PathData].timestamp), totalDistance, #PathData))
+    else
+        StatusText.Text = "❌ TIDAK ADA DATA!"
+        StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+        task.delay(2, function()
+            StatusText.Text = "Siap Merekam"
+            StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end)
+    end
+end)
+
+-- Tombol Simpan pada SavePrompt (panggil callback jika ada)
+SaveConfirmBtn.MouseButton1Click:Connect(function()
+    local name = SaveInput.Text
+    if name and name ~= "" then
+        if pendingSaveCallback then
+            pendingSaveCallback(name)
+            pendingSaveCallback = nil
+        end
+        SavePrompt.Visible = false
+        SaveInput.Text = ""
+    else
+        StatusText.Text = "❌ Nama tidak boleh kosong!"
+        task.delay(1, function()
+            StatusText.Text = "Siap Merekam"
+        end)
+    end
+end)
+
+SaveCancelBtn.MouseButton1Click:Connect(function()
+    SavePrompt.Visible = false
+    pendingSaveCallback = nil
+end)
+
+-- File Manager
+local selectedFile = nil
+local selectedFileData = nil
+
+local function refreshFileList()
+    for _, child in pairs(FileScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    local saves = loadFromDisk()
+    for name, data in pairs(saves) do
+        local fileBtn = Instance.new("TextButton")
+        fileBtn.Size = UDim2.new(1, -10, 0, 40)
+        fileBtn.Text = string.format("📁 %s\n⏱ %s | 📏 %.1fm | 📍 %d titik", 
+            name, formatTime(data.duration), data.distance, data.points)
+        fileBtn.TextColor3 = Color3.new(1, 1, 1)
+        fileBtn.TextSize = 11
+        fileBtn.Font = Enum.Font.Gotham
+        fileBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        fileBtn.Parent = FileScroll
+        
+        local fileCorner = Instance.new("UICorner")
+        fileCorner.CornerRadius = UDim.new(0, 6)
+        fileCorner.Parent = fileBtn
+        
+        fileBtn.MouseButton1Click:Connect(function()
+            selectedFile = name
+            selectedFileData = data
+            DetailName.Text = "Nama: " .. name
+            DetailDuration.Text = "⏱ Durasi: " .. formatTime(data.duration)
+            DetailDistance.Text = string.format("📏 Jarak: %.1fm", data.distance)
+            DetailPoints.Text = "📍 Titik: " .. data.points
+            FileDetailWindow.Visible = true
+        end)
+    end
+end
+
+FileManagerBtn.MouseButton1Click:Connect(function()
+    FileWindow.Visible = true
+    refreshFileList()
+end)
+
+CloseFileBtn.MouseButton1Click:Connect(function()
+    FileWindow.Visible = false
+end)
+
+-- Detail Window Events
+CloseDetailBtn.MouseButton1Click:Connect(function()
+    FileDetailWindow.Visible = false
+end)
+
+CloseDetailBtn2.MouseButton1Click:Connect(function()
+    FileDetailWindow.Visible = false
+end)
+
+DetailSpeedPlus.MouseButton1Click:Connect(function()
+    currentSpeed = math.min(currentSpeed + speedIncrement, 5.0)
+    DetailSpeedDisplay.Text = string.format("%.1fx", currentSpeed)
+end)
+
+DetailSpeedMinus.MouseButton1Click:Connect(function()
+    currentSpeed = math.max(currentSpeed - speedIncrement, 0.1)
+    DetailSpeedDisplay.Text = string.format("%.1fx", currentSpeed)
+end)
+
+PlayWalkBtn.MouseButton1Click:Connect(function()
+    if selectedFileData then
+        FileDetailWindow.Visible = false
+        playReplay(selectedFileData.data)
+    end
+end)
+
+ReviewWalkBtn.MouseButton1Click:Connect(function()
+    if selectedFileData then
+        TerrainViewer.Enabled = true
+        FileDetailWindow.Visible = false
+        playReplay(selectedFileData.data, 1, #selectedFileData.data)
+        TerrainViewer.Enabled = false
+    end
+end)
+
+-- Delete System
+DeleteFileBtn.MouseButton1Click:Connect(function()
+    DeleteConfirmWindow.Visible = true
+end)
+
+YesDeleteBtn.MouseButton1Click:Connect(function()
+    if selectedFile then
+        local saves = loadFromDisk()
+        saves[selectedFile] = nil
+        saveToDisk(saves)
+        DeleteConfirmWindow.Visible = false
+        FileDetailWindow.Visible = false
+        refreshFileList()
+        StatusText.Text = "🗑 TERHAPUS!"
+        StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+end)
+
+NoDeleteBtn.MouseButton1Click:Connect(function()
+    DeleteConfirmWindow.Visible = false
+end)
+
+-- Editor System
+local editorSelectedFile = nil
+local editorData = nil
+local trimStart = 0
+local trimEnd = 0
+
+EditorBtn.MouseButton1Click:Connect(function()
+    EditorWindow.Visible = true
+    -- Refresh dropdown
+    local saves = loadFromDisk()
+    local fileNames = {}
+    for name, _ in pairs(saves) do
+        table.insert(fileNames, name)
+    end
+    EditorFileDropdown.Text = #fileNames > 0 and fileNames[1] or "Tidak ada file"
+end)
+
+CloseEditorBtn.MouseButton1Click:Connect(function()
+    EditorWindow.Visible = false
+end)
+
+EditorFileDropdown.MouseButton1Click:Connect(function()
+    local saves = loadFromDisk()
+    local fileNames = {}
+    for name, _ in pairs(saves) do
+        table.insert(fileNames, name)
+    end
+    
+    -- Simple dropdown simulation
+    if #fileNames > 0 then
+        local current = EditorFileDropdown.Text
+        local currentIndex = 1
+        for i, name in ipairs(fileNames) do
+            if name == current then
+                currentIndex = i
                 break
             end
         end
-        if targetIndex > #points then return end
-        
-        local p1 = points[math.max(1, targetIndex-1)]
-        local p2 = points[targetIndex]
-        if not p1 then p1 = p2 end
-        local t = (self.currentTime - p1.time) / (p2.time - p1.time)
-        local newCFrame = p1.cframe:Lerp(p2.cframe, t)
-        self.rootPart.CFrame = newCFrame
-        self.lastIndex = targetIndex
-        
-        -- Anti stuck detection
-        local newPos = self.rootPart.Position
-        if (newPos - self.lastPosition).Magnitude < 0.5 then
-            self.stuckTimer = self.stuckTimer + delta
-            if self.stuckTimer > CONFIG.AntiStuckTimeout then
-                if self.onStuck then self.onStuck() end
-                self.stuckTimer = 0
-            end
-        else
-            self.stuckTimer = 0
+        local nextIndex = currentIndex % #fileNames + 1
+        EditorFileDropdown.Text = fileNames[nextIndex]
+        editorSelectedFile = fileNames[nextIndex]
+        editorData = cloneTable(saves[editorSelectedFile]) -- Gunakan cloneTable
+        if editorData then
+            TimelineInfo.Text = string.format("Durasi: %s | Titik: %d", 
+                formatTime(editorData.duration), editorData.points)
+            trimEnd = editorData.duration
+            EndTrimInput.PlaceholderText = string.format("%.2f", trimEnd)
         end
-        self.lastPosition = newPos
+    end
+end)
+
+-- Preview Trim (LIHAT POTONGAN) - DIPERBAIKI
+PreviewTrimBtn.MouseButton1Click:Connect(function()
+    if editorData then
+        local startTime = tonumber(StartTrimInput.Text) or 0
+        local endTime = tonumber(EndTrimInput.Text) or editorData.duration
         
-        -- Auto jump sederhana
-        if self.autoJump then
-            local rayOrigin = self.rootPart.Position + Vector3.new(0, 2, 0)
-            local rayDirection = self.rootPart.CFrame.LookVector * CONFIG.AutoJumpThreshold
-            local raycastParams = RaycastParams.new()
-            raycastParams.FilterDescendantsInstances = {self.character}
-            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-            local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-            if result and result.Normal.Y < 0.5 then
-                self.humanoid.Jump = true
+        -- Cari indeks
+        local startIdx = 1
+        local endIdx = #editorData.data
+        
+        for i, point in ipairs(editorData.data) do
+            if point.timestamp >= startTime and startIdx == 1 then
+                startIdx = i
+            end
+            if point.timestamp >= endTime then
+                endIdx = i
+                break
             end
         end
-    end)
-end
-
-function WalkPlayer:pause()
-    self.isPaused = true
-end
-
-function WalkPlayer:resume()
-    self.isPaused = false
-end
-
-function WalkPlayer:stop()
-    if self.connection then
-        self.connection:Disconnect()
-        self.connection = nil
-    end
-    self.isPlaying = false
-end
-
-function WalkPlayer:setSpeed(speed)
-    self.speed = speed
-end
-
-function WalkPlayer:seek(time)
-    self.currentTime = math.clamp(time, 0, self.walkData.duration)
-    self.lastIndex = 1
-    -- langsung set posisi
-    local points = self.walkData.points
-    for i = #points, 1, -1 do
-        if points[i].time <= self.currentTime then
-            self.rootPart.CFrame = points[i].cframe
-            self.lastIndex = i
-            break
+        
+        -- Buat data potongan sementara untuk preview
+        local previewData = {}
+        for i = startIdx, endIdx do
+            local newPoint = cloneTable(editorData.data[i])
+            newPoint.timestamp = newPoint.timestamp - startTime
+            table.insert(previewData, newPoint)
         end
+        
+        TrimPreviewInfo.Text = string.format("Preview: Mulai %s (idx:%d) - Akhir %s (idx:%d)\nDurasi: %s", 
+            formatTime(startTime), startIdx, formatTime(endTime), endIdx, 
+            formatTime(endTime - startTime))
+        
+        -- Tampilkan preview dengan marker (opsional)
+        TerrainViewer.Enabled = true
+        playReplay(previewData, 1, #previewData)
+        TerrainViewer.Enabled = false
     end
-end
+end)
 
--- ================================ RECORDER ENGINE ================================
-local Recorder = {}
-Recorder.__index = Recorder
-
-function Recorder:new(character)
-    local obj = setmetatable({}, self)
-    obj.character = character
-    obj.rootPart = character:WaitForChild("HumanoidRootPart")
-    obj.isRecording = false
-    obj.data = nil
-    obj.startTime = 0
-    obj.lastTime = 0
-    obj.connection = nil
-    obj.onDataUpdate = nil
-    return obj
-end
-
-function Recorder:start()
-    if self.isRecording then return end
-    self.isRecording = true
-    self.data = WalkUtils.createEmpty("recording_" .. os.time())
-    self.startTime = tick()
-    self.lastTime = 0
-    self.connection = RunService.Heartbeat:Connect(function()
-        if not self.isRecording then return end
-        local now = tick() - self.startTime
-        if now - self.lastTime >= CONFIG.RecordInterval then
-            WalkUtils.addPoint(self.data, now, self.rootPart.CFrame)
-            self.lastTime = now
-            if self.onDataUpdate then
-                self.onDataUpdate(now, #self.data.points)
+-- Apply Trim (TERAPKAN) - Gunakan cloneTable
+ApplyTrimBtn.MouseButton1Click:Connect(function()
+    if editorData then
+        local startTime = tonumber(StartTrimInput.Text) or 0
+        local endTime = tonumber(EndTrimInput.Text) or editorData.duration
+        
+        local newData = {}
+        local newTotalDistance = 0
+        local lastPos = nil
+        
+        for _, point in ipairs(editorData.data) do
+            if point.timestamp >= startTime and point.timestamp <= endTime then
+                local newPoint = cloneTable(point)
+                newPoint.timestamp = point.timestamp - startTime
+                -- Hitung ulang jarak (opsional)
+                if lastPos then
+                    local pos = Vector3.new(point.position[1], point.position[2], point.position[3])
+                    newTotalDistance = newTotalDistance + (pos - lastPos).Magnitude
+                end
+                lastPos = Vector3.new(point.position[1], point.position[2], point.position[3])
+                table.insert(newData, newPoint)
             end
         end
-    end)
-end
-
-function Recorder:stop()
-    if not self.isRecording then return end
-    self.isRecording = false
-    if self.connection then
-        self.connection:Disconnect()
-        self.connection = nil
-    end
-    return self.data
-end
-
--- ================================ GUI SYSTEM =====================================
-local GUI = {}
-GUI.__index = GUI
-
-function GUI:new()
-    local obj = setmetatable({}, self)
-    obj.screenGui = nil
-    obj.mainFrame = nil
-    obj.isMinimized = false
-    obj.miniIcon = nil
-    obj.recordIcon = nil
-    obj.elements = {}
-    obj.modalStack = {}
-    return obj
-end
-
-function GUI:create()
-    if self.screenGui then self.screenGui:Destroy() end
-    self.screenGui = Instance.new("ScreenGui")
-    self.screenGui.Name = "AutoWalkProGUI"
-    self.screenGui.ResetOnSpawn = false
-    self.screenGui.Parent = game.CoreGui
-    
-    -- Main frame
-    self.mainFrame = Instance.new("Frame")
-    self.mainFrame.Size = UDim2.new(0, CONFIG.GUI_Size.Width, 0, CONFIG.GUI_Size.Height)
-    self.mainFrame.Position = UDim2.new(0.5, -CONFIG.GUI_Size.Width/2, 0.5, -CONFIG.GUI_Size.Height/2)
-    self.mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    self.mainFrame.BorderSizePixel = 0
-    self.mainFrame.ClipsDescendants = true
-    self.mainFrame.Parent = self.screenGui
-    
-    -- Title bar dengan drag
-    local titleBar = Instance.new("Frame")
-    titleBar.Size = UDim2.new(1, 0, 0, 35)
-    titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    titleBar.Parent = self.mainFrame
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -60, 1, 0)
-    title.Position = UDim2.new(0, 10, 0, 0)
-    title.BackgroundTransparency = 1
-    title.Text = "⚡ AUTO WALK PRO ⚡"
-    title.TextColor3 = Color3.fromRGB(255, 200, 100)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 16
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = titleBar
-    
-    self.minimizeBtn = Instance.new("TextButton")
-    self.minimizeBtn.Size = UDim2.new(0, 30, 1, 0)
-    self.minimizeBtn.Position = UDim2.new(1, -60, 0, 0)
-    self.minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    self.minimizeBtn.Text = "−"
-    self.minimizeBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    self.minimizeBtn.Font = Enum.Font.GothamBold
-    self.minimizeBtn.Parent = titleBar
-    
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 30, 1, 0)
-    closeBtn.Position = UDim2.new(1, -30, 0, 0)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Parent = titleBar
-    closeBtn.MouseButton1Click:Connect(function() self:destroy() end)
-    
-    -- Scrollable content
-    local scrollFrame = Instance.new("ScrollingFrame")
-    scrollFrame.Size = UDim2.new(1, 0, 1, -35)
-    scrollFrame.Position = UDim2.new(0, 0, 0, 35)
-    scrollFrame.BackgroundTransparency = 1
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 800)
-    scrollFrame.ScrollBarThickness = 5
-    scrollFrame.Parent = self.mainFrame
-    
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Parent = scrollFrame
-    
-    -- Record section
-    self:addSection(scrollFrame, "🎙️ RECORDING", 1)
-    local recRow = self:addRow(scrollFrame, 2)
-    self.recordBtn = self:addButton(recRow, "🔴 RECORD", 0, 0, 120, 35, Color3.fromRGB(200, 60, 60))
-    self.stopRecordBtn = self:addButton(recRow, "⏹️ STOP", 130, 0, 120, 35, Color3.fromRGB(100, 100, 120))
-    
-    -- Time display saat record
-    self.recordTimeLabel = self:addLabel(scrollFrame, "⏱️ Record time: 0.00 s", 3, Color3.fromRGB(255, 255, 150))
-    
-    -- Speed control
-    self:addSection(scrollFrame, "⚙️ SPEED CONTROL", 4)
-    local speedRow = self:addRow(scrollFrame, 5)
-    self.speedMinus = self:addButton(speedRow, "-0.1", 0, 0, 60, 35, Color3.fromRGB(80, 80, 100))
-    self.speedLabel = self:addLabel(speedRow, "Speed: 1.0", 70, 0, 180, 35, Color3.fromRGB(60, 60, 80))
-    self.speedPlus = self:addButton(speedRow, "+0.1", 260, 0, 60, 35, Color3.fromRGB(80, 80, 100))
-    
-    -- Playback controls
-    self:addSection(scrollFrame, "▶️ PLAYBACK", 6)
-    local playRow = self:addRow(scrollFrame, 7)
-    self.playBtn = self:addButton(playRow, "▶ PLAY", 0, 0, 100, 40, Color3.fromRGB(60, 150, 60))
-    self.pauseBtn = self:addButton(playRow, "⏸ PAUSE", 110, 0, 100, 40, Color3.fromRGB(150, 150, 60))
-    self.stopPlayBtn = self:addButton(playRow, "⏹ STOP", 220, 0, 100, 40, Color3.fromRGB(150, 80, 80))
-    
-    -- Save current record
-    self:addSection(scrollFrame, "💾 SAVE WALK", 8)
-    self.saveBtn = self:addButton(scrollFrame, "SAVE RECORDED WALK", 0, 0, 360, 40, Color3.fromRGB(70, 70, 150), 9)
-    
-    -- Loaded walk info
-    self:addSection(scrollFrame, "📁 LOADED WALK", 10)
-    self.loadedInfoLabel = self:addLabel(scrollFrame, "No walk loaded", 11, Color3.fromRGB(200, 200, 200))
-    
-    -- Saved walks list
-    self:addSection(scrollFrame, "📂 SAVED WALKS", 12)
-    self.walkListFrame = Instance.new("ScrollingFrame")
-    self.walkListFrame.Size = UDim2.new(1, -20, 0, 150)
-    self.walkListFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    self.walkListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    self.walkListFrame.ScrollBarThickness = 4
-    self.walkListFrame.Parent = scrollFrame
-    self.walkListFrame.LayoutOrder = 13
-    
-    local listLayout = Instance.new("UIListLayout")
-    listLayout.Padding = UDim.new(0, 4)
-    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    listLayout.Parent = self.walkListFrame
-    
-    -- Editor buttons
-    self:addSection(scrollFrame, "✂️ EDITORS", 14)
-    local editorRow = self:addRow(scrollFrame, 15)
-    self.cutBtn = self:addButton(editorRow, "✂ CUT", 0, 0, 170, 40, Color3.fromRGB(200, 120, 50))
-    self.joinBtn = self:addButton(editorRow, "🔗 JOIN", 180, 0, 170, 40, Color3.fromRGB(80, 120, 200))
-    
-    -- Timeline preview
-    self:addSection(scrollFrame, "📊 TIMELINE", 16)
-    self.timelineFrame = Instance.new("Frame")
-    self.timelineFrame.Size = UDim2.new(1, -20, 0, 80)
-    self.timelineFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    self.timelineFrame.Parent = scrollFrame
-    self.timelineFrame.LayoutOrder = 17
-    
-    -- Mini icon (saat minimize)
-    self.miniIcon = Instance.new("TextButton")
-    self.miniIcon.Size = UDim2.new(0, 50, 0, 50)
-    self.miniIcon.Position = UDim2.new(0, 10, 0, 70)
-    self.miniIcon.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    self.miniIcon.Text = "⚡"
-    self.miniIcon.TextColor3 = Color3.fromRGB(255, 200, 100)
-    self.miniIcon.Font = Enum.Font.GothamBold
-    self.miniIcon.TextSize = 30
-    self.miniIcon.Parent = self.screenGui
-    self.miniIcon.Visible = false
-    
-    -- Record icon di atas kiri
-    self.recordIcon = Instance.new("TextButton")
-    self.recordIcon.Size = UDim2.new(0, 50, 0, 50)
-    self.recordIcon.Position = UDim2.new(0, 10, 0, 10)
-    self.recordIcon.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    self.recordIcon.Text = "●"
-    self.recordIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
-    self.recordIcon.Font = Enum.Font.GothamBold
-    self.recordIcon.TextSize = 35
-    self.recordIcon.Parent = self.screenGui
-    
-    -- Events
-    self.minimizeBtn.MouseButton1Click:Connect(function() self:toggleMinimize() end)
-    self.miniIcon.MouseButton1Click:Connect(function() self:toggleMinimize() end)
-    
-    return self
-end
-
-function GUI:addSection(parent, text, order)
-    local section = Instance.new("TextLabel")
-    section.Size = UDim2.new(1, -20, 0, 25)
-    section.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    section.Text = "  " .. text
-    section.TextColor3 = Color3.fromRGB(255, 255, 255)
-    section.Font = Enum.Font.GothamBold
-    section.TextSize = 14
-    section.TextXAlignment = Enum.TextXAlignment.Left
-    section.LayoutOrder = order
-    section.Parent = parent
-    return section
-end
-
-function GUI:addRow(parent, order)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, -20, 0, 45)
-    row.BackgroundTransparency = 1
-    row.LayoutOrder = order
-    row.Parent = parent
-    return row
-end
-
-function GUI:addButton(parent, text, x, y, w, h, color, order)
-    local btn = Instance.new("TextButton")
-    if parent:IsA("Frame") then
-        btn.Position = UDim2.new(0, x, 0, y)
-        btn.Size = UDim2.new(0, w, 0, h)
-        btn.Parent = parent
-    else
-        btn.Size = UDim2.new(0, w, 0, h)
-        btn.Position = UDim2.new(0.5, -w/2, 0, 0)
-        btn.Parent = parent
-        btn.LayoutOrder = order or 0
-    end
-    btn.Text = text
-    btn.BackgroundColor3 = color
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    return btn
-end
-
-function GUI:addLabel(parent, text, order, color, x, y, w, h)
-    local label = Instance.new("TextLabel")
-    if parent:IsA("ScrollingFrame") then
-        label.Size = UDim2.new(1, -20, 0, 30)
-        label.Parent = parent
-        label.LayoutOrder = order
-    else
-        label.Size = UDim2.new(0, w or 200, 0, h or 30)
-        label.Position = UDim2.new(0, x or 0, 0, y or 0)
-        label.Parent = parent
-    end
-    label.BackgroundColor3 = color or Color3.fromRGB(50,50,70)
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(255,255,255)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 13
-    return label
-end
-
-function GUI:toggleMinimize()
-    self.isMinimized = not self.isMinimized
-    self.mainFrame.Visible = not self.isMinimized
-    self.miniIcon.Visible = self.isMinimized
-end
-
-function GUI:showModal(title, content, buttons)
-    local modal = Instance.new("Frame")
-    modal.Size = UDim2.new(0, 320, 0, 200)
-    modal.Position = UDim2.new(0.5, -160, 0.5, -100)
-    modal.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    modal.BorderSizePixel = 1
-    modal.Parent = self.screenGui
-    table.insert(self.modalStack, modal)
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 0, 35)
-    titleLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    titleLabel.Text = title
-    titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Parent = modal
-    
-    local contentLabel = Instance.new("TextLabel")
-    contentLabel.Size = UDim2.new(1, -20, 0, 80)
-    contentLabel.Position = UDim2.new(0, 10, 0, 45)
-    contentLabel.BackgroundTransparency = 1
-    contentLabel.Text = content
-    contentLabel.TextColor3 = Color3.fromRGB(220,220,220)
-    contentLabel.TextWrapped = true
-    contentLabel.Font = Enum.Font.Gotham
-    contentLabel.TextSize = 13
-    contentLabel.Parent = modal
-    
-    local btnY = 140
-    for i, btn in ipairs(buttons) do
-        local button = Instance.new("TextButton")
-        button.Size = UDim2.new(0, 120, 0, 35)
-        button.Position = UDim2.new(0.5, -60 + (i-1)*130, 0, btnY)
-        button.Text = btn.text
-        button.BackgroundColor3 = btn.color or Color3.fromRGB(80,80,100)
-        button.TextColor3 = Color3.fromRGB(255,255,255)
-        button.Font = Enum.Font.Gotham
-        button.Parent = modal
-        button.MouseButton1Click:Connect(function()
-            if btn.callback then btn.callback() end
-            modal:Destroy()
-            table.remove(self.modalStack, #self.modalStack)
-        end)
-    end
-end
-
-function GUI:showInputModal(title, placeholder, callback)
-    local modal = Instance.new("Frame")
-    modal.Size = UDim2.new(0, 300, 0, 150)
-    modal.Position = UDim2.new(0.5, -150, 0.5, -75)
-    modal.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    modal.Parent = self.screenGui
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 0, 35)
-    titleLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    titleLabel.Text = title
-    titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Parent = modal
-    
-    local inputBox = Instance.new("TextBox")
-    inputBox.Size = UDim2.new(1, -40, 0, 35)
-    inputBox.Position = UDim2.new(0, 20, 0, 50)
-    inputBox.PlaceholderText = placeholder
-    inputBox.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    inputBox.TextColor3 = Color3.fromRGB(0,0,0)
-    inputBox.Font = Enum.Font.Gotham
-    inputBox.Parent = modal
-    
-    local okBtn = Instance.new("TextButton")
-    okBtn.Size = UDim2.new(0, 80, 0, 35)
-    okBtn.Position = UDim2.new(0.5, -40, 1, -45)
-    okBtn.Text = "OK"
-    okBtn.BackgroundColor3 = Color3.fromRGB(100,200,100)
-    okBtn.Parent = modal
-    okBtn.MouseButton1Click:Connect(function()
-        callback(inputBox.Text)
-        modal:Destroy()
-    end)
-end
-
-function GUI:updateWalkList(walks, onSelect, onDelete)
-    -- Clear existing
-    for _, child in ipairs(self.walkListFrame:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    local yOffset = 0
-    for i, name in ipairs(walks) do
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, 0, 0, 40)
-        row.BackgroundTransparency = 1
-        row.Parent = self.walkListFrame
         
+        editorData.data = newData
+        editorData.duration = endTime - startTime
+        editorData.points = #newData
+        editorData.distance = newTotalDistance
+        TimelineInfo.Text = string.format("Durasi: %s | Titik: %d", 
+            formatTime(editorData.duration), editorData.points)
+        StatusText.Text = "✂️ DIPOTONG!"
+        StatusText.TextColor3 = Color3.fromRGB(255, 200, 100)
+    end
+end)
+
+-- Save Trim (SIMPAN BARU)
+SaveTrimBtn.MouseButton1Click:Connect(function()
+    if editorData and editorSelectedFile then
+        showSavePromptWithCallback(function(name)
+            local allSaves = loadFromDisk()
+            allSaves[name] = {
+                data = editorData.data,
+                timestamp = os.time(),
+                duration = editorData.duration,
+                distance = editorData.distance or 0,
+                points = editorData.points
+            }
+            saveToDisk(allSaves)
+            StatusText.Text = "💾 TERSIMPAN!"
+            StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end, editorSelectedFile .. "_edited", string.format("Durasi: %s | Jarak: %.1fm | Titik: %d", 
+            formatTime(editorData.duration), editorData.distance or 0, editorData.points))
+    end
+end)
+
+CancelTrimBtn.MouseButton1Click:Connect(function()
+    EditorWindow.Visible = false
+end)
+
+-- Joiner System
+local joinQueue = {}
+
+JoinerBtn.MouseButton1Click:Connect(function()
+    JoinerWindow.Visible = true
+    -- Refresh available
+    for _, child in pairs(AvailableScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    local saves = loadFromDisk()
+    for name, data in pairs(saves) do
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -50, 1, -2)
-        btn.Position = UDim2.new(0, 0, 0, 1)
-        btn.Text = name
-        btn.BackgroundColor3 = Color3.fromRGB(55, 55, 75)
-        btn.TextColor3 = Color3.fromRGB(255,255,255)
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 13
-        btn.TextXAlignment = Enum.TextXAlignment.Left
-        btn.Parent = row
-        btn.MouseButton1Click:Connect(function() onSelect(name) end)
+        btn.Size = UDim2.new(1, -10, 0, 35)
+        btn.Text = string.format("%s (%s)", name, formatTime(data.duration))
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        btn.Parent = AvailableScroll
         
-        local delBtn = Instance.new("TextButton")
-        delBtn.Size = UDim2.new(0, 40, 1, -2)
-        delBtn.Position = UDim2.new(1, -45, 0, 1)
-        delBtn.Text = "🗑"
-        delBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-        delBtn.TextColor3 = Color3.fromRGB(255,255,255)
-        delBtn.Font = Enum.Font.GothamBold
-        delBtn.Parent = row
-        delBtn.MouseButton1Click:Connect(function()
-            self:showModal("Confirm Delete", "Delete walk '" .. name .. "' ?", {
-                {text = "Yes", color = Color3.fromRGB(200,80,80), callback = function() onDelete(name) end},
-                {text = "No", color = Color3.fromRGB(100,100,100)}
-            })
+        btn.MouseButton1Click:Connect(function()
+            table.insert(joinQueue, {name = name, data = cloneTable(data)}) -- clone data
+            refreshQueue()
         end)
     end
-    self.walkListFrame.CanvasSize = UDim2.new(0, 0, 0, #walks * 45)
-end
+end)
 
-function GUI:updateTimeline(walkData)
-    for _, child in ipairs(self.timelineFrame:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
-    end
-    if not walkData or #walkData.points == 0 then
-        local empty = Instance.new("TextLabel")
-        empty.Size = UDim2.new(1, 0, 1, 0)
-        empty.BackgroundTransparency = 1
-        empty.Text = "No data"
-        empty.TextColor3 = Color3.fromRGB(150,150,150)
-        empty.Parent = self.timelineFrame
-        return
-    end
-    local duration = walkData.duration
-    if duration <= 0 then return end
-    local width = self.timelineFrame.AbsoluteSize.X - 10
-    local pixelsPerSec = width / duration
-    for i, point in ipairs(walkData.points) do
-        if i % 10 == 0 then -- tampilkan setiap 10 titik saja
-            local x = point.time * pixelsPerSec
-            local marker = Instance.new("Frame")
-            marker.Size = UDim2.new(0, 2, 1, 0)
-            marker.Position = UDim2.new(0, x, 0, 0)
-            marker.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-            marker.Parent = self.timelineFrame
+local function refreshQueue()
+    for _, child in pairs(QueueScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
         end
     end
-    -- waypoint markers
-    for _, wp in ipairs(walkData.waypoints or {}) do
-        local x = wp.time * pixelsPerSec
-        local marker = Instance.new("Frame")
-        marker.Size = UDim2.new(0, 6, 1, 0)
-        marker.Position = UDim2.new(0, x-3, 0, 0)
-        marker.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
-        marker.Parent = self.timelineFrame
-    end
-end
-
-function GUI:destroy()
-    if self.screenGui then self.screenGui:Destroy() end
-    self.screenGui = nil
-end
-
--- ================================ MAIN APPLICATION ===============================
-local App = {}
-App.__index = App
-
-function App:new()
-    local obj = setmetatable({}, self)
-    obj.dataManager = DataManager:new()
-    obj.gui = GUI:new()
-    obj.currentWalk = nil
-    obj.currentWalkName = nil
-    obj.recorder = nil
-    obj.player = nil
-    obj.walkSpeed = CONFIG.WalkSpeedDefault
-    obj.recording = false
-    obj.recordDataPoints = 0
-    obj.undoStack = {}
-    obj.redoStack = {}
-    return obj
-end
-
-function App:init()
-    self.gui:create()
-    self:bindEvents()
-    self:refreshWalkList()
-    self:setupCharacter()
-    game.Players.LocalPlayer.CharacterAdded:Connect(function() self:setupCharacter() end)
-end
-
-function App:setupCharacter()
-    local player = game.Players.LocalPlayer
-    self.character = player.Character or player.CharacterAdded:Wait()
-    self.humanoid = self.character:WaitForChild("Humanoid")
-    self.rootPart = self.character:WaitForChild("HumanoidRootPart")
-    self.recorder = Recorder:new(self.character)
-    self.recorder.onDataUpdate = function(time, points)
-        self.recordDataPoints = points
-        self.gui.recordTimeLabel.Text = string.format("⏱️ Record time: %.2f s (%d points)", time, points)
-    end
-end
-
-function App:bindEvents()
-    -- Record
-    self.gui.recordBtn.MouseButton1Click:Connect(function()
-        if self.recording then return end
-        self.recording = true
-        self.recorder:start()
-        self.gui.recordBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-        self.gui.recordBtn.Text = "🔴 RECORDING"
-        -- Juga update icon record
-        self.gui.recordIcon.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    end)
     
-    self.gui.stopRecordBtn.MouseButton1Click:Connect(function()
-        if not self.recording then return end
-        self.recording = false
-        local walkData = self.recorder:stop()
-        self.currentWalk = walkData
-        self.currentWalkName = nil
-        self.gui.recordBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        self.gui.recordBtn.Text = "🔴 RECORD"
-        self.gui.recordIcon.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        self.gui.loadedInfoLabel.Text = "Recorded walk ready to save"
-        self.gui:updateTimeline(walkData)
-        self:pushUndo(walkData)
-    end)
-    
-    -- Save
-    self.gui.saveBtn.MouseButton1Click:Connect(function()
-        if not self.currentWalk or #self.currentWalk.points == 0 then
-            self.gui:showModal("Error", "No recorded walk to save", {{text="OK", color=Color3.fromRGB(100,100,120)}})
-            return
-        end
-        self.gui:showInputModal("Save Walk", "Enter walk name", function(name)
-            if name == "" then name = "walk_" .. os.time() end
-            self.currentWalk.name = name
-            self.dataManager:save(name, self.currentWalk)
-            self.refreshWalkList()
-            self.gui:showModal("Saved", "Walk '" .. name .. "' saved successfully", {{text="OK", color=Color3.fromRGB(100,200,100)}})
-        end)
-    end)
-    
-    -- Speed
-    self.gui.speedMinus.MouseButton1Click:Connect(function()
-        self.walkSpeed = math.max(CONFIG.MinSpeed, self.walkSpeed - CONFIG.SpeedStep)
-        self.gui.speedLabel.Text = "Speed: " .. string.format("%.1f", self.walkSpeed)
-        if self.player then self.player:setSpeed(self.walkSpeed) end
-    end)
-    self.gui.speedPlus.MouseButton1Click:Connect(function()
-        self.walkSpeed = math.min(CONFIG.MaxSpeed, self.walkSpeed + CONFIG.SpeedStep)
-        self.gui.speedLabel.Text = "Speed: " .. string.format("%.1f", self.walkSpeed)
-        if self.player then self.player:setSpeed(self.walkSpeed) end
-    end)
-    
-    -- Playback
-    self.gui.playBtn.MouseButton1Click:Connect(function()
-        if not self.currentWalk then
-            self.gui:showModal("Error", "Load a walk first", {{text="OK"}})
-            return
-        end
-        if self.player and self.player.isPlaying then
-            self.player:stop()
-        end
-        self.player = WalkPlayer:new(self.currentWalk, self.character, self.walkSpeed)
-        self.player.onComplete = function()
-            self.gui:showModal("Complete", "Walk finished", {{text="OK"}})
-        end
-        self.player:play()
-    end)
-    
-    self.gui.pauseBtn.MouseButton1Click:Connect(function()
-        if self.player and self.player.isPlaying then
-            if self.player.isPaused then
-                self.player:resume()
-                self.gui.pauseBtn.Text = "⏸ PAUSE"
-            else
-                self.player:pause()
-                self.gui.pauseBtn.Text = "▶ RESUME"
-            end
-        end
-    end)
-    
-    self.gui.stopPlayBtn.MouseButton1Click:Connect(function()
-        if self.player then
-            self.player:stop()
-            self.player = nil
-            self.gui.pauseBtn.Text = "⏸ PAUSE"
-        end
-    end)
-    
-    -- Cut editor
-    self.gui.cutBtn.MouseButton1Click:Connect(function()
-        if not self.currentWalk then
-            self.gui:showModal("Error", "Load a walk first", {{text="OK"}})
-            return
-        end
-        self:openCutEditor()
-    end)
-    
-    -- Join editor
-    self.gui.joinBtn.MouseButton1Click:Connect(function()
-        self:openJoinEditor()
-    end)
-    
-    -- Record icon (floating)
-    self.gui.recordIcon.MouseButton1Click:Connect(function()
-        if self.recording then
-            self.recording = false
-            local walkData = self.recorder:stop()
-            self.currentWalk = walkData
-            self.gui.recordBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-            self.gui.recordBtn.Text = "🔴 RECORD"
-            self.gui.recordIcon.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-            self.gui.loadedInfoLabel.Text = "Recorded walk ready"
-            self.gui:updateTimeline(walkData)
-        else
-            self.recording = true
-            self.recorder:start()
-            self.gui.recordBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-            self.gui.recordBtn.Text = "🔴 RECORDING"
-            self.gui.recordIcon.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-        end
-    end)
-end
-
-function App:refreshWalkList()
-    local walks = self.dataManager:list()
-    self.gui:updateWalkList(walks,
-        function(name)
-            local walk = self.dataManager:load(name)
-            if walk then
-                self.currentWalk = walk
-                self.currentWalkName = name
-                self.gui.loadedInfoLabel.Text = "Loaded: " .. name .. " (" .. #walk.points .. " points)"
-                self.gui:updateTimeline(walk)
-                self:pushUndo(walk)
-            end
-        end,
-        function(name)
-            self.dataManager:delete(name)
-            self:refreshWalkList()
-            if self.currentWalkName == name then
-                self.currentWalk = nil
-                self.currentWalkName = nil
-                self.gui.loadedInfoLabel.Text = "No walk loaded"
-                self.gui:updateTimeline(nil)
-            end
-        end
-    )
-end
-
-function App:pushUndo(walkData)
-    if walkData then
-        table.insert(self.undoStack, walkData)
-        if #self.undoStack > CONFIG.MaxUndoSteps then
-            table.remove(self.undoStack, 1)
-        end
-        self.redoStack = {}
-    end
-end
-
-function App:undo()
-    if #self.undoStack > 1 then
-        local current = table.remove(self.undoStack)
-        table.insert(self.redoStack, current)
-        local previous = self.undoStack[#self.undoStack]
-        self.currentWalk = previous
-        self.gui:updateTimeline(previous)
-        self.gui.loadedInfoLabel.Text = "Undo: " .. (self.currentWalkName or "walk")
-    end
-end
-
-function App:openCutEditor()
-    local editor = Instance.new("Frame")
-    editor.Size = UDim2.new(0, 360, 0, 280)
-    editor.Position = UDim2.new(0.5, -180, 0.5, -140)
-    editor.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    editor.BorderSizePixel = 1
-    editor.Parent = self.gui.screenGui
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.Text = "✂ Cut Walk Editor"
-    title.BackgroundColor3 = Color3.fromRGB(55, 55, 75)
-    title.TextColor3 = Color3.fromRGB(255,255,255)
-    title.Font = Enum.Font.GothamBold
-    title.Parent = editor
-    
-    local fromLabel = Instance.new("TextLabel")
-    fromLabel.Size = UDim2.new(0, 60, 0, 30)
-    fromLabel.Position = UDim2.new(0, 10, 0, 45)
-    fromLabel.Text = "From (s):"
-    fromLabel.BackgroundTransparency = 1
-    fromLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    fromLabel.Parent = editor
-    
-    local fromBox = Instance.new("TextBox")
-    fromBox.Size = UDim2.new(0, 100, 0, 30)
-    fromBox.Position = UDim2.new(0, 80, 0, 45)
-    fromBox.Text = "0"
-    fromBox.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    fromBox.Parent = editor
-    
-    local toLabel = Instance.new("TextLabel")
-    toLabel.Size = UDim2.new(0, 60, 0, 30)
-    toLabel.Position = UDim2.new(0, 190, 0, 45)
-    toLabel.Text = "To (s):"
-    toLabel.BackgroundTransparency = 1
-    toLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    toLabel.Parent = editor
-    
-    local toBox = Instance.new("TextBox")
-    toBox.Size = UDim2.new(0, 100, 0, 30)
-    toBox.Position = UDim2.new(0, 250, 0, 45)
-    toBox.Text = tostring(self.currentWalk.duration)
-    toBox.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    toBox.Parent = editor
-    
-    -- Preview range
-    local previewBtn = Instance.new("TextButton")
-    previewBtn.Size = UDim2.new(0, 120, 0, 35)
-    previewBtn.Position = UDim2.new(0.5, -140, 0, 95)
-    previewBtn.Text = "Preview Range"
-    previewBtn.BackgroundColor3 = Color3.fromRGB(150, 120, 50)
-    previewBtn.Parent = editor
-    
-    local skipLabel = Instance.new("TextLabel")
-    skipLabel.Size = UDim2.new(0, 60, 0, 30)
-    skipLabel.Position = UDim2.new(0, 10, 0, 145)
-    skipLabel.Text = "Skip to:"
-    skipLabel.BackgroundTransparency = 1
-    skipLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    skipLabel.Parent = editor
-    
-    local skipBox = Instance.new("TextBox")
-    skipBox.Size = UDim2.new(0, 100, 0, 30)
-    skipBox.Position = UDim2.new(0, 80, 0, 145)
-    skipBox.PlaceholderText = "detik"
-    skipBox.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    skipBox.Parent = editor
-    
-    local skipBtn = Instance.new("TextButton")
-    skipBtn.Size = UDim2.new(0, 80, 0, 30)
-    skipBtn.Position = UDim2.new(0, 190, 0, 145)
-    skipBtn.Text = "Skip"
-    skipBtn.BackgroundColor3 = Color3.fromRGB(100,100,150)
-    skipBtn.Parent = editor
-    
-    local applyBtn = Instance.new("TextButton")
-    applyBtn.Size = UDim2.new(0, 140, 0, 40)
-    applyBtn.Position = UDim2.new(0.5, -70, 1, -50)
-    applyBtn.Text = "Apply Cut"
-    applyBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-    applyBtn.Parent = editor
-    
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 50, 0, 30)
-    closeBtn.Position = UDim2.new(1, -55, 0, 0)
-    closeBtn.Text = "X"
-    closeBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-    closeBtn.Parent = editor
-    closeBtn.MouseButton1Click:Connect(function() editor:Destroy() end)
-    
-    -- Preview function
-    local function previewRange(fromT, toT)
-        if self.player then self.player:stop() end
-        local cutWalk = WalkUtils.cut(self.currentWalk, fromT, toT)
-        local tempPlayer = WalkPlayer:new(cutWalk, self.character, self.walkSpeed)
-        tempPlayer:play()
-        -- cleanup setelah preview selesai
-        tempPlayer.onComplete = function()
-            tempPlayer:stop()
-        end
-        self.tempPreview = tempPlayer
-    end
-    
-    previewBtn.MouseButton1Click:Connect(function()
-        local from = tonumber(fromBox.Text) or 0
-        local to = tonumber(toBox.Text) or self.currentWalk.duration
-        if from >= to then
-            self.gui:showModal("Error", "Invalid range", {{text="OK"}})
-            return
-        end
-        previewRange(from, to)
-    end)
-    
-    skipBtn.MouseButton1Click:Connect(function()
-        local skipTo = tonumber(skipBox.Text) or 0
-        if self.tempPreview and self.tempPreview.isPlaying then
-            self.tempPreview:seek(skipTo)
-        end
-    end)
-    
-    applyBtn.MouseButton1Click:Connect(function()
-        local from = tonumber(fromBox.Text) or 0
-        local to = tonumber(toBox.Text) or self.currentWalk.duration
-        if from >= to then return end
-        local newWalk = WalkUtils.cut(self.currentWalk, from, to)
-        self:pushUndo(self.currentWalk)
-        self.currentWalk = newWalk
-        self.currentWalkName = nil
-        self.gui:updateTimeline(newWalk)
-        self.gui.loadedInfoLabel.Text = "Walk cut from " .. from .. " to " .. to
-        editor:Destroy()
-        if self.tempPreview then self.tempPreview:stop() end
-    end)
-end
-
-function App:openJoinEditor()
-    local walks = self.dataManager:list()
-    if #walks < 2 then
-        self.gui:showModal("Error", "Need at least 2 saved walks to join", {{text="OK"}})
-        return
-    end
-    
-    local editor = Instance.new("Frame")
-    editor.Size = UDim2.new(0, 400, 0, 350)
-    editor.Position = UDim2.new(0.5, -200, 0.5, -175)
-    editor.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    editor.Parent = self.gui.screenGui
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.Text = "🔗 Join Walks Editor"
-    title.BackgroundColor3 = Color3.fromRGB(55, 55, 75)
-    title.TextColor3 = Color3.fromRGB(255,255,255)
-    title.Font = Enum.Font.GothamBold
-    title.Parent = editor
-    
-    local listFrame = Instance.new("ScrollingFrame")
-    listFrame.Size = UDim2.new(1, -20, 0, 200)
-    listFrame.Position = UDim2.new(0, 10, 0, 40)
-    listFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    listFrame.CanvasSize = UDim2.new(0, 0, 0, #walks * 45)
-    listFrame.ScrollBarThickness = 4
-    listFrame.Parent = editor
-    
-    local listLayout = Instance.new("UIListLayout")
-    listLayout.Padding = UDim.new(0, 5)
-    listLayout.Parent = listFrame
-    
-    local selectedWalks = {}
-    local checkboxes = {}
-    
-    for _, name in ipairs(walks) do
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, 0, 0, 40)
-        row.BackgroundTransparency = 1
-        row.Parent = listFrame
+    for i, item in ipairs(joinQueue) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 0, 30)
+        btn.Text = string.format("%d. %s", i, item.name)
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+        btn.Parent = QueueScroll
         
-        local check = Instance.new("TextButton")
-        check.Size = UDim2.new(0, 30, 0, 30)
-        check.Position = UDim2.new(0, 5, 0, 5)
-        check.Text = "⬜"
-        check.BackgroundColor3 = Color3.fromRGB(60,60,80)
-        check.TextColor3 = Color3.fromRGB(255,255,255)
-        check.Font = Enum.Font.Gotham
-        check.Parent = row
-        
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -45, 1, 0)
-        label.Position = UDim2.new(0, 45, 0, 0)
-        label.Text = name
-        label.BackgroundTransparency = 1
-        label.TextColor3 = Color3.fromRGB(255,255,255)
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = row
-        
-        checkboxes[name] = {check=check, selected=false}
-        check.MouseButton1Click:Connect(function()
-            checkboxes[name].selected = not checkboxes[name].selected
-            if checkboxes[name].selected then
-                check.Text = "✅"
-                table.insert(selectedWalks, name)
-            else
-                check.Text = "⬜"
-                for i, n in ipairs(selectedWalks) do
-                    if n == name then table.remove(selectedWalks, i); break end
-                end
-            end
+        btn.MouseButton1Click:Connect(function()
+            selectedQueueItem = i
         end)
     end
-    
-    local mountCheck = Instance.new("TextButton")
-    mountCheck.Size = UDim2.new(1, -20, 0, 35)
-    mountCheck.Position = UDim2.new(0, 10, 0, 250)
-    mountCheck.Text = "🚶 Use Mount (auto-walk between walks)"
-    mountCheck.BackgroundColor3 = Color3.fromRGB(80, 80, 110)
-    mountCheck.Parent = editor
-    local useMount = false
-    mountCheck.MouseButton1Click:Connect(function()
-        useMount = not useMount
-        mountCheck.BackgroundColor3 = useMount and Color3.fromRGB(100, 180, 100) or Color3.fromRGB(80, 80, 110)
-    end)
-    
-    local speedMountLabel = Instance.new("TextLabel")
-    speedMountLabel.Size = UDim2.new(0, 100, 0, 30)
-    speedMountLabel.Position = UDim2.new(0, 10, 0, 295)
-    speedMountLabel.Text = "Mount Speed:"
-    speedMountLabel.BackgroundTransparency = 1
-    speedMountLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    speedMountLabel.Parent = editor
-    
-    local mountSpeedBox = Instance.new("TextBox")
-    mountSpeedBox.Size = UDim2.new(0, 80, 0, 30)
-    mountSpeedBox.Position = UDim2.new(0, 120, 0, 295)
-    mountSpeedBox.Text = "16"
-    mountSpeedBox.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    mountSpeedBox.Parent = editor
-    
-    local joinBtn = Instance.new("TextButton")
-    joinBtn.Size = UDim2.new(0, 150, 0, 40)
-    joinBtn.Position = UDim2.new(0.5, -75, 1, -50)
-    joinBtn.Text = "Join Selected"
-    joinBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-    joinBtn.Parent = editor
-    
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 50, 0, 30)
-    closeBtn.Position = UDim2.new(1, -55, 0, 0)
-    closeBtn.Text = "X"
-    closeBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-    closeBtn.Parent = editor
-    closeBtn.MouseButton1Click:Connect(function() editor:Destroy() end)
-    
-    joinBtn.MouseButton1Click:Connect(function()
-        if #selectedWalks < 2 then
-            self.gui:showModal("Error", "Select at least 2 walks", {{text="OK"}})
-            return
-        end
-        local walkDataList = {}
-        for _, name in ipairs(selectedWalks) do
-            local w = self.dataManager:load(name)
-            if w then table.insert(walkDataList, w) end
-        end
-        local mountSpeed = tonumber(mountSpeedBox.Text) or 16
-        local joined = WalkUtils.join(walkDataList, useMount, mountSpeed)
-        self:pushUndo(self.currentWalk)
-        self.currentWalk = joined
-        self.currentWalkName = nil
-        self.gui:updateTimeline(joined)
-        self.gui.loadedInfoLabel.Text = "Joined " .. #selectedWalks .. " walks"
-        editor:Destroy()
-    end)
 end
 
--- ================================ START APPLICATION ===============================
-local app = App:new()
-app:init()
+local selectedQueueItem = nil
 
--- Optional: Command line interface for advanced users
-local function createCommandBar()
-    local cmdBar = Instance.new("Frame")
-    cmdBar.Size = UDim2.new(0, 400, 0, 30)
-    cmdBar.Position = UDim2.new(1, -410, 1, -40)
-    cmdBar.BackgroundColor3 = Color3.fromRGB(20,20,30)
-    cmdBar.Parent = game.CoreGui
-    
-    local cmdInput = Instance.new("TextBox")
-    cmdInput.Size = UDim2.new(1, 0, 1, 0)
-    cmdInput.PlaceholderText = "Command: /help"
-    cmdInput.BackgroundColor3 = Color3.fromRGB(40,40,55)
-    cmdInput.TextColor3 = Color3.fromRGB(255,255,255)
-    cmdInput.Font = Enum.Font.Gotham
-    cmdInput.Parent = cmdBar
-    
-    cmdInput.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            local cmd = cmdInput.Text
-            cmdInput.Text = ""
-            if cmd == "/help" then
-                app.gui:showModal("Commands", "/load <name> - load walk\n/save <name> - save current\n/play - play\n/stop - stop\n/speed <val> - set speed\n/list - list walks\n/cut <from> <to> - cut\n/undo - undo last edit", {{text="OK"}})
-            elseif cmd:match("/load .+") then
-                local name = cmd:match("/load (.+)")
-                local w = app.dataManager:load(name)
-                if w then
-                    app.currentWalk = w
-                    app.currentWalkName = name
-                    app.gui.loadedInfoLabel.Text = "Loaded: " .. name
-                    app.gui:updateTimeline(w)
-                end
-            elseif cmd:match("/save .+") then
-                if app.currentWalk then
-                    local name = cmd:match("/save (.+)")
-                    app.currentWalk.name = name
-                    app.dataManager:save(name, app.currentWalk)
-                    app:refreshWalkList()
-                end
-            elseif cmd == "/play" then
-                if app.currentWalk then
-                    if app.player then app.player:stop() end
-                    app.player = WalkPlayer:new(app.currentWalk, app.character, app.walkSpeed)
-                    app.player:play()
-                end
-            elseif cmd == "/stop" then
-                if app.player then app.player:stop() end
-            elseif cmd:match("/speed .+") then
-                local sp = tonumber(cmd:match("/speed (.+)"))
-                if sp then
-                    app.walkSpeed = math.clamp(sp, CONFIG.MinSpeed, CONFIG.MaxSpeed)
-                    app.gui.speedLabel.Text = "Speed: " .. string.format("%.1f", app.walkSpeed)
-                    if app.player then app.player:setSpeed(app.walkSpeed) end
-                end
-            elseif cmd == "/list" then
-                local walks = app.dataManager:list()
-                app.gui:showModal("Walks", table.concat(walks, "\n"), {{text="OK"}})
-            elseif cmd == "/undo" then
-                app:undo()
+CloseJoinerBtn.MouseButton1Click:Connect(function()
+    JoinerWindow.Visible = false
+end)
+
+CloseJoinerBtn2.MouseButton1Click:Connect(function()
+    JoinerWindow.Visible = false
+end)
+
+RemoveFromQueueBtn.MouseButton1Click:Connect(function()
+    if selectedQueueItem then
+        table.remove(joinQueue, selectedQueueItem)
+        selectedQueueItem = nil
+        refreshQueue()
+    end
+end)
+
+ClearQueueBtn.MouseButton1Click:Connect(function()
+    joinQueue = {}
+    refreshQueue()
+end)
+
+PlayQueueBtn.MouseButton1Click:Connect(function()
+    if #joinQueue > 0 then
+        local combinedData = {}
+        local timeOffset = 0
+        
+        for _, item in ipairs(joinQueue) do
+            for _, point in ipairs(item.data.data) do
+                local newPoint = cloneTable(point)
+                newPoint.timestamp = point.timestamp + timeOffset
+                table.insert(combinedData, newPoint)
             end
+            timeOffset = timeOffset + item.data.duration
         end
-    end)
-end
+        
+        playReplay(combinedData)
+    end
+end)
 
-createCommandBar()
+SaveQueueBtn.MouseButton1Click:Connect(function()
+    if #joinQueue > 0 then
+        -- Buat data gabungan
+        local combinedData = {}
+        local timeOffset = 0
+        local totalDuration = 0
+        local totalPoints = 0
+        for _, item in ipairs(joinQueue) do
+            for _, point in ipairs(item.data.data) do
+                local newPoint = cloneTable(point)
+                newPoint.timestamp = point.timestamp + timeOffset
+                table.insert(combinedData, newPoint)
+            end
+            timeOffset = timeOffset + item.data.duration
+            totalDuration = totalDuration + item.data.duration
+            totalPoints = totalPoints + item.data.points
+        end
+        
+        showSavePromptWithCallback(function(name)
+            local allSaves = loadFromDisk()
+            allSaves[name] = {
+                data = combinedData,
+                timestamp = os.time(),
+                duration = totalDuration,
+                distance = 0, -- bisa dihitung ulang jika perlu
+                points = totalPoints
+            }
+            saveToDisk(allSaves)
+            StatusText.Text = "💾 TERSIMPAN!"
+            StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end, "Combined_Walk", string.format("Total Durasi: %s | Total Titik: %d", 
+            formatTime(totalDuration), totalPoints))
+    end
+end)
 
--- End of script
-print("Auto Walk Pro loaded. Use GUI or /help for commands.")
+-- === INISIALISASI === --
+StatusText.Text = "✓ SHHHHNAYY05 AUTO WALK READY (FIXED)"
+print("🎬 Recorder Auto Walk - shhhhnayy05 Edition Loaded (Fixed)!")
+
+return ScreenGui
