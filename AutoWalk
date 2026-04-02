@@ -2,6 +2,9 @@
 -- Dibuat oleh: shhhhnayy05
 -- Support: Executor Level 7-8
 
+-- Tunggu game load sepenuhnya
+task.wait(1)
+
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -9,8 +12,8 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
-local LP = Players.LocalPlayer
-local PlayerGui = LP:WaitForChild("PlayerGui")
+local LP = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() and Players.LocalPlayer
+-- PlayerGui tidak dipakai (menggunakan CoreGui/gethui)
 
 -- === VARIABEL DATA === --
 local PathData = {}
