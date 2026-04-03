@@ -1,7 +1,6 @@
 -- [[ RECORDER AUTO WALK - SHHHHNAYY05 EDITION ]] --
 -- Dibuat oleh: shhhhnayy05
 -- Support: Executor Level 7-8
--- [DIPERBAIKI] - Penyimpanan file & preview potongan berfungsi
 
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
@@ -25,18 +24,16 @@ local totalDistance = 0
 local lastPosition = nil
 local hasUnsavedData = false
 
--- === FUNGSI CLONE MANUAL (PERBAIKAN) === --
-local function cloneTable(original)
-    local copy = {}
-    for k, v in pairs(original) do
-        if type(v) == "table" then
-            copy[k] = cloneTable(v)
-        else
-            copy[k] = v
-        end
-    end
-    return copy
-end
+-- === VARIABEL EDITOR === --
+local editorSelectedFile = nil
+local editorData = nil
+local trimStart = 0
+local trimEnd = 0
+local tempTrimmedData = nil -- Simpan hasil trim sementara
+
+-- === VARIABEL JOINER === --
+local joinQueue = {}
+local selectedQueueItem = nil
 
 -- === MANAJEMEN DATA === --
 local function saveToDisk(allSaves)
@@ -49,10 +46,6 @@ local function loadFromDisk()
     end
     return {}
 end
-
--- === PENYIMPANAN DENGAN CALLBACK (PERBAIKAN) === --
-local pendingSaveCallback = nil
-local pendingSaveData = nil
 
 -- === GUI UTAMA === --
 local ScreenGui = Instance.new("ScreenGui")
@@ -632,7 +625,7 @@ local FileListLayout = Instance.new("UIListLayout")
 FileListLayout.Padding = UDim.new(0, 8)
 FileListLayout.Parent = FileScroll
 
--- === JENDELA DETAIL FILE (PERBAIKAN) === --
+-- === JENDELA DETAIL FILE === --
 local FileDetailWindow = Instance.new("Frame")
 FileDetailWindow.Name = "FileDetail"
 FileDetailWindow.Size = UDim2.new(0, 300, 0, 350)
@@ -1102,7 +1095,7 @@ CancelTrimBtn.Parent = EditorContent
 local TrimPreviewInfo = Instance.new("TextLabel")
 TrimPreviewInfo.Size = UDim2.new(1, -20, 0, 50)
 TrimPreviewInfo.Position = UDim2.new(0, 10, 0, 315)
-TrimPreviewInfo.Text = "Preview Potongan: Mulai 00:00 - Akhir 00:00\nDurasi: 00:00"
+TrimPreviewInfo.Text = "Preview Potongan: Mulai 00:00 - Akhir 00:00\\nDurasi: 00:00"
 TrimPreviewInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
 TrimPreviewInfo.TextSize = 11
 TrimPreviewInfo.BackgroundTransparency = 1
@@ -1373,7 +1366,7 @@ local function playReplay(dataToPlay, startIndex, endIndex)
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChild("Humanoid")
     
-    if not hrp or not hum then
+    if not hrp or hum then
         isPlaying = false
         return
     end
@@ -1387,60 +1380,39 @@ local function playReplay(dataToPlay, startIndex, endIndex)
     
     local i = startIndex
     while i <= endIndex and isPlaying do
-        local data = dataToPlay[i]
-        if not data then break end
+        local point = dataToPlay[i]
+        if not point then break end
         
-        local targetCF = CFrame.new(unpack(data.cf_raw))
+        -- Konversi data ke CFrame
+        local cf = CFrame.new(unpack(point.cf_raw))
         
-        hrp.CFrame = targetCF
-        hrp.Velocity = Vector3.new(unpack(data.velocity)) * currentSpeed
+        -- Hitung kecepatan berdasarkan jarak ke point berikutnya
+        local targetPos = cf.Position
+        local currentPos = hrp.Position
+        local distance = (targetPos - currentPos).Magnitude
         
-        -- Sync State (dari Elbruzh)
-        if hum:GetState().Value ~= data.state then
-            hum:ChangeState(data.state)
-        end
+        -- Gunakan tween untuk pergerakan smooth
+        local speed = currentSpeed * 16 -- Base speed 16
+        local duration = math.max(distance / speed, 0.05)
         
-        -- Marker untuk Review Mode
-        if TerrainViewer.Enabled and i % 10 == 0 then
-            local marker = Instance.new("Part")
-            marker.Size = Vector3.new(2, 2, 2)
-            marker.Shape = Enum.PartType.Ball
-            marker.BrickColor = BrickColor.new("Bright yellow")
-            marker.Material = Enum.Material.Neon
-            marker.Position = hrp.Position + Vector3.new(0, 5, 0)
-            marker.Anchored = true
-            marker.CanCollide = false
-            marker.Parent = Workspace
-
-            local billboard = Instance.new("BillboardGui")
-            billboard.Size = UDim2.new(0, 100, 0, 30)
-            billboard.AlwaysOnTop = true
-            billboard.StudsOffset = Vector3.new(0, 3, 0)
-            billboard.Parent = marker
-
-            local markerText = Instance.new("TextLabel")
-            markerText.Size = UDim2.new(1, 0, 1, 0)
-            markerText.BackgroundTransparency = 1
-            markerText.Text = tostring(i)
-            markerText.TextColor3 = Color3.new(1, 1, 1)
-            markerText.TextStrokeTransparency = 0
-            markerText.Font = Enum.Font.GothamBold
-            markerText.TextSize = 14
-            markerText.Parent = billboard
-
-            table.insert(TerrainViewer.Markers, marker)
-            task.delay(2, function()
-                marker:Destroy()
-            end)
-        end
+        local tweenInfo = TweenInfo.new(
+            duration,
+            Enum.EasingStyle.Linear,
+            Enum.EasingDirection.Out
+        )
         
-        local nextIndex = math.min(i + math.floor(10 * currentSpeed), endIndex)
-        local waitTime = (dataToPlay[nextIndex].timestamp - data.timestamp) / currentSpeed
-        task.wait(math.max(waitTime, 0.01))
-        i = nextIndex + 1
+        local tween = TweenService:Create(hrp, tweenInfo, {
+            CFrame = cf
+        })
+        
+        tween:Play()
+        tween.Completed:Wait()
+        
+        i = i + 1
+        TimerLabel.Text = formatTime(point.timestamp or 0)
     end
     
-    -- Restore Collision
+    -- Restore collision
     for _, v in pairs(char:GetChildren()) do
         if v:IsA("BasePart") then 
             v.CanCollide = true 
@@ -1448,30 +1420,142 @@ local function playReplay(dataToPlay, startIndex, endIndex)
     end
     
     isPlaying = false
-    StatusText.Text = "✓ SELESAI"
+    StatusText.Text = "✅ SELESAI"
     StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+    task.delay(2, function()
+        StatusText.Text = "Siap Merekam"
+        StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+    end)
 end
 
--- === FUNGSI PENYIMPANAN DENGAN CALLBACK === --
-local function showSavePromptWithCallback(callback, defaultName, infoText)
-    pendingSaveCallback = callback
-    if defaultName then
-        SaveInput.Text = defaultName
-    else
-        SaveInput.Text = ""
+-- === SISTEM REVIEW JALAN (VISUAL MARKER) === --
+local function clearMarkers()
+    for _, marker in pairs(TerrainViewer.Markers) do
+        if marker then marker:Destroy() end
     end
-    if infoText then
-        SaveInfo.Text = infoText
-    end
-    SavePrompt.Visible = true
+    TerrainViewer.Markers = {}
+    TerrainViewer.CurrentIndex = 1
 end
 
--- === SISTEM UI EVENTS === --
+local function createMarker(position, color, number)
+    local marker = Instance.new("Part")
+    marker.Name = "shhhhnayy05_Marker_" .. tostring(number)
+    marker.Shape = Enum.PartType.Ball
+    marker.Size = Vector3.new(2, 2, 2)
+    marker.Position = position + Vector3.new(0, 3, 0)
+    marker.Anchored = true
+    marker.CanCollide = false
+    marker.Color = color or Color3.fromRGB(0, 255, 255)
+    marker.Material = Enum.Material.Neon
+    marker.Transparency = 0.3
+    marker.Parent = Workspace
+    
+    -- Billboard GUI untuk nomor
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 50, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = marker
+    
+    local numberLabel = Instance.new("TextLabel")
+    numberLabel.Size = UDim2.new(1, 0, 1, 0)
+    numberLabel.Text = tostring(number)
+    numberLabel.TextColor3 = Color3.new(1, 1, 1)
+    numberLabel.TextSize = 20
+    numberLabel.Font = Enum.Font.GothamBold
+    numberLabel.BackgroundTransparency = 1
+    numberLabel.Parent = billboard
+    
+    table.insert(TerrainViewer.Markers, marker)
+    return marker
+end
 
--- Toggle Record Icon
+local function showPathMarkers(data, startIdx, endIdx, color)
+    clearMarkers()
+    if not data or #data == 0 then return end
+    
+    startIdx = startIdx or 1
+    endIdx = endIdx or #data
+    
+    for i = startIdx, endIdx, math.max(1, math.floor((endIdx - startIdx) / 20)) do
+        local point = data[i]
+        if point and point.position then
+            local pos = Vector3.new(unpack(point.position))
+            createMarker(pos, color, i)
+        end
+    end
+end
+
+local function highlightTrimSection(data, trimStart, trimEnd)
+    clearMarkers()
+    if not data or #data == 0 then return end
+    
+    -- Mark titik sebelum trim (merah)
+    for i = 1, trimStart - 1, math.max(1, math.floor(trimStart / 10)) do
+        local point = data[i]
+        if point and point.position then
+            local pos = Vector3.new(unpack(point.position))
+            createMarker(pos, Color3.fromRGB(255, 50, 50), i)
+        end
+    end
+    
+    -- Mark titik dalam trim (hijau)
+    for i = trimStart, trimEnd, math.max(1, math.floor((trimEnd - trimStart) / 15)) do
+        local point = data[i]
+        if point and point.position then
+            local pos = Vector3.new(unpack(point.position))
+            createMarker(pos, Color3.fromRGB(50, 255, 50), i)
+        end
+    end
+    
+    -- Mark titik setelah trim (kuning)
+    for i = trimEnd + 1, #data, math.max(1, math.floor((#data - trimEnd) / 10)) do
+        local point = data[i]
+        if point and point.position then
+            local pos = Vector3.new(unpack(point.position))
+            createMarker(pos, Color3.fromRGB(255, 255, 50), i)
+        end
+    end
+end
+
+-- === FUNGSI UTILITY EDITOR === --
+local function findIndexByTimestamp(data, targetTime)
+    if not data or #data == 0 then return 1 end
+    
+    for i, point in ipairs(data) do
+        if point.timestamp >= targetTime then
+            return i
+        end
+    end
+    return #data
+end
+
+local function trimData(data, startTime, endTime)
+    if not data or #data == 0 then return {} end
+    
+    local startIdx = findIndexByTimestamp(data, startTime)
+    local endIdx = findIndexByTimestamp(data, endTime)
+    
+    local trimmed = {}
+    for i = startIdx, endIdx do
+        if data[i] then
+            local newPoint = table.clone(data[i])
+            -- Adjust timestamp relatif
+            newPoint.timestamp = data[i].timestamp - startTime
+            table.insert(trimmed, newPoint)
+        end
+    end
+    
+    return trimmed
+end
+
+-- === EVENT HANDLERS === --
+
+-- Record Icon Click
 RecordIcon.MouseButton1Click:Connect(function()
     if isRecording then
         stopRecording()
+        SavePrompt.Visible = true
     else
         if hasUnsavedData then
             NewRecordWarningWindow.Visible = true
@@ -1481,10 +1565,10 @@ RecordIcon.MouseButton1Click:Connect(function()
     end
 end)
 
+-- New Record Warning
 YesNewRecordBtn.MouseButton1Click:Connect(function()
     NewRecordWarningWindow.Visible = false
     discardRecording()
-    task.wait(0.1)
     startRecording()
 end)
 
@@ -1492,21 +1576,17 @@ NoCancelRecordBtn.MouseButton1Click:Connect(function()
     NewRecordWarningWindow.Visible = false
 end)
 
--- Minimize System
-local isMinimized = false
+-- Minimize/Close
 MinimizeBtn.MouseButton1Click:Connect(function()
-    isMinimized = true
     MainFrame.Visible = false
     MinimizedIcon.Visible = true
 end)
 
 MinimizedIcon.MouseButton1Click:Connect(function()
-    isMinimized = false
     MainFrame.Visible = true
     MinimizedIcon.Visible = false
 end)
 
--- Close Button
 CloseBtn.MouseButton1Click:Connect(function()
     if hasUnsavedData then
         UnsavedWarningWindow.Visible = true
@@ -1515,6 +1595,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Unsaved Warning
 YesSaveBtn.MouseButton1Click:Connect(function()
     UnsavedWarningWindow.Visible = false
     SavePrompt.Visible = true
@@ -1526,88 +1607,61 @@ NoDiscardBtn.MouseButton1Click:Connect(function()
 end)
 
 -- Speed Control
-PlusBtn.MouseButton1Click:Connect(function()
-    currentSpeed = math.min(currentSpeed + speedIncrement, 5.0)
-    SpeedDisplay.Text = string.format("%.1fx", currentSpeed)
-end)
-
 MinusBtn.MouseButton1Click:Connect(function()
-    currentSpeed = math.max(currentSpeed - speedIncrement, 0.1)
+    currentSpeed = math.max(0.1, currentSpeed - speedIncrement)
     SpeedDisplay.Text = string.format("%.1fx", currentSpeed)
 end)
 
--- Save System (Rekaman saat ini)
-SaveBtn.MouseButton1Click:Connect(function()
-    if #PathData > 0 then
-        -- Tampilkan prompt simpan dengan callback untuk menyimpan PathData
-        showSavePromptWithCallback(function(name)
-            local allSaves = loadFromDisk()
-            allSaves[name] = {
-                data = PathData,
-                timestamp = os.time(),
-                duration = PathData[#PathData].timestamp,
-                distance = totalDistance,
-                points = #PathData
-            }
-            saveToDisk(allSaves)
-            hasUnsavedData = false
-            StatusText.Text = "💾 TERSIMPAN!"
-            StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
-        end, nil, string.format("Durasi: %s | Jarak: %.1fm | Titik: %d", 
-            formatTime(PathData[#PathData].timestamp), totalDistance, #PathData))
-    else
-        StatusText.Text = "❌ TIDAK ADA DATA!"
-        StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
-        task.delay(2, function()
-            StatusText.Text = "Siap Merekam"
-            StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
-        end)
-    end
+PlusBtn.MouseButton1Click:Connect(function()
+    currentSpeed = currentSpeed + speedIncrement
+    SpeedDisplay.Text = string.format("%.1fx", currentSpeed)
 end)
 
--- Tombol Simpan pada SavePrompt (panggil callback jika ada)
+-- Save Prompt
 SaveConfirmBtn.MouseButton1Click:Connect(function()
     local name = SaveInput.Text
-    if name and name ~= "" then
-        if pendingSaveCallback then
-            pendingSaveCallback(name)
-            pendingSaveCallback = nil
-        end
-        SavePrompt.Visible = false
-        SaveInput.Text = ""
-    else
-        StatusText.Text = "❌ Nama tidak boleh kosong!"
-        task.delay(1, function()
-            StatusText.Text = "Siap Merekam"
-        end)
+    if name == "" then
+        name = "Jalan_" .. os.date("%Y%m%d_%H%M%S")
     end
+    
+    local allSaves = loadFromDisk()
+    allSaves[name] = {
+        data = PathData,
+        timestamp = os.time(),
+        duration = #PathData > 0 and PathData[#PathData].timestamp or 0,
+        distance = totalDistance,
+        points = #PathData
+    }
+    
+    saveToDisk(allSaves)
+    SavePrompt.Visible = false
+    SaveInput.Text = ""
+    hasUnsavedData = false
+    StatusText.Text = "💾 TERSIMPAN!"
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
 end)
 
 SaveCancelBtn.MouseButton1Click:Connect(function()
     SavePrompt.Visible = false
-    pendingSaveCallback = nil
 end)
 
 -- File Manager
-local selectedFile = nil
-local selectedFileData = nil
-
 local function refreshFileList()
+    -- Clear existing
     for _, child in pairs(FileScroll:GetChildren()) do
         if child:IsA("TextButton") then
             child:Destroy()
         end
     end
     
-    local saves = loadFromDisk()
-    for name, data in pairs(saves) do
+    local allSaves = loadFromDisk()
+    for name, info in pairs(allSaves) do
         local fileBtn = Instance.new("TextButton")
-        fileBtn.Size = UDim2.new(1, -10, 0, 40)
-        fileBtn.Text = string.format("📁 %s\n⏱ %s | 📏 %.1fm | 📍 %d titik", 
-            name, formatTime(data.duration), data.distance, data.points)
+        fileBtn.Size = UDim2.new(1, -10, 0, 50)
+        fileBtn.Text = "📄 " .. name
         fileBtn.TextColor3 = Color3.new(1, 1, 1)
-        fileBtn.TextSize = 11
-        fileBtn.Font = Enum.Font.Gotham
+        fileBtn.TextSize = 12
+        fileBtn.Font = Enum.Font.GothamBold
         fileBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         fileBtn.Parent = FileScroll
         
@@ -1616,27 +1670,28 @@ local function refreshFileList()
         fileCorner.Parent = fileBtn
         
         fileBtn.MouseButton1Click:Connect(function()
-            selectedFile = name
-            selectedFileData = data
-            DetailName.Text = "Nama: " .. name
-            DetailDuration.Text = "⏱ Durasi: " .. formatTime(data.duration)
-            DetailDistance.Text = string.format("📏 Jarak: %.1fm", data.distance)
-            DetailPoints.Text = "📍 Titik: " .. data.points
             FileDetailWindow.Visible = true
+            editorSelectedFile = name
+            DetailName.Text = "Nama: " .. name
+            DetailDuration.Text = "⏱ Durasi: " .. formatTime(info.duration or 0)
+            DetailDistance.Text = "📏 Jarak: " .. string.format("%.1fm", info.distance or 0)
+            DetailPoints.Text = "📍 Titik: " .. tostring(info.points or 0)
         end)
     end
+    
+    FileScroll.CanvasSize = UDim2.new(0, 0, 0, #FileScroll:GetChildren() * 58)
 end
 
 FileManagerBtn.MouseButton1Click:Connect(function()
-    FileWindow.Visible = true
     refreshFileList()
+    FileWindow.Visible = true
 end)
 
 CloseFileBtn.MouseButton1Click:Connect(function()
     FileWindow.Visible = false
 end)
 
--- Detail Window Events
+-- File Detail
 CloseDetailBtn.MouseButton1Click:Connect(function()
     FileDetailWindow.Visible = false
 end)
@@ -1645,46 +1700,52 @@ CloseDetailBtn2.MouseButton1Click:Connect(function()
     FileDetailWindow.Visible = false
 end)
 
-DetailSpeedPlus.MouseButton1Click:Connect(function()
-    currentSpeed = math.min(currentSpeed + speedIncrement, 5.0)
+DetailSpeedMinus.MouseButton1Click:Connect(function()
+    currentSpeed = math.max(0.1, currentSpeed - speedIncrement)
     DetailSpeedDisplay.Text = string.format("%.1fx", currentSpeed)
 end)
 
-DetailSpeedMinus.MouseButton1Click:Connect(function()
-    currentSpeed = math.max(currentSpeed - speedIncrement, 0.1)
+DetailSpeedPlus.MouseButton1Click:Connect(function()
+    currentSpeed = currentSpeed + speedIncrement
     DetailSpeedDisplay.Text = string.format("%.1fx", currentSpeed)
 end)
 
 PlayWalkBtn.MouseButton1Click:Connect(function()
-    if selectedFileData then
+    if not editorSelectedFile then return end
+    local allSaves = loadFromDisk()
+    local save = allSaves[editorSelectedFile]
+    if save and save.data then
         FileDetailWindow.Visible = false
-        playReplay(selectedFileData.data)
+        playReplay(save.data)
     end
 end)
 
 ReviewWalkBtn.MouseButton1Click:Connect(function()
-    if selectedFileData then
-        TerrainViewer.Enabled = true
+    if not editorSelectedFile then return end
+    local allSaves = loadFromDisk()
+    local save = allSaves[editorSelectedFile]
+    if save and save.data then
+        showPathMarkers(save.data, 1, #save.data, Color3.fromRGB(0, 255, 255))
         FileDetailWindow.Visible = false
-        playReplay(selectedFileData.data, 1, #selectedFileData.data)
-        TerrainViewer.Enabled = false
+        StatusText.Text = "👁 REVIEW MODE - Klik ⏹ untuk hapus marker"
+        StatusText.TextColor3 = Color3.fromRGB(100, 200, 255)
     end
 end)
 
--- Delete System
+-- Delete File
 DeleteFileBtn.MouseButton1Click:Connect(function()
     DeleteConfirmWindow.Visible = true
 end)
 
 YesDeleteBtn.MouseButton1Click:Connect(function()
-    if selectedFile then
-        local saves = loadFromDisk()
-        saves[selectedFile] = nil
-        saveToDisk(saves)
+    if editorSelectedFile then
+        local allSaves = loadFromDisk()
+        allSaves[editorSelectedFile] = nil
+        saveToDisk(allSaves)
         DeleteConfirmWindow.Visible = false
         FileDetailWindow.Visible = false
         refreshFileList()
-        StatusText.Text = "🗑 TERHAPUS!"
+        StatusText.Text = "🗑 FILE DIHAPUS"
         StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
     end
 end)
@@ -1693,205 +1754,315 @@ NoDeleteBtn.MouseButton1Click:Connect(function()
     DeleteConfirmWindow.Visible = false
 end)
 
--- Editor System
-local editorSelectedFile = nil
-local editorData = nil
-local trimStart = 0
-local trimEnd = 0
+-- === EDITOR WINDOW - BUG FIXES === --
+
+-- Refresh Editor File Dropdown
+local function refreshEditorDropdown()
+    -- Clear existing buttons in dropdown
+    for _, child in pairs(EditorContent:GetChildren()) do
+        if child.Name:match("^FileOption_") then
+            child:Destroy()
+        end
+    end
+    
+    local allSaves = loadFromDisk()
+    local yOffset = 35
+    
+    for name, _ in pairs(allSaves) do
+        local option = Instance.new("TextButton")
+        option.Name = "FileOption_" .. name
+        option.Size = UDim2.new(0.6, 0, 0, 25)
+        option.Position = UDim2.new(0.35, 0, 0, yOffset)
+        option.Text = name
+        option.TextColor3 = Color3.new(1, 1, 1)
+        option.TextSize = 11
+        option.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        option.Visible = false -- Hidden by default
+        option.ZIndex = 10
+        option.Parent = EditorContent
+        
+        option.MouseButton1Click:Connect(function()
+            EditorFileDropdown.Text = name
+            -- Hide all options
+            for _, child in pairs(EditorContent:GetChildren()) do
+                if child.Name:match("^FileOption_") then
+                    child.Visible = false
+                end
+            end
+            
+            -- Load data
+            local allSaves = loadFromDisk()
+            editorData = allSaves[name] and allSaves[name].data or nil
+            editorSelectedFile = name
+            
+            if editorData then
+                local duration = editorData[#editorData] and editorData[#editorData].timestamp or 0
+                TimelineInfo.Text = string.format("Durasi: %s | Titik: %d", formatTime(duration), #editorData)
+                trimStart = 1
+                trimEnd = #editorData
+                StartTrimInput.Text = "0.00"
+                EndTrimInput.Text = string.format("%.2f", duration)
+            end
+        end)
+        
+        yOffset = yOffset + 27
+    end
+end
 
 EditorBtn.MouseButton1Click:Connect(function()
+    refreshEditorDropdown()
     EditorWindow.Visible = true
-    -- Refresh dropdown
-    local saves = loadFromDisk()
-    local fileNames = {}
-    for name, _ in pairs(saves) do
-        table.insert(fileNames, name)
-    end
-    EditorFileDropdown.Text = #fileNames > 0 and fileNames[1] or "Tidak ada file"
+    editorData = nil
+    tempTrimmedData = nil
+    trimStart = 0
+    trimEnd = 0
+    EditorFileDropdown.Text = "Pilih jalan..."
+    TimelineInfo.Text = "Durasi: 00:00 | Titik: 0"
+    StartTrimInput.Text = ""
+    EndTrimInput.Text = ""
+    ReviewInput.Text = ""
+    TrimPreviewInfo.Text = "Preview Potongan: Mulai 00:00 - Akhir 00:00\nDurasi: 00:00"
 end)
 
 CloseEditorBtn.MouseButton1Click:Connect(function()
     EditorWindow.Visible = false
+    clearMarkers()
 end)
 
+-- Dropdown toggle
 EditorFileDropdown.MouseButton1Click:Connect(function()
-    local saves = loadFromDisk()
-    local fileNames = {}
-    for name, _ in pairs(saves) do
-        table.insert(fileNames, name)
+    local visible = false
+    for _, child in pairs(EditorContent:GetChildren()) do
+        if child.Name:match("^FileOption_") then
+            visible = not child.Visible
+            break
+        end
     end
     
-    -- Simple dropdown simulation
-    if #fileNames > 0 then
-        local current = EditorFileDropdown.Text
-        local currentIndex = 1
-        for i, name in ipairs(fileNames) do
-            if name == current then
-                currentIndex = i
-                break
-            end
-        end
-        local nextIndex = currentIndex % #fileNames + 1
-        EditorFileDropdown.Text = fileNames[nextIndex]
-        editorSelectedFile = fileNames[nextIndex]
-        editorData = cloneTable(saves[editorSelectedFile]) -- Gunakan cloneTable
-        if editorData then
-            TimelineInfo.Text = string.format("Durasi: %s | Titik: %d", 
-                formatTime(editorData.duration), editorData.points)
-            trimEnd = editorData.duration
-            EndTrimInput.PlaceholderText = string.format("%.2f", trimEnd)
+    for _, child in pairs(EditorContent:GetChildren()) do
+        if child.Name:match("^FileOption_") then
+            child.Visible = visible
         end
     end
 end)
 
--- Preview Trim (LIHAT POTONGAN) - DIPERBAIKI
+-- 🔴 BUG FIX 3: PreviewTrimBtn dengan logika index yang benar dan visual feedback
 PreviewTrimBtn.MouseButton1Click:Connect(function()
-    if editorData then
-        local startTime = tonumber(StartTrimInput.Text) or 0
-        local endTime = tonumber(EndTrimInput.Text) or editorData.duration
+    if not editorData or #editorData == 0 then
+        TrimPreviewInfo.Text = "❌ ERROR: Tidak ada data!"
+        TrimPreviewInfo.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    local startTime = tonumber(StartTrimInput.Text) or 0
+    local endTime = tonumber(EndTrimInput.Text) or 0
+    
+    -- Validate
+    local maxTime = editorData[#editorData] and editorData[#editorData].timestamp or 0
+    
+    if startTime < 0 then startTime = 0 end
+    if endTime > maxTime then endTime = maxTime end
+    if startTime >= endTime then
+        TrimPreviewInfo.Text = "❌ ERROR: Waktu mulai harus lebih kecil dari akhir!"
+        TrimPreviewInfo.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    -- 🔴 FIX: Gunakan fungsi trimData yang sudah diperbaiki
+    tempTrimmedData = trimData(editorData, startTime, endTime)
+    
+    -- 🔴 FIX: Hitung index dengan benar untuk visual feedback
+    trimStart = findIndexByTimestamp(editorData, startTime)
+    trimEnd = findIndexByTimestamp(editorData, endTime)
+    
+    -- Update preview info dengan warna success
+    local newDuration = endTime - startTime
+    TrimPreviewInfo.Text = string.format("✅ PREVIEW: Mulai %s - Akhir %s\nDurasi: %s | Titik: %d", 
+        formatTime(startTime), formatTime(endTime), formatTime(newDuration), #tempTrimmedData)
+    TrimPreviewInfo.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    -- 🔴 FIX: Visual feedback dengan marker berwarna
+    highlightTrimSection(editorData, trimStart, trimEnd)
+    
+    StatusText.Text = "👁 PREVIEW TRIM - Lihat marker di map"
+    StatusText.TextColor3 = Color3.fromRGB(100, 200, 255)
+end)
+
+-- Review button di editor
+ReviewBtn.MouseButton1Click:Connect(function()
+    if not editorData or #editorData == 0 then return end
+    
+    local reviewTime = tonumber(ReviewInput.Text) or 0
+    local reviewIdx = findIndexByTimestamp(editorData, reviewTime)
+    
+    if editorData[reviewIdx] and editorData[reviewIdx].position then
+        local pos = Vector3.new(unpack(editorData[reviewIdx].position))
         
-        -- Cari indeks
-        local startIdx = 1
-        local endIdx = #editorData.data
-        
-        for i, point in ipairs(editorData.data) do
-            if point.timestamp >= startTime and startIdx == 1 then
-                startIdx = i
-            end
-            if point.timestamp >= endTime then
-                endIdx = i
-                break
-            end
+        -- Teleport player ke posisi review
+        local char = LP.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))
         end
         
-        -- Buat data potongan sementara untuk preview
-        local previewData = {}
-        for i = startIdx, endIdx do
-            local newPoint = cloneTable(editorData.data[i])
-            newPoint.timestamp = newPoint.timestamp - startTime
-            table.insert(previewData, newPoint)
-        end
-        
-        TrimPreviewInfo.Text = string.format("Preview: Mulai %s (idx:%d) - Akhir %s (idx:%d)\nDurasi: %s", 
-            formatTime(startTime), startIdx, formatTime(endTime), endIdx, 
-            formatTime(endTime - startTime))
-        
-        -- Tampilkan preview dengan marker (opsional)
-        TerrainViewer.Enabled = true
-        playReplay(previewData, 1, #previewData)
-        TerrainViewer.Enabled = false
+        -- Highlight titik tersebut
+        clearMarkers()
+        createMarker(pos, Color3.fromRGB(255, 255, 0), reviewIdx)
     end
 end)
 
--- Apply Trim (TERAPKAN) - Gunakan cloneTable
+-- 🔴 BUG FIX 1 & 2: ApplyTrimBtn dan SaveTrimBtn dengan data yang benar
 ApplyTrimBtn.MouseButton1Click:Connect(function()
-    if editorData then
-        local startTime = tonumber(StartTrimInput.Text) or 0
-        local endTime = tonumber(EndTrimInput.Text) or editorData.duration
-        
-        local newData = {}
-        local newTotalDistance = 0
-        local lastPos = nil
-        
-        for _, point in ipairs(editorData.data) do
-            if point.timestamp >= startTime and point.timestamp <= endTime then
-                local newPoint = cloneTable(point)
-                newPoint.timestamp = point.timestamp - startTime
-                -- Hitung ulang jarak (opsional)
-                if lastPos then
-                    local pos = Vector3.new(point.position[1], point.position[2], point.position[3])
-                    newTotalDistance = newTotalDistance + (pos - lastPos).Magnitude
-                end
-                lastPos = Vector3.new(point.position[1], point.position[2], point.position[3])
-                table.insert(newData, newPoint)
-            end
-        end
-        
-        editorData.data = newData
-        editorData.duration = endTime - startTime
-        editorData.points = #newData
-        editorData.distance = newTotalDistance
-        TimelineInfo.Text = string.format("Durasi: %s | Titik: %d", 
-            formatTime(editorData.duration), editorData.points)
-        StatusText.Text = "✂️ DIPOTONG!"
-        StatusText.TextColor3 = Color3.fromRGB(255, 200, 100)
+    if not tempTrimmedData or #tempTrimmedData == 0 then
+        TrimPreviewInfo.Text = "❌ ERROR: Preview dulu sebelum apply!"
+        TrimPreviewInfo.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
     end
+    
+    -- 🔴 BUG FIX 1: Gunakan tempTrimmedData (hasil edit) bukan PathData
+    editorData = tempTrimmedData
+    
+    -- Update timeline info
+    local duration = editorData[#editorData] and editorData[#editorData].timestamp or 0
+    TimelineInfo.Text = string.format("✅ DITERAPKAN | Durasi: %s | Titik: %d", formatTime(duration), #editorData)
+    TimelineInfo.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    TrimPreviewInfo.Text = "✅ Perubahan diterapkan! Simpan untuk menyimpan ke file."
+    TrimPreviewInfo.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    -- Reset input
+    trimStart = 1
+    trimEnd = #editorData
+    StartTrimInput.Text = "0.00"
+    EndTrimInput.Text = string.format("%.2f", duration)
+    
+    clearMarkers()
+    StatusText.Text = "✅ TRIM DITERAPKAN"
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
 end)
 
--- Save Trim (SIMPAN BARU)
+-- 🔴 BUG FIX 2: SaveTrimBtn menyimpan editorData yang sudah ditrim
 SaveTrimBtn.MouseButton1Click:Connect(function()
-    if editorData and editorSelectedFile then
-        showSavePromptWithCallback(function(name)
-            local allSaves = loadFromDisk()
-            allSaves[name] = {
-                data = editorData.data,
-                timestamp = os.time(),
-                duration = editorData.duration,
-                distance = editorData.distance or 0,
-                points = editorData.points
-            }
-            saveToDisk(allSaves)
-            StatusText.Text = "💾 TERSIMPAN!"
-            StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
-        end, editorSelectedFile .. "_edited", string.format("Durasi: %s | Jarak: %.1fm | Titik: %d", 
-            formatTime(editorData.duration), editorData.distance or 0, editorData.points))
+    if not editorData or #editorData == 0 then
+        TrimPreviewInfo.Text = "❌ ERROR: Tidak ada data untuk disimpan!"
+        TrimPreviewInfo.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
     end
+    
+    -- 🔴 FIX: Langsung simpan tanpa membuka SavePrompt yang salah
+    local defaultName = editorSelectedFile and (editorSelectedFile .. "_Edited") or "Jalan_Edited_" .. os.date("%H%M%S")
+    
+    -- Buat prompt nama file yang lebih baik
+    local saveName = defaultName
+    
+    -- Hitung statistik
+    local duration = editorData[#editorData] and editorData[#editorData].timestamp or 0
+    local distance = 0
+    local lastPos = nil
+    
+    for _, point in ipairs(editorData) do
+        if point.position then
+            local pos = Vector3.new(unpack(point.position))
+            if lastPos then
+                distance = distance + (pos - lastPos).Magnitude
+            end
+            lastPos = pos
+        end
+    end
+    
+    -- Simpan ke disk
+    local allSaves = loadFromDisk()
+    allSaves[saveName] = {
+        data = editorData, -- 🔴 FIX: Gunakan editorData (yang sudah ditrim), bukan PathData
+        timestamp = os.time(),
+        duration = duration,
+        distance = distance,
+        points = #editorData,
+        edited = true,
+        originalFile = editorSelectedFile
+    }
+    
+    saveToDisk(allSaves)
+    
+    TrimPreviewInfo.Text = string.format("✅ TERSIMPAN sebagai '%s'!\nDurasi: %s | Titik: %d", 
+        saveName, formatTime(duration), #editorData)
+    TrimPreviewInfo.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    StatusText.Text = "💾 FILE EDIT TERSIMPAN!"
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    -- Refresh dropdown
+    refreshEditorDropdown()
 end)
 
 CancelTrimBtn.MouseButton1Click:Connect(function()
     EditorWindow.Visible = false
+    clearMarkers()
+    tempTrimmedData = nil
+    editorData = nil
 end)
 
--- Joiner System
-local joinQueue = {}
-
-JoinerBtn.MouseButton1Click:Connect(function()
-    JoinerWindow.Visible = true
-    -- Refresh available
+-- === JOINER WINDOW === --
+local function refreshJoinerLists()
+    -- Clear lists
     for _, child in pairs(AvailableScroll:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    for _, child in pairs(QueueScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
     end
     
-    local saves = loadFromDisk()
-    for name, data in pairs(saves) do
+    -- Populate available
+    local allSaves = loadFromDisk()
+    for name, info in pairs(allSaves) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, -10, 0, 35)
-        btn.Text = string.format("%s (%s)", name, formatTime(data.duration))
+        btn.Text = "📄 " .. name
         btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.TextSize = 11
         btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
         btn.Parent = AvailableScroll
         
         btn.MouseButton1Click:Connect(function()
-            table.insert(joinQueue, {name = name, data = cloneTable(data)}) -- clone data
-            refreshQueue()
+            selectedQueueItem = {name = name, data = info.data}
+            -- Highlight selection
+            for _, other in pairs(AvailableScroll:GetChildren()) do
+                if other:IsA("TextButton") then
+                    other.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+                end
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
         end)
     end
-end)
-
-local function refreshQueue()
-    for _, child in pairs(QueueScroll:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
     
+    -- Populate queue
     for i, item in ipairs(joinQueue) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, -10, 0, 30)
         btn.Text = string.format("%d. %s", i, item.name)
         btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.TextSize = 11
         btn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
         btn.Parent = QueueScroll
         
         btn.MouseButton1Click:Connect(function()
-            selectedQueueItem = i
+            for _, other in pairs(QueueScroll:GetChildren()) do
+                if other:IsA("TextButton") then
+                    other.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+                end
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
         end)
     end
+    
+    AvailableScroll.CanvasSize = UDim2.new(0, 0, 0, #AvailableScroll:GetChildren() * 40)
+    QueueScroll.CanvasSize = UDim2.new(0, 0, 0, #QueueScroll:GetChildren() * 35)
 end
 
-local selectedQueueItem = nil
+JoinerBtn.MouseButton1Click:Connect(function()
+    JoinerWindow.Visible = true
+    refreshJoinerLists()
+end)
 
 CloseJoinerBtn.MouseButton1Click:Connect(function()
     JoinerWindow.Visible = false
@@ -1901,74 +2072,107 @@ CloseJoinerBtn2.MouseButton1Click:Connect(function()
     JoinerWindow.Visible = false
 end)
 
-RemoveFromQueueBtn.MouseButton1Click:Connect(function()
+AddToQueueBtn.MouseButton1Click:Connect(function()
     if selectedQueueItem then
-        table.remove(joinQueue, selectedQueueItem)
+        table.insert(joinQueue, selectedQueueItem)
         selectedQueueItem = nil
-        refreshQueue()
+        refreshJoinerLists()
     end
+end)
+
+RemoveFromQueueBtn.MouseButton1Click:Connect(function()
+    table.remove(joinQueue, #joinQueue)
+    refreshJoinerLists()
 end)
 
 ClearQueueBtn.MouseButton1Click:Connect(function()
     joinQueue = {}
-    refreshQueue()
+    refreshJoinerLists()
 end)
 
 PlayQueueBtn.MouseButton1Click:Connect(function()
-    if #joinQueue > 0 then
-        local combinedData = {}
-        local timeOffset = 0
-        
-        for _, item in ipairs(joinQueue) do
-            for _, point in ipairs(item.data.data) do
-                local newPoint = cloneTable(point)
+    if #joinQueue == 0 then return end
+    
+    -- Gabungkan semua data
+    local combinedData = {}
+    local timeOffset = 0
+    
+    for _, item in ipairs(joinQueue) do
+        if item.data then
+            for _, point in ipairs(item.data) do
+                local newPoint = table.clone(point)
                 newPoint.timestamp = point.timestamp + timeOffset
                 table.insert(combinedData, newPoint)
             end
-            timeOffset = timeOffset + item.data.duration
+            -- Update offset untuk jalan berikutnya
+            if item.data[#item.data] then
+                timeOffset = timeOffset + item.data[#item.data].timestamp
+            end
         end
-        
-        playReplay(combinedData)
     end
+    
+    JoinerWindow.Visible = false
+    playReplay(combinedData)
 end)
 
 SaveQueueBtn.MouseButton1Click:Connect(function()
-    if #joinQueue > 0 then
-        -- Buat data gabungan
-        local combinedData = {}
-        local timeOffset = 0
-        local totalDuration = 0
-        local totalPoints = 0
-        for _, item in ipairs(joinQueue) do
-            for _, point in ipairs(item.data.data) do
-                local newPoint = cloneTable(point)
+    if #joinQueue == 0 then return end
+    
+    -- Gabungkan data
+    local combinedData = {}
+    local timeOffset = 0
+    local totalDistance = 0
+    
+    for _, item in ipairs(joinQueue) do
+        if item.data then
+            for _, point in ipairs(item.data) do
+                local newPoint = table.clone(point)
                 newPoint.timestamp = point.timestamp + timeOffset
                 table.insert(combinedData, newPoint)
             end
-            timeOffset = timeOffset + item.data.duration
-            totalDuration = totalDuration + item.data.duration
-            totalPoints = totalPoints + item.data.points
+            if item.data[#item.data] then
+                timeOffset = timeOffset + item.data[#item.data].timestamp
+            end
         end
-        
-        showSavePromptWithCallback(function(name)
-            local allSaves = loadFromDisk()
-            allSaves[name] = {
-                data = combinedData,
-                timestamp = os.time(),
-                duration = totalDuration,
-                distance = 0, -- bisa dihitung ulang jika perlu
-                points = totalPoints
-            }
-            saveToDisk(allSaves)
-            StatusText.Text = "💾 TERSIMPAN!"
-            StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
-        end, "Combined_Walk", string.format("Total Durasi: %s | Total Titik: %d", 
-            formatTime(totalDuration), totalPoints))
     end
+    
+    -- Hitung ulang distance
+    local lastPos = nil
+    for _, point in ipairs(combinedData) do
+        if point.position then
+            local pos = Vector3.new(unpack(point.position))
+            if lastPos then
+                totalDistance = totalDistance + (pos - lastPos).Magnitude
+            end
+            lastPos = pos
+        end
+    end
+    
+    local name = "Joined_" .. os.date("%H%M%S")
+    local allSaves = loadFromDisk()
+    allSaves[name] = {
+        data = combinedData,
+        timestamp = os.time(),
+        duration = timeOffset,
+        distance = totalDistance,
+        points = #combinedData,
+        joined = true
+    }
+    saveToDisk(allSaves)
+    
+    StatusText.Text = "💾 ANTRIAN TERSIMPAN!"
+    StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
 end)
 
--- === INISIALISASI === --
-StatusText.Text = "✓ SHHHHNAYY05 AUTO WALK READY (FIXED)"
-print("🎬 Recorder Auto Walk - shhhhnayy05 Edition Loaded (Fixed)!")
+-- Cleanup on death
+LP.CharacterAdded:Connect(function()
+    clearMarkers()
+    isRecording = false
+    isPlaying = false
+end)
 
-return ScreenGui
+-- Initial status
+StatusText.Text = "✅ SHHHHNAYY05 AUTO WALK READY"
+StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+
+print("✅ SHHHHNAYY05 AUTO WALK LOADED SUCCESSFULLY!")
