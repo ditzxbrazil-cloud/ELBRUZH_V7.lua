@@ -4,6 +4,7 @@
     ║  Features: Record, Playback, Save/Load, Editor, Persistent   ║
     ║  Compatible with: Synapse X, Krnl, Fluxus, Script-Ware      ║
     ╚══════════════════════════════════════════════════════════════╝
+    Created by: shhhhnayy05
 ]]--
 
 -- ==================== SERVICES ==================== --
@@ -11,7 +12,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
+local HttpService = game:GetService("HttpService")
 
 local Player = Players.LocalPlayer
 local Character = Player.Character or Player.CharacterAdded:Wait()
@@ -29,15 +30,6 @@ local recordConnection = nil
 local playConnection = nil
 local walkSpeedModifier = 0
 local baseWalkSpeed = 16
-
--- Editor State
-local editorMode = "none" -- "cut" or "join"
-local selectedWalksForJoin = {}
-local walkBeingEdited = nil
-local cutStartPoint = 0
-local cutEndPoint = 0
-local previewMode = false
-local previewStartTime = 0
 
 -- ==================== CONFIGURATION ==================== --
 local CONFIG = {
@@ -96,61 +88,34 @@ end
 
 -- ==================== PERSISTENT STORAGE ==================== --
 
--- Try DataStore first, fallback to file system
-local useDataStore = false
-local DataStore = nil
-
-pcall(function()
-    local DataStoreService = game:GetService("DataStoreService")
-    DataStore = DataStoreService:GetDataStore("AutoWalkSystem_v3")
-    useDataStore = true
-end)
-
 local function saveWalks()
-    local data = game:GetService("HttpService"):JSONEncode(savedWalks)
+    local success, data = pcall(function()
+        return HttpService:JSONEncode(savedWalks)
+    end)
     
-    if useDataStore then
+    if success and data then
         pcall(function()
-            DataStore:SetAsync("Walks_" .. Player.UserId, savedWalks)
+            if writefile then
+                writefile("shhhhnayy05_AutoWalk_" .. Player.Name .. ".json", data)
+            end
         end)
     end
-    
-    -- Also try file system (for executors that support it)
-    pcall(function()
-        if writefile then
-            writefile("AutoWalkSaves_" .. Player.Name .. ".json", data)
-        end
-    end)
 end
 
 local function loadWalks()
     local loaded = false
     
-    -- Try DataStore first
-    if useDataStore then
-        pcall(function()
-            local data = DataStore:GetAsync("Walks_" .. Player.UserId)
-            if data and type(data) == "table" then
-                savedWalks = data
+    pcall(function()
+        if readfile and isfile then
+            local filename = "shhhhnayy05_AutoWalk_" .. Player.Name .. ".json"
+            if isfile(filename) then
+                local data = readfile(filename)
+                savedWalks = HttpService:JSONDecode(data)
                 loaded = true
             end
-        end)
-    end
+        end
+    end)
     
-    -- Try file system as backup
-    if not loaded then
-        pcall(function()
-            if readfile and isfile then
-                if isfile("AutoWalkSaves_" .. Player.Name .. ".json") then
-                    local data = readfile("AutoWalkSaves_" .. Player.Name .. ".json")
-                    savedWalks = game:GetService("HttpService"):JSONDecode(data)
-                    loaded = true
-                end
-            end
-        end)
-    end
-    
-    -- Default empty if nothing loaded
     if not loaded then
         savedWalks = {}
     end
@@ -161,7 +126,7 @@ end
 -- Remove existing GUI if present
 local function cleanExistingGUI()
     if Player:FindFirstChild("PlayerGui") then
-        local existing = Player.PlayerGui:FindFirstChild("AutoWalkSystem")
+        local existing = Player.PlayerGui:FindFirstChild("shhhhnayy05_AutoWalkSystem")
         if existing then
             existing:Destroy()
         end
@@ -171,7 +136,7 @@ end
 cleanExistingGUI()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AutoWalkSystem"
+ScreenGui.Name = "shhhhnayy05_AutoWalkSystem"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -179,7 +144,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 -- ==================== RECORD BUTTON (Top Left Icon) ==================== --
 
 local RecordButton = Instance.new("ImageButton")
-RecordButton.Name = "RecordButton"
+RecordButton.Name = "shhhhnayy05_RecordButton"
 RecordButton.Size = UDim2.new(0, 55, 0, 55)
 RecordButton.Position = UDim2.new(0, 10, 0, 10)
 RecordButton.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
@@ -192,11 +157,11 @@ RecordCorner.Parent = RecordButton
 
 -- Record icon circle
 local RecordIcon = Instance.new("Frame")
+RecordIcon.Name = "shhhhnayy05_RecordIcon"
 RecordIcon.Size = UDim2.new(0, 28, 0, 28)
 RecordIcon.Position = UDim2.new(0.5, -14, 0.5, -14)
 RecordIcon.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-RecordIcon.BorderSizePixel = 3
-RecordIcon.BorderColor3 = Color3.fromRGB(150, 30, 30)
+RecordIcon.BorderSizePixel = 0
 RecordIcon.Parent = RecordButton
 
 local RecordIconCorner = Instance.new("UICorner")
@@ -204,9 +169,9 @@ RecordIconCorner.CornerRadius = UDim.new(0.5, 0)
 RecordIconCorner.Parent = RecordIcon
 
 local RecordToolTip = Instance.new("TextLabel")
+RecordToolTip.Name = "shhhhnayy05_ToolTip"
 RecordToolTip.Size = UDim2.new(0, 100, 0, 25)
 RecordToolTip.Position = UDim2.new(1, 10, 0.5, -12)
-RecordToolTip.BackgroundTransparency = 0
 RecordToolTip.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 RecordToolTip.TextColor3 = Color3.new(1, 1, 1)
 RecordToolTip.TextSize = 11
@@ -222,7 +187,7 @@ RecordToolTipCorner.Parent = RecordToolTip
 -- ==================== MINIMIZE BUTTON ==================== --
 
 local MinimizeButton = Instance.new("ImageButton")
-MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Name = "shhhhnayy05_MinimizeButton"
 MinimizeButton.Size = UDim2.new(0, 55, 0, 40)
 MinimizeButton.Position = UDim2.new(0, 10, 0, 70)
 MinimizeButton.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
@@ -234,18 +199,19 @@ MinimizeCorner.CornerRadius = UDim.new(0.3, 0)
 MinimizeCorner.Parent = MinimizeButton
 
 local MinimizeIcon = Instance.new("TextLabel")
+MinimizeIcon.Name = "shhhhnayy05_MinimizeIcon"
 MinimizeIcon.Size = UDim2.new(1, 0, 1, 0)
 MinimizeIcon.BackgroundTransparency = 1
 MinimizeIcon.TextColor3 = Color3.new(1, 1, 1)
 MinimizeIcon.TextSize = 20
 MinimizeIcon.Font = Enum.Font.GothamBold
-MinimizeIcon.Text = "⊞"
+MinimizeIcon.Text = "⊟"
 MinimizeIcon.Parent = MinimizeButton
 
 -- ==================== TIMER DISPLAY (Top Center) ==================== --
 
 local TimerFrame = Instance.new("Frame")
-TimerFrame.Name = "TimerFrame"
+TimerFrame.Name = "shhhhnayy05_TimerFrame"
 TimerFrame.Size = UDim2.new(0, 120, 0, 32)
 TimerFrame.Position = UDim2.new(0.5, -60, 0, 15)
 TimerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
@@ -263,6 +229,7 @@ TimerStroke.Thickness = 2
 TimerStroke.Parent = TimerFrame
 
 local TimerLabel = Instance.new("TextLabel")
+TimerLabel.Name = "shhhhnayy05_TimerLabel"
 TimerLabel.Size = UDim2.new(1, -10, 1, 0)
 TimerLabel.Position = UDim2.new(0, 5, 0, 0)
 TimerLabel.BackgroundTransparency = 1
@@ -275,7 +242,7 @@ TimerLabel.Parent = TimerFrame
 -- ==================== MAIN GUI PANEL ==================== --
 
 local MainPanel = Instance.new("Frame")
-MainPanel.Name = "MainPanel"
+MainPanel.Name = "shhhhnayy05_MainPanel"
 MainPanel.Size = UDim2.new(0, CONFIG.GUI_MAX_WIDTH, 0, CONFIG.GUI_MAX_HEIGHT)
 MainPanel.Position = UDim2.new(0.5, -CONFIG.GUI_MAX_WIDTH/2, 0.5, -CONFIG.GUI_MAX_HEIGHT/2)
 MainPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -294,7 +261,7 @@ MainStroke.Parent = MainPanel
 
 -- Title Bar
 local TitleBar = Instance.new("Frame")
-TitleBar.Name = "TitleBar"
+TitleBar.Name = "shhhhnayy05_TitleBar"
 TitleBar.Size = UDim2.new(1, 0, 0, 40)
 TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 TitleBar.BorderSizePixel = 0
@@ -306,6 +273,7 @@ TitleCorner.Parent = TitleBar
 
 -- Fix bottom corners
 local TitleFix = Instance.new("Frame")
+TitleFix.Name = "shhhhnayy05_TitleFix"
 TitleFix.Size = UDim2.new(1, 0, 0, 20)
 TitleFix.Position = UDim2.new(0, 0, 1, -20)
 TitleFix.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
@@ -313,6 +281,7 @@ TitleFix.BorderSizePixel = 0
 TitleFix.Parent = TitleBar
 
 local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "shhhhnayy05_TitleLabel"
 TitleLabel.Size = UDim2.new(1, -80, 1, 0)
 TitleLabel.Position = UDim2.new(0, 15, 0, 0)
 TitleLabel.BackgroundTransparency = 1
@@ -325,7 +294,7 @@ TitleLabel.Parent = TitleBar
 
 -- Close Button
 local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
+CloseButton.Name = "shhhhnayy05_CloseButton"
 CloseButton.Size = UDim2.new(0, 32, 0, 32)
 CloseButton.Position = UDim2.new(1, -38, 0.5, -16)
 CloseButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
@@ -341,7 +310,7 @@ CloseCorner.Parent = CloseButton
 
 -- Content Frame
 local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Name = "ContentFrame"
+ContentFrame.Name = "shhhhnayy05_ContentFrame"
 ContentFrame.Size = UDim2.new(1, -20, 1, -55)
 ContentFrame.Position = UDim2.new(0, 10, 0, 45)
 ContentFrame.BackgroundTransparency = 1
@@ -356,7 +325,7 @@ ContentLayout.Parent = ContentFrame
 -- ==================== RECORD DURATION DISPLAY ==================== --
 
 local RecordInfoFrame = Instance.new("Frame")
-RecordInfoFrame.Name = "RecordInfoFrame"
+RecordInfoFrame.Name = "shhhhnayy05_RecordInfoFrame"
 RecordInfoFrame.Size = UDim2.new(1, 0, 0, 50)
 RecordInfoFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 RecordInfoFrame.BorderSizePixel = 0
@@ -368,6 +337,7 @@ RecordInfoCorner.CornerRadius = UDim.new(0, 8)
 RecordInfoCorner.Parent = RecordInfoFrame
 
 local RecordInfoLabel = Instance.new("TextLabel")
+RecordInfoLabel.Name = "shhhhnayy05_RecordInfoLabel"
 RecordInfoLabel.Size = UDim2.new(1, 0, 1, 0)
 RecordInfoLabel.BackgroundTransparency = 1
 RecordInfoLabel.TextColor3 = Color3.fromRGB(220, 50, 50)
@@ -379,7 +349,7 @@ RecordInfoLabel.Parent = RecordInfoFrame
 -- ==================== SPEED MODIFIER SECTION ==================== --
 
 local SpeedSection = Instance.new("Frame")
-SpeedSection.Name = "SpeedSection"
+SpeedSection.Name = "shhhhnayy05_SpeedSection"
 SpeedSection.Size = UDim2.new(1, 0, 0, 85)
 SpeedSection.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 SpeedSection.BorderSizePixel = 0
@@ -390,6 +360,7 @@ SpeedCorner.CornerRadius = UDim.new(0, 8)
 SpeedCorner.Parent = SpeedSection
 
 local SpeedTitle = Instance.new("TextLabel")
+SpeedTitle.Name = "shhhhnayy05_SpeedTitle"
 SpeedTitle.Size = UDim2.new(1, -10, 0, 25)
 SpeedTitle.Position = UDim2.new(0, 10, 0, 5)
 SpeedTitle.BackgroundTransparency = 1
@@ -401,7 +372,7 @@ SpeedTitle.TextXAlignment = Enum.TextXAlignment.Left
 SpeedTitle.Parent = SpeedSection
 
 local SpeedValue = Instance.new("TextLabel")
-SpeedValue.Name = "SpeedValue"
+SpeedValue.Name = "shhhhnayy05_SpeedValue"
 SpeedValue.Size = UDim2.new(0, 80, 0, 30)
 SpeedValue.Position = UDim2.new(0.5, -40, 0.5, 5)
 SpeedValue.BackgroundTransparency = 1
@@ -412,6 +383,7 @@ SpeedValue.Text = "+0.0"
 SpeedValue.Parent = SpeedSection
 
 local SpeedMinus = Instance.new("TextButton")
+SpeedMinus.Name = "shhhhnayy05_SpeedMinus"
 SpeedMinus.Size = UDim2.new(0, 50, 0, 32)
 SpeedMinus.Position = UDim2.new(0, 15, 1, -42)
 SpeedMinus.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
@@ -426,6 +398,7 @@ SpeedMinusCorner.CornerRadius = UDim.new(0.4, 0)
 SpeedMinusCorner.Parent = SpeedMinus
 
 local SpeedPlus = Instance.new("TextButton")
+SpeedPlus.Name = "shhhhnayy05_SpeedPlus"
 SpeedPlus.Size = UDim2.new(0, 50, 0, 32)
 SpeedPlus.Position = UDim2.new(0, 70, 1, -42)
 SpeedPlus.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
@@ -440,6 +413,7 @@ SpeedPlusCorner.CornerRadius = UDim.new(0.4, 0)
 SpeedPlusCorner.Parent = SpeedPlus
 
 local SpeedReset = Instance.new("TextButton")
+SpeedReset.Name = "shhhhnayy05_SpeedReset"
 SpeedReset.Size = UDim2.new(0, 60, 0, 32)
 SpeedReset.Position = UDim2.new(1, -75, 1, -42)
 SpeedReset.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
@@ -456,7 +430,7 @@ SpeedResetCorner.Parent = SpeedReset
 -- ==================== SAVED FILES SECTION ==================== --
 
 local FilesSection = Instance.new("Frame")
-FilesSection.Name = "FilesSection"
+FilesSection.Name = "shhhhnayy05_FilesSection"
 FilesSection.Size = UDim2.new(1, 0, 0, 180)
 FilesSection.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 FilesSection.BorderSizePixel = 0
@@ -467,6 +441,7 @@ FilesCorner.CornerRadius = UDim.new(0, 8)
 FilesCorner.Parent = FilesSection
 
 local FilesTitleFrame = Instance.new("Frame")
+FilesTitleFrame.Name = "shhhhnayy05_FilesTitleFrame"
 FilesTitleFrame.Size = UDim2.new(1, 0, 0, 28)
 FilesTitleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 FilesTitleFrame.BorderSizePixel = 0
@@ -477,6 +452,7 @@ FilesTitleCorner.CornerRadius = UDim.new(0, 8)
 FilesTitleCorner.Parent = FilesTitleFrame
 
 local FilesTitleLabel = Instance.new("TextLabel")
+FilesTitleLabel.Name = "shhhhnayy05_FilesTitleLabel"
 FilesTitleLabel.Size = UDim2.new(1, 0, 1, 0)
 FilesTitleLabel.BackgroundTransparency = 1
 FilesTitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -486,7 +462,7 @@ FilesTitleLabel.Text = "📁 Saved Walks"
 FilesTitleLabel.Parent = FilesTitleFrame
 
 local FilesList = Instance.new("ScrollingFrame")
-FilesList.Name = "FilesList"
+FilesList.Name = "shhhhnayy05_FilesList"
 FilesList.Size = UDim2.new(1, -15, 0, 140)
 FilesList.Position = UDim2.new(0, 5, 0, 33)
 FilesList.BackgroundTransparency = 1
@@ -494,14 +470,14 @@ FilesList.ScrollBarThickness = 4
 FilesList.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
 FilesList.Parent = FilesSection
 
-local FilesLayout = Instance.new::UIListLayout()
+local FilesLayout = Instance.new("UIListLayout")
 FilesLayout.Padding = UDim.new(0, 5)
 FilesLayout.Parent = FilesList
 
 -- ==================== EDITOR BUTTONS ==================== --
 
 local EditorSection = Instance.new("Frame")
-EditorSection.Name = "EditorSection"
+EditorSection.Name = "shhhhnayy05_EditorSection"
 EditorSection.Size = UDim2.new(1, 0, 0, 45)
 EditorSection.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 EditorSection.BorderSizePixel = 0
@@ -512,7 +488,7 @@ EditorCorner.CornerRadius = UDim.new(0, 8)
 EditorCorner.Parent = EditorSection
 
 local CutEditorBtn = Instance.new("TextButton")
-CutEditorBtn.Name = "CutEditorBtn"
+CutEditorBtn.Name = "shhhhnayy05_CutEditorBtn"
 CutEditorBtn.Size = UDim2.new(0.48, 0, 0, 30)
 CutEditorBtn.Position = UDim2.new(0, 5, 0.5, -15)
 CutEditorBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 180)
@@ -527,7 +503,7 @@ CutEditorCorner.CornerRadius = UDim.new(0, 6)
 CutEditorCorner.Parent = CutEditorBtn
 
 local JoinEditorBtn = Instance.new("TextButton")
-JoinEditorBtn.Name = "JoinEditorBtn"
+JoinEditorBtn.Name = "shhhhnayy05_JoinEditorBtn"
 JoinEditorBtn.Size = UDim2.new(0.48, 0, 0, 30)
 JoinEditorBtn.Position = UDim2.new(0.52, 0, 0.5, -15)
 JoinEditorBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 180)
@@ -541,7 +517,7 @@ local JoinEditorCorner = Instance.new("UICorner")
 JoinEditorCorner.CornerRadius = UDim.new(0, 6)
 JoinEditorCorner.Parent = JoinEditorBtn
 
--- ==================== HELPER: UPDATE FILE LIST ==================== --
+-- ==================== HELPER FUNCTIONS ==================== --
 
 local function updateFileList()
     -- Clear existing files
@@ -553,6 +529,7 @@ local function updateFileList()
     
     if #savedWalks == 0 then
         local EmptyLabel = Instance.new("TextLabel")
+        EmptyLabel.Name = "shhhhnayy05_EmptyLabel"
         EmptyLabel.Size = UDim2.new(1, 0, 0, 100)
         EmptyLabel.BackgroundTransparency = 1
         EmptyLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
@@ -565,8 +542,9 @@ local function updateFileList()
         return
     end
     
-    for i, walkData in pairs(savedWalks) do
+    for i, walkData in ipairs(savedWalks) do
         local FileFrame = Instance.new("Frame")
+        FileFrame.Name = "shhhhnayy05_FileFrame_" .. i
         FileFrame.Size = UDim2.new(1, 0, 0, 55)
         FileFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
         FileFrame.BorderSizePixel = 0
@@ -578,6 +556,7 @@ local function updateFileList()
         
         -- File icon and name
         local FileName = Instance.new("TextLabel")
+        FileName.Name = "shhhhnayy05_FileName"
         FileName.Size = UDim2.new(1, -130, 0, 25)
         FileName.Position = UDim2.new(0, 10, 0, 5)
         FileName.BackgroundTransparency = 1
@@ -590,6 +569,7 @@ local function updateFileList()
         
         -- File info
         local FileInfo = Instance.new("TextLabel")
+        FileInfo.Name = "shhhhnayy05_FileInfo"
         FileInfo.Size = UDim2.new(1, -130, 0, 18)
         FileInfo.Position = UDim2.new(0, 10, 0, 30)
         FileInfo.BackgroundTransparency = 1
@@ -603,6 +583,7 @@ local function updateFileList()
         
         -- Load Button
         local LoadBtn = Instance.new("TextButton")
+        LoadBtn.Name = "shhhhnayy05_LoadBtn"
         LoadBtn.Size = UDim2.new(0, 55, 0, 45)
         LoadBtn.Position = UDim2.new(1, -120, 0.5, -22)
         LoadBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
@@ -618,6 +599,7 @@ local function updateFileList()
         
         -- Delete Button
         local DeleteBtn = Instance.new("TextButton")
+        DeleteBtn.Name = "shhhhnayy05_DeleteBtn"
         DeleteBtn.Size = UDim2.new(0, 55, 0, 45)
         DeleteBtn.Position = UDim2.new(1, -60, 0.5, -22)
         DeleteBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
@@ -645,15 +627,14 @@ local function updateFileList()
     FilesList.CanvasSize = UDim2.new(0, 0, 0, #savedWalks * 60)
 end
 
--- ==================== CREATE FILE VIEWER WINDOW ==================== --
+-- ==================== FILE VIEWER WINDOW ==================== --
 
 function createFileViewer(walkData, index)
-    -- Close existing viewer
-    local existing = ScreenGui:FindFirstChild("FileViewer_" .. index)
+    local existing = ScreenGui:FindFirstChild("shhhhnayy05_FileViewer_" .. index)
     if existing then existing:Destroy() end
     
     local ViewerPanel = Instance.new("Frame")
-    ViewerPanel.Name = "FileViewer_" .. index
+    ViewerPanel.Name = "shhhhnayy05_FileViewer_" .. index
     ViewerPanel.Size = UDim2.new(0, 320, 0, 380)
     ViewerPanel.Position = UDim2.new(0.5, -160, 0.5, -190)
     ViewerPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
@@ -671,6 +652,7 @@ function createFileViewer(walkData, index)
     
     -- Title Bar
     local ViewerTitle = Instance.new("Frame")
+    ViewerTitle.Name = "shhhhnayy05_ViewerTitle"
     ViewerTitle.Size = UDim2.new(1, 0, 0, 40)
     ViewerTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     ViewerTitle.BorderSizePixel = 0
@@ -681,6 +663,7 @@ function createFileViewer(walkData, index)
     ViewerTitleCorner.Parent = ViewerTitle
     
     local ViewerTitleLabel = Instance.new("TextLabel")
+    ViewerTitleLabel.Name = "shhhhnayy05_ViewerTitleLabel"
     ViewerTitleLabel.Size = UDim2.new(1, -50, 1, 0)
     ViewerTitleLabel.Position = UDim2.new(0, 15, 0, 0)
     ViewerTitleLabel.BackgroundTransparency = 1
@@ -692,6 +675,7 @@ function createFileViewer(walkData, index)
     ViewerTitleLabel.Parent = ViewerTitle
     
     local ViewerClose = Instance.new("TextButton")
+    ViewerClose.Name = "shhhhnayy05_ViewerClose"
     ViewerClose.Size = UDim2.new(0, 30, 0, 30)
     ViewerClose.Position = UDim2.new(1, -35, 0.5, -15)
     ViewerClose.BackgroundTransparency = 1
@@ -703,6 +687,7 @@ function createFileViewer(walkData, index)
     
     -- Content Frame
     local ViewerContent = Instance.new("Frame")
+    ViewerContent.Name = "shhhhnayy05_ViewerContent"
     ViewerContent.Size = UDim2.new(1, -30, 0, 220)
     ViewerContent.Position = UDim2.new(0, 15, 0, 50)
     ViewerContent.BackgroundTransparency = 1
@@ -720,8 +705,9 @@ function createFileViewer(walkData, index)
         {icon = "📍", title = "Waypoints", value = tostring(#walkData.positions) .. " points"}
     }
     
-    for _, info in pairs(infoLabels) do
+    for _, info in ipairs(infoLabels) do
         local InfoFrame = Instance.new("Frame")
+        InfoFrame.Name = "shhhhnayy05_InfoFrame_" .. info.title
         InfoFrame.Size = UDim2.new(1, 0, 0, 38)
         InfoFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
         InfoFrame.Parent = ViewerContent
@@ -731,6 +717,7 @@ function createFileViewer(walkData, index)
         InfoCorner.Parent = InfoFrame
         
         local InfoIcon = Instance.new("TextLabel")
+        InfoIcon.Name = "shhhhnayy05_InfoIcon"
         InfoIcon.Size = UDim2.new(0, 30, 1, 0)
         InfoIcon.BackgroundTransparency = 1
         InfoIcon.TextColor3 = Color3.new(1, 1, 1)
@@ -740,6 +727,7 @@ function createFileViewer(walkData, index)
         InfoIcon.Parent = InfoFrame
         
         local InfoTitle = Instance.new("TextLabel")
+        InfoTitle.Name = "shhhhnayy05_InfoTitle"
         InfoTitle.Size = UDim2.new(0.4, 0, 1, 0)
         InfoTitle.Position = UDim2.new(0, 35, 0, 0)
         InfoTitle.BackgroundTransparency = 1
@@ -751,6 +739,7 @@ function createFileViewer(walkData, index)
         InfoTitle.Parent = InfoFrame
         
         local InfoValue = Instance.new("TextLabel")
+        InfoValue.Name = "shhhhnayy05_InfoValue"
         InfoValue.Size = UDim2.new(0.5, 0, 1, 0)
         InfoValue.Position = UDim2.new(0.5, 0, 0, 0)
         InfoValue.BackgroundTransparency = 1
@@ -764,6 +753,7 @@ function createFileViewer(walkData, index)
     
     -- Play Walk Button
     local PlayWalkBtn = Instance.new("TextButton")
+    PlayWalkBtn.Name = "shhhhnayy05_PlayWalkBtn"
     PlayWalkBtn.Size = UDim2.new(1, 0, 0, 45)
     PlayWalkBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
     PlayWalkBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -783,6 +773,7 @@ function createFileViewer(walkData, index)
     
     -- Close GUI Button
     local CloseGUIBtn = Instance.new("TextButton")
+    CloseGUIBtn.Name = "shhhhnayy05_CloseGUIBtn"
     CloseGUIBtn.Size = UDim2.new(1, 0, 0, 35)
     CloseGUIBtn.Position = UDim2.new(0, 0, 1, -60)
     CloseGUIBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
@@ -815,11 +806,11 @@ end
 -- ==================== DELETE CONFIRMATION DIALOG ==================== --
 
 function createDeleteDialog(index)
-    local existing = ScreenGui:FindFirstChild("DeleteDialog")
+    local existing = ScreenGui:FindFirstChild("shhhhnayy05_DeleteDialog")
     if existing then existing:Destroy() end
     
     local Dialog = Instance.new("Frame")
-    Dialog.Name = "DeleteDialog"
+    Dialog.Name = "shhhhnayy05_DeleteDialog"
     Dialog.Size = UDim2.new(0, 280, 0, 160)
     Dialog.Position = UDim2.new(0.5, -140, 0.5, -80)
     Dialog.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
@@ -837,6 +828,7 @@ function createDeleteDialog(index)
     
     -- Icon
     local DialogIcon = Instance.new("TextLabel")
+    DialogIcon.Name = "shhhhnayy05_DialogIcon"
     DialogIcon.Size = UDim2.new(1, 0, 0, 35)
     DialogIcon.BackgroundTransparency = 1
     DialogIcon.TextColor3 = Color3.new(1, 1, 1)
@@ -847,6 +839,7 @@ function createDeleteDialog(index)
     
     -- Message
     local DialogMessage = Instance.new("TextLabel")
+    DialogMessage.Name = "shhhhnayy05_DialogMessage"
     DialogMessage.Size = UDim2.new(1, -30, 0, 50)
     DialogMessage.Position = UDim2.new(0, 15, 0, 35)
     DialogMessage.BackgroundTransparency = 1
@@ -859,6 +852,7 @@ function createDeleteDialog(index)
     
     -- Yes Button
     local YesBtn = Instance.new("TextButton")
+    YesBtn.Name = "shhhhnayy05_YesBtn"
     YesBtn.Size = UDim2.new(0, 100, 0, 35)
     YesBtn.Position = UDim2.new(0.25, -50, 1, -50)
     YesBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
@@ -874,6 +868,7 @@ function createDeleteDialog(index)
     
     -- No Button
     local NoBtn = Instance.new("TextButton")
+    NoBtn.Name = "shhhhnayy05_NoBtn"
     NoBtn.Size = UDim2.new(0, 100, 0, 35)
     NoBtn.Position = UDim2.new(0.75, -50, 1, -50)
     NoBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
@@ -903,11 +898,11 @@ end
 -- ==================== SAVE DIALOG ==================== --
 
 function createSaveDialog()
-    local existing = ScreenGui:FindFirstChild("SaveDialog")
+    local existing = ScreenGui:FindFirstChild("shhhhnayy05_SaveDialog")
     if existing then existing:Destroy() end
     
     local Dialog = Instance.new("Frame")
-    Dialog.Name = "SaveDialog"
+    Dialog.Name = "shhhhnayy05_SaveDialog"
     Dialog.Size = UDim2.new(0, 300, 0, 200)
     Dialog.Position = UDim2.new(0.5, -150, 0.5, -100)
     Dialog.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
@@ -925,6 +920,7 @@ function createSaveDialog()
     
     -- Title Bar
     local DialogTitle = Instance.new("Frame")
+    DialogTitle.Name = "shhhhnayy05_DialogTitle"
     DialogTitle.Size = UDim2.new(1, 0, 0, 40)
     DialogTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     DialogTitle.BorderSizePixel = 0
@@ -935,6 +931,7 @@ function createSaveDialog()
     DialogTitleCorner.Parent = DialogTitle
     
     local DialogTitleLabel = Instance.new("TextLabel")
+    DialogTitleLabel.Name = "shhhhnayy05_DialogTitleLabel"
     DialogTitleLabel.Size = UDim2.new(1, 0, 1, 0)
     DialogTitleLabel.BackgroundTransparency = 1
     DialogTitleLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -945,6 +942,7 @@ function createSaveDialog()
     
     -- Name Input
     local NameInput = Instance.new("TextBox")
+    NameInput.Name = "shhhhnayy05_NameInput"
     NameInput.Size = UDim2.new(1, -30, 0, 40)
     NameInput.Position = UDim2.new(0, 15, 0, 55)
     NameInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
@@ -963,6 +961,7 @@ function createSaveDialog()
     
     -- Buttons Frame
     local ButtonsFrame = Instance.new("Frame")
+    ButtonsFrame.Name = "shhhhnayy05_ButtonsFrame"
     ButtonsFrame.Size = UDim2.new(1, -30, 0, 35)
     ButtonsFrame.Position = UDim2.new(0, 15, 1, -50)
     ButtonsFrame.BackgroundTransparency = 1
@@ -970,6 +969,7 @@ function createSaveDialog()
     
     -- Save Button
     local SaveBtn = Instance.new("TextButton")
+    SaveBtn.Name = "shhhhnayy05_SaveBtn"
     SaveBtn.Size = UDim2.new(0.48, 0, 1, 0)
     SaveBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
     SaveBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -984,6 +984,7 @@ function createSaveDialog()
     
     -- Cancel Button
     local CancelBtn = Instance.new("TextButton")
+    CancelBtn.Name = "shhhhnayy05_CancelBtn"
     CancelBtn.Size = UDim2.new(0.48, 0, 1, 0)
     CancelBtn.Position = UDim2.new(0.52, 0, 0, 0)
     CancelBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
@@ -998,8 +999,9 @@ function createSaveDialog()
     CancelCorner.Parent = CancelBtn
     
     -- Focus
-    wait(0.1)
-    NameInput:CaptureFocus()
+    delay(0.1, function()
+        NameInput:CaptureFocus()
+    end)
     
     -- Actions
     local function saveWalk()
@@ -1109,7 +1111,7 @@ end
 
 -- ==================== PLAYBACK FUNCTIONS ==================== --
 
-function playWalk(walkData, audioCallback)
+function playWalk(walkData)
     if isPlaying then return end
     if isRecording then return end
     
@@ -1122,7 +1124,7 @@ function playWalk(walkData, audioCallback)
     
     -- Create playback notification
     local PlaybackFrame = Instance.new("Frame")
-    PlaybackFrame.Name = "PlaybackFrame"
+    PlaybackFrame.Name = "shhhhnayy05_PlaybackFrame"
     PlaybackFrame.Size = UDim2.new(0, 200, 0, 40)
     PlaybackFrame.Position = UDim2.new(0.5, -100, 0, 100)
     PlaybackFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
@@ -1138,7 +1140,8 @@ function playWalk(walkData, audioCallback)
     PlaybackStroke.Thickness = 2
     PlaybackStroke.Parent = PlaybackFrame
     
-    local PlaybackLabel = Instance.new::TextLabel()
+    local PlaybackLabel = Instance.new("TextLabel")
+    PlaybackLabel.Name = "shhhhnayy05_PlaybackLabel"
     PlaybackLabel.Size = UDim2.new(1, -10, 1, 0)
     PlaybackLabel.Position = UDim2.new(0, 5, 0, 0)
     PlaybackLabel.BackgroundTransparency = 1
@@ -1150,6 +1153,7 @@ function playWalk(walkData, audioCallback)
     
     -- Stop button
     local StopButton = Instance.new("TextButton")
+    StopButton.Name = "shhhhnayy05_StopButton"
     StopButton.Size = UDim2.new(0, 80, 0, 35)
     StopButton.Position = UDim2.new(0.5, -40, 0, 150)
     StopButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
@@ -1212,13 +1216,13 @@ end
 -- ==================== CUT EDITOR WINDOW ==================== --
 
 function createCutEditorWindow()
-    local existing = ScreenGui:FindFirstChild("CutEditorWindow")
+    local existing = ScreenGui:FindFirstChild("shhhhnayy05_CutEditorWindow")
     if existing then existing:Destroy() end
     
     if #savedWalks == 0 then
         -- Show notification
         local notification = Instance.new("Frame")
-        notification.Name = "Notification"
+        notification.Name = "shhhhnayy05_Notification"
         notification.Size = UDim2.new(0, 250, 0, 50)
         notification.Position = UDim2.new(0.5, -125, 0.5, -25)
         notification.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
@@ -1230,21 +1234,24 @@ function createCutEditorWindow()
         notifCorner.Parent = notification
         
         local notifLabel = Instance.new("TextLabel")
+        notifLabel.Name = "shhhhnayy05_NotifLabel"
         notifLabel.Size = UDim2.new(1, 0, 1, 0)
         notifLabel.BackgroundTransparency = 1
         notifLabel.TextColor3 = Color3.new(1, 1, 1)
         notifLabel.TextSize = 12
         notifLabel.Font = Enum.Font.Gotham
         notifLabel.Text = "⚠️ Tidak ada walk tersimpan.\nRekam walk terlebih dahulu!"
+        notifLabel.TextWrapped = true
         notifLabel.Parent = notification
         
-        wait(2)
-        notification:Destroy()
+        delay(2, function()
+            notification:Destroy()
+        end)
         return
     end
     
     local EditorWindow = Instance.new("Frame")
-    EditorWindow.Name = "CutEditorWindow"
+    EditorWindow.Name = "shhhhnayy05_CutEditorWindow"
     EditorWindow.Size = UDim2.new(0, 350, 0, 450)
     EditorWindow.Position = UDim2.new(0.5, -175, 0.5, -225)
     EditorWindow.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
@@ -1262,6 +1269,7 @@ function createCutEditorWindow()
     
     -- Title
     local EditorTitle = Instance.new("Frame")
+    EditorTitle.Name = "shhhhnayy05_EditorTitle"
     EditorTitle.Size = UDim2.new(1, 0, 0, 40)
     EditorTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     EditorTitle.BorderSizePixel = 0
@@ -1272,6 +1280,7 @@ function createCutEditorWindow()
     EditorTitleCorner.Parent = EditorTitle
     
     local EditorTitleLabel = Instance.new("TextLabel")
+    EditorTitleLabel.Name = "shhhhnayy05_EditorTitleLabel"
     EditorTitleLabel.Size = UDim2.new(1, -50, 1, 0)
     EditorTitleLabel.Position = UDim2.new(0, 15, 0, 0)
     EditorTitleLabel.BackgroundTransparency = 1
@@ -1283,6 +1292,7 @@ function createCutEditorWindow()
     EditorTitleLabel.Parent = EditorTitle
     
     local EditorClose = Instance.new("TextButton")
+    EditorClose.Name = "shhhhnayy05_EditorClose"
     EditorClose.Size = UDim2.new(0, 30, 0, 30)
     EditorClose.Position = UDim2.new(1, -35, 0.5, -15)
     EditorClose.BackgroundTransparency = 1
@@ -1294,6 +1304,7 @@ function createCutEditorWindow()
     
     -- Walk Selection
     local WalkSelectLabel = Instance.new("TextLabel")
+    WalkSelectLabel.Name = "shhhhnayy05_WalkSelectLabel"
     WalkSelectLabel.Size = UDim2.new(1, -30, 0, 25)
     WalkSelectLabel.Position = UDim2.new(0, 15, 0, 50)
     WalkSelectLabel.BackgroundTransparency = 1
@@ -1304,15 +1315,17 @@ function createCutEditorWindow()
     WalkSelectLabel.TextXAlignment = Enum.TextXAlignment.Left
     WalkSelectLabel.Parent = EditorWindow
     
+    local selectedWalkIndex = 1
+    
     local WalkSelectDropdown = Instance.new("TextButton")
-    WalkSelectDropdown.Name = "WalkSelectDropdown"
+    WalkSelectDropdown.Name = "shhhhnayy05_WalkSelectDropdown"
     WalkSelectDropdown.Size = UDim2.new(1, -30, 0, 35)
     WalkSelectDropdown.Position = UDim2.new(0, 15, 0, 80)
     WalkSelectDropdown.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
     WalkSelectDropdown.TextColor3 = Color3.new(1, 1, 1)
     WalkSelectDropdown.TextSize = 13
     WalkSelectDropdown.Font = Enum.Font.Gotham
-    WalkSelectDropdown.Text = savedWalks[1].name
+    WalkSelectDropdown.Text = savedWalks[1] and savedWalks[1].name or "No walks"
     WalkSelectDropdown.TextXAlignment = Enum.TextXAlignment.Left
     WalkSelectDropdown.Parent = EditorWindow
     
@@ -1322,6 +1335,7 @@ function createCutEditorWindow()
     
     -- Cut Range Inputs
     local CutRangeLabel = Instance.new("TextLabel")
+    CutRangeLabel.Name = "shhhhnayy05_CutRangeLabel"
     CutRangeLabel.Size = UDim2.new(1, -30, 0, 25)
     CutRangeLabel.Position = UDim2.new(0, 15, 0, 130)
     CutRangeLabel.BackgroundTransparency = 1
@@ -1334,6 +1348,7 @@ function createCutEditorWindow()
     
     -- Start Time Input
     local StartTimeLabel = Instance.new("TextLabel")
+    StartTimeLabel.Name = "shhhhnayy05_StartTimeLabel"
     StartTimeLabel.Size = UDim2.new(0, 80, 0, 30)
     StartTimeLabel.Position = UDim2.new(0, 15, 0, 160)
     StartTimeLabel.BackgroundTransparency = 1
@@ -1345,6 +1360,7 @@ function createCutEditorWindow()
     StartTimeLabel.Parent = EditorWindow
     
     local StartTimeInput = Instance.new("TextBox")
+    StartTimeInput.Name = "shhhhnayy05_StartTimeInput"
     StartTimeInput.Size = UDim2.new(0, 80, 0, 30)
     StartTimeInput.Position = UDim2.new(0, 100, 0, 160)
     StartTimeInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
@@ -1360,6 +1376,7 @@ function createCutEditorWindow()
     
     -- End Time Input
     local EndTimeLabel = Instance.new("TextLabel")
+    EndTimeLabel.Name = "shhhhnayy05_EndTimeLabel"
     EndTimeLabel.Size = UDim2.new(0, 80, 0, 30)
     EndTimeLabel.Position = UDim2.new(0.45, 0, 0, 160)
     EndTimeLabel.BackgroundTransparency = 1
@@ -1371,13 +1388,14 @@ function createCutEditorWindow()
     EndTimeLabel.Parent = EditorWindow
     
     local EndTimeInput = Instance.new("TextBox")
+    EndTimeInput.Name = "shhhhnayy05_EndTimeInput"
     EndTimeInput.Size = UDim2.new(0, 80, 0, 30)
     EndTimeInput.Position = UDim2.new(0.55, 0, 0, 160)
     EndTimeInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
     EndTimeInput.TextColor3 = Color3.new(1, 1, 1)
     EndTimeInput.TextSize = 12
     EndTimeInput.Font = Enum.Font.Gotham
-    EndTimeInput.Text = tostring(savedWalks[1].duration)
+    EndTimeInput.Text = savedWalks[1] and tostring(savedWalks[1].duration) or "0"
     EndTimeInput.Parent = EditorWindow
     
     local EndTimeCorner = Instance.new("UICorner")
@@ -1386,6 +1404,7 @@ function createCutEditorWindow()
     
     -- Preview Start Input
     local PreviewLabel = Instance.new("TextLabel")
+    PreviewLabel.Name = "shhhhnayy05_PreviewLabel"
     PreviewLabel.Size = UDim2.new(1, -30, 0, 25)
     PreviewLabel.Position = UDim2.new(0, 15, 0, 200)
     PreviewLabel.BackgroundTransparency = 1
@@ -1397,8 +1416,9 @@ function createCutEditorWindow()
     PreviewLabel.Parent = EditorWindow
     
     local PreviewInput = Instance.new("TextBox")
+    PreviewInput.Name = "shhhhnayy05_PreviewInput"
     PreviewInput.Size = UDim2.new(0, 100, 0, 30)
-    PreviewInput.Position = UDim2.new(0.5, -50, 0, 200)
+    PreviewInput.Position = UDim2.new(0.5, -50, 0, 230)
     PreviewInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
     PreviewInput.TextColor3 = Color3.new(1, 1, 1)
     PreviewInput.TextSize = 12
@@ -1406,14 +1426,15 @@ function createCutEditorWindow()
     PreviewInput.Text = "0"
     PreviewInput.Parent = EditorWindow
     
-    local PreviewCorner = Instance.new("UICorner")
-    PreviewCorner.CornerRadius = UDim.new(0, 6)
-    PreviewCorner.Parent = PreviewInput
+    local PreviewInputCorner = Instance.new("UICorner")
+    PreviewInputCorner.CornerRadius = UDim.new(0, 6)
+    PreviewInputCorner.Parent = PreviewInput
     
     -- Buttons
     local PreviewBtn = Instance.new("TextButton")
+    PreviewBtn.Name = "shhhhnayy05_PreviewBtn"
     PreviewBtn.Size = UDim2.new(0.48, -5, 0, 40)
-    PreviewBtn.Position = UDim2.new(0, 15, 0, 250)
+    PreviewBtn.Position = UDim2.new(0, 15, 0, 280)
     PreviewBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 200)
     PreviewBtn.TextColor3 = Color3.new(1, 1, 1)
     PreviewBtn.TextSize = 13
@@ -1421,13 +1442,14 @@ function createCutEditorWindow()
     PreviewBtn.Text = "▶️ Preview"
     PreviewBtn.Parent = EditorWindow
     
-    local PreviewCorner = Instance.new("UICorner")
-    PreviewCorner.CornerRadius = UDim.new(0, 6)
-    PreviewCorner.Parent = PreviewBtn
+    local PreviewBtnCorner = Instance.new("UICorner")
+    PreviewBtnCorner.CornerRadius = UDim.new(0, 6)
+    PreviewBtnCorner.Parent = PreviewBtn
     
     local ApplyCutBtn = Instance.new("TextButton")
+    ApplyCutBtn.Name = "shhhhnayy05_ApplyCutBtn"
     ApplyCutBtn.Size = UDim2.new(0.48, -5, 0, 40)
-    ApplyCutBtn.Position = UDim2.new(0.52, 0, 0, 250)
+    ApplyCutBtn.Position = UDim2.new(0.52, 0, 0, 280)
     ApplyCutBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 180)
     ApplyCutBtn.TextColor3 = Color3.new(1, 1, 1)
     ApplyCutBtn.TextSize = 13
@@ -1435,13 +1457,15 @@ function createCutEditorWindow()
     ApplyCutBtn.Text = "✂️ Apply Cut"
     ApplyCutBtn.Parent = EditorWindow
     
+    local ApplyCutCorner = Instance.new("UICorner")
     ApplyCutCorner.CornerRadius = UDim.new(0, 6)
     ApplyCutCorner.Parent = ApplyCutBtn
     
     -- Info Label
     local InfoLabel = Instance.new("TextLabel")
+    InfoLabel.Name = "shhhhnayy05_InfoLabel"
     InfoLabel.Size = UDim2.new(1, -30, 0, 60)
-    InfoLabel.Position = UDim2.new(0, 15, 0, 300)
+    InfoLabel.Position = UDim2.new(0, 15, 0, 330)
     InfoLabel.BackgroundTransparency = 1
     InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
     InfoLabel.TextSize = 11
@@ -1452,8 +1476,9 @@ function createCutEditorWindow()
     
     -- Close Button
     local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Name = "shhhhnayy05_CloseBtn"
     CloseBtn.Size = UDim2.new(1, -30, 0, 35)
-    CloseBtn.Position = UDim2.new(0, 15, 0, 400)
+    CloseBtn.Position = UDim2.new(0, 15, 0, 410)
     CloseBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
     CloseBtn.TextColor3 = Color3.new(1, 1, 1)
     CloseBtn.TextSize = 13
@@ -1478,6 +1503,7 @@ function createCutEditorWindow()
         
         dropdownOpen = true
         dropdownFrame = Instance.new("Frame")
+        dropdownFrame.Name = "shhhhnayy05_DropdownFrame"
         dropdownFrame.Size = UDim2.new(1, 0, 0, math.min(#savedWalks * 35, 150))
         dropdownFrame.Position = UDim2.new(0, 0, 1, 5)
         dropdownFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
@@ -1490,6 +1516,7 @@ function createCutEditorWindow()
         dropdownCorner.Parent = dropdownFrame
         
         local dropdownScroll = Instance.new("ScrollingFrame")
+        dropdownScroll.Name = "shhhhnayy05_DropdownScroll"
         dropdownScroll.Size = UDim2.new(1, 0, 1, 0)
         dropdownScroll.BackgroundTransparency = 1
         dropdownScroll.ScrollBarThickness = 4
@@ -1499,6 +1526,7 @@ function createCutEditorWindow()
         
         for i, walk in ipairs(savedWalks) do
             local option = Instance.new("TextButton")
+            option.Name = "shhhhnayy05_Option_" .. i
             option.Size = UDim2.new(1, 0, 0, 30)
             option.Position = UDim2.new(0, 0, 0, (i-1) * 35)
             option.BackgroundColor3 = Color3.fromRGB(55, 55, 75)
@@ -1514,6 +1542,7 @@ function createCutEditorWindow()
             optionCorner.Parent = option
             
             option.MouseButton1Click:Connect(function()
+                selectedWalkIndex = i
                 WalkSelectDropdown.Text = walk.name
                 EndTimeInput.Text = tostring(walk.duration)
                 if dropdownFrame then dropdownFrame:Destroy() end
@@ -1522,44 +1551,19 @@ function createCutEditorWindow()
         end
     end)
     
-    -- Close dropdown when clicking elsewhere
-    UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            if dropdownOpen and dropdownFrame then
-                local pos = input.Position
-                local absPos = dropdownFrame.AbsolutePosition
-                local absSize = dropdownFrame.AbsoluteSize
-                if pos.X < absPos.X or pos.X > absPos.X + absSize.X or 
-                   pos.Y < absPos.Y or pos.Y > absPos.Y + absSize.Y then
-                    if dropdownFrame then dropdownFrame:Destroy() end
-                    dropdownOpen = false
-                end
-            end
-        end
-    end)
-    
     -- Preview Button
     PreviewBtn.MouseButton1Click:Connect(function()
-        local walkName = WalkSelectDropdown.Text
-        local walkData = nil
-        
-        for _, walk in ipairs(savedWalks) do
-            if walk.name == walkName then
-                walkData = walk
-                break
-            end
-        end
-        
+        local walkData = savedWalks[selectedWalkIndex]
         if not walkData then return end
         
         local previewStart = tonumber(PreviewInput.Text) or 0
-        local startTime = tonumber(StartTimeInput.Text) or 0
-        local endTime = tonumber(EndTimeInput.Text) or walkData.duration
+        local startTimeVal = tonumber(StartTimeInput.Text) or 0
+        local endTimeVal = tonumber(EndTimeInput.Text) or walkData.duration
         
         -- Filter positions for preview
         local previewPositions = {}
         for _, pos in ipairs(walkData.positions) do
-            if pos.Time >= previewStart and pos.Time >= startTime and pos.Time <= endTime then
+            if pos.Time >= previewStart and pos.Time >= startTimeVal and pos.Time <= endTimeVal then
                 table.insert(previewPositions, pos)
             end
         end
@@ -1578,31 +1582,20 @@ function createCutEditorWindow()
     
     -- Apply Cut Button
     ApplyCutBtn.MouseButton1Click:Connect(function()
-        local walkName = WalkSelectDropdown.Text
-        local walkData = nil
-        local walkIndex = 0
-        
-        for i, walk in ipairs(savedWalks) do
-            if walk.name == walkName then
-                walkData = walk
-                walkIndex = i
-                break
-            end
-        end
-        
+        local walkData = savedWalks[selectedWalkIndex]
         if not walkData then return end
         
-        local startTime = tonumber(StartTimeInput.Text) or 0
-        local endTime = tonumber(EndTimeInput.Text) or walkData.duration
+        local startTimeVal = tonumber(StartTimeInput.Text) or 0
+        local endTimeVal = tonumber(EndTimeInput.Text) or walkData.duration
         
         -- Filter positions
         local newPositions = {}
         for _, pos in ipairs(walkData.positions) do
-            if pos.Time >= startTime and pos.Time <= endTime then
+            if pos.Time >= startTimeVal and pos.Time <= endTimeVal then
                 -- Adjust time relative to new start
                 local adjustedPos = {
                     Position = pos.Position,
-                    Time = pos.Time - startTime
+                    Time = pos.Time - startTimeVal
                 }
                 table.insert(newPositions, adjustedPos)
             end
@@ -1623,6 +1616,7 @@ function createCutEditorWindow()
             
             -- Notification
             local notif = Instance.new("Frame")
+            notif.Name = "shhhhnayy05_SuccessNotif"
             notif.Size = UDim2.new(0, 250, 0, 40)
             notif.Position = UDim2.new(0.5, -125, 0.8, 0)
             notif.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
@@ -1634,6 +1628,7 @@ function createCutEditorWindow()
             notifCorner.Parent = notif
             
             local notifLabel = Instance.new("TextLabel")
+            notifLabel.Name = "shhhhnayy05_NotifLabel"
             notifLabel.Size = UDim2.new(1, 0, 1, 0)
             notifLabel.BackgroundTransparency = 1
             notifLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -1642,8 +1637,9 @@ function createCutEditorWindow()
             notifLabel.Text = "✅ Cut berhasil disimpan!"
             notifLabel.Parent = notif
             
-            wait(2)
-            notif:Destroy()
+            delay(2, function()
+                notif:Destroy()
+            end)
         end
     end)
     
@@ -1660,12 +1656,12 @@ end
 -- ==================== JOIN EDITOR WINDOW ==================== --
 
 function createJoinEditorWindow()
-    local existing = ScreenGui:FindFirstChild("JoinEditorWindow")
+    local existing = ScreenGui:FindFirstChild("shhhhnayy05_JoinEditorWindow")
     if existing then existing:Destroy() end
     
     if #savedWalks < 2 then
         local notification = Instance.new("Frame")
-        notification.Name = "Notification"
+        notification.Name = "shhhhnayy05_Notification"
         notification.Size = UDim2.new(0, 280, 0, 50)
         notification.Position = UDim2.new(0.5, -140, 0.5, -25)
         notification.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
@@ -1677,6 +1673,7 @@ function createJoinEditorWindow()
         notifCorner.Parent = notification
         
         local notifLabel = Instance.new("TextLabel")
+        notifLabel.Name = "shhhhnayy05_NotifLabel"
         notifLabel.Size = UDim2.new(1, 0, 1, 0)
         notifLabel.BackgroundTransparency = 1
         notifLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -1686,13 +1683,14 @@ function createJoinEditorWindow()
         notifLabel.TextWrapped = true
         notifLabel.Parent = notification
         
-        wait(2)
-        notification:Destroy()
+        delay(2, function()
+            notification:Destroy()
+        end)
         return
     end
     
     local JoinWindow = Instance.new("Frame")
-    JoinWindow.Name = "JoinEditorWindow"
+    JoinWindow.Name = "shhhhnayy05_JoinEditorWindow"
     JoinWindow.Size = UDim2.new(0, 350, 0, 450)
     JoinWindow.Position = UDim2.new(0.5, -175, 0.5, -225)
     JoinWindow.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
@@ -1710,6 +1708,7 @@ function createJoinEditorWindow()
     
     -- Title
     local JoinTitle = Instance.new("Frame")
+    JoinTitle.Name = "shhhhnayy05_JoinTitle"
     JoinTitle.Size = UDim2.new(1, 0, 0, 40)
     JoinTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     JoinTitle.BorderSizePixel = 0
@@ -1720,6 +1719,7 @@ function createJoinEditorWindow()
     JoinTitleCorner.Parent = JoinTitle
     
     local JoinTitleLabel = Instance.new("TextLabel")
+    JoinTitleLabel.Name = "shhhhnayy05_JoinTitleLabel"
     JoinTitleLabel.Size = UDim2.new(1, -50, 1, 0)
     JoinTitleLabel.Position = UDim2.new(0, 15, 0, 0)
     JoinTitleLabel.BackgroundTransparency = 1
@@ -1731,6 +1731,7 @@ function createJoinEditorWindow()
     JoinTitleLabel.Parent = JoinTitle
     
     local JoinClose = Instance.new("TextButton")
+    JoinClose.Name = "shhhhnayy05_JoinClose"
     JoinClose.Size = UDim2.new(0, 30, 0, 30)
     JoinClose.Position = UDim2.new(1, -35, 0.5, -15)
     JoinClose.BackgroundTransparency = 1
@@ -1742,6 +1743,7 @@ function createJoinEditorWindow()
     
     -- Walk Selection List
     local SelectLabel = Instance.new("TextLabel")
+    SelectLabel.Name = "shhhhnayy05_SelectLabel"
     SelectLabel.Size = UDim2.new(1, -30, 0, 25)
     SelectLabel.Position = UDim2.new(0, 15, 0, 50)
     SelectLabel.BackgroundTransparency = 1
@@ -1753,6 +1755,7 @@ function createJoinEditorWindow()
     SelectLabel.Parent = JoinWindow
     
     local WalkList = Instance.new("ScrollingFrame")
+    WalkList.Name = "shhhhnayy05_WalkList"
     WalkList.Size = UDim2.new(1, -30, 0, 150)
     WalkList.Position = UDim2.new(0, 15, 0, 80)
     WalkList.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
@@ -1772,6 +1775,7 @@ function createJoinEditorWindow()
     
     for i, walk in ipairs(savedWalks) do
         local WalkItem = Instance.new("Frame")
+        WalkItem.Name = "shhhhnayy05_WalkItem_" .. i
         WalkItem.Size = UDim2.new(1, -10, 0, 35)
         WalkItem.Position = UDim2.new(0, 5, 0, (i-1) * 40)
         WalkItem.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
@@ -1783,6 +1787,7 @@ function createJoinEditorWindow()
         ItemCorner.Parent = WalkItem
         
         local CheckBox = Instance.new("TextButton")
+        CheckBox.Name = "shhhhnayy05_CheckBox"
         CheckBox.Size = UDim2.new(0, 25, 0, 25)
         CheckBox.Position = UDim2.new(0, 5, 0.5, -12)
         CheckBox.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
@@ -1797,6 +1802,7 @@ function createJoinEditorWindow()
         CheckCorner.Parent = CheckBox
         
         local WalkName = Instance.new("TextLabel")
+        WalkName.Name = "shhhhnayy05_WalkName"
         WalkName.Size = UDim2.new(1, -40, 1, 0)
         WalkName.Position = UDim2.new(0, 35, 0, 0)
         WalkName.BackgroundTransparency = 1
@@ -1824,6 +1830,7 @@ function createJoinEditorWindow()
     
     -- Join Name Input
     local JoinNameLabel = Instance.new("TextLabel")
+    JoinNameLabel.Name = "shhhhnayy05_JoinNameLabel"
     JoinNameLabel.Size = UDim2.new(1, -30, 0, 25)
     JoinNameLabel.Position = UDim2.new(0, 15, 0, 240)
     JoinNameLabel.BackgroundTransparency = 1
@@ -1835,6 +1842,7 @@ function createJoinEditorWindow()
     JoinNameLabel.Parent = JoinWindow
     
     local JoinNameInput = Instance.new("TextBox")
+    JoinNameInput.Name = "shhhhnayy05_JoinNameInput"
     JoinNameInput.Size = UDim2.new(1, -30, 0, 35)
     JoinNameInput.Position = UDim2.new(0, 15, 0, 270)
     JoinNameInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
@@ -1852,6 +1860,7 @@ function createJoinEditorWindow()
     
     -- Buttons
     local JoinBtn = Instance.new("TextButton")
+    JoinBtn.Name = "shhhhnayy05_JoinBtn"
     JoinBtn.Size = UDim2.new(1, -30, 0, 40)
     JoinBtn.Position = UDim2.new(0, 15, 0, 320)
     JoinBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 180)
@@ -1866,6 +1875,7 @@ function createJoinEditorWindow()
     JoinBtnCorner.Parent = JoinBtn
     
     local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Name = "shhhhnayy05_CloseBtn"
     CloseBtn.Size = UDim2.new(1, -30, 0, 35)
     CloseBtn.Position = UDim2.new(0, 15, 0, 400)
     CloseBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
@@ -1888,6 +1898,7 @@ function createJoinEditorWindow()
         
         if #walksToJoin < 2 then
             local notif = Instance.new("Frame")
+            notif.Name = "shhhhnayy05_ErrorNotif"
             notif.Size = UDim2.new(0, 250, 0, 40)
             notif.Position = UDim2.new(0.5, -125, 0.8, 0)
             notif.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
@@ -1899,6 +1910,7 @@ function createJoinEditorWindow()
             notifCorner.Parent = notif
             
             local notifLabel = Instance.new("TextLabel")
+            notifLabel.Name = "shhhhnayy05_NotifLabel"
             notifLabel.Size = UDim2.new(1, 0, 1, 0)
             notifLabel.BackgroundTransparency = 1
             notifLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -1907,8 +1919,9 @@ function createJoinEditorWindow()
             notifLabel.Text = "⚠️ Pilih minimal 2 walk!"
             notifLabel.Parent = notif
             
-            wait(2)
-            notif:Destroy()
+            delay(2, function()
+                notif:Destroy()
+            end)
             return
         end
         
@@ -1949,6 +1962,7 @@ function createJoinEditorWindow()
         updateFileList()
         
         local notif = Instance.new("Frame")
+        notif.Name = "shhhhnayy05_SuccessNotif"
         notif.Size = UDim2.new(0, 250, 0, 40)
         notif.Position = UDim2.new(0.5, -125, 0.8, 0)
         notif.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
@@ -1960,6 +1974,7 @@ function createJoinEditorWindow()
         notifCorner.Parent = notif
         
         local notifLabel = Instance.new("TextLabel")
+        notifLabel.Name = "shhhhnayy05_NotifLabel"
         notifLabel.Size = UDim2.new(1, 0, 1, 0)
         notifLabel.BackgroundTransparency = 1
         notifLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -1968,8 +1983,9 @@ function createJoinEditorWindow()
         notifLabel.Text = "✅ Walks berhasil digabung!"
         notifLabel.Parent = notif
         
-        wait(2)
-        notif:Destroy()
+        delay(2, function()
+            notif:Destroy()
+        end)
         JoinWindow:Destroy()
     end)
     
@@ -2000,14 +2016,14 @@ end)
 MinimizeButton.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     MainPanel.Visible = not isMinimized
-    MinimizeIcon.Text = isMinimized and "⊟" or "⊞"
+    MinimizeIcon.Text = isMinimized and "⊞" or "⊟"
 end)
 
 -- Close Button
 CloseButton.MouseButton1Click:Connect(function()
     MainPanel.Visible = false
     isMinimized = true
-    MinimizeIcon.Text = "⊟"
+    MinimizeIcon.Text = "⊞"
 end)
 
 -- Speed Controls
@@ -2121,6 +2137,7 @@ local function showNotification(text, duration)
     notifStroke.Parent = notif
     
     local notifLabel = Instance.new("TextLabel")
+    notifLabel.Name = "shhhhnayy05_NotifLabel"
     notifLabel.Size = UDim2.new(1, -20, 1, 0)
     notifLabel.Position = UDim2.new(0, 10, 0, 0)
     notifLabel.BackgroundTransparency = 1
@@ -2134,16 +2151,18 @@ local function showNotification(text, duration)
     -- Animate in
     createTween(notif, {Position = UDim2.new(0.5, -150, 0, 20)}, 0.3)
     
-    wait(duration)
-    
-    -- Animate out
-    createTween(notif, {Position = UDim2.new(0.5, -150, 0, -60)}, 0.3)
-    wait(0.3)
-    notif:Destroy()
+    delay(duration, function()
+        -- Animate out
+        createTween(notif, {Position = UDim2.new(0.5, -150, 0, -60)}, 0.3)
+        delay(0.3, function()
+            notif:Destroy()
+        end)
+    end)
 end
 
 -- Welcome notification
-wait(0.5)
-showNotification("🚶 shhhhnayy05 Auto Walk System v3.0 loaded!\nTekan R untuk record atau klik tombol merah.", 4)
+delay(0.5, function()
+    showNotification("🚶 shhhhnayy05 Auto Walk System v3.0 loaded!\nTekan R untuk record atau klik tombol merah.", 4)
+end)
 
 print("[shhhhnayy05] Auto Walk System v3.0 initialized successfully!")
