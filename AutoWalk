@@ -1,7 +1,7 @@
 --[[
     ╔══════════════════════════════════════════════════════════════╗
-    ║     AUTO WALK SYSTEM v4.0 - MAIN EDITOR (FILE 1)            ║
-    ║  Features: Record, Cut Editor, Join Editor, Playback        ║
+    ║     AUTO WALK SYSTEM v5.0 - TOGGLE WINDOW EDITION           ║
+    ║  Features: All Windows Toggleable, Record, Cut, Join, Save   ║
     ║  Created by: shhhhnayy05                                    ║
     ╚══════════════════════════════════════════════════════════════╝
 ]]--
@@ -21,31 +21,31 @@ local RootPart = Character:WaitForChild("HumanoidRootPart")
 -- ==================== STATE VARIABLES ==================== --
 local isRecording = false
 local isPlaying = false
-local isMinimized = false
 local currentRecording = {}
 local savedWalks = {}
-local startTime = 0
 local recordConnection = nil
-local playConnection = nil
-local walkSpeedModifier = 0
-local baseWalkSpeed = 16
+
+-- Window States
+local Windows = {
+    Main = {Visible = true, Frame = nil, Button = nil},
+    CutEditor = {Visible = false, Frame = nil, Button = nil},
+    JoinEditor = {Visible = false, Frame = nil, Button = nil},
+    SaveDialog = {Visible = false, Frame = nil}
+}
 
 -- ==================== CONFIGURATION ==================== --
 local CONFIG = {
-    GUI_MAX_WIDTH = 370,
-    GUI_MAX_HEIGHT = 415,
-    RECORD_INTERVAL = 0.05,
-    MAX_SAVE_SLOTS = 50
+    GUI_WIDTH = 370,
+    GUI_HEIGHT = 415,
+    COLOR_PRIMARY = Color3.fromRGB(35, 35, 50),
+    COLOR_SECONDARY = Color3.fromRGB(45, 45, 65),
+    COLOR_ACCENT = Color3.fromRGB(150, 80, 180),
+    COLOR_SUCCESS = Color3.fromRGB(50, 150, 50),
+    COLOR_DANGER = Color3.fromRGB(200, 60, 60),
+    COLOR_WARNING = Color3.fromRGB(200, 150, 50)
 }
 
 -- ==================== UTILITY FUNCTIONS ==================== --
-
-local function round(num, decimals)
-    if decimals then
-        return tonumber(string.format("%." .. decimals .. "f", num))
-    end
-    return math.floor(num + 0.5)
-end
 
 local function formatTime(seconds)
     local mins = math.floor(seconds / 60)
@@ -55,11 +55,11 @@ local function formatTime(seconds)
 end
 
 local function calculateDistance(positions)
-    local totalDistance = 0
+    local total = 0
     for i = 2, #positions do
-        totalDistance = totalDistance + (positions[i].cf.Position - positions[i-1].cf.Position).Magnitude
+        total = total + (positions[i].cf.Position - positions[i-1].cf.Position).Magnitude
     end
-    return round(totalDistance, 1)
+    return math.floor(total * 10) / 10
 end
 
 local function calculateDuration(positions)
@@ -67,145 +67,147 @@ local function calculateDuration(positions)
     return positions[#positions].time - positions[1].time
 end
 
-local function createTween(obj, properties, duration, easingStyle, callback)
-    local tween = TweenService:Create(
-        obj, 
-        TweenInfo.new(duration, easingStyle or Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        properties
-    )
-    if callback then
-        tween.Completed:Connect(callback)
-    end
-    tween:Play()
-    return tween
-end
-
--- ==================== PERSISTENT STORAGE ==================== --
+-- ==================== STORAGE FUNCTIONS ==================== --
 
 local function saveWalks()
-    local success, data = pcall(function()
-        return HttpService:JSONEncode(savedWalks)
+    pcall(function()
+        if writefile then
+            local data = HttpService:JSONEncode(savedWalks)
+            writefile("shhhhnayy05_WalkData.json", data)
+        end
     end)
-    
-    if success and data then
-        pcall(function()
-            if writefile then
-                writefile("shhhhnayy05_AutoWalk_Edited.json", data)
-            end
-        end)
-    end
 end
 
 local function loadWalks()
-    local loaded = false
-    
     pcall(function()
-        if readfile and isfile then
-            if isfile("shhhhnayy05_AutoWalk_Edited.json") then
-                local data = readfile("shhhhnayy05_AutoWalk_Edited.json")
-                savedWalks = HttpService:JSONDecode(data)
-                loaded = true
-            end
+        if readfile and isfile and isfile("shhhhnayy05_WalkData.json") then
+            savedWalks = HttpService:JSONDecode(readfile("shhhhnayy05_WalkData.json"))
         end
     end)
-    
-    if not loaded then
-        savedWalks = {}
-    end
+    if type(savedWalks) ~= "table" then savedWalks = {} end
 end
 
 -- ==================== GUI CREATION ==================== --
 
-local function cleanExistingGUI()
+local function cleanGUI()
     if Player:FindFirstChild("PlayerGui") then
-        local existing = Player.PlayerGui:FindFirstChild("shhhhnayy05_MainEditor")
-        if existing then
-            existing:Destroy()
-        end
+        local existing = Player.PlayerGui:FindFirstChild("shhhhnayy05_AutoWalk")
+        if existing then existing:Destroy() end
     end
 end
 
-cleanExistingGUI()
+cleanGUI()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "shhhhnayy05_MainEditor"
+ScreenGui.Name = "shhhhnayy05_AutoWalk"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- ==================== RECORD BUTTON (Fixed Position) ==================== --
+-- ==================== TOGGLE BUTTONS (Fixed Position) ==================== --
 
-local RecordButton = Instance.new("ImageButton")
-RecordButton.Name = "shhhhnayy05_RecordButton"
-RecordButton.Size = UDim2.new(0, 55, 0, 55)
-RecordButton.Position = UDim2.new(0, 10, 0, 10)
-RecordButton.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-RecordButton.BorderSizePixel = 0
-RecordButton.AutoButtonColor = true
-RecordButton.Parent = ScreenGui
+-- Main Window Toggle
+local MainToggleBtn = Instance.new("ImageButton")
+MainToggleBtn.Name = "shhhhnayy05_MainToggle"
+MainToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+MainToggleBtn.Position = UDim2.new(0, 10, 0, 10)
+MainToggleBtn.BackgroundColor3 = CONFIG.COLOR_ACCENT
+MainToggleBtn.BorderSizePixel = 0
+MainToggleBtn.AutoButtonColor = true
+MainToggleBtn.Parent = ScreenGui
+
+local MainToggleCorner = Instance.new("UICorner")
+MainToggleCorner.CornerRadius = UDim.new(0.3, 0)
+MainToggleCorner.Parent = MainToggleBtn
+
+local MainToggleIcon = Instance.new("TextLabel")
+MainToggleIcon.Name = "shhhhnayy05_MainToggleIcon"
+MainToggleIcon.Size = UDim2.new(1, 0, 1, 0)
+MainToggleIcon.BackgroundTransparency = 1
+MainToggleIcon.TextColor3 = Color3.new(1, 1, 1)
+MainToggleIcon.TextSize = 20
+MainToggleIcon.Font = Enum.Font.GothamBold
+MainToggleIcon.Text = "🚶"
+MainToggleIcon.Parent = MainToggleBtn
+
+-- Cut Editor Toggle
+local CutToggleBtn = Instance.new("ImageButton")
+CutToggleBtn.Name = "shhhhnayy05_CutToggle"
+CutToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+CutToggleBtn.Position = UDim2.new(0, 10, 0, 70)
+CutToggleBtn.BackgroundColor3 = CONFIG.COLOR_SECONDARY
+CutToggleBtn.BorderSizePixel = 0
+CutToggleBtn.AutoButtonColor = true
+CutToggleBtn.Parent = ScreenGui
+
+local CutToggleCorner = Instance.new("UICorner")
+CutToggleCorner.CornerRadius = UDim.new(0.3, 0)
+CutToggleCorner.Parent = CutToggleBtn
+
+local CutToggleIcon = Instance.new("TextLabel")
+CutToggleIcon.Name = "shhhhnayy05_CutToggleIcon"
+CutToggleIcon.Size = UDim2.new(1, 0, 1, 0)
+CutToggleIcon.BackgroundTransparency = 1
+CutToggleIcon.TextColor3 = Color3.new(1, 1, 1)
+CutToggleIcon.TextSize = 20
+CutToggleIcon.Font = Enum.Font.GothamBold
+CutToggleIcon.Text = "✂️"
+CutToggleIcon.Parent = CutToggleBtn
+
+-- Join Editor Toggle
+local JoinToggleBtn = Instance.new("ImageButton")
+JoinToggleBtn.Name = "shhhhnayy05_JoinToggle"
+JoinToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+JoinToggleBtn.Position = UDim2.new(0, 10, 0, 130)
+JoinToggleBtn.BackgroundColor3 = CONFIG.COLOR_SECONDARY
+JoinToggleBtn.BorderSizePixel = 0
+JoinToggleBtn.AutoButtonColor = true
+JoinToggleBtn.Parent = ScreenGui
+
+local JoinToggleCorner = Instance.new("UICorner")
+JoinToggleCorner.CornerRadius = UDim.new(0.3, 0)
+JoinToggleCorner.Parent = JoinToggleBtn
+
+local JoinToggleIcon = Instance.new("TextLabel")
+JoinToggleIcon.Name = "shhhhnayy05_JoinToggleIcon"
+JoinToggleIcon.Size = UDim2.new(1, 0, 1, 0)
+JoinToggleIcon.BackgroundTransparency = 1
+JoinToggleIcon.TextColor3 = Color3.new(1, 1, 1)
+JoinToggleIcon.TextSize = 20
+JoinToggleIcon.Font = Enum.Font.GothamBold
+JoinToggleIcon.Text = "🔗"
+JoinToggleIcon.Parent = JoinToggleBtn
+
+-- Record Button (Separate)
+local RecordBtn = Instance.new("ImageButton")
+RecordBtn.Name = "shhhhnayy05_RecordBtn"
+RecordBtn.Size = UDim2.new(0, 55, 0, 55)
+RecordBtn.Position = UDim2.new(0, 10, 0, 190)
+RecordBtn.BackgroundColor3 = CONFIG.COLOR_DANGER
+RecordBtn.BorderSizePixel = 0
+RecordBtn.AutoButtonColor = true
+RecordBtn.Parent = ScreenGui
 
 local RecordCorner = Instance.new("UICorner")
-RecordCorner.CornerRadius = UDim.new(0.4, 0)
-RecordCorner.Parent = RecordButton
+RecordCorner.CornerRadius = UDim.new(0.5, 0)
+RecordCorner.Parent = RecordBtn
 
 local RecordIcon = Instance.new("Frame")
 RecordIcon.Name = "shhhhnayy05_RecordIcon"
 RecordIcon.Size = UDim2.new(0, 28, 0, 28)
 RecordIcon.Position = UDim2.new(0.5, -14, 0.5, -14)
-RecordIcon.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+RecordIcon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 RecordIcon.BorderSizePixel = 0
-RecordIcon.Parent = RecordButton
+RecordIcon.Parent = RecordBtn
 
 local RecordIconCorner = Instance.new("UICorner")
 RecordIconCorner.CornerRadius = UDim.new(0.5, 0)
 RecordIconCorner.Parent = RecordIcon
 
-local RecordToolTip = Instance.new("TextLabel")
-RecordToolTip.Name = "shhhhnayy05_ToolTip"
-RecordToolTip.Size = UDim2.new(0, 100, 0, 25)
-RecordToolTip.Position = UDim2.new(1, 10, 0.5, -12)
-RecordToolTip.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-RecordToolTip.TextColor3 = Color3.new(1, 1, 1)
-RecordToolTip.TextSize = 11
-RecordToolTip.Font = Enum.Font.GothamBold
-RecordToolTip.Text = "Record Walk"
-RecordToolTip.Visible = false
-RecordToolTip.Parent = RecordButton
-
-local RecordToolTipCorner = Instance.new("UICorner")
-RecordToolTipCorner.CornerRadius = UDim.new(0.3, 0)
-RecordToolTipCorner.Parent = RecordToolTip
-
--- ==================== MINIMIZE BUTTON (Fixed Position) ==================== --
-
-local MinimizeButton = Instance.new("ImageButton")
-MinimizeButton.Name = "shhhhnayy05_MinimizeButton"
-MinimizeButton.Size = UDim2.new(0, 55, 0, 40)
-MinimizeButton.Position = UDim2.new(0, 10, 0, 70)
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-MinimizeButton.BorderSizePixel = 0
-MinimizeButton.AutoButtonColor = true
-MinimizeButton.Parent = ScreenGui
-
-local MinimizeCorner = Instance.new("UICorner")
-MinimizeCorner.CornerRadius = UDim.new(0.3, 0)
-MinimizeCorner.Parent = MinimizeButton
-
-local MinimizeIcon = Instance.new("TextLabel")
-MinimizeIcon.Name = "shhhhnayy05_MinimizeIcon"
-MinimizeIcon.Size = UDim2.new(1, 0, 1, 0)
-MinimizeIcon.BackgroundTransparency = 1
-MinimizeIcon.TextColor3 = Color3.new(1, 1, 1)
-MinimizeIcon.TextSize = 20
-MinimizeIcon.Font = Enum.Font.GothamBold
-MinimizeIcon.Text = "⊟"
-MinimizeIcon.Parent = MinimizeButton
-
--- ==================== TIMER DISPLAY ==================== --
-
+-- Timer Display
 local TimerFrame = Instance.new("Frame")
 TimerFrame.Name = "shhhhnayy05_TimerFrame"
-TimerFrame.Size = UDim2.new(0, 120, 0, 32)
+TimerFrame.Size = UDim2.new(0, 120, 0, 35)
 TimerFrame.Position = UDim2.new(0.5, -60, 0, 15)
 TimerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 TimerFrame.BorderSizePixel = 0
@@ -217,7 +219,7 @@ TimerCorner.CornerRadius = UDim.new(0.5, 0)
 TimerCorner.Parent = TimerFrame
 
 local TimerStroke = Instance.new("UIStroke")
-TimerStroke.Color = Color3.fromRGB(220, 50, 50)
+TimerStroke.Color = CONFIG.COLOR_DANGER
 TimerStroke.Thickness = 2
 TimerStroke.Parent = TimerFrame
 
@@ -227,102 +229,103 @@ TimerLabel.Size = UDim2.new(1, -10, 1, 0)
 TimerLabel.Position = UDim2.new(0, 5, 0, 0)
 TimerLabel.BackgroundTransparency = 1
 TimerLabel.TextColor3 = Color3.new(1, 1, 1)
-TimerLabel.TextSize = 16
+TimerLabel.TextSize = 18
 TimerLabel.Font = Enum.Font.GothamBold
 TimerLabel.Text = "00:00.0"
 TimerLabel.Parent = TimerFrame
 
--- ==================== MAIN GUI PANEL (Draggable) ==================== --
+-- ==================== MAIN WINDOW ==================== --
 
-local MainPanel = Instance.new("Frame")
-MainPanel.Name = "shhhhnayy05_MainPanel"
-MainPanel.Size = UDim2.new(0, CONFIG.GUI_MAX_WIDTH, 0, CONFIG.GUI_MAX_HEIGHT)
-MainPanel.Position = UDim2.new(0.5, -CONFIG.GUI_MAX_WIDTH/2, 0.5, -CONFIG.GUI_MAX_HEIGHT/2)
-MainPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MainPanel.BorderSizePixel = 0
-MainPanel.Visible = true
-MainPanel.Parent = ScreenGui
+local MainWindow = Instance.new("Frame")
+MainWindow.Name = "shhhhnayy05_MainWindow"
+MainWindow.Size = UDim2.new(0, CONFIG.GUI_WIDTH, 0, CONFIG.GUI_HEIGHT)
+MainWindow.Position = UDim2.new(0.5, -CONFIG.GUI_WIDTH/2, 0.5, -CONFIG.GUI_HEIGHT/2)
+MainWindow.BackgroundColor3 = CONFIG.COLOR_PRIMARY
+MainWindow.BorderSizePixel = 0
+MainWindow.Visible = true
+MainWindow.Parent = ScreenGui
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = MainPanel
+Windows.Main.Frame = MainWindow
 
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(60, 60, 80)
-MainStroke.Thickness = 1
-MainStroke.Parent = MainPanel
+local MainWindowCorner = Instance.new("UICorner")
+MainWindowCorner.CornerRadius = UDim.new(0, 12)
+MainWindowCorner.Parent = MainWindow
 
--- Title Bar (Draggable Handle)
-local TitleBar = Instance.new("Frame")
-TitleBar.Name = "shhhhnayy05_TitleBar"
-TitleBar.Size = UDim2.new(1, 0, 0, 40)
-TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-TitleBar.BorderSizePixel = 0
-TitleBar.Parent = MainPanel
+local MainWindowStroke = Instance.new("UIStroke")
+MainWindowStroke.Color = Color3.fromRGB(70, 70, 90)
+MainWindowStroke.Thickness = 1
+MainWindowStroke.Parent = MainWindow
 
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 12)
-TitleCorner.Parent = TitleBar
+-- Title Bar
+local MainTitleBar = Instance.new("Frame")
+MainTitleBar.Name = "shhhhnayy05_MainTitleBar"
+MainTitleBar.Size = UDim2.new(1, 0, 0, 40)
+MainTitleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+MainTitleBar.BorderSizePixel = 0
+MainTitleBar.Parent = MainWindow
 
-local TitleFix = Instance.new("Frame")
-TitleFix.Name = "shhhhnayy05_TitleFix"
-TitleFix.Size = UDim2.new(1, 0, 0, 20)
-TitleFix.Position = UDim2.new(0, 0, 1, -20)
-TitleFix.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-TitleFix.BorderSizePixel = 0
-TitleFix.Parent = TitleBar
+local MainTitleCorner = Instance.new("UICorner")
+MainTitleCorner.CornerRadius = UDim.new(0, 12)
+MainTitleCorner.Parent = MainTitleBar
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "shhhhnayy05_TitleLabel"
-TitleLabel.Size = UDim2.new(1, -80, 1, 0)
-TitleLabel.Position = UDim2.new(0, 15, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.TextColor3 = Color3.new(1, 1, 1)
-TitleLabel.TextSize = 16
-TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.Text = "🚶 Auto Walk Editor"
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Parent = TitleBar
+local MainTitleFix = Instance.new("Frame")
+MainTitleFix.Name = "shhhhnayy05_MainTitleFix"
+MainTitleFix.Size = UDim2.new(1, 0, 0, 20)
+MainTitleFix.Position = UDim2.new(0, 0, 1, -20)
+MainTitleFix.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+MainTitleFix.BorderSizePixel = 0
+MainTitleFix.Parent = MainTitleBar
 
--- Close Button
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "shhhhnayy05_CloseButton"
-CloseButton.Size = UDim2.new(0, 32, 0, 32)
-CloseButton.Position = UDim2.new(1, -38, 0.5, -16)
-CloseButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-CloseButton.TextColor3 = Color3.new(1, 1, 1)
-CloseButton.TextSize = 18
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.Text = "✕"
-CloseButton.Parent = TitleBar
+local MainTitleLabel = Instance.new("TextLabel")
+MainTitleLabel.Name = "shhhhnayy05_MainTitleLabel"
+MainTitleLabel.Size = UDim2.new(1, -50, 1, 0)
+MainTitleLabel.Position = UDim2.new(0, 15, 0, 0)
+MainTitleLabel.BackgroundTransparency = 1
+MainTitleLabel.TextColor3 = Color3.new(1, 1, 1)
+MainTitleLabel.TextSize = 16
+MainTitleLabel.Font = Enum.Font.GothamBold
+MainTitleLabel.Text = "🚶 Auto Walk System"
+MainTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+MainTitleLabel.Parent = MainTitleBar
 
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0.4, 0)
-CloseCorner.Parent = CloseButton
+-- Close Button (X)
+local MainCloseBtn = Instance.new("TextButton")
+MainCloseBtn.Name = "shhhhnayy05_MainCloseBtn"
+MainCloseBtn.Size = UDim2.new(0, 32, 0, 32)
+MainCloseBtn.Position = UDim2.new(1, -38, 0.5, -16)
+MainCloseBtn.BackgroundColor3 = CONFIG.COLOR_DANGER
+MainCloseBtn.TextColor3 = Color3.new(1, 1, 1)
+MainCloseBtn.TextSize = 18
+MainCloseBtn.Font = Enum.Font.GothamBold
+MainCloseBtn.Text = "✕"
+MainCloseBtn.Parent = MainTitleBar
+
+local MainCloseCorner = Instance.new("UICorner")
+MainCloseCorner.CornerRadius = UDim.new(0.4, 0)
+MainCloseCorner.Parent = MainCloseBtn
 
 -- Content Frame
-local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Name = "shhhhnayy05_ContentFrame"
-ContentFrame.Size = UDim2.new(1, -20, 1, -55)
-ContentFrame.Position = UDim2.new(0, 10, 0, 45)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.ScrollBarThickness = 6
-ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
-ContentFrame.Parent = MainPanel
+local MainContent = Instance.new("ScrollingFrame")
+MainContent.Name = "shhhhnayy05_MainContent"
+MainContent.Size = UDim2.new(1, -20, 1, -55)
+MainContent.Position = UDim2.new(0, 10, 0, 45)
+MainContent.BackgroundTransparency = 1
+MainContent.ScrollBarThickness = 6
+MainContent.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+MainContent.Parent = MainWindow
 
-local ContentLayout = Instance.new("UIListLayout")
-ContentLayout.Padding = UDim.new(0, 10)
-ContentLayout.Parent = ContentFrame
+local MainContentLayout = Instance.new("UIListLayout")
+MainContentLayout.Padding = UDim.new(0, 10)
+MainContentLayout.Parent = MainContent
 
--- ==================== RECORD INFO ==================== --
-
+-- Recording Info
 local RecordInfoFrame = Instance.new("Frame")
 RecordInfoFrame.Name = "shhhhnayy05_RecordInfoFrame"
 RecordInfoFrame.Size = UDim2.new(1, 0, 0, 50)
-RecordInfoFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+RecordInfoFrame.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
 RecordInfoFrame.BorderSizePixel = 0
 RecordInfoFrame.Visible = false
-RecordInfoFrame.Parent = ContentFrame
+RecordInfoFrame.Parent = MainContent
 
 local RecordInfoCorner = Instance.new("UICorner")
 RecordInfoCorner.CornerRadius = UDim.new(0, 8)
@@ -332,322 +335,490 @@ local RecordInfoLabel = Instance.new("TextLabel")
 RecordInfoLabel.Name = "shhhhnayy05_RecordInfoLabel"
 RecordInfoLabel.Size = UDim2.new(1, 0, 1, 0)
 RecordInfoLabel.BackgroundTransparency = 1
-RecordInfoLabel.TextColor3 = Color3.fromRGB(220, 50, 50)
+RecordInfoLabel.TextColor3 = CONFIG.COLOR_DANGER
 RecordInfoLabel.TextSize = 14
 RecordInfoLabel.Font = Enum.Font.GothamBold
-RecordInfoLabel.Text = "⏺ Recording... 00:00.0"
+RecordInfoLabel.Text = "⏺ Recording..."
 RecordInfoLabel.Parent = RecordInfoFrame
 
--- ==================== EDITOR BUTTONS ==================== --
+-- Action Buttons Section
+local ActionSection = Instance.new("Frame")
+ActionSection.Name = "shhhhnayy05_ActionSection"
+ActionSection.Size = UDim2.new(1, 0, 0, 50)
+ActionSection.BackgroundColor3 = CONFIG.COLOR_SECONDARY
+ActionSection.BorderSizePixel = 0
+ActionSection.Parent = MainContent
 
-local EditorSection = Instance.new("Frame")
-EditorSection.Name = "shhhhnayy05_EditorSection"
-EditorSection.Size = UDim2.new(1, 0, 0, 45)
-EditorSection.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-EditorSection.BorderSizePixel = 0
-EditorSection.Parent = ContentFrame
+local ActionCorner = Instance.new("UICorner")
+ActionCorner.CornerRadius = UDim.new(0, 8)
+ActionCorner.Parent = ActionSection
 
-local EditorCorner = Instance.new("UICorner")
-EditorCorner.CornerRadius = UDim.new(0, 8)
-EditorCorner.Parent = EditorSection
+local PlayBtn = Instance.new("TextButton")
+PlayBtn.Name = "shhhhnayy05_PlayBtn"
+PlayBtn.Size = UDim2.new(0.48, -5, 0, 40)
+PlayBtn.Position = UDim2.new(0, 5, 0.5, -20)
+PlayBtn.BackgroundColor3 = CONFIG.COLOR_SUCCESS
+PlayBtn.TextColor3 = Color3.new(1, 1, 1)
+PlayBtn.TextSize = 14
+PlayBtn.Font = Enum.Font.GothamBold
+PlayBtn.Text = "▶️ Play"
+PlayBtn.Parent = ActionSection
 
-local CutEditorBtn = Instance.new("TextButton")
-CutEditorBtn.Name = "shhhhnayy05_CutEditorBtn"
-CutEditorBtn.Size = UDim2.new(0.48, 0, 0, 30)
-CutEditorBtn.Position = UDim2.new(0, 5, 0.5, -15)
-CutEditorBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 180)
-CutEditorBtn.TextColor3 = Color3.new(1, 1, 1)
-CutEditorBtn.TextSize = 12
-CutEditorBtn.Font = Enum.Font.GothamBold
-CutEditorBtn.Text = "✂️ Cut Editor"
-CutEditorBtn.Parent = EditorSection
+local PlayCorner = Instance.new("UICorner")
+PlayCorner.CornerRadius = UDim.new(0, 6)
+PlayCorner.Parent = PlayBtn
 
-local CutEditorCorner = Instance.new("UICorner")
-CutEditorCorner.CornerRadius = UDim.new(0, 6)
-CutEditorCorner.Parent = CutEditorBtn
+local SaveCurrentBtn = Instance.new("TextButton")
+SaveCurrentBtn.Name = "shhhhnayy05_SaveCurrentBtn"
+SaveCurrentBtn.Size = UDim2.new(0.48, -5, 0, 40)
+SaveCurrentBtn.Position = UDim2.new(0.52, 0, 0.5, -20)
+SaveCurrentBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 150)
+SaveCurrentBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveCurrentBtn.TextSize = 14
+SaveCurrentBtn.Font = Enum.Font.GothamBold
+SaveCurrentBtn.Text = "💾 Save"
+SaveCurrentBtn.Parent = ActionSection
 
-local JoinEditorBtn = Instance.new("TextButton")
-JoinEditorBtn.Name = "shhhhnayy05_JoinEditorBtn"
-JoinEditorBtn.Size = UDim2.new(0.48, 0, 0, 30)
-JoinEditorBtn.Position = UDim2.new(0.52, 0, 0.5, -15)
-JoinEditorBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 180)
-JoinEditorBtn.TextColor3 = Color3.new(1, 1, 1)
-JoinEditorBtn.TextSize = 12
-JoinEditorBtn.Font = Enum.Font.GothamBold
-JoinEditorBtn.Text = "🔗 Join Walks"
-JoinEditorBtn.Parent = EditorSection
+local SaveCurrentCorner = Instance.new("UICorner")
+SaveCurrentCorner.CornerRadius = UDim.new(0, 6)
+SaveCurrentCorner.Parent = SaveCurrentBtn
 
-local JoinEditorCorner = Instance.new("UICorner")
-JoinEditorCorner.CornerRadius = UDim.new(0, 6)
-JoinEditorCorner.Parent = JoinEditorBtn
+-- Saved Walks Section
+local SavedSection = Instance.new("Frame")
+SavedSection.Name = "shhhhnayy05_SavedSection"
+SavedSection.Size = UDim2.new(1, 0, 0, 250)
+SavedSection.BackgroundColor3 = CONFIG.COLOR_SECONDARY
+SavedSection.BorderSizePixel = 0
+SavedSection.Parent = MainContent
 
--- ==================== SAVED FILES SECTION ==================== --
+local SavedCorner = Instance.new("UICorner")
+SavedCorner.CornerRadius = UDim.new(0, 8)
+SavedCorner.Parent = SavedSection
 
-local FilesSection = Instance.new("Frame")
-FilesSection.Name = "shhhhnayy05_FilesSection"
-FilesSection.Size = UDim2.new(1, 0, 0, 200)
-FilesSection.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-FilesSection.BorderSizePixel = 0
-FilesSection.Parent = ContentFrame
+local SavedTitle = Instance.new("Frame")
+SavedTitle.Name = "shhhhnayy05_SavedTitle"
+SavedTitle.Size = UDim2.new(1, 0, 0, 28)
+SavedTitle.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+SavedTitle.BorderSizePixel = 0
+SavedTitle.Parent = SavedSection
 
-local FilesCorner = Instance.new("UICorner")
-FilesCorner.CornerRadius = UDim.new(0, 8)
-FilesCorner.Parent = FilesSection
+local SavedTitleCorner = Instance.new("UICorner")
+SavedTitleCorner.CornerRadius = UDim.new(0, 8)
+SavedTitleCorner.Parent = SavedTitle
 
-local FilesTitleFrame = Instance.new("Frame")
-FilesTitleFrame.Name = "shhhhnayy05_FilesTitleFrame"
-FilesTitleFrame.Size = UDim2.new(1, 0, 0, 28)
-FilesTitleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-FilesTitleFrame.BorderSizePixel = 0
-FilesTitleFrame.Parent = FilesSection
+local SavedTitleLabel = Instance.new("TextLabel")
+SavedTitleLabel.Name = "shhhhnayy05_SavedTitleLabel"
+SavedTitleLabel.Size = UDim2.new(1, 0, 1, 0)
+SavedTitleLabel.BackgroundTransparency = 1
+SavedTitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+SavedTitleLabel.TextSize = 13
+SavedTitleLabel.Font = Enum.Font.GothamBold
+SavedTitleLabel.Text = "📁 Saved Walks"
+SavedTitleLabel.Parent = SavedTitle
 
-local FilesTitleCorner = Instance.new("UICorner")
-FilesTitleCorner.CornerRadius = UDim.new(0, 8)
-FilesTitleCorner.Parent = FilesTitleFrame
+local SavedList = Instance.new("ScrollingFrame")
+SavedList.Name = "shhhhnayy05_SavedList"
+SavedList.Size = UDim2.new(1, -15, 0, 210)
+SavedList.Position = UDim2.new(0, 5, 0, 33)
+SavedList.BackgroundTransparency = 1
+SavedList.ScrollBarThickness = 4
+SavedList.Parent = SavedSection
 
-local FilesTitleLabel = Instance.new("TextLabel")
-FilesTitleLabel.Name = "shhhhnayy05_FilesTitleLabel"
-FilesTitleLabel.Size = UDim2.new(1, 0, 1, 0)
-FilesTitleLabel.BackgroundTransparency = 1
-FilesTitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-FilesTitleLabel.TextSize = 13
-FilesTitleLabel.Font = Enum.Font.GothamBold
-FilesTitleLabel.Text = "📁 Edited Walks"
-FilesTitleLabel.Parent = FilesTitleFrame
+local SavedListLayout = Instance.new("UIListLayout")
+SavedListLayout.Padding = UDim.new(0, 5)
+SavedListLayout.Parent = SavedList
 
-local FilesList = Instance.new("ScrollingFrame")
-FilesList.Name = "shhhhnayy05_FilesList"
-FilesList.Size = UDim2.new(1, -15, 0, 160)
-FilesList.Position = UDim2.new(0, 5, 0, 33)
-FilesList.BackgroundTransparency = 1
-FilesList.ScrollBarThickness = 4
-FilesList.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
-FilesList.Parent = FilesSection
+-- ==================== CUT EDITOR WINDOW ==================== --
 
-local FilesLayout = Instance.new("UIListLayout")
-FilesLayout.Padding = UDim.new(0, 5)
-FilesLayout.Parent = FilesList
+local CutWindow = Instance.new("Frame")
+CutWindow.Name = "shhhhnayy05_CutWindow"
+CutWindow.Size = UDim2.new(0, CONFIG.GUI_WIDTH, 0, CONFIG.GUI_HEIGHT)
+CutWindow.Position = UDim2.new(0.5, -CONFIG.GUI_WIDTH/2 - 200, 0.5, -CONFIG.GUI_HEIGHT/2)
+CutWindow.BackgroundColor3 = CONFIG.COLOR_PRIMARY
+CutWindow.BorderSizePixel = 0
+CutWindow.Visible = false
+CutWindow.Parent = ScreenGui
 
--- ==================== HELPER FUNCTIONS ==================== --
+Windows.CutEditor.Frame = CutWindow
 
-local function updateFileList()
-    for _, child in pairs(FilesList:GetChildren()) do
-        if child:IsA("Frame") then
-            child:Destroy()
+local CutWindowCorner = Instance.new("UICorner")
+CutWindowCorner.CornerRadius = UDim.new(0, 12)
+CutWindowCorner.Parent = CutWindow
+
+local CutWindowStroke = Instance.new("UIStroke")
+CutWindowStroke.Color = CONFIG.COLOR_ACCENT
+CutWindowStroke.Thickness = 2
+CutWindowStroke.Parent = CutWindow
+
+-- Cut Title Bar
+local CutTitleBar = Instance.new("Frame")
+CutTitleBar.Name = "shhhhnayy05_CutTitleBar"
+CutTitleBar.Size = UDim2.new(1, 0, 0, 40)
+CutTitleBar.BackgroundColor3 = Color3.fromRGB(60, 40, 70)
+CutTitleBar.BorderSizePixel = 0
+CutTitleBar.Parent = CutWindow
+
+local CutTitleCorner = Instance.new("UICorner")
+CutTitleCorner.CornerRadius = UDim.new(0, 12)
+CutTitleCorner.Parent = CutTitleBar
+
+local CutTitleLabel = Instance.new("TextLabel")
+CutTitleLabel.Name = "shhhhnayy05_CutTitleLabel"
+CutTitleLabel.Size = UDim2.new(1, -80, 1, 0)
+CutTitleLabel.Position = UDim2.new(0, 15, 0, 0)
+CutTitleLabel.BackgroundTransparency = 1
+CutTitleLabel.TextColor3 = Color3.new(1, 1, 1)
+CutTitleLabel.TextSize = 16
+CutTitleLabel.Font = Enum.Font.GothamBold
+CutTitleLabel.Text = "✂️ Cut Editor"
+CutTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+CutTitleLabel.Parent = CutTitleBar
+
+-- Cut Toggle Button (in window)
+local CutWinToggleBtn = Instance.new("TextButton")
+CutWinToggleBtn.Name = "shhhhnayy05_CutWinToggleBtn"
+CutWinToggleBtn.Size = UDim2.new(0, 80, 0, 30)
+CutWinToggleBtn.Position = UDim2.new(1, -90, 0.5, -15)
+CutWinToggleBtn.BackgroundColor3 = CONFIG.COLOR_ACCENT
+CutWinToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+CutWinToggleBtn.TextSize = 12
+CutWinToggleBtn.Font = Enum.Font.GothamBold
+CutWinToggleBtn.Text = "Tutup ✕"
+CutWinToggleBtn.Parent = CutTitleBar
+
+local CutWinToggleCorner = Instance.new("UICorner")
+CutWinToggleCorner.CornerRadius = UDim.new(0, 6)
+CutWinToggleCorner.Parent = CutWinToggleBtn
+
+-- Cut Content
+local CutContent = Instance.new("Frame")
+CutContent.Name = "shhhhnayy05_CutContent"
+CutContent.Size = UDim2.new(1, -20, 1, -50)
+CutContent.Position = UDim2.new(0, 10, 0, 45)
+CutContent.BackgroundTransparency = 1
+CutContent.Parent = CutWindow
+
+-- Walk Selection
+local CutSelectLabel = Instance.new("TextLabel")
+CutSelectLabel.Name = "shhhhnayy05_CutSelectLabel"
+CutSelectLabel.Size = UDim2.new(1, 0, 0, 25)
+CutSelectLabel.BackgroundTransparency = 1
+CutSelectLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+CutSelectLabel.TextSize = 12
+CutSelectLabel.Font = Enum.Font.GothamBold
+CutSelectLabel.Text = "Pilih Walk:"
+CutSelectLabel.TextXAlignment = Enum.TextXAlignment.Left
+CutSelectLabel.Parent = CutContent
+
+local CutDropdown = Instance.new("TextButton")
+CutDropdown.Name = "shhhhnayy05_CutDropdown"
+CutDropdown.Size = UDim2.new(1, 0, 0, 35)
+CutDropdown.Position = UDim2.new(0, 0, 0, 30)
+CutDropdown.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+CutDropdown.TextColor3 = Color3.new(1, 1, 1)
+CutDropdown.TextSize = 13
+CutDropdown.Font = Enum.Font.Gotham
+CutDropdown.Text = "Pilih walk..."
+CutDropdown.TextXAlignment = Enum.TextXAlignment.Left
+CutDropdown.Parent = CutContent
+
+local CutDropdownCorner = Instance.new("UICorner")
+CutDropdownCorner.CornerRadius = UDim.new(0, 6)
+CutDropdownCorner.Parent = CutDropdown
+
+-- Time Inputs
+local CutTimeLabel = Instance.new("TextLabel")
+CutTimeLabel.Name = "shhhhnayy05_CutTimeLabel"
+CutTimeLabel.Size = UDim2.new(1, 0, 0, 25)
+CutTimeLabel.Position = UDim2.new(0, 0, 0, 80)
+CutTimeLabel.BackgroundTransparency = 1
+CutTimeLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+CutTimeLabel.TextSize = 12
+CutTimeLabel.Font = Enum.Font.GothamBold
+CutTimeLabel.Text = "Rentang Waktu (detik):"
+CutTimeLabel.TextXAlignment = Enum.TextXAlignment.Left
+CutTimeLabel.Parent = CutContent
+
+local CutStartLabel = Instance.new("TextLabel")
+CutStartLabel.Name = "shhhhnayy05_CutStartLabel"
+CutStartLabel.Size = UDim2.new(0, 60, 0, 30)
+CutStartLabel.Position = UDim2.new(0, 0, 0, 110)
+CutStartLabel.BackgroundTransparency = 1
+CutStartLabel.TextColor3 = Color3.new(1, 1, 1)
+CutStartLabel.TextSize = 12
+CutStartLabel.Font = Enum.Font.Gotham
+CutStartLabel.Text = "Mulai:"
+CutStartLabel.Parent = CutContent
+
+local CutStartInput = Instance.new("TextBox")
+CutStartInput.Name = "shhhhnayy05_CutStartInput"
+CutStartInput.Size = UDim2.new(0, 80, 0, 30)
+CutStartInput.Position = UDim2.new(0, 70, 0, 110)
+CutStartInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+CutStartInput.TextColor3 = Color3.new(1, 1, 1)
+CutStartInput.TextSize = 14
+CutStartInput.Font = Enum.Font.Gotham
+CutStartInput.Text = "0"
+CutStartInput.Parent = CutContent
+
+local CutStartCorner = Instance.new("UICorner")
+CutStartCorner.CornerRadius = UDim.new(0, 6)
+CutStartCorner.Parent = CutStartInput
+
+local CutEndLabel = Instance.new("TextLabel")
+CutEndLabel.Name = "shhhhnayy05_CutEndLabel"
+CutEndLabel.Size = UDim2.new(0, 60, 0, 30)
+CutEndLabel.Position = UDim2.new(0.5, 0, 0, 110)
+CutEndLabel.BackgroundTransparency = 1
+CutEndLabel.TextColor3 = Color3.new(1, 1, 1)
+CutEndLabel.TextSize = 12
+CutEndLabel.Font = Enum.Font.Gotham
+CutEndLabel.Text = "Akhir:"
+CutEndLabel.Parent = CutContent
+
+local CutEndInput = Instance.new("TextBox")
+CutEndInput.Name = "shhhhnayy05_CutEndInput"
+CutEndInput.Size = UDim2.new(0, 80, 0, 30)
+CutEndInput.Position = UDim2.new(0.5, 70, 0, 110)
+CutEndInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+CutEndInput.TextColor3 = Color3.new(1, 1, 1)
+CutEndInput.TextSize = 14
+CutEndInput.Font = Enum.Font.Gotham
+CutEndInput.Text = "0"
+CutEndInput.Parent = CutContent
+
+local CutEndCorner = Instance.new("UICorner")
+CutEndCorner.CornerRadius = UDim.new(0, 6)
+CutEndCorner.Parent = CutEndInput
+
+-- Preview and Apply Buttons
+local CutPreviewBtn = Instance.new("TextButton")
+CutPreviewBtn.Name = "shhhhnayy05_CutPreviewBtn"
+CutPreviewBtn.Size = UDim2.new(0.48, -5, 0, 40)
+CutPreviewBtn.Position = UDim2.new(0, 0, 0, 160)
+CutPreviewBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 200)
+CutPreviewBtn.TextColor3 = Color3.new(1, 1, 1)
+CutPreviewBtn.TextSize = 14
+CutPreviewBtn.Font = Enum.Font.GothamBold
+CutPreviewBtn.Text = "▶️ Preview"
+CutPreviewBtn.Parent = CutContent
+
+local CutPreviewCorner = Instance.new("UICorner")
+CutPreviewCorner.CornerRadius = UDim.new(0, 6)
+CutPreviewCorner.Parent = CutPreviewBtn
+
+local CutApplyBtn = Instance.new("TextButton")
+CutApplyBtn.Name = "shhhhnayy05_CutApplyBtn"
+CutApplyBtn.Size = UDim2.new(0.48, -5, 0, 40)
+CutApplyBtn.Position = UDim2.new(0.52, 0, 0, 160)
+CutApplyBtn.BackgroundColor3 = CONFIG.COLOR_ACCENT
+CutApplyBtn.TextColor3 = Color3.new(1, 1, 1)
+CutApplyBtn.TextSize = 14
+CutApplyBtn.Font = Enum.Font.GothamBold
+CutApplyBtn.Text = "✂️ Apply Cut"
+CutApplyBtn.Parent = CutContent
+
+local CutApplyCorner = Instance.new("UICorner")
+CutApplyCorner.CornerRadius = UDim.new(0, 6)
+CutApplyCorner.Parent = CutApplyBtn
+
+-- Info
+local CutInfoLabel = Instance.new("TextLabel")
+CutInfoLabel.Name = "shhhhnayy05_CutInfoLabel"
+CutInfoLabel.Size = UDim2.new(1, 0, 0, 60)
+CutCutInfoLabel.Position = UDim2.new(0, 0, 0, 220)
+CutInfoLabel.BackgroundTransparency = 1
+CutInfoLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+CutInfoLabel.TextSize = 11
+CutInfoLabel.Font = Enum.Font.Gotham
+CutInfoLabel.Text = "💡 Tips:\n• Masukkan waktu mulai dan akhir\n• Preview sebelum apply\n• Hasil cut akan tersimpan sebagai walk baru"
+CutInfoLabel.TextWrapped = true
+CutInfoLabel.Parent = CutContent
+
+-- ==================== JOIN EDITOR WINDOW ==================== --
+
+local JoinWindow = Instance.new("Frame")
+JoinWindow.Name = "shhhhnayy05_JoinWindow"
+JoinWindow.Size = UDim2.new(0, CONFIG.GUI_WIDTH, 0, CONFIG.GUI_HEIGHT)
+JoinWindow.Position = UDim2.new(0.5, -CONFIG.GUI_WIDTH/2 + 200, 0.5, -CONFIG.GUI_HEIGHT/2)
+JoinWindow.BackgroundColor3 = CONFIG.COLOR_PRIMARY
+JoinWindow.BorderSizePixel = 0
+JoinWindow.Visible = false
+JoinWindow.Parent = ScreenGui
+
+Windows.JoinEditor.Frame = JoinWindow
+
+local JoinWindowCorner = Instance.new("UICorner")
+JoinWindowCorner.CornerRadius = UDim.new(0, 12)
+JoinWindowCorner.Parent = JoinWindow
+
+local JoinWindowStroke = Instance.new("UIStroke")
+JoinWindowStroke.Color = Color3.fromRGB(80, 150, 180)
+JoinWindowStroke.Thickness = 2
+JoinWindowStroke.Parent = JoinWindow
+
+-- Join Title Bar
+local JoinTitleBar = Instance.new("Frame")
+JoinTitleBar.Name = "shhhhnayy05_JoinTitleBar"
+JoinTitleBar.Size = UDim2.new(1, 0, 0, 40)
+JoinTitleBar.BackgroundColor3 = Color3.fromRGB(40, 60, 70)
+JoinTitleBar.BorderSizePixel = 0
+JoinTitleBar.Parent = JoinWindow
+
+local JoinTitleCorner = Instance.new("UICorner")
+JoinTitleCorner.CornerRadius = UDim.new(0, 12)
+JoinTitleCorner.Parent = JoinTitleBar
+
+local JoinTitleLabel = Instance.new("TextLabel")
+JoinTitleLabel.Name = "shhhhnayy05_JoinTitleLabel"
+JoinTitleLabel.Size = UDim2.new(1, -80, 1, 0)
+JoinTitleLabel.Position = UDim2.new(0, 15, 0, 0)
+JoinTitleLabel.BackgroundTransparency = 1
+JoinTitleLabel.TextColor3 = Color3.new(1, 1, 1)
+JoinTitleLabel.TextSize = 16
+JoinTitleLabel.Font = Enum.Font.GothamBold
+JoinTitleLabel.Text = "🔗 Join Editor"
+JoinTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+JoinTitleLabel.Parent = JoinTitleBar
+
+-- Join Toggle Button (in window)
+local JoinWinToggleBtn = Instance.new("TextButton")
+JoinWinToggleBtn.Name = "shhhhnayy05_JoinWinToggleBtn"
+JoinWinToggleBtn.Size = UDim2.new(0, 80, 0, 30)
+JoinWinToggleBtn.Position = UDim2.new(1, -90, 0.5, -15)
+JoinWinToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 180)
+JoinWinToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+JoinWinToggleBtn.TextSize = 12
+JoinWinToggleBtn.Font = Enum.Font.GothamBold
+JoinWinToggleBtn.Text = "Tutup ✕"
+JoinWinToggleBtn.Parent = JoinTitleBar
+
+local JoinWinToggleCorner = Instance.new("UICorner")
+JoinWinToggleCorner.CornerRadius = UDim.new(0, 6)
+JoinWinToggleCorner.Parent = JoinWinToggleBtn
+
+-- Join Content
+local JoinContent = Instance.new("Frame")
+JoinContent.Name = "shhhhnayy05_JoinContent"
+JoinContent.Size = UDim2.new(1, -20, 1, -50)
+JoinContent.Position = UDim2.new(0, 10, 0, 45)
+JoinContent.BackgroundTransparency = 1
+JoinContent.Parent = JoinWindow
+
+local JoinSelectLabel = Instance.new("TextLabel")
+JoinSelectLabel.Name = "shhhhnayy05_JoinSelectLabel"
+JoinSelectLabel.Size = UDim2.new(1, 0, 0, 25)
+JoinSelectLabel.BackgroundTransparency = 1
+JoinSelectLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+JoinSelectLabel.TextSize = 12
+JoinSelectLabel.Font = Enum.Font.GothamBold
+JoinSelectLabel.Text = "Pilih 2 atau lebih walk:"
+JoinSelectLabel.TextXAlignment = Enum.TextXAlignment.Left
+JoinSelectLabel.Parent = JoinContent
+
+-- Walk List Container
+local JoinListFrame = Instance.new("ScrollingFrame")
+JoinListFrame.Name = "shhhhnayy05_JoinListFrame"
+JoinListFrame.Size = UDim2.new(1, 0, 0, 180)
+JoinListFrame.Position = UDim2.new(0, 0, 0, 30)
+JoinListFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+JoinListFrame.BorderSizePixel = 0
+JoinListFrame.ScrollBarThickness = 4
+JoinListFrame.Parent = JoinContent
+
+local JoinListCorner = Instance.new("UICorner")
+JoinListCorner.CornerRadius = UDim.new(0, 8)
+JoinListCorner.Parent = JoinListFrame
+
+local JoinListLayout = Instance.new("UIListLayout")
+JoinListLayout.Padding = UDim.new(0, 5)
+JoinListLayout.Parent = JoinListFrame
+
+-- Join Name Input
+local JoinNameLabel = Instance.new("TextLabel")
+JoinNameLabel.Name = "shhhhnayy05_JoinNameLabel"
+JoinNameLabel.Size = UDim2.new(1, 0, 0, 25)
+JoinNameLabel.Position = UDim2.new(0, 0, 0, 220)
+JoinNameLabel.BackgroundTransparency = 1
+JoinNameLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+JoinNameLabel.TextSize = 12
+JoinNameLabel.Font = Enum.Font.GothamBold
+JoinNameLabel.Text = "Nama Hasil Gabungan:"
+JoinNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+JoinNameLabel.Parent = JoinContent
+
+local JoinNameInput = Instance.new("TextBox")
+JoinNameInput.Name = "shhhhnayy05_JoinNameInput"
+JoinNameInput.Size = UDim2.new(1, 0, 0, 35)
+JoinNameInput.Position = UDim2.new(0, 0, 0, 250)
+JoinNameInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+JoinNameInput.TextColor3 = Color3.new(1, 1, 1)
+JoinNameInput.TextSize = 13
+JoinNameInput.Font = Enum.Font.Gotham
+JoinNameInput.PlaceholderText = "Masukkan nama..."
+JoinNameInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
+JoinNameInput.Text = ""
+JoinNameInput.Parent = JoinContent
+
+local JoinNameCorner = Instance.new("UICorner")
+JoinNameCorner.CornerRadius = UDim.new(0, 6)
+JoinNameCorner.Parent = JoinNameInput
+
+-- Join Apply Button
+local JoinApplyBtn = Instance.new("TextButton")
+JoinApplyBtn.Name = "shhhhnayy05_JoinApplyBtn"
+JoinApplyBtn.Size = UDim2.new(1, 0, 0, 40)
+JoinApplyBtn.Position = UDim2.new(0, 0, 0, 300)
+JoinApplyBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 180)
+JoinApplyBtn.TextColor3 = Color3.new(1, 1, 1)
+JoinApplyBtn.TextSize = 14
+JoinApplyBtn.Font = Enum.Font.GothamBold
+JoinApplyBtn.Text = "🔗 Gabung Walks"
+JoinApplyBtn.Parent = JoinContent
+
+local JoinApplyCorner = Instance.new("UICorner")
+JoinApplyCorner.CornerRadius = UDim.new(0, 6)
+JoinApplyCorner.Parent = JoinApplyBtn
+
+-- ==================== FUNCTIONS ==================== --
+
+-- Toggle Window Function
+local function toggleWindow(windowName)
+    local windowData = Windows[windowName]
+    if not windowData or not windowData.Frame then return end
+    
+    windowData.Visible = not windowData.Visible
+    windowData.Frame.Visible = windowData.Visible
+    
+    -- Update button color
+    if windowData.Button then
+        if windowData.Visible then
+            windowData.Button.BackgroundColor3 = CONFIG.COLOR_ACCENT
+        else
+            windowData.Button.BackgroundColor3 = CONFIG.COLOR_SECONDARY
         end
     end
     
-    if #savedWalks == 0 then
-        local EmptyLabel = Instance.new("TextLabel")
-        EmptyLabel.Name = "shhhhnayy05_EmptyLabel"
-        EmptyLabel.Size = UDim2.new(1, 0, 0, 100)
-        EmptyLabel.BackgroundTransparency = 1
-        EmptyLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
-        EmptyLabel.TextSize = 13
-        EmptyLabel.Font = Enum.Font.Gotham
-        EmptyLabel.Text = "Belum ada walk tersimpan.\n\nRekam walk terlebih dahulu,\nlalu edit menggunakan Cut/Join."
-        EmptyLabel.TextWrapped = true
-        EmptyLabel.Parent = FilesList
-        FilesList.CanvasSize = UDim2.new(0, 0, 0, 100)
-        return
+    -- Animation
+    if windowData.Visible then
+        windowData.Frame.Size = UDim2.new(0, CONFIG.GUI_WIDTH * 0.9, 0, CONFIG.GUI_HEIGHT * 0.9)
+        TweenService:Create(windowData.Frame, TweenInfo.new(0.2), {
+            Size = UDim2.new(0, CONFIG.GUI_WIDTH, 0, CONFIG.GUI_HEIGHT)
+        }):Play()
     end
-    
-    for i, walkData in ipairs(savedWalks) do
-        local FileFrame = Instance.new("Frame")
-        FileFrame.Name = "shhhhnayy05_FileFrame_" .. i
-        FileFrame.Size = UDim2.new(1, 0, 0, 55)
-        FileFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-        FileFrame.BorderSizePixel = 0
-        FileFrame.Parent = FilesList
-        
-        local FileCorner = Instance.new("UICorner")
-        FileCorner.CornerRadius = UDim.new(0, 6)
-        FileCorner.Parent = FileFrame
-        
-        local FileName = Instance.new("TextLabel")
-        FileName.Name = "shhhhnayy05_FileName"
-        FileName.Size = UDim2.new(1, -130, 0, 25)
-        FileName.Position = UDim2.new(0, 10, 0, 5)
-        FileName.BackgroundTransparency = 1
-        FileName.TextColor3 = Color3.new(1, 1, 1)
-        FileName.TextSize = 13
-        FileName.Font = Enum.Font.GothamBold
-        FileName.Text = walkData.name
-        FileName.TextXAlignment = Enum.TextXAlignment.Left
-        FileName.Parent = FileFrame
-        
-        local FileInfo = Instance.new("TextLabel")
-        FileInfo.Name = "shhhhnayy05_FileInfo"
-        FileInfo.Size = UDim2.new(1, -130, 0, 18)
-        FileInfo.Position = UDim2.new(0, 10, 0, 30)
-        FileInfo.BackgroundTransparency = 1
-        FileInfo.TextColor3 = Color3.fromRGB(150, 150, 170)
-        FileInfo.TextSize = 10
-        FileInfo.Font = Enum.Font.Gotham
-        FileInfo.Text = string.format("%.1fs | %.1fm | %d pts", 
-            walkData.duration, walkData.distance, #walkData.positions)
-        FileInfo.TextXAlignment = Enum.TextXAlignment.Left
-        FileInfo.Parent = FileFrame
-        
-        local LoadBtn = Instance.new("TextButton")
-        LoadBtn.Name = "shhhhnayy05_LoadBtn"
-        LoadBtn.Size = UDim2.new(0, 55, 0, 45)
-        LoadBtn.Position = UDim2.new(1, -120, 0.5, -22)
-        LoadBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-        LoadBtn.TextColor3 = Color3.new(1, 1, 1)
-        LoadBtn.TextSize = 11
-        LoadBtn.Font = Enum.Font.GothamBold
-        LoadBtn.Text = "▶️ Play"
-        LoadBtn.Parent = FileFrame
-        
-        local LoadCorner = Instance.new("UICorner")
-        LoadCorner.CornerRadius = UDim.new(0, 4)
-        LoadCorner.Parent = LoadBtn
-        
-        local DeleteBtn = Instance.new("TextButton")
-        DeleteBtn.Name = "shhhhnayy05_DeleteBtn"
-        DeleteBtn.Size = UDim2.new(0, 55, 0, 45)
-        DeleteBtn.Position = UDim2.new(1, -60, 0.5, -22)
-        DeleteBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-        DeleteBtn.TextColor3 = Color3.new(1, 1, 1)
-        DeleteBtn.TextSize = 11
-        DeleteBtn.Font = Enum.Font.GothamBold
-        DeleteBtn.Text = "🗑️"
-        DeleteBtn.Parent = FileFrame
-        
-        local DeleteCorner = Instance.new("UICorner")
-        DeleteCorner.CornerRadius = UDim.new(0, 4)
-        DeleteCorner.Parent = DeleteBtn
-        
-        LoadBtn.MouseButton1Click:Connect(function()
-            playWalk(walkData)
-        end)
-        
-        DeleteBtn.MouseButton1Click:Connect(function()
-            createDeleteDialog(i)
-        end)
-    end
-    
-    FilesList.CanvasSize = UDim2.new(0, 0, 0, #savedWalks * 60)
 end
 
--- ==================== PLAYBACK FUNCTION (Using Your Logic) ==================== --
-
-function playWalk(walkData)
-    if isPlaying then return end
-    if isRecording then return end
-    
-    isPlaying = true
-    
-    Character = Player.Character or Player.CharacterAdded:Wait()
-    local hrp = Character:WaitForChild("HumanoidRootPart")
-    local hum = Character:WaitForChild("Humanoid")
-    
-    -- Disable collisions temporarily
-    for _, v in pairs(Character:GetChildren()) do
-        if v:IsA("BasePart") then 
-            v.CanCollide = false 
-        end
-    end
-    
-    -- Playback notification
-    local PlaybackFrame = Instance.new("Frame")
-    PlaybackFrame.Name = "shhhhnayy05_PlaybackFrame"
-    PlaybackFrame.Size = UDim2.new(0, 200, 0, 40)
-    PlaybackFrame.Position = UDim2.new(0.5, -100, 0, 100)
-    PlaybackFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    PlaybackFrame.BorderSizePixel = 0
-    PlaybackFrame.Parent = ScreenGui
-    
-    local PlaybackCorner = Instance.new("UICorner")
-    PlaybackCorner.CornerRadius = UDim.new(0.5, 0)
-    PlaybackCorner.Parent = PlaybackFrame
-    
-    local PlaybackStroke = Instance.new("UIStroke")
-    PlaybackStroke.Color = Color3.fromRGB(50, 150, 50)
-    PlaybackStroke.Thickness = 2
-    PlaybackStroke.Parent = PlaybackFrame
-    
-    local PlaybackLabel = Instance.new("TextLabel")
-    PlaybackLabel.Name = "shhhhnayy05_PlaybackLabel"
-    PlaybackLabel.Size = UDim2.new(1, -10, 1, 0)
-    PlaybackLabel.Position = UDim2.new(0, 5, 0, 0)
-    PlaybackLabel.BackgroundTransparency = 1
-    PlaybackLabel.TextColor3 = Color3.new(1, 1, 1)
-    PlaybackLabel.TextSize = 14
-    PlaybackLabel.Font = Enum.Font.GothamBold
-    PlaybackLabel.Text = "▶️ Playing..."
-    PlaybackLabel.Parent = PlaybackFrame
-    
-    local StopButton = Instance.new("TextButton")
-    StopButton.Name = "shhhhnayy05_StopButton"
-    StopButton.Size = UDim2.new(0, 80, 0, 35)
-    StopButton.Position = UDim2.new(0.5, -40, 0, 150)
-    StopButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-    StopButton.TextColor3 = Color3.new(1, 1, 1)
-    StopButton.TextSize = 13
-    StopButton.Font = Enum.Font.GothamBold
-    StopButton.Text = "⏹ Stop"
-    StopButton.Parent = ScreenGui
-    
-    local StopCorner = Instance.new("UICorner")
-    StopCorner.CornerRadius = UDim.new(0.5, 0)
-    StopCorner.Parent = StopButton
-    
-    local stopRequested = false
-    
-    StopButton.MouseButton1Click:Connect(function()
-        stopRequested = true
-        isPlaying = false
-    end)
-    
-    -- Playback using your logic with state
-    local positions = walkData.positions
-    
-    for i = 1, #positions do
-        if not isPlaying or stopRequested then break end
-        
-        local data = positions[i]
-        
-        -- 1. Force Position (Smooth)
-        hrp.CFrame = data.cf
-        
-        -- 2. Force Animation State (ANTI STIFF JUMP)
-        if hum:GetState() ~= data.state then
-            hum:ChangeState(data.state)
-        end
-        
-        -- 3. Give visual velocity so Roblox Animate script works
-        hrp.Velocity = data.velocity
-        
-        RunService.Heartbeat:Wait()
-    end
-    
-    -- Restore collisions
-    for _, v in pairs(Character:GetChildren()) do
-        if v:IsA("BasePart") then 
-            v.CanCollide = true 
-        end
-    end
-    
-    PlaybackFrame:Destroy()
-    StopButton:Destroy()
-    isPlaying = false
-end
-
--- ==================== RECORDING FUNCTIONS ==================== --
-
+-- Recording Functions
 local function startRecording()
     if isRecording then return end
     
     isRecording = true
     currentRecording = {}
-    startTime = tick()
+    local startTime = tick()
     
     RecordIcon.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
     TimerFrame.Visible = true
     RecordInfoFrame.Visible = true
-    RecordToolTip.Text = "Stop Recording"
     
     recordConnection = RunService.Heartbeat:Connect(function()
         if not isRecording then return end
@@ -658,19 +829,16 @@ local function startRecording()
             local hum = char:FindFirstChild("Humanoid")
             
             if hrp and hum then
-                -- Record state: Important so jump isn't stiff
                 table.insert(currentRecording, {
                     cf = hrp.CFrame,
                     velocity = hrp.Velocity,
-                    state = hum:GetState(), -- Record if Jumping, Running, or Falling
+                    state = hum:GetState(),
                     time = tick() - startTime
                 })
             end
         end
         
-        local elapsed = tick() - startTime
-        TimerLabel.Text = formatTime(elapsed)
-        RecordInfoLabel.Text = "⏺ Recording... " .. formatTime(elapsed)
+        TimerLabel.Text = formatTime(tick() - startTime)
     end)
 end
 
@@ -678,678 +846,453 @@ local function stopRecording()
     if not isRecording then return end
     
     isRecording = false
-    
     if recordConnection then
         recordConnection:Disconnect()
         recordConnection = nil
     end
     
-    RecordIcon.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    RecordIcon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     TimerFrame.Visible = false
     RecordInfoFrame.Visible = false
-    RecordToolTip.Text = "Record Walk"
     
-    if #currentRecording > 1 then
+    -- Auto open save dialog if has data
+    if #currentRecording > 10 then
+        -- Create save dialog
         createSaveDialog()
-    else
-        currentRecording = {}
     end
 end
 
-local function toggleRecording()
-    if isRecording then
-        stopRecording()
-    else
-        startRecording()
+-- Play Function (Your Logic)
+local function playWalk(walkData)
+    if isPlaying or isRecording then return end
+    if not walkData or not walkData.positions or #walkData.positions == 0 then return end
+    
+    isPlaying = true
+    PlayBtn.Text = "⏹ Stop"
+    PlayBtn.BackgroundColor3 = CONFIG.COLOR_DANGER
+    
+    local char = Player.Character or Player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local hum = char:WaitForChild("Humanoid")
+    
+    -- Disable collisions
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then v.CanCollide = false end
     end
+    
+    for i = 1, #walkData.positions do
+        if not isPlaying then break end
+        
+        local data = walkData.positions[i]
+        
+        -- 1. Force Position
+        hrp.CFrame = data.cf
+        
+        -- 2. Force Animation State (ANTI KAKU)
+        if hum:GetState() ~= data.state then
+            hum:ChangeState(data.state)
+        end
+        
+        -- 3. Visual Velocity
+        hrp.Velocity = data.velocity
+        
+        RunService.Heartbeat:Wait()
+    end
+    
+    -- Restore collisions
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then v.CanCollide = true end
+    end
+    
+    isPlaying = false
+    PlayBtn.Text = "▶️ Play"
+    PlayBtn.BackgroundColor3 = CONFIG.COLOR_SUCCESS
 end
 
--- ==================== SAVE DIALOG ==================== --
-
+-- Save Dialog
 function createSaveDialog()
-    local existing = ScreenGui:FindFirstChild("shhhhnayy05_SaveDialog")
-    if existing then existing:Destroy() end
+    if #currentRecording == 0 then return end
+    
+    -- Close existing
+    if Windows.SaveDialog.Frame then
+        Windows.SaveDialog.Frame:Destroy()
+    end
     
     local Dialog = Instance.new("Frame")
     Dialog.Name = "shhhhnayy05_SaveDialog"
-    Dialog.Size = UDim2.new(0, 300, 0, 200)
-    Dialog.Position = UDim2.new(0.5, -150, 0.5, -100)
-    Dialog.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
+    Dialog.Size = UDim2.new(0, 300, 0, 180)
+    Dialog.Position = UDim2.new(0.5, -150, 0.5, -90)
+    Dialog.BackgroundColor3 = CONFIG.COLOR_PRIMARY
     Dialog.BorderSizePixel = 0
+    Dialog.ZIndex = 100
     Dialog.Parent = ScreenGui
     
-    -- Make dialog draggable
-    local DialogDrag = Instance.new("Frame")
-    DialogDrag.Name = "shhhhnayy05_DialogDrag"
-    DialogDrag.Size = UDim2.new(1, 0, 0, 40)
-    DialogDrag.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    DialogDrag.BorderSizePixel = 0
-    DialogDrag.Parent = Dialog
-    
-    local DialogCorner = Instance.new("UICorner")
-    DialogCorner.CornerRadius = UDim.new(0, 10)
-    DialogCorner.Parent = Dialog
-    
-    local DialogTitleCorner = Instance.new("UICorner")
-    DialogTitleCorner.CornerRadius = UDim.new(0, 10)
-    DialogTitleCorner.Parent = DialogDrag
-    
-    local DialogTitleLabel = Instance.new("TextLabel")
-    DialogTitleLabel.Name = "shhhhnayy05_DialogTitleLabel"
-    DialogTitleLabel.Size = UDim2.new(1, 0, 1, 0)
-    DialogTitleLabel.BackgroundTransparency = 1
-    DialogTitleLabel.TextColor3 = Color3.new(1, 1, 1)
-    DialogTitleLabel.TextSize = 14
-    DialogTitleLabel.Font = Enum.Font.GothamBold
-    DialogTitleLabel.Text = "💾 Simpan Walk"
-    DialogTitleLabel.Parent = DialogDrag
-    
-    local NameInput = Instance.new("TextBox")
-    NameInput.Name = "shhhhnayy05_NameInput"
-    NameInput.Size = UDim2.new(1, -30, 0, 40)
-    NameInput.Position = UDim2.new(0, 15, 0, 55)
-    NameInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    NameInput.TextColor3 = Color3.new(1, 1, 1)
-    NameInput.TextSize = 14
-    NameInput.Font = Enum.Font.Gotham
-    NameInput.PlaceholderText = "Masukkan judul walk..."
-    NameInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
-    NameInput.Text = ""
-    NameInput.ClearTextOnFocus = false
-    NameInput.Parent = Dialog
-    
-    local NameInputCorner = Instance.new("UICorner")
-    NameInputCorner.CornerRadius = UDim.new(0, 6)
-    NameInputCorner.Parent = NameInput
-    
-    local ButtonsFrame = Instance.new("Frame")
-    ButtonsFrame.Name = "shhhhnayy05_ButtonsFrame"
-    ButtonsFrame.Size = UDim2.new(1, -30, 0, 35)
-    ButtonsFrame.Position = UDim2.new(0, 15, 1, -50)
-    ButtonsFrame.BackgroundTransparency = 1
-    ButtonsFrame.Parent = Dialog
-    
-    local SaveBtn = Instance.new("TextButton")
-    SaveBtn.Name = "shhhhnayy05_SaveBtn"
-    SaveBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    SaveBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-    SaveBtn.TextColor3 = Color3.new(1, 1, 1)
-    SaveBtn.TextSize = 13
-    SaveBtn.Font = Enum.Font.GothamBold
-    SaveBtn.Text = "✅ Simpan"
-    SaveBtn.Parent = ButtonsFrame
-    
-    local SaveCorner = Instance.new("UICorner")
-    SaveCorner.CornerRadius = UDim.new(0, 6)
-    SaveCorner.Parent = SaveBtn
-    
-    local CancelBtn = Instance.new("TextButton")
-    CancelBtn.Name = "shhhhnayy05_CancelBtn"
-    CancelBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    CancelBtn.Position = UDim2.new(0.52, 0, 0, 0)
-    CancelBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-    CancelBtn.TextColor3 = Color3.new(1, 1, 1)
-    CancelBtn.TextSize = 13
-    CancelBtn.Font = Enum.Font.GothamBold
-    CancelBtn.Text = "✕ Batal"
-    CancelBtn.Parent = ButtonsFrame
-    
-    local CancelCorner = Instance.new("UICorner")
-    CancelCorner.CornerRadius = UDim.new(0, 6)
-    CancelCorner.Parent = CancelBtn
-    
-    delay(0.1, function()
-        NameInput:CaptureFocus()
-    end)
-    
-    local function saveWalk()
-        local name = NameInput.Text
-        if name ~= "" and #currentRecording > 1 then
-            local walkData = {
-                name = name,
-                positions = currentRecording,
-                duration = calculateDuration(currentRecording),
-                distance = calculateDistance(currentRecording),
-                speedMod = walkSpeedModifier,
-                timestamp = os.time()
-            }
-            table.insert(savedWalks, walkData)
-            saveWalks()
-            updateFileList()
-            currentRecording = {}
-            Dialog:Destroy()
-            
-            -- Success notification
-            local notif = Instance.new("Frame")
-            notif.Name = "shhhhnayy05_SuccessNotif"
-            notif.Size = UDim2.new(0, 250, 0, 40)
-            notif.Position = UDim2.new(0.5, -125, 0.8, 0)
-            notif.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-            notif.BorderSizePixel = 0
-            notif.Parent = ScreenGui
-            
-            local notifCorner = Instance.new("UICorner")
-            notifCorner.CornerRadius = UDim.new(0, 8)
-            notifCorner.Parent = notif
-            
-            local notifLabel = Instance.new("TextLabel")
-            notifLabel.Name = "shhhhnayy05_NotifLabel"
-            notifLabel.Size = UDim2.new(1, 0, 1, 0)
-            notifLabel.BackgroundTransparency = 1
-            notifLabel.TextColor3 = Color3.new(1, 1, 1)
-            notifLabel.TextSize = 13
-            notifLabel.Font = Enum.Font.GothamBold
-            notifLabel.Text = "✅ Walk berhasil disimpan!"
-            notifLabel.Parent = notif
-            
-            delay(2, function()
-                notif:Destroy()
-            end)
-        end
-    end
-    
-    SaveBtn.MouseButton1Click:Connect(saveWalk)
-    
-    CancelBtn.MouseButton1Click:Connect(function()
-        currentRecording = {}
-        Dialog:Destroy()
-    end)
-    
-    NameInput.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            saveWalk()
-        end
-    end)
-    
-    -- Make dialog draggable
-    makeDraggable(Dialog, DialogDrag)
-end
-
--- ==================== DELETE DIALOG ==================== --
-
-function createDeleteDialog(index)
-    local existing = ScreenGui:FindFirstChild("shhhhnayy05_DeleteDialog")
-    if existing then existing:Destroy() end
-    
-    local Dialog = Instance.new("Frame")
-    Dialog.Name = "shhhhnayy05_DeleteDialog"
-    Dialog.Size = UDim2.new(0, 280, 0, 160)
-    Dialog.Position = UDim2.new(0.5, -140, 0.5, -80)
-    Dialog.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    Dialog.BorderSizePixel = 0
-    Dialog.Parent = ScreenGui
+    Windows.SaveDialog.Frame = Dialog
+    Windows.SaveDialog.Visible = true
     
     local DialogCorner = Instance.new("UICorner")
     DialogCorner.CornerRadius = UDim.new(0, 10)
     DialogCorner.Parent = Dialog
     
     local DialogStroke = Instance.new("UIStroke")
-    DialogStroke.Color = Color3.fromRGB(180, 50, 50)
+    DialogStroke.Color = CONFIG.COLOR_SUCCESS
     DialogStroke.Thickness = 2
     DialogStroke.Parent = Dialog
     
-    local DialogIcon = Instance.new("TextLabel")
-    DialogIcon.Name = "shhhhnayy05_DialogIcon"
-    DialogIcon.Size = UDim2.new(1, 0, 0, 35)
-    DialogIcon.BackgroundTransparency = 1
-    DialogIcon.TextColor3 = Color3.new(1, 1, 1)
-    DialogIcon.TextSize = 24
-    DialogIcon.Font = Enum.Font.GothamBold
-    DialogIcon.Text = "⚠️"
-    DialogIcon.Parent = Dialog
+    -- Title
+    local DialogTitle = Instance.new("Frame")
+    DialogTitle.Size = UDim2.new(1, 0, 0, 35)
+    DialogTitle.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
+    DialogTitle.BorderSizePixel = 0
+    DialogTitle.Parent = Dialog
     
-    local DialogMessage = Instance.new("TextLabel")
-    DialogMessage.Name = "shhhhnayy05_DialogMessage"
-    DialogMessage.Size = UDim2.new(1, -30, 0, 50)
-    DialogMessage.Position = UDim2.new(0, 15, 0, 35)
-    DialogMessage.BackgroundTransparency = 1
-    DialogMessage.TextColor3 = Color3.new(1, 1, 1)
-    DialogMessage.TextSize = 13
-    DialogMessage.Font = Enum.Font.GothamBold
-    DialogMessage.Text = "Apakah Anda yakin ingin\nmenghapus file ini?\n\nFile yang dihapus tidak dapat dikembalikan."
-    DialogMessage.TextWrapped = true
-    DialogMessage.Parent = Dialog
+    local DialogTitleCorner = Instance.new("UICorner")
+    DialogTitleCorner.CornerRadius = UDim.new(0, 10)
+    DialogTitleCorner.Parent = DialogTitle
     
-    local YesBtn = Instance.new("TextButton")
-    YesBtn.Name = "shhhhnayy05_YesBtn"
-    YesBtn.Size = UDim2.new(0, 100, 0, 35)
-    YesBtn.Position = UDim2.new(0.25, -50, 1, -50)
-    YesBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-    YesBtn.TextColor3 = Color3.new(1, 1, 1)
-    YesBtn.TextSize = 14
-    YesBtn.Font = Enum.Font.GothamBold
-    YesBtn.Text = "✓ Ya"
-    YesBtn.Parent = Dialog
+    local DialogTitleLabel = Instance.new("TextLabel")
+    DialogTitleLabel.Size = UDim2.new(1, 0, 1, 0)
+    DialogTitleLabel.BackgroundTransparency = 1
+    DialogTitleLabel.TextColor3 = Color3.new(1, 1, 1)
+    DialogTitleLabel.TextSize = 14
+    DialogTitleLabel.Font = Enum.Font.GothamBold
+    DialogTitleLabel.Text = "💾 Simpan Walk"
+    DialogTitleLabel.Parent = DialogTitle
     
-    local YesCorner = Instance.new("UICorner")
-    YesCorner.CornerRadius = UDim.new(0, 6)
-    YesCorner.Parent = YesBtn
+    -- Close button
+    local DialogClose = Instance.new("TextButton")
+    DialogClose.Size = UDim2.new(0, 30, 0, 30)
+    DialogClose.Position = UDim2.new(1, -35, 0.5, -15)
+    DialogClose.BackgroundTransparency = 1
+    DialogClose.TextColor3 = Color3.new(1, 1, 1)
+    DialogClose.TextSize = 18
+    DialogClose.Font = Enum.Font.GothamBold
+    DialogClose.Text = "✕"
+    DialogClose.Parent = DialogTitle
     
-    local NoBtn = Instance.new("TextButton")
-    NoBtn.Name = "shhhhnayy05_NoBtn"
-    NoBtn.Size = UDim2.new(0, 100, 0, 35)
-    NoBtn.Position = UDim2.new(0.75, -50, 1, -50)
-    NoBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    NoBtn.TextColor3 = Color3.new(1, 1, 1)
-    NoBtn.TextSize = 14
-    NoBtn.Font = Enum.Font.GothamBold
-    NoBtn.Text = "✕ Tidak"
-    NoBtn.Parent = Dialog
+    -- Input
+    local NameInput = Instance.new("TextBox")
+    NameInput.Size = UDim2.new(1, -20, 0, 40)
+    NameInput.Position = UDim2.new(0, 10, 0, 45)
+    NameInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    NameInput.TextColor3 = Color3.new(1, 1, 1)
+    NameInput.TextSize = 14
+    NameInput.Font = Enum.Font.Gotham
+    NameInput.PlaceholderText = "Masukkan nama walk..."
+    NameInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
+    NameInput.Text = "Walk_" .. os.time()
+    NameInput.ClearTextOnFocus = false
+    NameInput.Parent = Dialog
     
-    local NoCorner = Instance.new("UICorner")
-    NoCorner.CornerRadius = UDim.new(0, 6)
-    NoCorner.Parent = NoBtn
+    local NameCorner = Instance.new("UICorner")
+    NameCorner.CornerRadius = UDim.new(0, 6)
+    NameCorner.Parent = NameInput
     
-    YesBtn.MouseButton1Click:Connect(function()
-        table.remove(savedWalks, index)
-        saveWalks()
-        updateFileList()
-        Dialog:Destroy()
-    end)
-    
-    NoBtn.MouseButton1Click:Connect(function()
-        Dialog:Destroy()
-    end)
-end
-
--- ==================== CUT EDITOR WINDOW ==================== --
-
-function createCutEditorWindow()
-    local existing = ScreenGui:FindFirstChild("shhhhnayy05_CutEditorWindow")
-    if existing then existing:Destroy() end
-    
-    if #savedWalks == 0 then
-        local notification = Instance.new("Frame")
-        notification.Name = "shhhhnayy05_Notification"
-        notification.Size = UDim2.new(0, 250, 0, 50)
-        notification.Position = UDim2.new(0.5, -125, 0.5, -25)
-        notification.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
-        notification.BorderSizePixel = 0
-        notification.Parent = ScreenGui
-        
-        local notifCorner = Instance.new("UICorner")
-        notifCorner.CornerRadius = UDim.new(0, 8)
-        notifCorner.Parent = notification
-        
-        local notifLabel = Instance.new("TextLabel")
-        notifLabel.Name = "shhhhnayy05_NotifLabel"
-        notifLabel.Size = UDim2.new(1, 0, 1, 0)
-        notifLabel.BackgroundTransparency = 1
-        notifLabel.TextColor3 = Color3.new(1, 1, 1)
-        notifLabel.TextSize = 12
-        notifLabel.Font = Enum.Font.Gotham
-        notifLabel.Text = "⚠️ Tidak ada walk tersimpan!"
-        notifLabel.TextWrapped = true
-        notifLabel.Parent = notification
-        
-        delay(2, function()
-            notification:Destroy()
-        end)
-        return
-    end
-    
-    local EditorWindow = Instance.new("Frame")
-    EditorWindow.Name = "shhhhnayy05_CutEditorWindow"
-    EditorWindow.Size = UDim2.new(0, 370, 0, 415)
-    EditorWindow.Position = UDim2.new(0.5, -185, 0.5, -207)
-    EditorWindow.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
-    EditorWindow.BorderSizePixel = 0
-    EditorWindow.Parent = ScreenGui
-    
-    local EditorCorner = Instance.new("UICorner")
-    EditorCorner.CornerRadius = UDim.new(0, 12)
-    EditorCorner.Parent = EditorWindow
-    
-    local EditorStroke = Instance.new("UIStroke")
-    EditorStroke.Color = Color3.fromRGB(150, 80, 180)
-    EditorStroke.Thickness = 2
-    EditorStroke.Parent = EditorWindow
-    
-    -- Title Bar (Draggable)
-    local EditorTitle = Instance.new("Frame")
-    EditorTitle.Name = "shhhhnayy05_EditorTitle"
-    EditorTitle.Size = UDim2.new(1, 0, 0, 40)
-    EditorTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    EditorTitle.BorderSizePixel = 0
-    EditorTitle.Parent = EditorWindow
-    
-    local EditorTitleCorner = Instance.new("UICorner")
-    EditorTitleCorner.CornerRadius = UDim.new(0, 12)
-    EditorTitleCorner.Parent = EditorTitle
-    
-    local EditorTitleLabel = Instance.new("TextLabel")
-    EditorTitleLabel.Name = "shhhhnayy05_EditorTitleLabel"
-    EditorTitleLabel.Size = UDim2.new(1, -50, 1, 0)
-    EditorTitleLabel.Position = UDim2.new(0, 15, 0, 0)
-    EditorTitleLabel.BackgroundTransparency = 1
-    EditorTitleLabel.TextColor3 = Color3.new(1, 1, 1)
-    EditorTitleLabel.TextSize = 15
-    EditorTitleLabel.Font = Enum.Font.GothamBold
-    EditorTitleLabel.Text = "✂️ Cut/Trim Editor"
-    EditorTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    EditorTitleLabel.Parent = EditorTitle
-    
-    local EditorClose = Instance.new("TextButton")
-    EditorClose.Name = "shhhhnayy05_EditorClose"
-    EditorClose.Size = UDim2.new(0, 30, 0, 30)
-    EditorClose.Position = UDim2.new(1, -35, 0.5, -15)
-    EditorClose.BackgroundTransparency = 1
-    EditorClose.TextColor3 = Color3.fromRGB(255, 100, 100)
-    EditorClose.TextSize = 18
-    EditorClose.Font = Enum.Font.GothamBold
-    EditorClose.Text = "✕"
-    EditorClose.Parent = EditorTitle
-    
-    -- Content
-    local WalkSelectLabel = Instance.new("TextLabel")
-    WalkSelectLabel.Name = "shhhhnayy05_WalkSelectLabel"
-    WalkSelectLabel.Size = UDim2.new(1, -30, 0, 25)
-    WalkSelectLabel.Position = UDim2.new(0, 15, 0, 50)
-    WalkSelectLabel.BackgroundTransparency = 1
-    WalkSelectLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
-    WalkSelectLabel.TextSize = 12
-    WalkSelectLabel.Font = Enum.Font.GothamBold
-    WalkSelectLabel.Text = "Pilih walk untuk di-edit:"
-    WalkSelectLabel.TextXAlignment = Enum.TextXAlignment.Left
-    WalkSelectLabel.Parent = EditorWindow
-    
-    local selectedWalkIndex = 1
-    
-    local WalkSelectDropdown = Instance.new("TextButton")
-    WalkSelectDropdown.Name = "shhhhnayy05_WalkSelectDropdown"
-    WalkSelectDropdown.Size = UDim2.new(1, -30, 0, 35)
-    WalkSelectDropdown.Position = UDim2.new(0, 15, 0, 80)
-    WalkSelectDropdown.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    WalkSelectDropdown.TextColor3 = Color3.new(1, 1, 1)
-    WalkSelectDropdown.TextSize = 13
-    WalkSelectDropdown.Font = Enum.Font.Gotham
-    WalkSelectDropdown.Text = savedWalks[1] and savedWalks[1].name or "No walks"
-    WalkSelectDropdown.TextXAlignment = Enum.TextXAlignment.Left
-    WalkSelectDropdown.Parent = EditorWindow
-    
-    local DropdownCorner = Instance.new("UICorner")
-    DropdownCorner.CornerRadius = UDim.new(0, 6)
-    DropdownCorner.Parent = WalkSelectDropdown
-    
-    local CutRangeLabel = Instance.new("TextLabel")
-    CutRangeLabel.Name = "shhhhnayy05_CutRangeLabel"
-    CutRangeLabel.Size = UDim2.new(1, -30, 0, 25)
-    CutRangeLabel.Position = UDim2.new(0, 15, 0, 130)
-    CutRangeLabel.BackgroundTransparency = 1
-    CutRangeLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
-    CutRangeLabel.TextSize = 12
-    CutRangeLabel.Font = Enum.Font.GothamBold
-    CutRangeLabel.Text = "Rentang Potongan (detik):"
-    CutRangeLabel.TextXAlignment = Enum.TextXAlignment.Left
-    CutRangeLabel.Parent = EditorWindow
-    
-    local StartTimeLabel = Instance.new("TextLabel")
-    StartTimeLabel.Name = "shhhhnayy05_StartTimeLabel"
-    StartTimeLabel.Size = UDim2.new(0, 80, 0, 30)
-    StartTimeLabel.Position = UDim2.new(0, 15, 0, 160)
-    StartTimeLabel.BackgroundTransparency = 1
-    StartTimeLabel.TextColor3 = Color3.new(1, 1, 1)
-    StartTimeLabel.TextSize = 12
-    StartTimeLabel.Font = Enum.Font.Gotham
-    StartTimeLabel.Text = "Mulai:"
-    StartTimeLabel.TextXAlignment = Enum.TextXAlignment.Left
-    StartTimeLabel.Parent = EditorWindow
-    
-    local StartTimeInput = Instance.new("TextBox")
-    StartTimeInput.Name = "shhhhnayy05_StartTimeInput"
-    StartTimeInput.Size = UDim2.new(0, 80, 0, 30)
-    StartTimeInput.Position = UDim2.new(0, 100, 0, 160)
-    StartTimeInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    StartTimeInput.TextColor3 = Color3.new(1, 1, 1)
-    StartTimeInput.TextSize = 12
-    StartTimeInput.Font = Enum.Font.Gotham
-    StartTimeInput.Text = "0"
-    StartTimeInput.Parent = EditorWindow
-    
-    local StartTimeCorner = Instance.new("UICorner")
-    StartTimeCorner.CornerRadius = UDim.new(0, 6)
-    StartTimeCorner.Parent = StartTimeInput
-    
-    local EndTimeLabel = Instance.new("TextLabel")
-    EndTimeLabel.Name = "shhhhnayy05_EndTimeLabel"
-    EndTimeLabel.Size = UDim2.new(0, 80, 0, 30)
-    EndTimeLabel.Position = UDim2.new(0.45, 0, 0, 160)
-    EndTimeLabel.BackgroundTransparency = 1
-    EndTimeLabel.TextColor3 = Color3.new(1, 1, 1)
-    EndTimeLabel.TextSize = 12
-    EndTimeLabel.Font = Enum.Font.Gotham
-    EndTimeLabel.Text = "Akhir:"
-    EndTimeLabel.TextXAlignment = Enum.TextXAlignment.Left
-    EndTimeLabel.Parent = EditorWindow
-    
-    local EndTimeInput = Instance.new("TextBox")
-    EndTimeInput.Name = "shhhhnayy05_EndTimeInput"
-    EndTimeInput.Size = UDim2.new(0, 80, 0, 30)
-    EndTimeInput.Position = UDim2.new(0.55, 0, 0, 160)
-    EndTimeInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    EndTimeInput.TextColor3 = Color3.new(1, 1, 1)
-    EndTimeInput.TextSize = 12
-    EndTimeInput.Font = Enum.Font.Gotham
-    EndTimeInput.Text = savedWalks[1] and tostring(savedWalks[1].duration) or "0"
-    EndTimeInput.Parent = EditorWindow
-    
-    local EndTimeCorner = Instance.new("UICorner")
-    EndTimeCorner.CornerRadius = UDim.new(0, 6)
-    EndTimeCorner.Parent = EndTimeInput
-    
-    local PreviewLabel = Instance.new("TextLabel")
-    PreviewLabel.Name = "shhhhnayy05_PreviewLabel"
-    PreviewLabel.Size = UDim2.new(1, -30, 0, 25)
-    PreviewLabel.Position = UDim2.new(0, 15, 0, 200)
-    PreviewLabel.BackgroundTransparency = 1
-    PreviewLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
-    PreviewLabel.TextSize = 12
-    PreviewLabel.Font = Enum.Font.GothamBold
-    PreviewLabel.Text = "Preview dari detik ke:"
-    PreviewLabel.TextXAlignment = Enum.TextXAlignment.Left
-    PreviewLabel.Parent = EditorWindow
-    
-    local PreviewInput = Instance.new("TextBox")
-    PreviewInput.Name = "shhhhnayy05_PreviewInput"
-    PreviewInput.Size = UDim2.new(0, 100, 0, 30)
-    PreviewInput.Position = UDim2.new(0.5, -50, 0, 230)
-    PreviewInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    PreviewInput.TextColor3 = Color3.new(1, 1, 1)
-    PreviewInput.TextSize = 12
-    PreviewInput.Font = Enum.Font.Gotham
-    PreviewInput.Text = "0"
-    PreviewInput.Parent = EditorWindow
-    
-    local PreviewInputCorner = Instance.new("UICorner")
-    PreviewInputCorner.CornerRadius = UDim.new(0, 6)
-    PreviewInputCorner.Parent = PreviewInput
-    
-    local PreviewBtn = Instance.new("TextButton")
-    PreviewBtn.Name = "shhhhnayy05_PreviewBtn"
-    PreviewBtn.Size = UDim2.new(0.48, -5, 0, 40)
-    PreviewBtn.Position = UDim2.new(0, 15, 0, 280)
-    PreviewBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 200)
-    PreviewBtn.TextColor3 = Color3.new(1, 1, 1)
-    PreviewBtn.TextSize = 13
-    PreviewBtn.Font = Enum.Font.GothamBold
-    PreviewBtn.Text = "▶️ Preview"
-    PreviewBtn.Parent = EditorWindow
-    
-    local PreviewBtnCorner = Instance.new("UICorner")
-    PreviewBtnCorner.CornerRadius = UDim.new(0, 6)
-    PreviewBtnCorner.Parent = PreviewBtn
-    
-    local ApplyCutBtn = Instance.new("TextButton")
-    ApplyCutBtn.Name = "shhhhnayy05_ApplyCutBtn"
-    ApplyCutBtn.Size = UDim2.new(0.48, -5, 0, 40)
-    ApplyCutBtn.Position = UDim2.new(0.52, 0, 0, 280)
-    ApplyCutBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 180)
-    ApplyCutBtn.TextColor3 = Color3.new(1, 1, 1)
-    ApplyCutBtn.TextSize = 13
-    ApplyCutBtn.Font = Enum.Font.GothamBold
-    ApplyCutBtn.Text = "✂️ Apply Cut"
-    ApplyCutBtn.Parent = EditorWindow
-    
-    local ApplyCutCorner = Instance.new("UICorner")
-    ApplyCutCorner.CornerRadius = UDim.new(0, 6)
-    ApplyCutCorner.Parent = ApplyCutBtn
-    
+    -- Info
     local InfoLabel = Instance.new("TextLabel")
-    InfoLabel.Name = "shhhhnayy05_InfoLabel"
-    InfoLabel.Size = UDim2.new(1, -30, 0, 60)
-    InfoLabel.Position = UDim2.new(0, 15, 0, 330)
+    InfoLabel.Size = UDim2.new(1, -20, 0, 40)
+    InfoLabel.Position = UDim2.new(0, 10, 0, 90)
     InfoLabel.BackgroundTransparency = 1
     InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
     InfoLabel.TextSize = 11
     InfoLabel.Font = Enum.Font.Gotham
-    InfoLabel.Text = "💡 Tips:\n• Masukkan waktu mulai dan akhir\n• Preview untuk melihat hasil\n• Cut akan membuat file walk baru"
+    InfoLabel.Text = string.format("Durasi: %.1fs | Jarak: %.1fm | Points: %d", 
+        calculateDuration(currentRecording),
+        calculateDistance(currentRecording),
+        #currentRecording)
     InfoLabel.TextWrapped = true
-    InfoLabel.Parent = EditorWindow
+    InfoLabel.Parent = Dialog
     
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Name = "shhhhnayy05_CloseBtn"
-    CloseBtn.Size = UDim2.new(1, -30, 0, 35)
-    CloseBtn.Position = UDim2.new(0, 15, 0, 400)
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-    CloseBtn.TextColor3 = Color3.new(1, 1, 1)
-    CloseBtn.TextSize = 13
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Text = "✕ Tutup"
-    CloseBtn.Parent = EditorWindow
+    -- Buttons
+    local SaveBtn = Instance.new("TextButton")
+    SaveBtn.Size = UDim2.new(0.48, -5, 0, 35)
+    SaveBtn.Position = UDim2.new(0, 10, 1, -45)
+    SaveBtn.BackgroundColor3 = CONFIG.COLOR_SUCCESS
+    SaveBtn.TextColor3 = Color3.new(1, 1, 1)
+    SaveBtn.TextSize = 13
+    SaveBtn.Font = Enum.Font.GothamBold
+    SaveBtn.Text = "✅ Simpan"
+    SaveBtn.Parent = Dialog
     
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 6)
-    CloseCorner.Parent = CloseBtn
+    local SaveBtnCorner = Instance.new("UICorner")
+    SaveBtnCorner.CornerRadius = UDim.new(0, 6)
+    SaveBtnCorner.Parent = SaveBtn
     
-    -- Dropdown functionality
-    local dropdownOpen = false
-    local dropdownFrame = nil
+    local CancelBtn = Instance.new("TextButton")
+    CancelBtn.Size = UDim2.new(0.48, -5, 0, 35)
+    CancelBtn.Position = UDim2.new(0.52, 0, 1, -45)
+    CancelBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
+    CancelBtn.TextColor3 = Color3.new(1, 1, 1)
+    CancelBtn.TextSize = 13
+    CancelBtn.Font = Enum.Font.GothamBold
+    CancelBtn.Text = "✕ Batal"
+    CancelBtn.Parent = Dialog
     
-    WalkSelectDropdown.MouseButton1Click:Connect(function()
-        if dropdownOpen then
-            if dropdownFrame then dropdownFrame:Destroy() end
-            dropdownOpen = false
-            return
+    local CancelBtnCorner = Instance.new("UICorner")
+    CancelBtnCorner.CornerRadius = UDim.new(0, 6)
+    CancelBtnCorner.Parent = CancelBtn
+    
+    -- Functions
+    local function doSave()
+        local name = NameInput.Text
+        if name and name ~= "" and #currentRecording > 0 then
+            local walkData = {
+                name = name,
+                positions = currentRecording,
+                duration = calculateDuration(currentRecording),
+                distance = calculateDistance(currentRecording),
+                timestamp = os.time()
+            }
+            table.insert(savedWalks, walkData)
+            saveWalks()
+            updateSavedList()
+            currentRecording = {}
+            Dialog:Destroy()
+            Windows.SaveDialog.Frame = nil
+            Windows.SaveDialog.Visible = false
         end
+    end
+    
+    SaveBtn.MouseButton1Click:Connect(doSave)
+    
+    CancelBtn.MouseButton1Click:Connect(function()
+        Dialog:Destroy()
+        Windows.SaveDialog.Frame = nil
+        Windows.SaveDialog.Visible = false
+    end)
+    
+    DialogClose.MouseButton1Click:Connect(function()
+        Dialog:Destroy()
+        Windows.SaveDialog.Frame = nil
+        Windows.SaveDialog.Visible = false
+    end)
+    
+    NameInput.FocusLost:Connect(function(enter)
+        if enter then doSave() end
+    end)
+    
+    delay(0.1, function()
+        NameInput:CaptureFocus()
+    end)
+end
+
+-- Update Saved List
+local function updateSavedList()
+    for _, child in pairs(SavedList:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    
+    for i, walk in ipairs(savedWalks) do
+        local item = Instance.new("Frame")
+        item.Name = "shhhhnayy05_SavedItem_" .. i
+        item.Size = UDim2.new(1, -10, 0, 50)
+        item.Position = UDim2.new(0, 5, 0, (i-1) * 55)
+        item.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        item.BorderSizePixel = 0
+        item.Parent = SavedList
         
-        dropdownOpen = true
-        dropdownFrame = Instance.new("Frame")
-        dropdownFrame.Name = "shhhhnayy05_DropdownFrame"
-        dropdownFrame.Size = UDim2.new(1, 0, 0, math.min(#savedWalks * 35, 150))
-        dropdownFrame.Position = UDim2.new(0, 0, 1, 5)
-        dropdownFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-        dropdownFrame.BorderSizePixel = 0
-        dropdownFrame.ZIndex = 10
-        dropdownFrame.Parent = WalkSelectDropdown
+        local itemCorner = Instance.new("UICorner")
+        itemCorner.CornerRadius = UDim.new(0, 6)
+        itemCorner.Parent = item
+        
+        -- Name
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(1, -130, 0, 25)
+        nameLabel.Position = UDim2.new(0, 10, 0, 5)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.TextColor3 = Color3.new(1, 1, 1)
+        nameLabel.TextSize = 13
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.Text = walk.name
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.Parent = item
+        
+        -- Info
+        local infoLabel = Instance.new("TextLabel")
+        infoLabel.Size = UDim2.new(1, -130, 0, 20)
+        infoLabel.Position = UDim2.new(0, 10, 0, 28)
+        infoLabel.BackgroundTransparency = 1
+        infoLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+        infoLabel.TextSize = 10
+        infoLabel.Font = Enum.Font.Gotham
+        infoLabel.Text = string.format("%.1fs | %.1fm | %d pts", walk.duration, walk.distance, #walk.positions)
+        infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+        infoLabel.Parent = item
+        
+        -- Play Button
+        local playBtn = Instance.new("TextButton")
+        playBtn.Size = UDim2.new(0, 50, 0, 40)
+        playBtn.Position = UDim2.new(1, -110, 0.5, -20)
+        playBtn.BackgroundColor3 = CONFIG.COLOR_SUCCESS
+        playBtn.TextColor3 = Color3.new(1, 1, 1)
+        playBtn.TextSize = 11
+        playBtn.Font = Enum.Font.GothamBold
+        playBtn.Text = "▶️"
+        playBtn.Parent = item
+        
+        local playCorner = Instance.new("UICorner")
+        playCorner.CornerRadius = UDim.new(0, 4)
+        playCorner.Parent = playBtn
+        
+        -- Load to Editor Button
+        local loadBtn = Instance.new("TextButton")
+        loadBtn.Size = UDim2.new(0, 50, 0, 40)
+        loadBtn.Position = UDim2.new(1, -55, 0.5, -20)
+        loadBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 150)
+        loadBtn.TextColor3 = Color3.new(1, 1, 1)
+        loadBtn.TextSize = 11
+        loadBtn.Font = Enum.Font.GothamBold
+        loadBtn.Text = "📂"
+        loadBtn.Parent = item
+        
+        local loadCorner = Instance.new("UICorner")
+        loadCorner.CornerRadius = UDim.new(0, 4)
+        loadCorner.Parent = loadBtn
+        
+        playBtn.MouseButton1Click:Connect(function()
+            playWalk(walk)
+        end)
+        
+        loadBtn.MouseButton1Click:Connect(function()
+            currentRecording = walk.positions
+            -- Notification
+            local notif = Instance.new("Frame")
+            notif.Size = UDim2.new(0, 200, 0, 35)
+            notif.Position = UDim2.new(0.5, -100, 0.8, 0)
+            notif.BackgroundColor3 = Color3.fromRGB(80, 150, 80)
+            notif.Parent = ScreenGui
+            
+            local notifCorner = Instance.new("UICorner")
+            notifCorner.CornerRadius = UDim.new(0, 6)
+            notifCorner.Parent = notif
+            
+            local notifLabel = Instance.new("TextLabel")
+            notifLabel.Size = UDim2.new(1, 0, 1, 0)
+            notifLabel.BackgroundTransparency = 1
+            notifLabel.TextColor3 = Color3.new(1, 1, 1)
+            notifLabel.TextSize = 12
+            notifLabel.Font = Enum.Font.GothamBold
+            notifLabel.Text = "📂 Loaded: " .. walk.name
+            notifLabel.Parent = notif
+            
+            delay(2, function() notif:Destroy() end)
+        end)
+    end
+    
+    SavedList.CanvasSize = UDim2.new(0, 0, 0, #savedWalks * 55)
+end
+
+-- Update Cut Editor Dropdown
+local function updateCutDropdown()
+    local selectedWalk = nil
+    
+    CutDropdown.MouseButton1Click:Connect(function()
+        -- Create dropdown menu
+        local dropdown = Instance.new("Frame")
+        dropdown.Name = "shhhhnayy05_DropdownMenu"
+        dropdown.Size = UDim2.new(1, 0, 0, math.min(#savedWalks * 30, 150))
+        dropdown.Position = UDim2.new(0, 0, 1, 5)
+        dropdown.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+        dropdown.BorderSizePixel = 0
+        dropdown.ZIndex = 10
+        dropdown.Parent = CutDropdown
         
         local dropdownCorner = Instance.new("UICorner")
         dropdownCorner.CornerRadius = UDim.new(0, 6)
-        dropdownCorner.Parent = dropdownFrame
+        dropdownCorner.Parent = dropdown
         
-        local dropdownScroll = Instance.new("ScrollingFrame")
-        dropdownScroll.Name = "shhhhnayy05_DropdownScroll"
-        dropdownScroll.Size = UDim2.new(1, 0, 1, 0)
-        dropdownScroll.BackgroundTransparency = 1
-        dropdownScroll.ScrollBarThickness = 4
-        dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #savedWalks * 35)
-        dropdownScroll.ZIndex = 10
-        dropdownScroll.Parent = dropdownFrame
+        local scroll = Instance.new("ScrollingFrame")
+        scroll.Size = UDim2.new(1, 0, 1, 0)
+        scroll.BackgroundTransparency = 1
+        scroll.ScrollBarThickness = 4
+        scroll.CanvasSize = UDim2.new(0, 0, 0, #savedWalks * 30)
+        scroll.ZIndex = 10
+        scroll.Parent = dropdown
         
         for i, walk in ipairs(savedWalks) do
-            local option = Instance.new("TextButton")
-            option.Name = "shhhhnayy05_Option_" .. i
-            option.Size = UDim2.new(1, 0, 0, 30)
-            option.Position = UDim2.new(0, 0, 0, (i-1) * 35)
-            option.BackgroundColor3 = Color3.fromRGB(55, 55, 75)
-            option.TextColor3 = Color3.new(1, 1, 1)
-            option.TextSize = 12
-            option.Font = Enum.Font.Gotham
-            option.Text = walk.name
-            option.ZIndex = 10
-            option.Parent = dropdownScroll
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 28)
+            btn.Position = UDim2.new(0, 0, 0, (i-1) * 30)
+            btn.BackgroundColor3 = Color3.fromRGB(55, 55, 75)
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.TextSize = 12
+            btn.Font = Enum.Font.Gotham
+            btn.Text = walk.name
+            btn.ZIndex = 10
+            btn.Parent = scroll
             
-            local optionCorner = Instance.new("UICorner")
-            optionCorner.CornerRadius = UDim.new(0, 4)
-            optionCorner.Parent = option
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 4)
+            btnCorner.Parent = btn
             
-            option.MouseButton1Click:Connect(function()
-                selectedWalkIndex = i
-                WalkSelectDropdown.Text = walk.name
-                EndTimeInput.Text = tostring(walk.duration)
-                if dropdownFrame then dropdownFrame:Destroy() end
-                dropdownOpen = false
+            btn.MouseButton1Click:Connect(function()
+                selectedWalk = walk
+                CutDropdown.Text = walk.name
+                CutEndInput.Text = tostring(walk.duration)
+                dropdown:Destroy()
             end)
         end
     end)
     
-    -- Preview Button
-    PreviewBtn.MouseButton1Click:Connect(function()
-        local walkData = savedWalks[selectedWalkIndex]
-        if not walkData then return end
-        
-        local previewStart = tonumber(PreviewInput.Text) or 0
-        local startTimeVal = tonumber(StartTimeInput.Text) or 0
-        local endTimeVal = tonumber(EndTimeInput.Text) or walkData.duration
-        
-        local previewPositions = {}
-        for _, pos in ipairs(walkData.positions) do
-            if pos.time >= previewStart and pos.time >= startTimeVal and pos.time <= endTimeVal then
-                table.insert(previewPositions, pos)
-            end
+    -- Cut Apply
+    CutApplyBtn.MouseButton1Click:Connect(function()
+        if not selectedWalk then
+            -- Error notification
+            local notif = Instance.new("Frame")
+            notif.Size = UDim2.new(0, 250, 0, 35)
+            notif.Position = UDim2.new(0.5, -125, 0.8, 0)
+            notif.BackgroundColor3 = CONFIG.COLOR_DANGER
+            notif.Parent = ScreenGui
+            
+            local notifCorner = Instance.new("UICorner")
+            notifCorner.CornerRadius = UDim.new(0, 6)
+            notifCorner.Parent = notif
+            
+            local notifLabel = Instance.new("TextLabel")
+            notifLabel.Size = UDim2.new(1, 0, 1, 0)
+            notifLabel.BackgroundTransparency = 1
+            notifLabel.TextColor3 = Color3.new(1, 1, 1)
+            notifLabel.TextSize = 12
+            notifLabel.Font = Enum.Font.GothamBold
+            notifLabel.Text = "⚠️ Pilih walk dulu!"
+            notifLabel.Parent = notif
+            
+            delay(2, function() notif:Destroy() end)
+            return
         end
         
-        if #previewPositions > 1 then
-            local previewWalk = {
-                name = "Preview",
-                positions = previewPositions,
-                duration = calculateDuration(previewPositions),
-                distance = calculateDistance(previewPositions),
-                speedMod = walkData.speedMod or 0
-            }
-            playWalk(previewWalk)
-        end
-    end)
-    
-    -- Apply Cut Button
-    ApplyCutBtn.MouseButton1Click:Connect(function()
-        local walkData = savedWalks[selectedWalkIndex]
-        if not walkData then return end
-        
-        local startTimeVal = tonumber(StartTimeInput.Text) or 0
-        local endTimeVal = tonumber(EndTimeInput.Text) or walkData.duration
+        local startTime = tonumber(CutStartInput.Text) or 0
+        local endTime = tonumber(CutEndInput.Text) or selectedWalk.duration
         
         local newPositions = {}
-        for _, pos in ipairs(walkData.positions) do
-            if pos.time >= startTimeVal and pos.time <= endTimeVal then
-                local adjustedPos = {
+        for _, pos in ipairs(selectedWalk.positions) do
+            if pos.time >= startTime and pos.time <= endTime then
+                table.insert(newPositions, {
                     cf = pos.cf,
                     velocity = pos.velocity,
                     state = pos.state,
-                    time = pos.time - startTimeVal
-                }
-                table.insert(newPositions, adjustedPos)
+                    time = pos.time - startTime
+                })
             end
         end
         
-        if #newPositions > 1 then
+        if #newPositions > 5 then
             local cutWalk = {
-                name = walkData.name .. "_Cut",
+                name = selectedWalk.name .. "_Cut",
                 positions = newPositions,
                 duration = calculateDuration(newPositions),
                 distance = calculateDistance(newPositions),
-                speedMod = walkData.speedMod or 0,
                 timestamp = os.time()
             }
             table.insert(savedWalks, cutWalk)
             saveWalks()
-            updateFileList()
+            updateSavedList()
             
+            -- Success notification
             local notif = Instance.new("Frame")
-            notif.Name = "shhhhnayy05_SuccessNotif"
             notif.Size = UDim2.new(0, 250, 0, 40)
             notif.Position = UDim2.new(0.5, -125, 0.8, 0)
-            notif.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-            notif.BorderSizePixel = 0
+            notif.BackgroundColor3 = CONFIG.COLOR_SUCCESS
             notif.Parent = ScreenGui
             
             local notifCorner = Instance.new("UICorner")
@@ -1357,7 +1300,6 @@ function createCutEditorWindow()
             notifCorner.Parent = notif
             
             local notifLabel = Instance.new("TextLabel")
-            notifLabel.Name = "shhhhnayy05_NotifLabel"
             notifLabel.Size = UDim2.new(1, 0, 1, 0)
             notifLabel.BackgroundTransparency = 1
             notifLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -1366,284 +1308,109 @@ function createCutEditorWindow()
             notifLabel.Text = "✅ Cut berhasil disimpan!"
             notifLabel.Parent = notif
             
-            delay(2, function()
-                notif:Destroy()
-            end)
+            delay(2, function() notif:Destroy() end)
         end
     end)
     
-    -- Close handlers
-    EditorClose.MouseButton1Click:Connect(function()
-        EditorWindow:Destroy()
+    -- Cut Preview
+    CutPreviewBtn.MouseButton1Click:Connect(function()
+        if not selectedWalk then return end
+        
+        local startTime = tonumber(CutStartInput.Text) or 0
+        local endTime = tonumber(CutEndInput.Text) or selectedWalk.duration
+        
+        local previewPositions = {}
+        for _, pos in ipairs(selectedWalk.positions) do
+            if pos.time >= startTime and pos.time <= endTime then
+                table.insert(previewPositions, pos)
+            end
+        end
+        
+        if #previewPositions > 5 then
+            playWalk({positions = previewPositions})
+        end
     end)
-    
-    CloseBtn.MouseButton1Click:Connect(function()
-        EditorWindow:Destroy()
-    end)
-    
-    -- Make window draggable
-    makeDraggable(EditorWindow, EditorTitle)
 end
 
--- ==================== JOIN EDITOR WINDOW ==================== --
-
-function createJoinEditorWindow()
-    local existing = ScreenGui:FindFirstChild("shhhhnayy05_JoinEditorWindow")
-    if existing then existing:Destroy() end
-    
-    if #savedWalks < 2 then
-        local notification = Instance.new("Frame")
-        notification.Name = "shhhhnayy05_Notification"
-        notification.Size = UDim2.new(0, 280, 0, 50)
-        notification.Position = UDim2.new(0.5, -140, 0.5, -25)
-        notification.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
-        notification.BorderSizePixel = 0
-        notification.Parent = ScreenGui
-        
-        local notifCorner = Instance.new("UICorner")
-        notifCorner.CornerRadius = UDim.new(0, 8)
-        notifCorner.Parent = notification
-        
-        local notifLabel = Instance.new("TextLabel")
-        notifLabel.Name = "shhhhnayy05_NotifLabel"
-        notifLabel.Size = UDim2.new(1, 0, 1, 0)
-        notifLabel.BackgroundTransparency = 1
-        notifLabel.TextColor3 = Color3.new(1, 1, 1)
-        notifLabel.TextSize = 12
-        notifLabel.Font = Enum.Font.Gotham
-        notifLabel.Text = "⚠️ Butuh minimal 2 walk!"
-        notifLabel.TextWrapped = true
-        notifLabel.Parent = notification
-        
-        delay(2, function()
-            notification:Destroy()
-        end)
-        return
+-- Update Join Editor List
+local function updateJoinList()
+    for _, child in pairs(JoinListFrame:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
     end
     
-    local JoinWindow = Instance.new("Frame")
-    JoinWindow.Name = "shhhhnayy05_JoinEditorWindow"
-    JoinWindow.Size = UDim2.new(0, 370, 0, 415)
-    JoinWindow.Position = UDim2.new(0.5, -185, 0.5, -207)
-    JoinWindow.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
-    JoinWindow.BorderSizePixel = 0
-    JoinWindow.Parent = ScreenGui
-    
-    local JoinCorner = Instance.new("UICorner")
-    JoinCorner.CornerRadius = UDim.new(0, 12)
-    JoinCorner.Parent = JoinWindow
-    
-    local JoinStroke = Instance.new("UIStroke")
-    JoinStroke.Color = Color3.fromRGB(80, 150, 180)
-    JoinStroke.Thickness = 2
-    JoinStroke.Parent = JoinWindow
-    
-    -- Title Bar (Draggable)
-    local JoinTitle = Instance.new("Frame")
-    JoinTitle.Name = "shhhhnayy05_JoinTitle"
-    JoinTitle.Size = UDim2.new(1, 0, 0, 40)
-    JoinTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    JoinTitle.BorderSizePixel = 0
-    JoinTitle.Parent = JoinWindow
-    
-    local JoinTitleCorner = Instance.new("UICorner")
-    JoinTitleCorner.CornerRadius = UDim.new(0, 12)
-    JoinTitleCorner.Parent = JoinTitle
-    
-    local JoinTitleLabel = Instance.new("TextLabel")
-    JoinTitleLabel.Name = "shhhhnayy05_JoinTitleLabel"
-    JoinTitleLabel.Size = UDim2.new(1, -50, 1, 0)
-    JoinTitleLabel.Position = UDim2.new(0, 15, 0, 0)
-    JoinTitleLabel.BackgroundTransparency = 1
-    JoinTitleLabel.TextColor3 = Color3.new(1, 1, 1)
-    JoinTitleLabel.TextSize = 15
-    JoinTitleLabel.Font = Enum.Font.GothamBold
-    JoinTitleLabel.Text = "🔗 Join/Gabung Walks"
-    JoinTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    JoinTitleLabel.Parent = JoinTitle
-    
-    local JoinClose = Instance.new("TextButton")
-    JoinClose.Name = "shhhhnayy05_JoinClose"
-    JoinClose.Size = UDim2.new(0, 30, 0, 30)
-    JoinClose.Position = UDim2.new(1, -35, 0.5, -15)
-    JoinClose.BackgroundTransparency = 1
-    JoinClose.TextColor3 = Color3.fromRGB(255, 100, 100)
-    JoinClose.TextSize = 18
-    JoinClose.Font = Enum.Font.GothamBold
-    JoinClose.Text = "✕"
-    JoinClose.Parent = JoinTitle
-    
-    local SelectLabel = Instance.new("TextLabel")
-    SelectLabel.Name = "shhhhnayy05_SelectLabel"
-    SelectLabel.Size = UDim2.new(1, -30, 0, 25)
-    SelectLabel.Position = UDim2.new(0, 15, 0, 50)
-    SelectLabel.BackgroundTransparency = 1
-    SelectLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
-    SelectLabel.TextSize = 12
-    SelectLabel.Font = Enum.Font.GothamBold
-    SelectLabel.Text = "Pilih 2 atau lebih walk:"
-    SelectLabel.TextXAlignment = Enum.TextXAlignment.Left
-    SelectLabel.Parent = JoinWindow
-    
-    local WalkList = Instance.new("ScrollingFrame")
-    WalkList.Name = "shhhhnayy05_WalkList"
-    WalkList.Size = UDim2.new(1, -30, 0, 150)
-    WalkList.Position = UDim2.new(0, 15, 0, 80)
-    WalkList.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    WalkList.BorderSizePixel = 0
-    WalkList.ScrollBarThickness = 4
-    WalkList.Parent = JoinWindow
-    
-    local WalkListCorner = Instance.new("UICorner")
-    WalkListCorner.CornerRadius = UDim.new(0, 8)
-    WalkListCorner.Parent = WalkList
-    
-    local WalkListLayout = Instance.new("UIListLayout")
-    WalkListLayout.Padding = UDim.new(0, 5)
-    WalkListLayout.Parent = WalkList
-    
-    local selectedWalks = {}
+    local selectedJoins = {}
     
     for i, walk in ipairs(savedWalks) do
-        local WalkItem = Instance.new("Frame")
-        WalkItem.Name = "shhhhnayy05_WalkItem_" .. i
-        WalkItem.Size = UDim2.new(1, -10, 0, 35)
-        WalkItem.Position = UDim2.new(0, 5, 0, (i-1) * 40)
-        WalkItem.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-        WalkItem.BorderSizePixel = 0
-        WalkItem.Parent = WalkList
+        local item = Instance.new("Frame")
+        item.Name = "shhhhnayy05_JoinItem_" .. i
+        item.Size = UDim2.new(1, -10, 0, 35)
+        item.Position = UDim2.new(0, 5, 0, (i-1) * 40)
+        item.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        item.Parent = JoinListFrame
         
-        local ItemCorner = Instance.new("UICorner")
-        ItemCorner.CornerRadius = UDim.new(0, 6)
-        ItemCorner.Parent = WalkItem
+        local itemCorner = Instance.new("UICorner")
+        itemCorner.CornerRadius = UDim.new(0, 6)
+        itemCorner.Parent = item
         
-        local CheckBox = Instance.new("TextButton")
-        CheckBox.Name = "shhhhnayy05_CheckBox"
-        CheckBox.Size = UDim2.new(0, 25, 0, 25)
-        CheckBox.Position = UDim2.new(0, 5, 0.5, -12)
-        CheckBox.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-        CheckBox.TextColor3 = Color3.new(1, 1, 1)
-        CheckBox.TextSize = 14
-        CheckBox.Font = Enum.Font.GothamBold
-        CheckBox.Text = ""
-        CheckBox.Parent = WalkItem
+        local checkbox = Instance.new("TextButton")
+        checkbox.Size = UDim2.new(0, 25, 0, 25)
+        checkbox.Position = UDim2.new(0, 5, 0.5, -12)
+        checkbox.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        checkbox.TextColor3 = Color3.new(1, 1, 1)
+        checkbox.TextSize = 14
+        checkbox.Font = Enum.Font.GothamBold
+        checkbox.Text = ""
+        checkbox.Parent = item
         
-        local CheckCorner = Instance.new("UICorner")
-        CheckCorner.CornerRadius = UDim.new(0, 4)
-        CheckCorner.Parent = CheckBox
+        local checkCorner = Instance.new("UICorner")
+        checkCorner.CornerRadius = UDim.new(0, 4)
+        checkCorner.Parent = checkbox
         
-        local WalkName = Instance.new("TextLabel")
-        WalkName.Name = "shhhhnayy05_WalkName"
-        WalkName.Size = UDim2.new(1, -40, 1, 0)
-        WalkName.Position = UDim2.new(0, 35, 0, 0)
-        WalkName.BackgroundTransparency = 1
-        WalkName.TextColor3 = Color3.new(1, 1, 1)
-        WalkName.TextSize = 12
-        WalkName.Font = Enum.Font.Gotham
-        WalkName.Text = walk.name .. " (" .. string.format("%.1fs", walk.duration) .. ")"
-        WalkName.TextXAlignment = Enum.TextXAlignment.Left
-        WalkName.Parent = WalkItem
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(1, -40, 1, 0)
+        nameLabel.Position = UDim2.new(0, 35, 0, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.TextColor3 = Color3.new(1, 1, 1)
+        nameLabel.TextSize = 12
+        nameLabel.Font = Enum.Font.Gotham
+        nameLabel.Text = walk.name .. " (" .. string.format("%.1fs", walk.duration) .. ")"
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.Parent = item
         
-        -- ==================== JOIN EDITOR CONTINUED ==================== --
-
-        CheckBox.MouseButton1Click:Connect(function()
-            if selectedWalks[i] then
-                selectedWalks[i] = nil
-                CheckBox.Text = ""
-                CheckBox.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        checkbox.MouseButton1Click:Connect(function()
+            if selectedJoins[i] then
+                selectedJoins[i] = nil
+                checkbox.Text = ""
+                checkbox.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
             else
-                selectedWalks[i] = walk
-                CheckBox.Text = "✓"
-                CheckBox.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+                selectedJoins[i] = walk
+                checkbox.Text = "✓"
+                checkbox.BackgroundColor3 = CONFIG.COLOR_SUCCESS
             end
         end)
     end
     
-    WalkList.CanvasSize = UDim2.new(0, 0, 0, #savedWalks * 40)
+    JoinListFrame.CanvasSize = UDim2.new(0, 0, 0, #savedWalks * 40)
     
-    -- Join Name Input
-    local JoinNameLabel = Instance.new("TextLabel")
-    JoinNameLabel.Name = "shhhhnayy05_JoinNameLabel"
-    JoinNameLabel.Size = UDim2.new(1, -30, 0, 25)
-    JoinNameLabel.Position = UDim2.new(0, 15, 0, 240)
-    JoinNameLabel.BackgroundTransparency = 1
-    JoinNameLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
-    JoinNameLabel.TextSize = 12
-    JoinNameLabel.Font = Enum.Font.GothamBold
-    JoinNameLabel.Text = "Nama file hasil gabungan:"
-    JoinNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    JoinNameLabel.Parent = JoinWindow
-    
-    local JoinNameInput = Instance.new("TextBox")
-    JoinNameInput.Name = "shhhhnayy05_JoinNameInput"
-    JoinNameInput.Size = UDim2.new(1, -30, 0, 35)
-    JoinNameInput.Position = UDim2.new(0, 15, 0, 270)
-    JoinNameInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    JoinNameInput.TextColor3 = Color3.new(1, 1, 1)
-    JoinNameInput.TextSize = 13
-    JoinNameInput.Font = Enum.Font.Gotham
-    JoinNameInput.PlaceholderText = "Masukkan nama..."
-    JoinNameInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
-    JoinNameInput.Text = ""
-    JoinNameInput.Parent = JoinWindow
-    
-    local JoinNameCorner = Instance.new("UICorner")
-    JoinNameCorner.CornerRadius = UDim.new(0, 6)
-    JoinNameCorner.Parent = JoinNameInput
-    
-    -- Buttons
-    local JoinBtn = Instance.new("TextButton")
-    JoinBtn.Name = "shhhhnayy05_JoinBtn"
-    JoinBtn.Size = UDim2.new(1, -30, 0, 40)
-    JoinBtn.Position = UDim2.new(0, 15, 0, 320)
-    JoinBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 180)
-    JoinBtn.TextColor3 = Color3.new(1, 1, 1)
-    JoinBtn.TextSize = 14
-    JoinBtn.Font = Enum.Font.GothamBold
-    JoinBtn.Text = "🔗 Gabung Walks"
-    JoinBtn.Parent = JoinWindow
-    
-    local JoinBtnCorner = Instance.new("UICorner")
-    JoinBtnCorner.CornerRadius = UDim.new(0, 6)
-    JoinBtnCorner.Parent = JoinBtn
-    
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Name = "shhhhnayy05_CloseBtn"
-    CloseBtn.Size = UDim2.new(1, -30, 0, 35)
-    CloseBtn.Position = UDim2.new(0, 15, 0, 400)
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-    CloseBtn.TextColor3 = Color3.new(1, 1, 1)
-    CloseBtn.TextSize = 13
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Text = "✕ Tutup"
-    CloseBtn.Parent = JoinWindow
-    
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 6)
-    CloseCorner.Parent = CloseBtn
-    
-    -- Join Button Action
-    JoinBtn.MouseButton1Click:Connect(function()
+    -- Join Apply
+    JoinApplyBtn.MouseButton1Click:Connect(function()
         local walksToJoin = {}
-        for _, walk in pairs(selectedWalks) do
+        for _, walk in pairs(selectedJoins) do
             table.insert(walksToJoin, walk)
         end
         
         if #walksToJoin < 2 then
             local notif = Instance.new("Frame")
-            notif.Name = "shhhhnayy05_ErrorNotif"
-            notif.Size = UDim2.new(0, 250, 0, 40)
+            notif.Size = UDim2.new(0, 250, 0, 35)
             notif.Position = UDim2.new(0.5, -125, 0.8, 0)
-            notif.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-            notif.BorderSizePixel = 0
+            notif.BackgroundColor3 = CONFIG.COLOR_WARNING
             notif.Parent = ScreenGui
             
             local notifCorner = Instance.new("UICorner")
-            notifCorner.CornerRadius = UDim.new(0, 8)
+            notifCorner.CornerRadius = UDim.new(0, 6)
             notifCorner.Parent = notif
             
             local notifLabel = Instance.new("TextLabel")
-            notifLabel.Name = "shhhhnayy05_NotifLabel"
             notifLabel.Size = UDim2.new(1, 0, 1, 0)
             notifLabel.BackgroundTransparency = 1
             notifLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -1652,56 +1419,46 @@ function createJoinEditorWindow()
             notifLabel.Text = "⚠️ Pilih minimal 2 walk!"
             notifLabel.Parent = notif
             
-            delay(2, function()
-                notif:Destroy()
-            end)
+            delay(2, function() notif:Destroy() end)
             return
         end
         
-        -- Sort by timestamp
         table.sort(walksToJoin, function(a, b) return a.timestamp < b.timestamp end)
         
-        -- Join positions
         local joinedPositions = {}
-        local currentTimeOffset = 0
+        local timeOffset = 0
         
         for _, walk in ipairs(walksToJoin) do
             for _, pos in ipairs(walk.positions) do
-                local newPos = {
+                table.insert(joinedPositions, {
                     cf = pos.cf,
                     velocity = pos.velocity,
                     state = pos.state,
-                    time = pos.time + currentTimeOffset
-                }
-                table.insert(joinedPositions, newPos)
+                    time = pos.time + timeOffset
+                })
             end
-            currentTimeOffset = currentTimeOffset + walk.duration
+            timeOffset = timeOffset + walk.duration
         end
         
         local joinName = JoinNameInput.Text
-        if joinName == "" then
-            joinName = "Joined_Walk_" .. os.time()
-        end
+        if joinName == "" then joinName = "Joined_" .. os.time() end
         
         local joinedWalk = {
             name = joinName,
             positions = joinedPositions,
             duration = calculateDuration(joinedPositions),
             distance = calculateDistance(joinedPositions),
-            speedMod = 0,
             timestamp = os.time()
         }
         
         table.insert(savedWalks, joinedWalk)
         saveWalks()
-        updateFileList()
+        updateSavedList()
         
         local notif = Instance.new("Frame")
-        notif.Name = "shhhhnayy05_SuccessNotif"
         notif.Size = UDim2.new(0, 250, 0, 40)
         notif.Position = UDim2.new(0.5, -125, 0.8, 0)
-        notif.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-        notif.BorderSizePixel = 0
+        notif.BackgroundColor3 = CONFIG.COLOR_SUCCESS
         notif.Parent = ScreenGui
         
         local notifCorner = Instance.new("UICorner")
@@ -1709,7 +1466,6 @@ function createJoinEditorWindow()
         notifCorner.Parent = notif
         
         local notifLabel = Instance.new("TextLabel")
-        notifLabel.Name = "shhhhnayy05_NotifLabel"
         notifLabel.Size = UDim2.new(1, 0, 1, 0)
         notifLabel.BackgroundTransparency = 1
         notifLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -1718,26 +1474,23 @@ function createJoinEditorWindow()
         notifLabel.Text = "✅ Walks berhasil digabung!"
         notifLabel.Parent = notif
         
-        delay(2, function()
-            notif:Destroy()
-        end)
-        JoinWindow:Destroy()
+        delay(2, function() notif:Destroy() end)
+        
+        -- Clear selections
+        selectedJoins = {}
+        for _, child in pairs(JoinListFrame:GetChildren()) do
+            if child:IsA("Frame") then
+                local check = child:FindFirstChildOfClass("TextButton")
+                if check then
+                    check.Text = ""
+                    check.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+                end
+            end
+        end
     end)
-    
-    -- Close handlers
-    JoinClose.MouseButton1Click:Connect(function()
-        JoinWindow:Destroy()
-    end)
-    
-    CloseBtn.MouseButton1Click:Connect(function()
-        JoinWindow:Destroy()
-    end)
-    
-    -- Make window draggable
-    makeDraggable(JoinWindow, JoinTitle)
 end
 
--- ==================== DRAG FUNCTIONALITY (Only for GUI/Windows) ==================== --
+-- ==================== DRAG FUNCTIONALITY ==================== --
 
 local function makeDraggable(frame, handle)
     local dragging = false
@@ -1775,92 +1528,192 @@ end
 
 -- ==================== EVENT CONNECTIONS ==================== --
 
--- Record Button
-RecordButton.MouseButton1Click:Connect(toggleRecording)
-
-RecordButton.MouseEnter:Connect(function()
-    RecordToolTip.Visible = true
+-- Toggle Buttons (Fixed, not draggable)
+MainToggleBtn.MouseButton1Click:Connect(function()
+    toggleWindow("Main")
 end)
 
-RecordButton.MouseLeave:Connect(function()
-    RecordToolTip.Visible = false
-end)
-
--- Minimize Button
-MinimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    MainPanel.Visible = not isMinimized
-    MinimizeIcon.Text = isMinimized and "⊞" or "⊟"
-end)
-
--- Close Button
-CloseButton.MouseButton1Click:Connect(function()
-    MainPanel.Visible = false
-    isMinimized = true
-    MinimizeIcon.Text = "⊞"
-end)
-
--- Editor Buttons
-CutEditorBtn.MouseButton1Click:Connect(createCutEditorWindow)
-JoinEditorBtn.MouseButton1Click:Connect(createJoinEditorWindow)
-
--- ==================== INITIALIZATION ==================== --
-
--- Load saved walks
-loadWalks()
-updateFileList()
-
--- Character respawn handler
-Player.CharacterAdded:Connect(function(newChar)
-    Character = newChar
-    Humanoid = newChar:WaitForChild("Humanoid")
-    RootPart = newChar:WaitForChild("HumanoidRootPart")
-end)
-
--- Keyboard shortcut (R for record)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.R then
-        toggleRecording()
+CutToggleBtn.MouseButton1Click:Connect(function()
+    toggleWindow("CutEditor")
+    if Windows.CutEditor.Visible then
+        updateCutDropdown()
     end
 end)
 
--- Make GUI panels draggable (NOT icons)
-makeDraggable(MainPanel, TitleBar)
+JoinToggleBtn.MouseButton1Click:Connect(function()
+    toggleWindow("JoinEditor")
+    if Windows.JoinEditor.Visible then
+        updateJoinList()
+    end
+end)
+
+-- Window Close Buttons
+MainCloseBtn.MouseButton1Click:Connect(function()
+    toggleWindow("Main")
+end)
+
+CutWinToggleBtn.MouseButton1Click:Connect(function()
+    toggleWindow("CutEditor")
+end)
+
+JoinWinToggleBtn.MouseButton1Click:Connect(function()
+    toggleWindow("JoinEditor")
+end)
+
+-- Record Button
+RecordBtn.MouseButton1Click:Connect(function()
+    if isRecording then
+        stopRecording()
+    else
+        startRecording()
+    end
+end)
+
+-- Play Current Button
+PlayBtn.MouseButton1Click:Connect(function()
+    if isPlaying then
+        isPlaying = false
+        PlayBtn.Text = "▶️ Play"
+        PlayBtn.BackgroundColor3 = CONFIG.COLOR_SUCCESS
+    else
+        if #currentRecording > 0 then
+            playWalk({positions = currentRecording})
+        end
+    end
+end)
+
+-- Save Current Button
+SaveCurrentBtn.MouseButton1Click:Connect(function()
+    createSaveDialog()
+end)
+
+-- Keyboard Shortcuts
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.R then
+        if isRecording then
+            stopRecording()
+        else
+            startRecording()
+        end
+    elseif input.KeyCode == Enum.KeyCode.P then
+        toggleWindow("Main")
+    elseif input.KeyCode == Enum.KeyCode.C then
+        toggleWindow("CutEditor")
+        if Windows.CutEditor.Visible then
+            updateCutDropdown()
+        end
+    elseif input.KeyCode == Enum.KeyCode.J then
+        toggleWindow("JoinEditor")
+        if Windows.JoinEditor.Visible then
+            updateJoinList()
+        end
+    end
+end)
+
+-- ================== INITIALIZATION ==================
+
+-- Setup Windows
+Windows.Main.Button = MainToggleBtn
+Windows.CutEditor.Button = CutToggleBtn
+Windows.JoinEditor.Button = JoinToggleBtn
+
+-- Make windows draggable (NOT the toggle buttons)
+makeDraggable(MainWindow, MainTitleBar)
+makeDraggable(CutWindow, CutTitleBar)
+makeDraggable(JoinWindow, JoinTitleBar)
+
+-- Load data
+loadWalks()
+updateSavedList()
+updateCutDropdown()
 
 -- Welcome notification
 delay(0.5, function()
     local notif = Instance.new("Frame")
-    notif.Name = "shhhhnayy05_WelcomeNotif"
-    notif.Size = UDim2.new(0, 320, 0, 50)
-    notif.Position = UDim2.new(0.5, -160, 0, -60)
-    notif.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    notif.Name = "shhhhnayy05_Welcome"
+    notif.Size = UDim2.new(0, 350, 0, 60)
+    notif.Position = UDim2.new(0.5, -175, 0, -70)
+    notif.BackgroundColor3 = CONFIG.COLOR_PRIMARY
     notif.BorderSizePixel = 0
     notif.Parent = ScreenGui
     
     local notifCorner = Instance.new("UICorner")
-    notifCorner.CornerRadius = UDim.new(0, 8)
+    notifCorner.CornerRadius = UDim.new(0, 10)
     notifCorner.Parent = notif
     
-    local notifLabel = Instance.new("TextLabel")
-    notifLabel.Name = "shhhhnayy05_NotifLabel"
-    notifLabel.Size = UDim2.new(1, -20, 1, 0)
-    notifLabel.Position = UDim2.new(0, 10, 0, 0)
-    notifLabel.BackgroundTransparency = 1
-    notifLabel.TextColor3 = Color3.new(1, 1, 1)
-    notifLabel.TextSize = 13
-    notifLabel.Font = Enum.Font.Gotham
-    notifLabel.Text = "🚶 shhhhnayy05 Auto Walk Editor v4.0 loaded!\nTekan R untuk record atau klik tombol merah."
-    notifLabel.TextWrapped = true
-    notifLabel.Parent = notif
+    local notifStroke = Instance.new("UIStroke")
+    notifStroke.Color = CONFIG.COLOR_ACCENT
+    notifStroke.Thickness = 2
+    notifStroke.Parent = notif
     
-    createTween(notif, {Position = UDim2.new(0.5, -160, 0, 20)}, 0.3)
+    local notifTitle = Instance.new("TextLabel")
+    notifTitle.Size = UDim2.new(1, 0, 0, 25)
+    notifTitle.BackgroundTransparency = 1
+    notifTitle.TextColor3 = Color3.new(1, 1, 1)
+    notifTitle.TextSize = 16
+    notifTitle.Font = Enum.Font.GothamBold
+    notifTitle.Text = "🚶 Auto Walk System v5.0"
+    notifTitle.Parent = notif
     
+    local notifText = Instance.new("TextLabel")
+    notifText.Size = UDim2.new(1, 0, 0, 30)
+    notifText.Position = UDim2.new(0, 0, 0, 25)
+    notifText.BackgroundTransparency = 1
+    notifText.TextColor3 = Color3.fromRGB(180, 180, 200)
+    notifText.TextSize = 12
+    notifText.Font = Enum.Font.Gotham
+    notifText.Text = "Created by: shhhhnayy05 | Press [P] to toggle"
+    notifText.Parent = notif
+    
+    -- Animate in
+    TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+        Position = UDim2.new(0.5, -175, 0, 20)
+    }):Play()
+    
+    -- Animate out after delay
     delay(4, function()
-        createTween(notif, {Position = UDim2.new(0.5, -160, 0, -60)}, 0.3)
-        delay(0.3, function()
+        TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(0.5, -175, 0, -70)
+        }):Play()
+        delay(0.5, function()
             notif:Destroy()
         end)
     end)
 end)
 
-print("[shhhhnayy05] Auto Walk Editor v4.0 initialized successfully!")
+-- Character respawn handler
+Player.CharacterAdded:Connect(function(char)
+    Character = char
+    Humanoid = char:WaitForChild("Humanoid")
+    RootPart = char:WaitForChild("HumanoidRootPart")
+    
+    -- Stop recording/playing on respawn
+    if isRecording then
+        stopRecording()
+    end
+    isPlaying = false
+    
+    -- Reset UI states
+    if PlayBtn then
+        PlayBtn.Text = "▶️ Play"
+        PlayBtn.BackgroundColor3 = CONFIG.COLOR_SUCCESS
+    end
+end)
+
+-- Cleanup on script destroy (if supported by executor)
+local function cleanup()
+    if recordConnection then
+        recordConnection:Disconnect()
+    end
+    if ScreenGui then
+        ScreenGui:Destroy()
+    end
+end
+
+-- Export cleanup function for external use
+getfenv().shhhhnayy05_CleanupAutoWalk = cleanup
+
+print("[shhhhnayy05] Auto Walk System v5.0 Loaded Successfully!")
+print("[shhhhnayy05] Hotkeys: [R] Record | [P] Main Window | [C] Cut Editor | [J] Join Editor")
