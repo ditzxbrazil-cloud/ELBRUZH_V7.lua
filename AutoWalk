@@ -1624,6 +1624,26 @@ makeDraggable(MainWindow, MainTitleBar)
 makeDraggable(CutWindow, CutTitleBar)
 makeDraggable(JoinWindow, JoinTitleBar)
 
+-- FIX: Update calculateDistance function to handle nil values
+local function calculateDistance(positions)
+    local total = 0
+    for i = 2, #positions do
+        if positions[i] and positions[i].cf and positions[i-1] and positions[i-1].cf then
+            total = total + (positions[i].cf.Position - positions[i-1].cf.Position).Magnitude
+        end
+    end
+    return math.floor(total * 10) / 10
+end
+
+-- FIX: Update calculateDuration function to handle nil values
+local function calculateDuration(positions)
+    if #positions < 2 then return 0 end
+    if positions[#positions] and positions[1] then
+        return positions[#positions].time - positions[1].time
+    end
+    return 0
+end
+
 -- Load data
 loadWalks()
 updateSavedList()
