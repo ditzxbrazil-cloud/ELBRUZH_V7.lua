@@ -1721,18 +1721,18 @@ local function scanWorkspace()
         end
     end
     
-  local workspaceItems = {}
+local workspaceItems = {}
 for _, item in ipairs(workspace:GetChildren()) do
-  table.insert(workspaceItems, item)
+    table.insert(workspaceItems, item)
 end
 
 table.sort(workspaceItems, function(a, b)
-  return string.lower(a.Name) < string.lower(b.Name)
+    return string.lower(a.Name) < string.lower(b.Name)
 end)
 
 for index, item in ipairs(workspaceItems) do
-  local folderItem = createFolderItem(item, index)
-  folderItem.Parent = ContentFrame
+    local folderItem = createFolderItem(item, index)
+    folderItem.Parent = ContentFrame
 end
 
 ContentFrame.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 10)
@@ -1747,35 +1747,35 @@ local dragStart = nil
 local startPos = nil
 
 TitleBar.InputBegan:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-      dragging = true
-      dragStart = input.Position
-      startPos = MainFrame.Position
-      
-      input.Changed:Connect(function()
-          if input.UserInputState == Enum.UserInputState.End then
-              dragging = false
-          end
-      end)
-  end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
 end)
 
 TitleBar.InputChanged:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-      dragInput = input
-  end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-  if input == dragInput and dragging then
-      local delta = input.Position - dragStart
-      MainFrame.Position = UDim2.new(
-          startPos.X.Scale,
-          startPos.X.Offset + delta.X,
-          startPos.Y.Scale,
-          startPos.Y.Offset + delta.Y
-      )
-  end
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
 end)
 
 --// Drag Checkpoint Frame
@@ -1785,35 +1785,35 @@ local cpDragStart = nil
 local cpStartPos = nil
 
 CheckpointTitleBar.InputBegan:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-      cpDragging = true
-      cpDragStart = input.Position
-      cpStartPos = CheckpointFrame.Position
-      
-      input.Changed:Connect(function()
-          if input.UserInputState == Enum.UserInputState.End then
-              cpDragging = false
-          end
-      end)
-  end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        cpDragging = true
+        cpDragStart = input.Position
+        cpStartPos = CheckpointFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                cpDragging = false
+            end
+        end)
+    end
 end)
 
 CheckpointTitleBar.InputChanged:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-      cpDragInput = input
-  end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        cpDragInput = input
+    end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-  if input == cpDragInput and cpDragging then
-      local delta = input.Position - cpDragStart
-      CheckpointFrame.Position = UDim2.new(
-          cpStartPos.X.Scale,
-          cpStartPos.X.Offset + delta.X,
-          cpStartPos.Y.Scale,
-          cpStartPos.Y.Offset + delta.Y
-      )
-  end
+    if input == cpDragInput and cpDragging then
+        local delta = input.Position - cpDragStart
+        CheckpointFrame.Position = UDim2.new(
+            cpStartPos.X.Scale,
+            cpStartPos.X.Offset + delta.X,
+            cpStartPos.Y.Scale,
+            cpStartPos.Y.Offset + delta.Y
+        )
+    end
 end)
 
 --// Drag Teleport Frame
@@ -1823,35 +1823,35 @@ local tpDragStart = nil
 local tpStartPos = nil
 
 TeleportTitleBar.InputBegan:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-      tpDragging = true
-      tpDragStart = input.Position
-      tpStartPos = TeleportFrame.Position
-      
-      input.Changed:Connect(function()
-          if input.UserInputState == Enum.UserInputState.End then
-              tpDragging = false
-          end
-      end)
-  end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        tpDragging = true
+        tpDragStart = input.Position
+        tpStartPos = TeleportFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                tpDragging = false
+            end
+        end)
+    end
 end)
 
 TeleportTitleBar.InputChanged:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-      tpDragInput = input
-  end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        tpDragInput = input
+    end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-  if input == tpDragInput and tpDragging then
-      local delta = input.Position - tpDragStart
-      TeleportFrame.Position = UDim2.new(
-          tpStartPos.X.Scale,
-          tpStartPos.X.Offset + delta.X,
-          tpStartPos.Y.Scale,
-          tpStartPos.Y.Offset + delta.Y
-      )
-  end
+    if input == tpDragInput and tpDragging then
+        local delta = input.Position - tpDragStart
+        TeleportFrame.Position = UDim2.new(
+            tpStartPos.X.Scale,
+            tpStartPos.X.Offset + delta.X,
+            tpStartPos.Y.Scale,
+            tpStartPos.Y.Offset + delta.Y
+        )
+    end
 end)
 
 --// Drag Auto Loop Frame
@@ -1861,165 +1861,165 @@ local autoDragStart = nil
 local autoStartPos = nil
 
 AutoLoopTitleBar.InputBegan:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-      autoDragging = true
-      autoDragStart = input.Position
-      autoStartPos = AutoLoopFrame.Position
-      
-      input.Changed:Connect(function()
-          if input.UserInputState == Enum.UserInputState.End then
-              autoDragging = false
-          end
-      end)
-  end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        autoDragging = true
+        autoDragStart = input.Position
+        autoStartPos = AutoLoopFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                autoDragging = false
+            end
+        end)
+    end
 end)
 
 AutoLoopTitleBar.InputChanged:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-      autoDragInput = input
-  end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        autoDragInput = input
+    end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-  if input == autoDragInput and autoDragging then
-      local delta = input.Position - autoDragStart
-      AutoLoopFrame.Position = UDim2.new(
-          autoStartPos.X.Scale,
-          autoStartPos.X.Offset + delta.X,
-          autoStartPos.Y.Scale,
-          autoStartPos.Y.Offset + delta.Y
-      )
-  end
+    if input == autoDragInput and autoDragging then
+        local delta = input.Position - autoDragStart
+        AutoLoopFrame.Position = UDim2.new(
+            autoStartPos.X.Scale,
+            autoStartPos.X.Offset + delta.X,
+            autoStartPos.Y.Scale,
+            autoStartPos.Y.Offset + delta.Y
+        )
+    end
 end)
 
 --// Tombol Minimize
 MinimizeBtn.MouseButton1Click:Connect(function()
-  isMinimized = not isMinimized
-  
-  if isMinimized then
-      TweenService:Create(MainFrame, TweenInfo.new(0.3), {
-          Size = UDim2.new(0, 350, 0, 35)
-      }):Play()
-      
-      wait(0.3)
-      MainFrame.Visible = false
-      MinimizeIcon.Visible = true
-      
-      TweenService:Create(MinimizeIcon, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
-          Size = UDim2.new(0, 50, 0, 50)
-      }):Play()
-  end
+    isMinimized = not isMinimized
+    
+    if isMinimized then
+        TweenService:Create(MainFrame, TweenInfo.new(0.3), {
+            Size = UDim2.new(0, 350, 0, 35)
+        }):Play()
+        
+        wait(0.3)
+        MainFrame.Visible = false
+        MinimizeIcon.Visible = true
+        
+        TweenService:Create(MinimizeIcon, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+            Size = UDim2.new(0, 50, 0, 50)
+        }):Play()
+    end
 end)
 
 --// Minimize Icon Click
 MinimizeIcon.MouseButton1Click:Connect(function()
-  isMinimized = false
-  MinimizeIcon.Visible = false
-  MainFrame.Visible = true
-  
-  TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
-      Size = UDim2.new(0, 350, 0, 450)
-  }):Play()
+    isMinimized = false
+    MinimizeIcon.Visible = false
+    MainFrame.Visible = true
+    
+    TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 350, 0, 450)
+    }):Play()
 end)
 
 --// Tombol Close
 CloseBtn.MouseButton1Click:Connect(function()
-  shhhhnayy05Explorer:Destroy()
-  CheckpointGui:Destroy()
-  TeleportGui:Destroy()
-  AutoLoopGui:Destroy()
-  stopAutoLoop()
+    shhhhnayy05Explorer:Destroy()
+    CheckpointGui:Destroy()
+    TeleportGui:Destroy()
+    AutoLoopGui:Destroy()
+    stopAutoLoop()
 end)
 
 --// Tombol Close Checkpoint
 CloseCheckpointBtn.MouseButton1Click:Connect(function()
-  CheckpointFrame.Visible = false
+    CheckpointFrame.Visible = false
 end)
 
 --// Tombol Close Teleport
 CloseTeleportBtn.MouseButton1Click:Connect(function()
-  TeleportFrame.Visible = false
-  stopAutoLoop()
+    TeleportFrame.Visible = false
+    stopAutoLoop()
 end)
 
 --// Tombol Scan Checkpoint (di TitleBar)
 ScanCheckpointBtn.MouseButton1Click:Connect(function()
-  CheckpointFrame.Visible = true
-  TweenService:Create(CheckpointFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
-      Size = UDim2.new(0, 350, 0, 450),
-      Position = UDim2.new(0.5, -175, 0.5, -225)
-  }):Play()
+    CheckpointFrame.Visible = true
+    TweenService:Create(CheckpointFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 350, 0, 450),
+        Position = UDim2.new(0.5, -175, 0.5, -225)
+    }):Play()
 end)
 
 --// Tombol Scan New Checkpoint (di Checkpoint GUI)
 ScanNewCheckpointBtn.MouseButton1Click:Connect(function()
-  scanAllCheckpoints()
+    scanAllCheckpoints()
 end)
 
 --// Tombol Clear All Checkpoints
 ClearAllBtn.MouseButton1Click:Connect(function()
-  CheckpointData.stored = {}
-  updateCheckpointList()
-  TotalCheckpointLabel.Text = "📊 Total: 0 | 🎯 Active: 0 | 👻 Hidden: 0"
-  StatusLabel.Text = "Status: Cleared"
-  StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    CheckpointData.stored = {}
+    updateCheckpointList()
+    TotalCheckpointLabel.Text = "📊 Total: 0 | 🎯 Active: 0 | 👻 Hidden: 0"
+    StatusLabel.Text = "Status: Cleared"
+    StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 end)
 
 --// Tombol Reveal Hidden
 RevealHiddenBtn.MouseButton1Click:Connect(function()
-  revealHiddenCheckpoints()
+    revealHiddenCheckpoints()
 end)
 
 --// Search Box Handler
 SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-  local searchText = string.lower(SearchBox.Text)
-  
-  for _, child in ipairs(ContentFrame:GetChildren()) do
-      if child:IsA("Frame") and child.Name ~= "UIListLayout" then
-          local button = child:FindFirstChild("ItemButton")
-          if button then
-              local itemText = string.lower(button.Text)
-              if searchText == "" or string.find(itemText, searchText) then
-                  child.Visible = true
-              else
-                  child.Visible = false
-              end
-          end
-      end
-  end
-  
-  ContentFrame.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 10)
+    local searchText = string.lower(SearchBox.Text)
+    
+    for _, child in ipairs(ContentFrame:GetChildren()) do
+        if child:IsA("Frame") and child.Name ~= "UIListLayout" then
+            local button = child:FindFirstChild("ItemButton")
+            if button then
+                local itemText = string.lower(button.Text)
+                if searchText == "" or string.find(itemText, searchText) then
+                    child.Visible = true
+                else
+                    child.Visible = false
+                end
+            end
+        end
+    end
+    
+    ContentFrame.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 10)
 end)
 
 --// Checkpoint Search Handler
 CheckpointSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-  local searchText = string.lower(CheckpointSearchBox.Text)
-  
-  for _, child in ipairs(CheckpointContent:GetChildren()) do
-      if child:IsA("Frame") then
-          local nameLabel = child:FindFirstChild("Name")
-          local numberLabel = child:FindFirstChild("Number")
-          
-          local match = false
-          if nameLabel then
-              local itemText = string.lower(nameLabel.Text)
-              if searchText == "" or string.find(itemText, searchText) then
-                  match = true
-              end
-          end
-          
-          if numberLabel and not match then
-              local numText = string.lower(numberLabel.Text)
-              if string.find(numText, searchText) then
-                  match = true
-              end
-          end
-          
-          child.Visible = match
-      end
-  end
-  
-  CheckpointContent.CanvasSize = UDim2.new(0, 0, 0, CheckpointLayout.AbsoluteContentSize.Y + 10)
+    local searchText = string.lower(CheckpointSearchBox.Text)
+    
+    for _, child in ipairs(CheckpointContent:GetChildren()) do
+        if child:IsA("Frame") then
+            local nameLabel = child:FindFirstChild("Name")
+            local numberLabel = child:FindFirstChild("Number")
+            
+            local match = false
+            if nameLabel then
+                local itemText = string.lower(nameLabel.Text)
+                if searchText == "" or string.find(itemText, searchText) then
+                    match = true
+                end
+            end
+            
+            if numberLabel and not match then
+                local numText = string.lower(numberLabel.Text)
+                if string.find(numText, searchText) then
+                    match = true
+                end
+            end
+            
+            child.Visible = match
+        end
+    end
+    
+    CheckpointContent.CanvasSize = UDim2.new(0, 0, 0, CheckpointLayout.AbsoluteContentSize.Y + 10)
 end)
 
 --// Initialize
@@ -2027,56 +2027,54 @@ scanWorkspace()
 
 --// Auto refresh workspace setiap 5 detik
 spawn(function()
-  while wait(5) do
-      if shhhhnayy05Explorer and shhhhnayy05Explorer.Parent then
-          scanWorkspace()
-      else
-          break
-      end
-  end
+    while wait(5) do
+        if shhhhnayy05Explorer and shhhhnayy05Explorer.Parent then
+            scanWorkspace()
+        else
+            break
+        end
+    end
 end)
 
 --// Notifikasi startup
 spawn(function()
-  local notification = Instance.new("Frame")
-  notification.Name = "Notification"
-  notification.Size = UDim2.new(0, 250, 0, 50)
-  notification.Position = UDim2.new(0.5, -125, 0, -60)
-  notification.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-  notification.BorderSizePixel = 0
-  notification.Parent = shhhhnayy05Explorer
-  
-  local notifCorner = Instance.new("UICorner")
-  notifCorner.CornerRadius = UDim.new(0, 8)
-  notifCorner.Parent = notification
-  
-  local notifText = Instance.new("TextLabel")
-  notifText.Name = "Text"
-  notifText.Size = UDim2.new(1, -20, 1, 0)
-  notifText.Position = UDim2.new(0, 10, 0, 0)
-  notifText.BackgroundTransparency = 1
-  notifText.Text = "✅ shhhhnayy05 Explorer Loaded!\n📁 Click items to explore | 🎯 Scan for checkpoints"
-  notifText.TextColor3 = Color3.fromRGB(255, 255, 255)
-  notifText.TextSize = 12
-  notifText.Font = Enum.Font.Gotham
-  notifText.TextWrapped = true
-  notifText.Parent = notification
-  
-  TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-      Position = UDim2.new(0.5, -125, 0, 20)
-  }):Play()
-  
-  wait(3)
-  
-  TweenService:Create(notification, TweenInfo.new(0.5), {
-      Position = UDim2.new(0.5, -125, 0, -60)
-  }):Play()
-  
-  wait(0.5)
-  notification:Destroy()
+    local notification = Instance.new("Frame")
+    notification.Name = "Notification"
+    notification.Size = UDim2.new(0, 250, 0, 50)
+    notification.Position = UDim2.new(0.5, -125, 0, -60)
+    notification.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    notification.BorderSizePixel = 0
+    notification.Parent = shhhhnayy05Explorer
+    
+    local notifCorner = Instance.new("UICorner")
+    notifCorner.CornerRadius = UDim.new(0, 8)
+    notifCorner.Parent = notification
+    
+    local notifText = Instance.new("TextLabel")
+    notifText.Name = "Text"
+    notifText.Size = UDim2.new(1, -20, 1, 0)
+    notifText.Position = UDim2.new(0, 10, 0, 0)
+    notifText.BackgroundTransparency = 1
+    notifText.Text = "✅ shhhhnayy05 Explorer Loaded!\n📁 Click items to explore | 🎯 Scan for checkpoints"
+    notifText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    notifText.TextSize = 12
+    notifText.Font = Enum.Font.Gotham
+    notifText.TextWrapped = true
+    notifText.Parent = notification
+    
+    TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+        Position = UDim2.new(0.5, -125, 0, 20)
+    }):Play()
+    
+    wait(3)
+    
+    TweenService:Create(notification, TweenInfo.new(0.5), {
+        Position = UDim2.new(0.5, -125, 0, -60)
+    }):Play()
+    
+    wait(0.5)
+    notification:Destroy()
 end)
 
 print("✅ shhhhnayy05 Explorer & Teleport System - ELBRUZH EDITION Loaded!")
 print("📁 Features: Workspace Explorer | 🎯 Checkpoint Scanner | 🚀 Teleport System | 🤖 Auto Loop")
-
-       
