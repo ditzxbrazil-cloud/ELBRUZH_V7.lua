@@ -1,1694 +1,2082 @@
---[[
-    ███████╗██╗  ██╗██╗  ██╗██╗  ██╗███╗   ██╗ █████╗ ██╗   ██╗██╗   ██╗ ██████╗ ███████╗
-    ██╔════╝██║  ██║██║  ██║██║  ██║████╗  ██║██╔══██╗╚██╗ ██╔╝╚██╗ ██╔╝██╔═══██╗██╔════╝
-    ███████╗███████║███████║███████║██╔██╗ ██║███████║ ╚████╔╝  ╚████╔╝ ██║   ██║███████╗
-    ╚════██║██╔══██║██╔══██║██╔══██║██║╚██╗██║██╔══██║  ╚██╔╝    ╚██╔╝  ██║   ██║╚════██║
-    ███████║██║  ██║██║  ██║██║  ██║██║ ╚████║██║  ██║   ██║      ██║   ╚██████╔╝███████║
-    ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝   ╚═╝      ╚═╝    ╚═════╝ ╚══════╝
-    
-    shhhhnayy05 Executor Detector System v5.0
-    Support: Level 7-8 Executor
-    Features: Device Detection, Executor Detection, Script Detection, ESP, Teleport, Real-time Monitoring
-]]
+--// shhhhnayy05 Explorer & Teleport System - ELBRUZH EDITION
+--// Support Executor Level 7-8
+--// FITUR BARU: Checkpoint Scanner & Hidden Checkpoint Revealer
 
--- Services
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TeleportService = game:GetService("TeleportService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
 
 local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- shhhhnayy05 Main Configuration
-local shhhhnayy05_Config = {
-    Version = "5.0",
-    Creator = "shhhhnayy05",
-    UpdateInterval = 1,
-    LogEnabled = true,
-    AutoNotify = true,
-    NotificationDuration = 5,
-    ESPEnabled = false,
-    ESPDistance = 1000,
+--// DATA STORAGE - Simpan checkpoint yang terdeteksi
+local CheckpointData = {
+    detected = {},      -- Checkpoint yang terdeteksi saat ini
+    stored = {},        -- Checkpoint yang tersimpan permanent
+    hiddenRevealed = {} -- Checkpoint tersembunyi yang sudah di-reveal
+}
+
+--// GUI Utama - Explorer
+local shhhhnayy05Explorer = Instance.new("ScreenGui")
+shhhhnayy05Explorer.Name = "shhhhnayy05Explorer"
+shhhhnayy05Explorer.ResetOnSpawn = false
+shhhhnayy05Explorer.Parent = PlayerGui
+
+--// Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 350, 0, 450)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -225)
+MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = shhhhnayy05Explorer
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+--// Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 8)
+TitleCorner.Parent = TitleBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Name = "Title"
+TitleText.Size = UDim2.new(1, -120, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "shhhhnayy05 Explorer"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.TextSize = 16
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+--// Tombol Checkpoint Scanner
+local ScanCheckpointBtn = Instance.new("TextButton")
+ScanCheckpointBtn.Name = "ScanCheckpointBtn"
+ScanCheckpointBtn.Size = UDim2.new(0, 30, 0, 30)
+ScanCheckpointBtn.Position = UDim2.new(1, -140, 0, 2)
+ScanCheckpointBtn.BackgroundColor3 = Color3.fromRGB(100, 60, 200)
+ScanCheckpointBtn.Text = "🎯"
+ScanCheckpointBtn.TextSize = 16
+ScanCheckpointBtn.Parent = TitleBar
+
+local ScanCheckpointCorner = Instance.new("UICorner")
+ScanCheckpointCorner.CornerRadius = UDim.new(0, 6)
+ScanCheckpointCorner.Parent = ScanCheckpointBtn
+
+--// Tombol Minimize
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Name = "MinimizeBtn"
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -70, 0, 2)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 20
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Parent = TitleBar
+
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0, 6)
+MinimizeCorner.Parent = MinimizeBtn
+
+--// Tombol Close
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseBtn"
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 2)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 14
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TitleBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseBtn
+
+--// Search Bar
+local SearchFrame = Instance.new("Frame")
+SearchFrame.Name = "SearchFrame"
+SearchFrame.Size = UDim2.new(1, -20, 0, 30)
+SearchFrame.Position = UDim2.new(0, 10, 0, 45)
+SearchFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+SearchFrame.BorderSizePixel = 0
+SearchFrame.Parent = MainFrame
+
+local SearchCorner = Instance.new("UICorner")
+SearchCorner.CornerRadius = UDim.new(0, 6)
+SearchCorner.Parent = SearchFrame
+
+local SearchIcon = Instance.new("TextLabel")
+SearchIcon.Name = "SearchIcon"
+SearchIcon.Size = UDim2.new(0, 25, 1, 0)
+SearchIcon.BackgroundTransparency = 1
+SearchIcon.Text = "🔍"
+SearchIcon.TextSize = 14
+SearchIcon.Parent = SearchFrame
+
+local SearchBox = Instance.new("TextBox")
+SearchBox.Name = "SearchBox"
+SearchBox.Size = UDim2.new(1, -35, 1, 0)
+SearchBox.Position = UDim2.new(0, 30, 0, 0)
+SearchBox.BackgroundTransparency = 1
+SearchBox.Text = ""
+SearchBox.PlaceholderText = "Search workspace..."
+SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+SearchBox.TextSize = 14
+SearchBox.Font = Enum.Font.Gotham
+SearchBox.TextXAlignment = Enum.TextXAlignment.Left
+SearchBox.Parent = SearchFrame
+
+--// Content Frame
+local ContentFrame = Instance.new("ScrollingFrame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -20, 1, -90)
+ContentFrame.Position = UDim2.new(0, 10, 0, 85)
+ContentFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+ContentFrame.BorderSizePixel = 0
+ContentFrame.ScrollBarThickness = 6
+ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentFrame.Parent = MainFrame
+
+local ContentCorner = Instance.new("UICorner")
+ContentCorner.CornerRadius = UDim.new(0, 6)
+ContentCorner.Parent = ContentFrame
+
+local ContentLayout = Instance.new("UIListLayout")
+ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ContentLayout.Padding = UDim.new(0, 2)
+ContentLayout.Parent = ContentFrame
+
+--// Minimize Icon (Floating)
+local MinimizeIcon = Instance.new("TextButton")
+MinimizeIcon.Name = "shhhhnayy05Icon"
+MinimizeIcon.Size = UDim2.new(0, 50, 0, 50)
+MinimizeIcon.Position = UDim2.new(0.1, 0, 0.1, 0)
+MinimizeIcon.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+MinimizeIcon.Text = "📁"
+MinimizeIcon.TextSize = 24
+MinimizeIcon.Visible = false
+MinimizeIcon.Parent = shhhhnayy05Explorer
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(1, 0)
+IconCorner.Parent = MinimizeIcon
+
+local IconStroke = Instance.new("UIStroke")
+IconStroke.Color = Color3.fromRGB(100, 100, 255)
+IconStroke.Thickness = 2
+IconStroke.Parent = MinimizeIcon
+
+--// GUI CHECKPOINT MANAGER - Jendela Terpisah
+local CheckpointGui = Instance.new("ScreenGui")
+CheckpointGui.Name = "shhhhnayy05CheckpointGui"
+CheckpointGui.ResetOnSpawn = false
+CheckpointGui.Parent = PlayerGui
+
+local CheckpointFrame = Instance.new("Frame")
+CheckpointFrame.Name = "CheckpointFrame"
+CheckpointFrame.Size = UDim2.new(0, 350, 0, 450)
+CheckpointFrame.Position = UDim2.new(0.5, -175, 0.5, -225)
+CheckpointFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+CheckpointFrame.BorderSizePixel = 0
+CheckpointFrame.Visible = false
+CheckpointFrame.Parent = CheckpointGui
+
+local CheckpointCorner = Instance.new("UICorner")
+CheckpointCorner.CornerRadius = UDim.new(0, 8)
+CheckpointCorner.Parent = CheckpointFrame
+
+--// Checkpoint Title Bar
+local CheckpointTitleBar = Instance.new("Frame")
+CheckpointTitleBar.Name = "TitleBar"
+CheckpointTitleBar.Size = UDim2.new(1, 0, 0, 35)
+CheckpointTitleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+CheckpointTitleBar.BorderSizePixel = 0
+CheckpointTitleBar.Parent = CheckpointFrame
+
+local CheckpointTitleCorner = Instance.new("UICorner")
+CheckpointTitleCorner.CornerRadius = UDim.new(0, 8)
+CheckpointTitleCorner.Parent = CheckpointTitleBar
+
+local CheckpointTitleText = Instance.new("TextLabel")
+CheckpointTitleText.Name = "Title"
+CheckpointTitleText.Size = UDim2.new(1, -80, 1, 0)
+CheckpointTitleText.Position = UDim2.new(0, 10, 0, 0)
+CheckpointTitleText.BackgroundTransparency = 1
+CheckpointTitleText.Text = "🎯 Checkpoint Manager"
+CheckpointTitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+CheckpointTitleText.TextSize = 16
+CheckpointTitleText.Font = Enum.Font.GothamBold
+CheckpointTitleText.TextXAlignment = Enum.TextXAlignment.Left
+CheckpointTitleText.Parent = CheckpointTitleBar
+
+--// Close Checkpoint GUI
+local CloseCheckpointBtn = Instance.new("TextButton")
+CloseCheckpointBtn.Name = "CloseBtn"
+CloseCheckpointBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseCheckpointBtn.Position = UDim2.new(1, -35, 0, 2)
+CloseCheckpointBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseCheckpointBtn.Text = "X"
+CloseCheckpointBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseCheckpointBtn.TextSize = 14
+CloseCheckpointBtn.Font = Enum.Font.GothamBold
+CloseCheckpointBtn.Parent = CheckpointTitleBar
+
+local CloseCheckpointCorner = Instance.new("UICorner")
+CloseCheckpointCorner.CornerRadius = UDim.new(0, 6)
+CloseCheckpointCorner.Parent = CloseCheckpointBtn
+
+--// Scan Button di Checkpoint GUI
+local ScanNewCheckpointBtn = Instance.new("TextButton")
+ScanNewCheckpointBtn.Name = "ScanNewBtn"
+ScanNewCheckpointBtn.Size = UDim2.new(0, 30, 0, 30)
+ScanNewCheckpointBtn.Position = UDim2.new(1, -70, 0, 2)
+ScanNewCheckpointBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+ScanNewCheckpointBtn.Text = "🔍"
+ScanNewCheckpointBtn.TextSize = 16
+ScanNewCheckpointBtn.Parent = CheckpointTitleBar
+
+local ScanNewCorner = Instance.new("UICorner")
+ScanNewCorner.CornerRadius = UDim.new(0, 6)
+ScanNewCorner.Parent = ScanNewCheckpointBtn
+
+--// Info Panel
+local InfoPanel = Instance.new("Frame")
+InfoPanel.Name = "InfoPanel"
+InfoPanel.Size = UDim2.new(1, -20, 0, 60)
+InfoPanel.Position = UDim2.new(0, 10, 0, 45)
+InfoPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+InfoPanel.BorderSizePixel = 0
+InfoPanel.Parent = CheckpointFrame
+
+local InfoPanelCorner = Instance.new("UICorner")
+InfoPanelCorner.CornerRadius = UDim.new(0, 8)
+InfoPanelCorner.Parent = InfoPanel
+
+local TotalCheckpointLabel = Instance.new("TextLabel")
+TotalCheckpointLabel.Name = "TotalLabel"
+TotalCheckpointLabel.Size = UDim2.new(1, -10, 0, 20)
+TotalCheckpointLabel.Position = UDim2.new(0, 5, 0, 5)
+TotalCheckpointLabel.BackgroundTransparency = 1
+TotalCheckpointLabel.Text = "📊 Total: 0 | 🎯 Active: 0 | 👻 Hidden: 0"
+TotalCheckpointLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+TotalCheckpointLabel.TextSize = 12
+TotalCheckpointLabel.Font = Enum.Font.GothamBold
+TotalCheckpointLabel.Parent = InfoPanel
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Name = "StatusLabel"
+StatusLabel.Size = UDim2.new(1, -10, 0, 20)
+StatusLabel.Position = UDim2.new(0, 5, 0, 30)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Status: Ready to scan"
+StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+StatusLabel.TextSize = 11
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Parent = InfoPanel
+
+--// Search Checkpoint
+local CheckpointSearchFrame = Instance.new("Frame")
+CheckpointSearchFrame.Name = "SearchFrame"
+CheckpointSearchFrame.Size = UDim2.new(1, -20, 0, 30)
+CheckpointSearchFrame.Position = UDim2.new(0, 10, 0, 115)
+CheckpointSearchFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+CheckpointSearchFrame.BorderSizePixel = 0
+CheckpointSearchFrame.Parent = CheckpointFrame
+
+local CheckpointSearchCorner = Instance.new("UICorner")
+CheckpointSearchCorner.CornerRadius = UDim.new(0, 6)
+CheckpointSearchCorner.Parent = CheckpointSearchFrame
+
+local CheckpointSearchBox = Instance.new("TextBox")
+CheckpointSearchBox.Name = "CheckpointSearchBox"
+CheckpointSearchBox.Size = UDim2.new(1, -10, 1, 0)
+CheckpointSearchBox.Position = UDim2.new(0, 5, 0, 0)
+CheckpointSearchBox.BackgroundTransparency = 1
+CheckpointSearchBox.Text = ""
+CheckpointSearchBox.PlaceholderText = "Search checkpoint by number or name..."
+CheckpointSearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+CheckpointSearchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+CheckpointSearchBox.TextSize = 13
+CheckpointSearchBox.Font = Enum.Font.Gotham
+CheckpointSearchBox.TextXAlignment = Enum.TextXAlignment.Left
+CheckpointSearchBox.Parent = CheckpointSearchFrame
+
+--// Checkpoint Content List
+local CheckpointContent = Instance.new("ScrollingFrame")
+CheckpointContent.Name = "CheckpointContent"
+CheckpointContent.Size = UDim2.new(1, -20, 1, -200)
+CheckpointContent.Position = UDim2.new(0, 10, 0, 155)
+CheckpointContent.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+CheckpointContent.BorderSizePixel = 0
+CheckpointContent.ScrollBarThickness = 6
+CheckpointContent.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+CheckpointContent.CanvasSize = UDim2.new(0, 0, 0, 0)
+CheckpointContent.Parent = CheckpointFrame
+
+local CheckpointContentCorner = Instance.new("UICorner")
+CheckpointContentCorner.CornerRadius = UDim.new(0, 6)
+CheckpointContentCorner.Parent = CheckpointContent
+
+local CheckpointLayout = Instance.new("UIListLayout")
+CheckpointLayout.SortOrder = Enum.SortOrder.LayoutOrder
+CheckpointLayout.Padding = UDim.new(0, 3)
+CheckpointLayout.Parent = CheckpointContent
+
+--// Control Panel
+local ControlPanel = Instance.new("Frame")
+ControlPanel.Name = "ControlPanel"
+ControlPanel.Size = UDim2.new(1, -20, 0, 35)
+ControlPanel.Position = UDim2.new(0, 10, 1, -45)
+ControlPanel.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+ControlPanel.BorderSizePixel = 0
+ControlPanel.Parent = CheckpointFrame
+
+local ControlPanelCorner = Instance.new("UICorner")
+ControlPanelCorner.CornerRadius = UDim.new(0, 6)
+ControlPanelCorner.Parent = ControlPanel
+
+local ClearAllBtn = Instance.new("TextButton")
+ClearAllBtn.Name = "ClearAllBtn"
+ClearAllBtn.Size = UDim2.new(0.48, 0, 1, -6)
+ClearAllBtn.Position = UDim2.new(0, 3, 0, 3)
+ClearAllBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+ClearAllBtn.Text = "🗑 Clear All"
+ClearAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ClearAllBtn.TextSize = 12
+ClearAllBtn.Font = Enum.Font.GothamBold
+ClearAllBtn.Parent = ControlPanel
+
+local ClearAllCorner = Instance.new("UICorner")
+ClearAllCorner.CornerRadius = UDim.new(0, 6)
+ClearAllCorner.Parent = ClearAllBtn
+
+local RevealHiddenBtn = Instance.new("TextButton")
+RevealHiddenBtn.Name = "RevealHiddenBtn"
+RevealHiddenBtn.Size = UDim2.new(0.48, 0, 1, -6)
+RevealHiddenBtn.Position = UDim2.new(0.52, 0, 0, 3)
+RevealHiddenBtn.BackgroundColor3 = Color3.fromRGB(100, 60, 200)
+RevealHiddenBtn.Text = "👻 Reveal Hidden"
+RevealHiddenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RevealHiddenBtn.TextSize = 12
+RevealHiddenBtn.Font = Enum.Font.GothamBold
+RevealHiddenBtn.Parent = ControlPanel
+
+local RevealHiddenCorner = Instance.new("UICorner")
+RevealHiddenCorner.CornerRadius = UDim.new(0, 6)
+RevealHiddenCorner.Parent = RevealHiddenBtn
+
+--// GUI Teleport Folder
+local TeleportGui = Instance.new("ScreenGui")
+TeleportGui.Name = "shhhhnayy05TeleportGui"
+TeleportGui.ResetOnSpawn = false
+TeleportGui.Parent = PlayerGui
+
+local TeleportFrame = Instance.new("Frame")
+TeleportFrame.Name = "TeleportFrame"
+TeleportFrame.Size = UDim2.new(0, 350, 0, 450)
+TeleportFrame.Position = UDim2.new(0.5, -175, 0.5, -225)
+TeleportFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+TeleportFrame.BorderSizePixel = 0
+TeleportFrame.Visible = false
+TeleportFrame.Parent = TeleportGui
+
+local TeleportCorner = Instance.new("UICorner")
+TeleportCorner.CornerRadius = UDim.new(0, 8)
+TeleportCorner.Parent = TeleportFrame
+
+--// Teleport Title Bar
+local TeleportTitleBar = Instance.new("Frame")
+TeleportTitleBar.Name = "TitleBar"
+TeleportTitleBar.Size = UDim2.new(1, 0, 0, 35)
+TeleportTitleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+TeleportTitleBar.BorderSizePixel = 0
+TeleportTitleBar.Parent = TeleportFrame
+
+local TeleportTitleCorner = Instance.new("UICorner")
+TeleportTitleCorner.CornerRadius = UDim.new(0, 8)
+TeleportTitleCorner.Parent = TeleportTitleBar
+
+local TeleportTitleText = Instance.new("TextLabel")
+TeleportTitleText.Name = "Title"
+TeleportTitleText.Size = UDim2.new(1, -80, 1, 0)
+TeleportTitleText.Position = UDim2.new(0, 10, 0, 0)
+TeleportTitleText.BackgroundTransparency = 1
+TeleportTitleText.Text = "Teleport - Folder"
+TeleportTitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleportTitleText.TextSize = 16
+TeleportTitleText.Font = Enum.Font.GothamBold
+TeleportTitleText.TextXAlignment = Enum.TextXAlignment.Left
+TeleportTitleText.Parent = TeleportTitleBar
+
+--// Close Teleport GUI
+local CloseTeleportBtn = Instance.new("TextButton")
+CloseTeleportBtn.Name = "CloseBtn"
+CloseTeleportBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseTeleportBtn.Position = UDim2.new(1, -35, 0, 2)
+CloseTeleportBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseTeleportBtn.Text = "X"
+CloseTeleportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseTeleportBtn.TextSize = 14
+CloseTeleportBtn.Font = Enum.Font.GothamBold
+CloseTeleportBtn.Parent = TeleportTitleBar
+
+local CloseTeleportCorner = Instance.new("UICorner")
+CloseTeleportCorner.CornerRadius = UDim.new(0, 6)
+CloseTeleportCorner.Parent = CloseTeleportBtn
+
+--// NAVIGATION PANEL
+local NavPanel = Instance.new("Frame")
+NavPanel.Name = "NavPanel"
+NavPanel.Size = UDim2.new(1, -20, 0, 110)
+NavPanel.Position = UDim2.new(0, 10, 0, 45)
+NavPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+NavPanel.BorderSizePixel = 0
+NavPanel.Parent = TeleportFrame
+
+local NavPanelCorner = Instance.new("UICorner")
+NavPanelCorner.CornerRadius = UDim.new(0, 8)
+NavPanelCorner.Parent = NavPanel
+
+--// Tombol Kiri (⬅️)
+local LeftBtn = Instance.new("TextButton")
+LeftBtn.Name = "LeftBtn"
+LeftBtn.Size = UDim2.new(0, 50, 0, 35)
+LeftBtn.Position = UDim2.new(0, 10, 0, 5)
+LeftBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+LeftBtn.Text = "⬅️"
+LeftBtn.TextSize = 20
+LeftBtn.Font = Enum.Font.GothamBold
+LeftBtn.Parent = NavPanel
+
+local LeftCorner = Instance.new("UICorner")
+LeftCorner.CornerRadius = UDim.new(0, 8)
+LeftCorner.Parent = LeftBtn
+
+--// Tombol Kanan (➡️)
+local RightBtn = Instance.new("TextButton")
+RightBtn.Name = "RightBtn"
+RightBtn.Size = UDim2.new(0, 50, 0, 35)
+RightBtn.Position = UDim2.new(1, -60, 0, 5)
+RightBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+RightBtn.Text = "➡️"
+RightBtn.TextSize = 20
+RightBtn.Font = Enum.Font.GothamBold
+RightBtn.Parent = NavPanel
+
+local RightCorner = Instance.new("UICorner")
+RightCorner.CornerRadius = UDim.new(0, 8)
+RightCorner.Parent = RightBtn
+
+--// Counter Label (1-1000)
+local CounterLabel = Instance.new("TextLabel")
+CounterLabel.Name = "CounterLabel"
+CounterLabel.Size = UDim2.new(1, -120, 0, 20)
+CounterLabel.Position = UDim2.new(0, 60, 0, 12)
+CounterLabel.BackgroundTransparency = 1
+CounterLabel.Text = "1 / 1000"
+CounterLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+CounterLabel.TextSize = 16
+CounterLabel.Font = Enum.Font.GothamBold
+CounterLabel.Parent = NavPanel
+
+--// Nama Item Terpilih
+local SelectedItemLabel = Instance.new("TextLabel")
+SelectedItemLabel.Name = "SelectedItemLabel"
+SelectedItemLabel.Size = UDim2.new(1, -20, 0, 20)
+SelectedItemLabel.Position = UDim2.new(0, 10, 0, 45)
+SelectedItemLabel.BackgroundTransparency = 1
+SelectedItemLabel.Text = "🧊 Select an item"
+SelectedItemLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SelectedItemLabel.TextSize = 13
+SelectedItemLabel.Font = Enum.Font.Gotham
+SelectedItemLabel.TextTruncate = Enum.TextTruncate.AtEnd
+SelectedItemLabel.Parent = NavPanel
+
+--// MODE OTOMATIS PANEL
+local AutoModeBtn = Instance.new("TextButton")
+AutoModeBtn.Name = "AutoModeBtn"
+AutoModeBtn.Size = UDim2.new(1, -20, 0, 25)
+AutoModeBtn.Position = UDim2.new(0, 10, 0, 75)
+AutoModeBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+AutoModeBtn.Text = "🤖 Mode Otomatis"
+AutoModeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoModeBtn.TextSize = 12
+AutoModeBtn.Font = Enum.Font.GothamBold
+AutoModeBtn.Parent = NavPanel
+
+local AutoModeCorner = Instance.new("UICorner")
+AutoModeCorner.CornerRadius = UDim.new(0, 6)
+AutoModeCorner.Parent = AutoModeBtn
+
+--// GUI AUTO LOOP
+local AutoLoopGui = Instance.new("ScreenGui")
+AutoLoopGui.Name = "shhhhnayy05AutoLoopGui"
+AutoLoopGui.ResetOnSpawn = false
+AutoLoopGui.Parent = PlayerGui
+
+local AutoLoopFrame = Instance.new("Frame")
+AutoLoopFrame.Name = "AutoLoopFrame"
+AutoLoopFrame.Size = UDim2.new(0, 280, 0, 200)
+AutoLoopFrame.Position = UDim2.new(0.5, -140, 0.5, -100)
+AutoLoopFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+AutoLoopFrame.BorderSizePixel = 0
+AutoLoopFrame.Visible = false
+AutoLoopFrame.Parent = AutoLoopGui
+
+local AutoLoopCorner = Instance.new("UICorner")
+AutoLoopCorner.CornerRadius = UDim.new(0, 8)
+AutoLoopCorner.Parent = AutoLoopFrame
+
+--// Auto Loop Title Bar
+local AutoLoopTitleBar = Instance.new("Frame")
+AutoLoopTitleBar.Name = "TitleBar"
+AutoLoopTitleBar.Size = UDim2.new(1, 0, 0, 35)
+AutoLoopTitleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+AutoLoopTitleBar.BorderSizePixel = 0
+AutoLoopTitleBar.Parent = AutoLoopFrame
+
+local AutoLoopTitleCorner = Instance.new("UICorner")
+AutoLoopTitleCorner.CornerRadius = UDim.new(0, 8)
+AutoLoopTitleCorner.Parent = AutoLoopTitleBar
+
+local AutoLoopTitleText = Instance.new("TextLabel")
+AutoLoopTitleText.Name = "Title"
+AutoLoopTitleText.Size = UDim2.new(1, -40, 1, 0)
+AutoLoopTitleText.Position = UDim2.new(0, 10, 0, 0)
+AutoLoopTitleText.BackgroundTransparency = 1
+AutoLoopTitleText.Text = "🤖 Auto Loop Mode"
+AutoLoopTitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoLoopTitleText.TextSize = 14
+AutoLoopTitleText.Font = Enum.Font.GothamBold
+AutoLoopTitleText.TextXAlignment = Enum.TextXAlignment.Left
+AutoLoopTitleText.Parent = AutoLoopTitleBar
+
+--// Close Auto Loop GUI
+local CloseAutoLoopBtn = Instance.new("TextButton")
+CloseAutoLoopBtn.Name = "CloseBtn"
+CloseAutoLoopBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseAutoLoopBtn.Position = UDim2.new(1, -35, 0, 2)
+CloseAutoLoopBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseAutoLoopBtn.Text = "X"
+CloseAutoLoopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseAutoLoopBtn.TextSize = 14
+CloseAutoLoopBtn.Font = Enum.Font.GothamBold
+CloseAutoLoopBtn.Parent = AutoLoopTitleBar
+
+local CloseAutoLoopCorner = Instance.new("UICorner")
+CloseAutoLoopCorner.CornerRadius = UDim.new(0, 6)
+CloseAutoLoopCorner.Parent = CloseAutoLoopBtn
+
+--// START LOOP Button
+local StartLoopBtn = Instance.new("TextButton")
+StartLoopBtn.Name = "StartLoopBtn"
+StartLoopBtn.Size = UDim2.new(1, -20, 0, 45)
+StartLoopBtn.Position = UDim2.new(0, 10, 0, 50)
+StartLoopBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+StartLoopBtn.Text = "▶️ START LOOP"
+StartLoopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+StartLoopBtn.TextSize = 16
+StartLoopBtn.Font = Enum.Font.GothamBold
+StartLoopBtn.Parent = AutoLoopFrame
+
+local StartLoopCorner = Instance.new("UICorner")
+StartLoopCorner.CornerRadius = UDim.new(0, 8)
+StartLoopCorner.Parent = StartLoopBtn
+
+--// STOP LOOP Button
+local StopLoopBtn = Instance.new("TextButton")
+StopLoopBtn.Name = "StopLoopBtn"
+StopLoopBtn.Size = UDim2.new(1, -20, 0, 45)
+StopLoopBtn.Position = UDim2.new(0, 10, 0, 100)
+StopLoopBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+StopLoopBtn.Text = "⏹ STOP LOOP"
+StopLoopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+StopLoopBtn.TextSize = 16
+StopLoopBtn.Font = Enum.Font.GothamBold
+StopLoopBtn.Parent = AutoLoopFrame
+
+local StopLoopCorner = Instance.new("UICorner")
+StopLoopCorner.CornerRadius = UDim.new(0, 8)
+StopLoopCorner.Parent = StopLoopBtn
+
+--// SPEED Control Panel
+local SpeedPanel = Instance.new("Frame")
+SpeedPanel.Name = "SpeedPanel"
+SpeedPanel.Size = UDim2.new(1, -20, 0, 40)
+SpeedPanel.Position = UDim2.new(0, 10, 0, 155)
+SpeedPanel.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+SpeedPanel.BorderSizePixel = 0
+SpeedPanel.Parent = AutoLoopFrame
+
+local SpeedPanelCorner = Instance.new("UICorner")
+SpeedPanelCorner.CornerRadius = UDim.new(0, 6)
+SpeedPanelCorner.Parent = SpeedPanel
+
+--// SPEED Label
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Name = "SpeedLabel"
+SpeedLabel.Size = UDim2.new(0, 60, 1, 0)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "SPEED:"
+SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+SpeedLabel.TextSize = 12
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.Parent = SpeedPanel
+
+--// Tombol Minus (-)
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Name = "MinusBtn"
+MinusBtn.Size = UDim2.new(0, 40, 0, 30)
+MinusBtn.Position = UDim2.new(0, 65, 0, 5)
+MinusBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+MinusBtn.Text = "-"
+MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinusBtn.TextSize = 20
+MinusBtn.Font = Enum.Font.GothamBold
+MinusBtn.Parent = SpeedPanel
+
+local MinusCorner = Instance.new("UICorner")
+MinusCorner.CornerRadius = UDim.new(0, 6)
+MinusCorner.Parent = MinusBtn
+
+--// Speed Value Display
+local SpeedValueLabel = Instance.new("TextLabel")
+SpeedValueLabel.Name = "SpeedValue"
+SpeedValueLabel.Size = UDim2.new(0, 50, 1, 0)
+SpeedValueLabel.Position = UDim2.new(0, 110, 0, 0)
+SpeedValueLabel.BackgroundTransparency = 1
+SpeedValueLabel.Text = "1.0"
+SpeedValueLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+SpeedValueLabel.TextSize = 18
+SpeedValueLabel.Font = Enum.Font.GothamBold
+SpeedValueLabel.Parent = SpeedPanel
+
+--// Tombol Plus (+)
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Name = "PlusBtn"
+PlusBtn.Size = UDim2.new(0, 40, 0, 30)
+PlusBtn.Position = UDim2.new(0, 165, 0, 5)
+PlusBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+PlusBtn.Text = "+"
+PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlusBtn.TextSize = 20
+PlusBtn.Font = Enum.Font.GothamBold
+PlusBtn.Parent = SpeedPanel
+
+local PlusCorner = Instance.new("UICorner")
+PlusCorner.CornerRadius = UDim.new(0, 6)
+PlusCorner.Parent = PlusBtn
+
+--// Speed Info
+local SpeedInfo = Instance.new("TextLabel")
+SpeedInfo.Name = "SpeedInfo"
+SpeedInfo.Size = UDim2.new(0, 60, 1, 0)
+SpeedInfo.Position = UDim2.new(1, -65, 0, 0)
+SpeedInfo.BackgroundTransparency = 1
+SpeedInfo.Text = "detik"
+SpeedInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
+SpeedInfo.TextSize = 11
+SpeedInfo.Font = Enum.Font.Gotham
+SpeedInfo.Parent = SpeedPanel
+
+--// AUTO SEARCH PANEL
+local AutoSearchPanel = Instance.new("Frame")
+AutoSearchPanel.Name = "AutoSearchPanel"
+AutoSearchPanel.Size = UDim2.new(1, -20, 0, 65)
+AutoSearchPanel.Position = UDim2.new(0, 10, 0, 165)
+AutoSearchPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+AutoSearchPanel.BorderSizePixel = 0
+AutoSearchPanel.Parent = TeleportFrame
+
+local AutoSearchPanelCorner = Instance.new("UICorner")
+AutoSearchPanelCorner.CornerRadius = UDim.new(0, 8)
+AutoSearchPanelCorner.Parent = AutoSearchPanel
+
+--// Search Title
+local SearchTitle = Instance.new("TextLabel")
+SearchTitle.Name = "SearchTitle"
+SearchTitle.Size = UDim2.new(1, -10, 0, 18)
+SearchTitle.Position = UDim2.new(0, 5, 0, 3)
+SearchTitle.BackgroundTransparency = 1
+SearchTitle.Text = "🔍 Auto Search"
+SearchTitle.TextColor3 = Color3.fromRGB(100, 200, 255)
+SearchTitle.TextSize = 11
+SearchTitle.Font = Enum.Font.GothamBold
+SearchTitle.Parent = AutoSearchPanel
+
+--// Search Input
+local SearchInputFrame = Instance.new("Frame")
+SearchInputFrame.Name = "SearchInputFrame"
+SearchInputFrame.Size = UDim2.new(1, -10, 0, 30)
+SearchInputFrame.Position = UDim2.new(0, 5, 0, 28)
+SearchInputFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+SearchInputFrame.BorderSizePixel = 0
+SearchInputFrame.Parent = AutoSearchPanel
+
+local SearchInputCorner = Instance.new("UICorner")
+SearchInputCorner.CornerRadius = UDim.new(0, 6)
+SearchInputCorner.Parent = SearchInputFrame
+
+--// Search TextBox
+local TeleportSearchBox = Instance.new("TextBox")
+TeleportSearchBox.Name = "TeleportSearchBox"
+TeleportSearchBox.Size = UDim2.new(1, -10, 1, 0)
+TeleportSearchBox.Position = UDim2.new(0, 5, 0, 0)
+TeleportSearchBox.BackgroundTransparency = 1
+TeleportSearchBox.Text = ""
+TeleportSearchBox.PlaceholderText = "Type number or name..."
+TeleportSearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleportSearchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+TeleportSearchBox.TextSize = 13
+TeleportSearchBox.Font = Enum.Font.Gotham
+TeleportSearchBox.TextXAlignment = Enum.TextXAlignment.Left
+TeleportSearchBox.ClearTextOnFocus = false
+TeleportSearchBox.Parent = SearchInputFrame
+
+--// Teleport Content (List Item)
+local TeleportContent = Instance.new("ScrollingFrame")
+TeleportContent.Name = "TeleportContent"
+TeleportContent.Size = UDim2.new(1, -20, 1, -240)
+TeleportContent.Position = UDim2.new(0, 10, 0, 240)
+TeleportContent.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+TeleportContent.BorderSizePixel = 0
+TeleportContent.ScrollBarThickness = 6
+TeleportContent.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+TeleportContent.CanvasSize = UDim2.new(0, 0, 0, 0)
+TeleportContent.Parent = TeleportFrame
+
+local TeleportContentCorner = Instance.new("UICorner")
+TeleportContentCorner.CornerRadius = UDim.new(0, 6)
+TeleportContentCorner.Parent = TeleportContent
+
+local TeleportLayout = Instance.new("UIListLayout")
+TeleportLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TeleportLayout.Padding = UDim.new(0, 3)
+TeleportLayout.Parent = TeleportContent
+
+--// Sort Mode Toggle
+local SortFrame = Instance.new("Frame")
+SortFrame.Name = "SortFrame"
+SortFrame.Size = UDim2.new(1, -20, 0, 30)
+SortFrame.Position = UDim2.new(0, 10, 1, -35)
+SortFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+SortFrame.BorderSizePixel = 0
+SortFrame.Parent = TeleportFrame
+
+local SortCorner = Instance.new("UICorner")
+SortCorner.CornerRadius = UDim.new(0, 6)
+SortCorner.Parent = SortFrame
+
+local SortBtn = Instance.new("TextButton")
+SortBtn.Name = "SortBtn"
+SortBtn.Size = UDim2.new(1, 0, 1, 0)
+SortBtn.BackgroundTransparency = 1
+SortBtn.Text = "📊 Sort: 1-1000 (Numeric)"
+SortBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SortBtn.TextSize = 12
+SortBtn.Font = Enum.Font.Gotham
+SortBtn.Parent = SortFrame
+
+--// Variabel
+local isMinimized = false
+local currentFolder = nil
+local currentItems = {}
+local currentIndex = 1
+local sortMode = "numeric"
+local isLoopRunning = false
+local loopSpeed = 1.0
+local loopConnection = nil
+
+--// FUNGSI CHECKPOINT SYSTEM
+
+--// Cek apakah object adalah checkpoint
+local function isCheckpoint(instance)
+    if not instance then return false end
     
-    -- Executor Signatures Database
-    ExecutorDatabase = {
-        -- Mobile Executors (Android/Ponsel)
-        Mobile = {
-            ["Delta"] = {
-                Signatures = {"Delta", "DeltaExecutor", "Delta API", "delta_key", "Delta_Executor"},
-                Indicators = {"getexecutorname", "delta", "isdelta"},
-                UserAgent = "Delta",
-                Platform = "Android",
-                RiskLevel = "High",
-                Color = Color3.fromRGB(255, 100, 100)
-            },
-            ["Fluxus"] = {
-                Signatures = {"Fluxus", "FluxusExecutor", "Fluxus API", "fluxus_key", "Fluxus_Executor"},
-                Indicators = {"fluxus", "isfluxus", "fluxus_loaded"},
-                UserAgent = "Fluxus",
-                Platform = "Android",
-                RiskLevel = "High",
-                Color = Color3.fromRGB(255, 150, 50)
-            },
-            ["Codex"] = {
-                Signatures = {"Codex", "CodexExecutor", "Codex API", "codex_key", "Codex_Executor"},
-                Indicators = {"codex", "iscodex", "codex_loaded"},
-                UserAgent = "Codex",
-                Platform = "Android",
-                RiskLevel = "High",
-                Color = Color3.fromRGB(100, 255, 100)
-            },
-            ["Arceus"] = {
-                Signatures = {"Arceus", "Arceus X", "ArceusX", "ArceusExecutor", "arceus_key"},
-                Indicators = {"arceus", "arceusx", "isarceus"},
-                UserAgent = "Arceus",
-                Platform = "Android",
-                RiskLevel = "High",
-                Color = Color3.fromRGB(255, 50, 255)
-            },
-            ["Vega X"] = {
-                Signatures = {"Vega X", "VegaX", "VegaExecutor", "vega_key", "Vega_X"},
-                Indicators = {"vega", "vega_x", "isvega"},
-                UserAgent = "Vega",
-                Platform = "Android",
-                RiskLevel = "High",
-                Color = Color3.fromRGB(255, 255, 100)
-            }
-        },
-        
-        -- PC Executors (PC/Laptop/Emulator)
-        PC = {
-            ["Wave"] = {
-                Signatures = {"Wave", "WaveExecutor", "Wave API", "wave_key", "Wave_Executor"},
-                Indicators = {"wave", "iswave", "wave_loaded"},
-                UserAgent = "Wave",
-                Platform = "Windows",
-                RiskLevel = "High",
-                Color = Color3.fromRGB(100, 100, 255)
-            },
-            ["Synapse Z"] = {
-                Signatures = {"Synapse Z", "SynapseZ", "SynapseExecutor", "synapse_key", "Synapse_Z"},
-                Indicators = {"synapse", "synapsez", "issynapse"},
-                UserAgent = "Synapse",
-                Platform = "Windows",
-                RiskLevel = "Critical",
-                Color = Color3.fromRGB(255, 0, 0)
-            },
-            ["Hydrogen"] = {
-                Signatures = {"Hydrogen", "HydrogenExecutor", "Hydrogen API", "hydrogen_key", "Hydrogen_Executor"},
-                Indicators = {"hydrogen", "ishydrogen", "hydrogen_loaded"},
-                UserAgent = "Hydrogen",
-                Platform = "Windows",
-                RiskLevel = "High",
-                Color = Color3.fromRGB(0, 255, 255)
-            },
-            ["Electron"] = {
-                Signatures = {"Electron", "ElectronExecutor", "Electron API", "electron_key", "Electron_Executor"},
-                Indicators = {"electron", "iselectron", "electron_loaded"},
-                UserAgent = "Electron",
-                Platform = "Windows",
-                RiskLevel = "High",
-                Color = Color3.fromRGB(200, 200, 200)
-            }
-        }
-    },
+    local name = string.lower(instance.Name)
     
-    -- Script Detection Patterns
-    ScriptPatterns = {
-        ["Kill Script"] = {"kill", "damage", "health", "humanoid:TakeDamage", "humanoid.Health"},
-        ["Teleport Script"] = {"Teleport", "CFrame", "Vector3", "workspace", "Character:SetPrimaryPartCFrame"},
-        ["Speed Hack"] = {"speed", "walkspeed", "WalkSpeed", "Humanoid.WalkSpeed"},
-        ["Fly Script"] = {"fly", "flying", "BodyGyro", "BodyVelocity", "velocity", "flight"},
-        ["ESP Script"] = {"esp", "highlight", "BillboardGui", "AlwaysOnTop", "chams"},
-        ["Aimbot"] = {"aimbot", "aim", "Camera.CFrame", "CFrame.lookAt", "target"},
-        ["Infinite Jump"] = {"jump", "InfiniteJump", "UserInputService", "JumpRequest"},
-        ["Noclip"] = {"noclip", "CanCollide", "clip", "collision"},
-        ["Auto Farm"] = {"farm", "autofarm", "auto", "collect", "coin", "money"},
-        ["God Mode"] = {"god", "godmode", "invincible", "immortal", "Health = math.huge"},
-        ["Remote Spy"] = {"remotespy", "spy", "InvokeServer", "FireServer", "RemoteEvent"},
-        ["Backdoor"] = {"backdoor", "require", "loadstring", "getfenv", "setfenv"},
-        ["Server Side"] = {"serverside", "ss", "serversided", "admin", "cmd", "command"},
-        ["Crash Script"] = {"crash", "while true do", "for i=1,1000000", "memory", "lag"}
-    },
-    
-    -- UI Colors
-    Colors = {
-        Primary = Color3.fromRGB(25, 25, 35),
-        Secondary = Color3.fromRGB(35, 35, 50),
-        Accent = Color3.fromRGB(0, 170, 255),
-        Success = Color3.fromRGB(0, 255, 100),
-        Warning = Color3.fromRGB(255, 170, 0),
-        Danger = Color3.fromRGB(255, 50, 50),
-        Text = Color3.fromRGB(255, 255, 255),
-        SubText = Color3.fromRGB(180, 180, 180)
+    --// Pattern umum untuk checkpoint
+    local checkpointPatterns = {
+        "checkpoint", "check", "cp", "stage", "level", "spawn", "start", "begin",
+        "point", "save", "respawn", "progress", "waypoint", "flag", "goal",
+        "finish", "end", "teleport", "tp", "portal", "door", "entry", "exit"
     }
-}
-
--- shhhhnayy05 Main System
-local shhhhnayy05_System = {
-    DetectedPlayers = {},
-    ActiveScripts = {},
-    DetectionLogs = {},
-    Monitoring = false,
-    SelectedPlayer = nil,
-    ESPObjects = {},
-    TeleportOffset = Vector3.new(0, 3, 0)
-}
-
--- ESP Storage
-local shhhhnayy05_ESP = {
-    Containers = {},
-    Active = false
-}
-
--- Create GUI
-local function shhhhnayy05_CreateGUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "shhhhnayy05_DetectorSystem"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    if syn and syn.protect_gui then
-        syn.protect_gui(ScreenGui)
-        ScreenGui.Parent = game.CoreGui
-    elseif gethui then
-        ScreenGui.Parent = gethui()
-    else
-        ScreenGui.Parent = game.CoreGui
+    for _, pattern in ipairs(checkpointPatterns) do
+        if string.find(name, pattern) then
+            return true
+        end
     end
     
-    -- Main Frame
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 420, 0, 520)
-    MainFrame.Position = UDim2.new(1, -430, 0.5, -260)
-    MainFrame.BackgroundColor3 = shhhhnayy05_Config.Colors.Primary
-    MainFrame.BorderSizePixel = 0
-    MainFrame.ClipsDescendants = true
-    MainFrame.Parent = ScreenGui
+    --// Cek attribute checkpoint
+    if instance:GetAttribute("Checkpoint") or instance:GetAttribute("Stage") then
+        return true
+    end
     
-    local MainCorner = Instance.new("UICorner")
-    MainCorner.CornerRadius = UDim.new(0, 10)
-    MainCorner.Parent = MainFrame
+    --// Cek jika ada TouchInterest (biasanya checkpoint)
+    if instance:FindFirstChild("TouchInterest") then
+        return true
+    end
     
-    -- Top Bar
-    local TopBar = Instance.new("Frame")
-    TopBar.Name = "TopBar"
-    TopBar.Size = UDim2.new(1, 0, 0, 40)
-    TopBar.BackgroundColor3 = shhhhnayy05_Config.Colors.Secondary
-    TopBar.BorderSizePixel = 0
-    TopBar.Parent = MainFrame
+    --// Cek jika ada ClickDetector (checkpoint interaktif)
+    if instance:FindFirstChild("ClickDetector") then
+        return true
+    end
     
-    local TopBarCorner = Instance.new("UICorner")
-    TopBarCorner.CornerRadius = UDim.new(0, 10)
-    TopBarCorner.Parent = TopBar
+    --// Cek jika ada ProximityPrompt (checkpoint modern)
+    if instance:FindFirstChild("ProximityPrompt") then
+        return true
+    end
     
-    local Title = Instance.new("TextLabel")
-    Title.Name = "Title"
-    Title.Size = UDim2.new(1, -100, 1, 0)
-    Title.Position = UDim2.new(0, 15, 0, 0)
-    Title.BackgroundTransparency = 1
-    Title.Text = "🔍 shhhhnayy05 Detector v5.0"
-    Title.TextColor3 = shhhhnayy05_Config.Colors.Text
-    Title.TextSize = 16
-    Title.Font = Enum.Font.GothamBold
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = TopBar
-    
-    -- Minimize Button
-    local MinimizeBtn = Instance.new("TextButton")
-    MinimizeBtn.Name = "MinimizeBtn"
-    MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-    MinimizeBtn.Position = UDim2.new(1, -70, 0.5, -15)
-    MinimizeBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Accent
-    MinimizeBtn.Text = "-"
-    MinimizeBtn.TextColor3 = shhhhnayy05_Config.Colors.Text
-    MinimizeBtn.TextSize = 20
-    MinimizeBtn.Font = Enum.Font.GothamBold
-    MinimizeBtn.Parent = TopBar
-    
-    local MinimizeCorner = Instance.new("UICorner")
-    MinimizeCorner.CornerRadius = UDim.new(0, 6)
-    MinimizeCorner.Parent = MinimizeBtn
-    
-    -- Close Button
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Name = "CloseBtn"
-    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-    CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
-    CloseBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Danger
-    CloseBtn.Text = "X"
-    CloseBtn.TextColor3 = shhhhnayy05_Config.Colors.Text
-    CloseBtn.TextSize = 14
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Parent = TopBar
-    
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 6)
-    CloseCorner.Parent = CloseBtn
-    
-    -- Content Frame
-    local ContentFrame = Instance.new("Frame")
-    ContentFrame.Name = "ContentFrame"
-    ContentFrame.Size = UDim2.new(1, -20, 1, -120)
-    ContentFrame.Position = UDim2.new(0, 10, 0, 50)
-    ContentFrame.BackgroundColor3 = shhhhnayy05_Config.Colors.Secondary
-    ContentFrame.BorderSizePixel = 0
-    ContentFrame.Parent = MainFrame
-    
-    local ContentCorner = Instance.new("UICorner")
-    ContentCorner.CornerRadius = UDim.new(0, 8)
-    ContentCorner.Parent = ContentFrame
-    
-    -- Stats Frame
-    local StatsFrame = Instance.new("Frame")
-    StatsFrame.Name = "StatsFrame"
-    StatsFrame.Size = UDim2.new(1, -20, 0, 80)
-    StatsFrame.Position = UDim2.new(0, 10, 0, 10)
-    StatsFrame.BackgroundColor3 = shhhhnayy05_Config.Colors.Primary
-    StatsFrame.BorderSizePixel = 0
-    StatsFrame.Parent = ContentFrame
-    
-    local StatsCorner = Instance.new("UICorner")
-    StatsCorner.CornerRadius = UDim.new(0, 6)
-    StatsCorner.Parent = StatsFrame
-    
-    -- Stats Labels
-    local TotalDetected = Instance.new("TextLabel")
-    TotalDetected.Name = "TotalDetected"
-    TotalDetected.Size = UDim2.new(0.5, -5, 0, 25)
-    TotalDetected.Position = UDim2.new(0, 10, 0, 10)
-    TotalDetected.BackgroundTransparency = 1
-    TotalDetected.Text = "👥 Detected: 0"
-    TotalDetected.TextColor3 = shhhhnayy05_Config.Colors.Text
-    TotalDetected.TextSize = 14
-    TotalDetected.Font = Enum.Font.GothamSemibold
-    TotalDetected.TextXAlignment = Enum.TextXAlignment.Left
-    TotalDetected.Parent = StatsFrame
-    
-    local ActiveMonitors = Instance.new("TextLabel")
-    ActiveMonitors.Name = "ActiveMonitors"
-    ActiveMonitors.Size = UDim2.new(0.5, -5, 0, 25)
-    ActiveMonitors.Position = UDim2.new(0.5, 0, 0, 10)
-    ActiveMonitors.BackgroundTransparency = 1
-    ActiveMonitors.Text = "📊 Monitoring: OFF"
-    ActiveMonitors.TextColor3 = shhhhnayy05_Config.Colors.Danger
-    ActiveMonitors.TextSize = 14
-    ActiveMonitors.Font = Enum.Font.GothamSemibold
-    ActiveMonitors.TextXAlignment = Enum.TextXAlignment.Left
-    ActiveMonitors.Parent = StatsFrame
-    
-    local MobileCount = Instance.new("TextLabel")
-    MobileCount.Name = "MobileCount"
-    MobileCount.Size = UDim2.new(0.33, -5, 0, 25)
-    MobileCount.Position = UDim2.new(0, 10, 0, 45)
-    MobileCount.BackgroundTransparency = 1
-    MobileCount.Text = "📱 Mobile: 0"
-    MobileCount.TextColor3 = shhhhnayy05_Config.Colors.Warning
-    MobileCount.TextSize = 12
-    MobileCount.Font = Enum.Font.Gotham
-    MobileCount.TextXAlignment = Enum.TextXAlignment.Left
-    MobileCount.Parent = StatsFrame
-    
-    local PCCount = Instance.new("TextLabel")
-    PCCount.Name = "PCCount"
-    PCCount.Size = UDim2.new(0.33, -5, 0, 25)
-    PCCount.Position = UDim2.new(0.33, 0, 0, 45)
-    PCCount.BackgroundTransparency = 1
-    PCCount.Text = "💻 PC: 0"
-    PCCount.TextColor3 = shhhhnayy05_Config.Colors.Accent
-    PCCount.TextSize = 12
-    PCCount.Font = Enum.Font.Gotham
-    PCCount.TextXAlignment = Enum.TextXAlignment.Left
-    PCCount.Parent = StatsFrame
-    
-    local ScriptCount = Instance.new("TextLabel")
-    ScriptCount.Name = "ScriptCount"
-    ScriptCount.Size = UDim2.new(0.33, -5, 0, 25)
-    ScriptCount.Position = UDim2.new(0.66, 0, 0, 45)
-    ScriptCount.BackgroundTransparency = 1
-    ScriptCount.Text = "📜 Scripts: 0"
-    ScriptCount.TextColor3 = shhhhnayy05_Config.Colors.Success
-    ScriptCount.TextSize = 12
-    ScriptCount.Font = Enum.Font.Gotham
-    ScriptCount.TextXAlignment = Enum.TextXAlignment.Left
-    ScriptCount.Parent = StatsFrame
-    
-    -- Player List Frame
-    local PlayerListFrame = Instance.new("Frame")
-    PlayerListFrame.Name = "PlayerListFrame"
-    PlayerListFrame.Size = UDim2.new(0.5, -15, 1, -160)
-    PlayerListFrame.Position = UDim2.new(0, 10, 0, 100)
-    PlayerListFrame.BackgroundColor3 = shhhhnayy05_Config.Colors.Primary
-    PlayerListFrame.BorderSizePixel = 0
-    PlayerListFrame.Parent = ContentFrame
-    
-    local PlayerListCorner = Instance.new("UICorner")
-    PlayerListCorner.CornerRadius = UDim.new(0, 6)
-    PlayerListCorner.Parent = PlayerListFrame
-    
-    local PlayerListTitle = Instance.new("TextLabel")
-    PlayerListTitle.Name = "PlayerListTitle"
-    PlayerListTitle.Size = UDim2.new(1, -10, 0, 25)
-    PlayerListTitle.Position = UDim2.new(0, 5, 0, 5)
-    PlayerListTitle.BackgroundTransparency = 1
-    PlayerListTitle.Text = "👥 Player List"
-    PlayerListTitle.TextColor3 = shhhhnayy05_Config.Colors.Accent
-    PlayerListTitle.TextSize = 14
-    PlayerListTitle.Font = Enum.Font.GothamBold
-    PlayerListTitle.Parent = PlayerListFrame
-    
-    local PlayerListScroll = Instance.new("ScrollingFrame")
-    PlayerListScroll.Name = "PlayerListScroll"
-    PlayerListScroll.Size = UDim2.new(1, -10, 1, -35)
-    PlayerListScroll.Position = UDim2.new(0, 5, 0, 30)
-    PlayerListScroll.BackgroundTransparency = 1
-    PlayerListScroll.BorderSizePixel = 0
-    PlayerListScroll.ScrollBarThickness = 4
-    PlayerListScroll.ScrollBarImageColor3 = shhhhnayy05_Config.Colors.Accent
-    PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    PlayerListScroll.Parent = PlayerListFrame
-    
-    local PlayerListLayout = Instance.new("UIListLayout")
-    PlayerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    PlayerListLayout.Padding = UDim.new(0, 5)
-    PlayerListLayout.Parent = PlayerListScroll
-    
-    -- Details Frame
-    local DetailsFrame = Instance.new("Frame")
-    DetailsFrame.Name = "DetailsFrame"
-    DetailsFrame.Size = UDim2.new(0.5, -5, 1, -160)
-    DetailsFrame.Position = UDim2.new(0.5, 5, 0, 100)
-    DetailsFrame.BackgroundColor3 = shhhhnayy05_Config.Colors.Primary
-    DetailsFrame.BorderSizePixel = 0
-    DetailsFrame.Parent = ContentFrame
-    
-    local DetailsCorner = Instance.new("UICorner")
-    DetailsCorner.CornerRadius = UDim.new(0, 6)
-    DetailsCorner.Parent = DetailsFrame
-    
-    local DetailsTitle = Instance.new("TextLabel")
-    DetailsTitle.Name = "DetailsTitle"
-    DetailsTitle.Size = UDim2.new(1, -10, 0, 25)
-    DetailsTitle.Position = UDim2.new(0, 5, 0, 5)
-    DetailsTitle.BackgroundTransparency = 1
-    DetailsTitle.Text = "📋 Player Details"
-    DetailsTitle.TextColor3 = shhhhnayy05_Config.Colors.Accent
-    DetailsTitle.TextSize = 14
-    DetailsTitle.Font = Enum.Font.GothamBold
-    DetailsTitle.Parent = DetailsFrame
-    
-    local DetailsScroll = Instance.new("ScrollingFrame")
-    DetailsScroll.Name = "DetailsScroll"
-    DetailsScroll.Size = UDim2.new(1, -10, 1, -35)
-    DetailsScroll.Position = UDim2.new(0, 5, 0, 30)
-    DetailsScroll.BackgroundTransparency = 1
-    DetailsScroll.BorderSizePixel = 0
-    DetailsScroll.ScrollBarThickness = 4
-    DetailsScroll.ScrollBarImageColor3 = shhhhnayy05_Config.Colors.Accent
-    DetailsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    DetailsScroll.Parent = DetailsFrame
-    
-    local DetailsLayout = Instance.new("UIListLayout")
-    DetailsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    DetailsLayout.Padding = UDim.new(0, 5)
-    DetailsLayout.Parent = DetailsScroll
-    
-    -- Control Buttons Frame
-    local ControlFrame = Instance.new("Frame")
-    ControlFrame.Name = "ControlFrame"
-    ControlFrame.Size = UDim2.new(1, -20, 0, 65)
-    ControlFrame.Position = UDim2.new(0, 10, 1, -75)
-    ControlFrame.BackgroundColor3 = shhhhnayy05_Config.Colors.Secondary
-    ControlFrame.BorderSizePixel = 0
-    ControlFrame.Parent = MainFrame
-    
-    local ControlCorner = Instance.new("UICorner")
-    ControlCorner.CornerRadius = UDim.new(0, 8)
-    ControlCorner.Parent = ControlFrame
-    
-    -- Row 1 Buttons
-    local ScanBtn = Instance.new("TextButton")
-    ScanBtn.Name = "ScanBtn"
-    ScanBtn.Size = UDim2.new(0.24, -4, 0, 28)
-    ScanBtn.Position = UDim2.new(0, 4, 0, 5)
-    ScanBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Accent
-    ScanBtn.Text = "🔍 Scan"
-    ScanBtn.TextColor3 = shhhhnayy05_Config.Colors.Text
-    ScanBtn.TextSize = 11
-    ScanBtn.Font = Enum.Font.GothamBold
-    ScanBtn.Parent = ControlFrame
-    
-    local ScanCorner = Instance.new("UICorner")
-    ScanCorner.CornerRadius = UDim.new(0, 6)
-    ScanCorner.Parent = ScanBtn
-    
-    -- Monitor Toggle
-    local MonitorBtn = Instance.new("TextButton")
-    MonitorBtn.Name = "MonitorBtn"
-    MonitorBtn.Size = UDim2.new(0.24, -4, 0, 28)
-    MonitorBtn.Position = UDim2.new(0.25, 2, 0, 5)
-    MonitorBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Warning
-    MonitorBtn.Text = "▶️ Monitor"
-    MonitorBtn.TextColor3 = shhhhnayy05_Config.Colors.Text
-    MonitorBtn.TextSize = 11
-    MonitorBtn.Font = Enum.Font.GothamBold
-    MonitorBtn.Parent = ControlFrame
-    
-    local MonitorCorner = Instance.new("UICorner")
-    MonitorCorner.CornerRadius = UDim.new(0, 6)
-    MonitorCorner.Parent = MonitorBtn
-    
-    -- ESP Toggle
-    local ESPBtn = Instance.new("TextButton")
-    ESPBtn.Name = "ESPBtn"
-    ESPBtn.Size = UDim2.new(0.24, -4, 0, 28)
-    ESPBtn.Position = UDim2.new(0.50, 2, 0, 5)
-    ESPBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Danger
-    ESPBtn.Text = "👁️ ESP: OFF"
-    ESPBtn.TextColor3 = shhhhnayy05_Config.Colors.Text
-    ESPBtn.TextSize = 11
-    ESPBtn.Font = Enum.Font.GothamBold
-    ESPBtn.Parent = ControlFrame
-    
-    local ESPCorner = Instance.new("UICorner")
-    ESPCorner.CornerRadius = UDim.new(0, 6)
-    ESPCorner.Parent = ESPBtn
-    
-    -- Teleport Button
-    local TeleportBtn = Instance.new("TextButton")
-    TeleportBtn.Name = "TeleportBtn"
-    TeleportBtn.Size = UDim2.new(0.24, -4, 0, 28)
-    TeleportBtn.Position = UDim2.new(0.75, 0, 0, 5)
-    TeleportBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Success
-    TeleportBtn.Text = "🚀 Teleport"
-    TeleportBtn.TextColor3 = shhhhnayy05_Config.Colors.Text
-    TeleportBtn.TextSize = 11
-    TeleportBtn.Font = Enum.Font.GothamBold
-    TeleportBtn.Parent = ControlFrame
-    
-    local TeleportCorner = Instance.new("UICorner")
-    TeleportCorner.CornerRadius = UDim.new(0, 6)
-    TeleportCorner.Parent = TeleportBtn
-    
-    -- Row 2 Buttons
-    -- Clear Logs
-    local ClearBtn = Instance.new("TextButton")
-    ClearBtn.Name = "ClearBtn"
-    ClearBtn.Size = UDim2.new(0.32, -4, 0, 25)
-    ClearBtn.Position = UDim2.new(0, 4, 0, 36)
-    ClearBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Danger
-    ClearBtn.Text = "🗑️ Clear"
-    ClearBtn.TextColor3 = shhhhnayy05_Config.Colors.Text
-    ClearBtn.TextSize = 10
-    ClearBtn.Font = Enum.Font.GothamBold
-    ClearBtn.Parent = ControlFrame
-    
-    local ClearCorner = Instance.new("UICorner")
-    ClearCorner.CornerRadius = UDim.new(0, 6)
-    ClearCorner.Parent = ClearBtn
-    
-    -- ESP Settings Label
-    local ESPLabel = Instance.new("TextLabel")
-    ESPLabel.Name = "ESPLabel"
-    ESPLabel.Size = UDim2.new(0.68, -4, 0, 25)
-    ESPLabel.Position = UDim2.new(0.32, 4, 0, 36)
-    ESPLabel.BackgroundTransparency = 1
-    ESPLabel.Text = "👁️ Shows: Username + Executor"
-    ESPLabel.TextColor3 = shhhhnayy05_Config.Colors.SubText
-    ESPLabel.TextSize = 10
-    ESPLabel.Font = Enum.Font.Gotham
-    ESPLabel.TextXAlignment = Enum.TextXAlignment.Left
-    ESPLabel.Parent = ControlFrame
-    
-    -- Minimized Icon - POSISI ATAS KANAN
-    local MinimizedIcon = Instance.new("TextButton")
-    MinimizedIcon.Name = "MinimizedIcon"
-    MinimizedIcon.Size = UDim2.new(0, 45, 0, 45)
-    MinimizedIcon.Position = UDim2.new(1, -55, 0, 10) -- ATAS KANAN
-    MinimizedIcon.BackgroundColor3 = shhhhnayy05_Config.Colors.Accent
-    MinimizedIcon.Text = "🔍"
-    MinimizedIcon.TextSize = 22
-    MinimizedIcon.Visible = false
-    MinimizedIcon.Parent = ScreenGui
-    
-    local MinimizedCorner = Instance.new("UICorner")
-    MinimizedCorner.CornerRadius = UDim.new(1, 0)
-    MinimizedCorner.Parent = MinimizedIcon
-    
-    local MinimizedStroke = Instance.new("UIStroke")
-    MinimizedStroke.Color = shhhhnayy05_Config.Colors.Text
-    MinimizedStroke.Thickness = 2
-    MinimizedStroke.Parent = MinimizedIcon
-    
-    -- Notification Frame
-    local NotificationFrame = Instance.new("Frame")
-    NotificationFrame.Name = "NotificationFrame"
-    NotificationFrame.Size = UDim2.new(0, 300, 0, 80)
-    NotificationFrame.Position = UDim2.new(0.5, -150, 0, -100)
-    NotificationFrame.BackgroundColor3 = shhhhnayy05_Config.Colors.Secondary
-    NotificationFrame.BorderSizePixel = 0
-    NotificationFrame.Visible = false
-    NotificationFrame.Parent = ScreenGui
-    
-    local NotifCorner = Instance.new("UICorner")
-    NotifCorner.CornerRadius = UDim.new(0, 10)
-    NotifCorner.Parent = NotificationFrame
-    
-    local NotifTitle = Instance.new("TextLabel")
-    NotifTitle.Name = "NotifTitle"
-    NotifTitle.Size = UDim2.new(1, -20, 0, 25)
-    NotifTitle.Position = UDim2.new(0, 10, 0, 10)
-    NotifTitle.BackgroundTransparency = 1
-    NotifTitle.Text = "⚠️ Executor Detected!"
-    NotifTitle.TextColor3 = shhhhnayy05_Config.Colors.Danger
-    NotifTitle.TextSize = 16
-    NotifTitle.Font = Enum.Font.GothamBold
-    NotifTitle.Parent = NotificationFrame
-    
-    local NotifText = Instance.new("TextLabel")
-    NotifText.Name = "NotifText"
-    NotifText.Size = UDim2.new(1, -20, 0, 35)
-    NotifText.Position = UDim2.new(0, 10, 0, 35)
-    NotifText.BackgroundTransparency = 1
-    NotifText.Text = ""
-    NotifText.TextColor3 = shhhhnayy05_Config.Colors.Text
-    NotifText.TextSize = 13
-    NotifText.Font = Enum.Font.Gotham
-    NotifText.TextWrapped = true
-    NotifText.Parent = NotificationFrame
-    
-    return {
-        ScreenGui = ScreenGui,
-        MainFrame = MainFrame,
-        MinimizeBtn = MinimizeBtn,
-        CloseBtn = CloseBtn,
-        MinimizedIcon = MinimizedIcon,
-        PlayerListScroll = PlayerListScroll,
-        DetailsScroll = DetailsScroll,
-        ScanBtn = ScanBtn,
-        MonitorBtn = MonitorBtn,
-        ESPBtn = ESPBtn,
-        TeleportBtn = TeleportBtn,
-        ClearBtn = ClearBtn,
-        Stats = {
-            TotalDetected = TotalDetected,
-            ActiveMonitors = ActiveMonitors,
-            MobileCount = MobileCount,
-            PCCount = PCCount,
-            ScriptCount = ScriptCount
-        },
-        Notification = {
-            Frame = NotificationFrame,
-            Title = NotifTitle,
-            Text = NotifText
-        }
-    }
+    return false
 end
 
--- shhhhnayy05 ESP System
-local shhhhnayy05_ESPSystem = {}
-
-function shhhhnayy05_ESPSystem.CreateESP(player, data)
-    if not player or not player.Character then return nil end
+--// Simpan checkpoint ke storage
+local function storeCheckpoint(instance, position, isHidden)
+    if not instance then return end
     
-    local character = player.Character
+    local checkpointId = tostring(instance)
+    
+    --// Cek apakah sudah ada
+    for _, cp in ipairs(CheckpointData.stored) do
+        if cp.id == checkpointId then
+            return -- Sudah tersimpan
+        end
+    end
+    
+    local checkpointInfo = {
+        id = checkpointId,
+        name = instance.Name,
+        position = position or (instance:IsA("BasePart") and instance.Position) or nil,
+        cframe = instance:IsA("BasePart") and instance.CFrame or nil,
+        instance = instance,
+        isHidden = isHidden or false,
+        isActive = instance.Parent ~= nil,
+        detectedTime = tick(),
+        path = instance:GetFullName()
+    }
+    
+    table.insert(CheckpointData.stored, checkpointInfo)
+    
+    --// Update label
+    local total = #CheckpointData.stored
+    local active = 0
+    local hidden = 0
+    
+    for _, cp in ipairs(CheckpointData.stored) do
+        if cp.isActive then active = active + 1 end
+        if cp.isHidden then hidden = hidden + 1 end
+    end
+    
+    TotalCheckpointLabel.Text = string.format("📊 Total: %d | 🎯 Active: %d | 👻 Hidden: %d", total, active, hidden)
+    
+    return checkpointInfo
+end
+
+--// Scan seluruh workspace untuk checkpoint (termasuk yang tersembunyi)
+local function scanAllCheckpoints()
+    StatusLabel.Text = "Status: Scanning..."
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    
+    local foundCount = 0
+    
+    --// Recursive scan function
+    local function scanContainer(container, depth)
+        if depth > 10 then return end -- Limit depth
+        
+        for _, child in ipairs(container:GetChildren()) do
+            if isCheckpoint(child) then
+                local isHidden = false
+                
+                --// Cek apakah hidden (tidak terlihat atau di dalam folder tersembunyi)
+                if child:IsA("BasePart") then
+                    if child.Transparency > 0.9 or not child.CanCollide then
+                        isHidden = true
+                    end
+                end
+                
+                --// Cek parent yang mungkin menyembunyikan
+                local parent = child.Parent
+                while parent and parent ~= workspace do
+                    if parent:IsA("Folder") or parent:IsA("Model") then
+                        local parentName = string.lower(parent.Name)
+                        if string.find(parentName, "hidden") or string.find(parentName, "secret") or 
+                           string.find(parentName, "locked") or string.find(parentName, "unavailable") then
+                            isHidden = true
+                            break
+                        end
+                    end
+                    parent = parent.Parent
+                end
+                
+                storeCheckpoint(child, nil, isHidden)
+                foundCount = foundCount + 1
+            end
+            
+            --// Scan recursively tapi hanya untuk container tertentu
+            if child:IsA("Folder") or child:IsA("Model") or child:IsA("Configuration") then
+                scanContainer(child, depth + 1)
+            end
+        end
+    end
+    
+    --// Scan workspace
+    scanContainer(workspace, 0)
+    
+    --// Scan ReplicatedStorage (kadang checkpoint disimpan di sana)
+    pcall(function()
+        scanContainer(game:GetService("ReplicatedStorage"), 0)
+    end)
+    
+    --// Scan ServerStorage
+    pcall(function()
+        scanContainer(game:GetService("ServerStorage"), 0)
+    end)
+    
+    StatusLabel.Text = string.format("Status: Found %d checkpoints", foundCount)
+    StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    --// Update UI list
+    updateCheckpointList()
+    
+    return foundCount
+end
+
+--// Update daftar checkpoint di UI
+local function updateCheckpointList()
+    --// Clear existing
+    for _, child in ipairs(CheckpointContent:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+    
+    --// Sort checkpoints
+    table.sort(CheckpointData.stored, function(a, b)
+        local numA = extractNumber(a.name)
+        local numB = extractNumber(b.name)
+        if numA ~= numB then
+            return numA < numB
+        else
+            return string.lower(a.name) < string.lower(b.name)
+        end
+    end)
+    
+    --// Create items
+    for index, checkpoint in ipairs(CheckpointData.stored) do
+        local itemFrame = Instance.new("Frame")
+        itemFrame.Name = checkpoint.name .. "_CheckpointItem"
+        itemFrame.Size = UDim2.new(1, -10, 0, 40)
+        itemFrame.BackgroundColor3 = checkpoint.isHidden and Color3.fromRGB(60, 50, 80) or Color3.fromRGB(45, 45, 50)
+        itemFrame.BorderSizePixel = 0
+        itemFrame.LayoutOrder = index
+        
+        local itemCorner = Instance.new("UICorner")
+        itemCorner.CornerRadius = UDim.new(0, 6)
+        itemCorner.Parent = itemFrame
+        
+        --// Status indicator
+        local statusIcon = checkpoint.isHidden and "👻" or (checkpoint.isActive and "🎯" or "💤")
+        
+        local numberLabel = Instance.new("TextLabel")
+        numberLabel.Name = "Number"
+        numberLabel.Size = UDim2.new(0, 35, 1, 0)
+        numberLabel.BackgroundTransparency = 1
+        numberLabel.Text = statusIcon .. " " .. index
+        numberLabel.TextColor3 = checkpoint.isHidden and Color3.fromRGB(200, 100, 255) or Color3.fromRGB(100, 200, 255)
+        numberLabel.TextSize = 12
+        numberLabel.Font = Enum.Font.GothamBold
+        numberLabel.TextXAlignment = Enum.TextXAlignment.Left
+        numberLabel.Parent = itemFrame
+        
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Name = "Name"
+        nameLabel.Size = UDim2.new(1, -80, 0, 20)
+        nameLabel.Position = UDim2.new(0, 40, 0, 2)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = formatName(checkpoint.name)
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.TextSize = 13
+        nameLabel.Font = Enum.Font.Gotham
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.Parent = itemFrame
+        
+        local infoLabel = Instance.new("TextLabel")
+        infoLabel.Name = "Info"
+        infoLabel.Size = UDim2.new(1, -80, 0, 15)
+        infoLabel.Position = UDim2.new(0, 40, 0, 22)
+        infoLabel.BackgroundTransparency = 1
+        infoLabel.Text = checkpoint.isHidden and "Hidden Checkpoint" or "Active"
+        infoLabel.TextColor3 = checkpoint.isHidden and Color3.fromRGB(200, 100, 255) or Color3.fromRGB(150, 255, 150)
+        infoLabel.TextSize = 10
+        infoLabel.Font = Enum.Font.Gotham
+        infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+        infoLabel.Parent = itemFrame
+        
+        --// Teleport button
+        local tpBtn = Instance.new("TextButton")
+        tpBtn.Name = "TeleportBtn"
+        tpBtn.Size = UDim2.new(0, 35, 0, 30)
+        tpBtn.Position = UDim2.new(1, -40, 0, 5)
+        tpBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        tpBtn.Text = "🚀"
+        tpBtn.TextSize = 16
+        tpBtn.Parent = itemFrame
+        
+        local tpBtnCorner = Instance.new("UICorner")
+        tpBtnCorner.CornerRadius = UDim.new(0, 6)
+        tpBtnCorner.Parent = tpBtn
+        
+        --// Hover effects
+        itemFrame.MouseEnter:Connect(function()
+            TweenService:Create(itemFrame, TweenInfo.new(0.2), {
+                BackgroundColor3 = checkpoint.isHidden and Color3.fromRGB(80, 70, 100) or Color3.fromRGB(70, 70, 80)
+            }):Play()
+        end)
+        
+        itemFrame.MouseLeave:Connect(function()
+            TweenService:Create(itemFrame, TweenInfo.new(0.2), {
+                BackgroundColor3 = checkpoint.isHidden and Color3.fromRGB(60, 50, 80) or Color3.fromRGB(45, 45, 50)
+            }):Play()
+        end)
+        
+        --// Teleport functionality
+        tpBtn.MouseButton1Click:Connect(function()
+            teleportToCheckpoint(checkpoint)
+        end)
+        
+        itemFrame.Parent = CheckpointContent
+    end
+    
+    if #CheckpointData.stored == 0 then
+        local emptyLabel = Instance.new("TextLabel")
+        emptyLabel.Name = "EmptyLabel"
+        emptyLabel.Size = UDim2.new(1, -10, 0, 50)
+        emptyLabel.BackgroundTransparency = 1
+        emptyLabel.Text = "No checkpoints found.\nClick 🔍 to scan."
+        emptyLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        emptyLabel.TextSize = 12
+        emptyLabel.Font = Enum.Font.Gotham
+        emptyLabel.TextWrapped = true
+        emptyLabel.Parent = CheckpointContent
+    end
+    
+    CheckpointContent.CanvasSize = UDim2.new(0, 0, 0, CheckpointLayout.AbsoluteContentSize.Y + 10)
+end
+
+--// Teleport ke checkpoint
+local function teleportToCheckpoint(checkpoint)
+    local character = LocalPlayer.Character
+    if not character then return end
+    
     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return nil end
+    if not humanoidRootPart then return end
     
-    -- Get executor info for color and text
-    local executorName = "Clean"
-    local espColor = shhhhnayy05_Config.Colors.Success
-    local hasExecutor = false
+    local targetPosition = nil
     
-    if #data.Executors > 0 then
-        hasExecutor = true
-        executorName = data.Executors[1].Name
-        espColor = data.Executors[1].Color or shhhhnayy05_Config.Colors.Danger
+    --// Coba dapatkan posisi dari instance
+    if checkpoint.instance and checkpoint.instance.Parent then
+        if checkpoint.instance:IsA("BasePart") then
+            targetPosition = checkpoint.instance.Position + Vector3.new(0, 5, 0)
+        else
+            --// Cari part dalam model
+            local part = checkpoint.instance:FindFirstChildWhichIsA("BasePart")
+            if part then
+                targetPosition = part.Position + Vector3.new(0, 5, 0)
+            end
+        end
+    end
+    
+    --// Gunakan posisi tersimpan jika instance tidak valid
+    if not targetPosition and checkpoint.position then
+        targetPosition = checkpoint.position + Vector3.new(0, 5, 0)
+    end
+    
+    if targetPosition then
+        --// Animasi teleport
+        TweenService:Create(humanoidRootPart, TweenInfo.new(0.3), {
+            CFrame = CFrame.new(targetPosition)
+        }):Play()
         
-        -- If multiple executors, show count
-        if #data.Executors > 1 then
-            executorName = executorName .. " (+" .. (#data.Executors - 1) .. ")"
-        end
-    end
-    
-    -- Create BillboardGui
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "shhhhnayy05_ESP_" .. player.Name
-    billboard.Adornee = humanoidRootPart
-    billboard.Size = UDim2.new(0, 200, 0, 60)
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-    billboard.AlwaysOnTop = true
-    billboard.MaxDistance = shhhhnayy05_Config.ESPDistance
-    
-    -- Main Frame
-    local espFrame = Instance.new("Frame")
-    espFrame.Name = "ESPFrame"
-    espFrame.Size = UDim2.new(1, 0, 1, 0)
-    espFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    espFrame.BackgroundTransparency = 0.3
-    espFrame.BorderSizePixel = 0
-    espFrame.Parent = billboard
-    
-    local espCorner = Instance.new("UICorner")
-    espCorner.CornerRadius = UDim.new(0, 8)
-    espCorner.Parent = espFrame
-    
-    -- Border
-    local espStroke = Instance.new("UIStroke")
-    espStroke.Color = espColor
-    espStroke.Thickness = 2
-    espStroke.Parent = espFrame
-    
-    -- Username Label
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Name = "Username"
-    nameLabel.Size = UDim2.new(1, -10, 0, 22)
-    nameLabel.Position = UDim2.new(0, 5, 0, 5)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = "👤 " .. player.Name
-    nameLabel.TextColor3 = shhhhnayy05_Config.Colors.Text
-    nameLabel.TextSize = 14
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.Parent = espFrame
-    
-    -- Executor Label
-    local execLabel = Instance.new("TextLabel")
-    execLabel.Name = "Executor"
-    execLabel.Size = UDim2.new(1, -10, 0, 18)
-    execLabel.Position = UDim2.new(0, 5, 0, 27)
-    execLabel.BackgroundTransparency = 1
-    execLabel.Text = hasExecutor and ("🚨 " .. executorName) or "✅ Clean"
-    execLabel.TextColor3 = hasExecutor and espColor or shhhhnayy05_Config.Colors.Success
-    execLabel.TextSize = 12
-    execLabel.Font = Enum.Font.GothamSemibold
-    execLabel.Parent = espFrame
-    
-    -- Distance Label
-    local distLabel = Instance.new("TextLabel")
-    distLabel.Name = "Distance"
-    distLabel.Size = UDim2.new(1, -10, 0, 15)
-    distLabel.Position = UDim2.new(0, 5, 0, 45)
-    distLabel.BackgroundTransparency = 1
-    distLabel.Text = "📏 Calculating..."
-    distLabel.TextColor3 = shhhhnayy05_Config.Colors.SubText
-    distLabel.TextSize = 10
-    distLabel.Font = Enum.Font.Gotham
-    distLabel.Parent = espFrame
-    
-    billboard.Parent = character
-    
-    -- Store reference
-    shhhhnayy05_System.ESPObjects[player] = {
-        Billboard = billboard,
-        Frame = espFrame,
-        NameLabel = nameLabel,
-        ExecLabel = execLabel,
-        DistLabel = distLabel,
-        Color = espColor,
-        HasExecutor = hasExecutor,
-        Player = player
-    }
-    
-    return billboard
-end
-
-function shhhhnayy05_ESPSystem.UpdateESP()
-    for player, espData in pairs(shhhhnayy05_System.ESPObjects) do
-        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            -- Update distance
-            local distance = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            espData.DistLabel.Text = string.format("📏 %.1f studs", distance)
-            
-            -- Update color if executor status changed
-            local data = shhhhnayy05_System.DetectedPlayers[player]
-            if data then
-                if #data.Executors > 0 and not espData.HasExecutor then
-                    -- Now has executor
-                    espData.HasExecutor = true
-                    espData.ExecLabel.Text = "🚨 " .. data.Executors[1].Name
-                    espData.ExecLabel.TextColor3 = data.Executors[1].Color or shhhhnayy05_Config.Colors.Danger
-                    espData.Frame.UIStroke.Color = data.Executors[1].Color or shhhhnayy05_Config.Colors.Danger
-                elseif #data.Executors == 0 and espData.HasExecutor then
-                    -- No longer has executor
-                    espData.HasExecutor = false
-                    espData.ExecLabel.Text = "✅ Clean"
-                    espData.ExecLabel.TextColor3 = shhhhnayy05_Config.Colors.Success
-                    espData.Frame.UIStroke.Color = shhhhnayy05_Config.Colors.Success
-                end
-            end
-        else
-            -- Remove ESP if player character doesn't exist
-            if espData.Billboard then
-                espData.Billboard:Destroy()
-            end
-            shhhhnayy05_System.ESPObjects[player] = nil
-        end
-    end
-end
-
-function shhhhnayy05_ESPSystem.ClearESP()
-    for player, espData in pairs(shhhhnayy05_System.ESPObjects) do
-        if espData.Billboard then
-            espData.Billboard:Destroy()
-        end
-    end
-    shhhhnayy05_System.ESPObjects = {}
-end
-
-function shhhhnayy05_ESPSystem.RefreshESP()
-    shhhhnayy05_ESPSystem.ClearESP()
-    
-    if not shhhhnayy05_Config.ESPEnabled then return end
-    
-    for player, data in pairs(shhhhnayy05_System.DetectedPlayers) do
-        if player ~= LocalPlayer then
-            shhhhnayy05_ESPSystem.CreateESP(player, data)
-        end
-    end
-end
-
--- shhhhnayy05 Detection Engine
-local shhhhnayy05_Detector = {}
-
-function shhhhnayy05_Detector.DetectDeviceType(player)
-    local deviceType = "Unknown"
-    local platform = "Unknown"
-    
-    -- Check using UserInputService
-    local success, result = pcall(function()
-        if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-            return "Mobile", "Android/iOS"
-        elseif UserInputService.KeyboardEnabled then
-            return "PC", "Windows/Mac"
-        else
-            return "Unknown", "Unknown"
-        end
-    end)
-    
-    if success then
-        deviceType, platform = result[1] or result, result[2] or result
-    end
-    
-    return deviceType, platform
-end
-
-function shhhhnayy05_Detector.DetectExecutor(player)
-    local detectedExecutors = {}
-    
-    -- Method 1: Check global variables and functions
-    for category, executors in pairs(shhhhnayy05_Config.ExecutorDatabase) do
-        for execName, execData in pairs(executors) do
-            local detected = false
-            
-            -- Check for global variables
-            for _, signature in ipairs(execData.Signatures) do
-                local success, exists = pcall(function()
-                    return _G[signature] ~= nil or getfenv()[signature] ~= nil
-                end)
-                if success and exists then
-                    detected = true
-                    break
-                end
-            end
-            
-            -- Check for specific functions/identifiers
-            if not detected then
-                for _, indicator in ipairs(execData.Indicators) do
-                    local success, exists = pcall(function()
-                        return _G[indicator] ~= nil or 
-                               getfenv()[indicator] ~= nil or
-                               (typeof(getfenv) == "function" and getfenv(0)[indicator] ~= nil)
-                    end)
-                    if success and exists then
-                        detected = true
-                        break
-                    end
-                end
-            end
-            
-            -- Check using identifyexecutor
-            if not detected then
-                local success, execIdentity = pcall(function()
-                    if identifyexecutor then
-                        return identifyexecutor()
-                    end
-                    return nil
-                end)
-                if success and execIdentity then
-                    local identity = tostring(execIdentity):lower()
-                    for _, signature in ipairs(execData.Signatures) do
-                        if identity:find(signature:lower()) then
-                            detected = true
-                            break
-                        end
-                    end
-                end
-            end
-            
-            -- Check using getexecutorname
-            if not detected then
-                local success, execName_result = pcall(function()
-                    if getexecutorname then
-                        return getexecutorname()
-                    end
-                    return nil
-                end)
-                if success and execName_result then
-                    local name = tostring(execName_result):lower()
-                    for _, signature in ipairs(execData.Signatures) do
-                        if name:find(signature:lower()) then
-                            detected = true
-                            break
-                        end
-                    end
-                end
-            end
-            
-            if detected then
-                table.insert(detectedExecutors, {
-                    Name = execName,
-                    Category = category,
-                    Platform = execData.Platform,
-                    RiskLevel = execData.RiskLevel,
-                    Color = execData.Color,
-                    DetectionMethod = "Global Variable Check"
-                })
-            end
-        end
-    end
-    
-    -- Method 2: Check for common executor functions
-    local executorFunctions = {
-        "getrawmetatable", "setrawmetatable", "getnamecallmethod", "setnamecallmethod",
-        "hookfunction", "hookmetamethod", "newcclosure", "checkcaller", "iscclosure",
-        "getgc", "getrenv", "getgenv", "getreg", "getconstants", "getupvalues",
-        "getprotos", "getstack", "getinfo", "setupvalue", "setconstant",
-        "loadstring", "loadfile", "dofile", "require", "getscriptbytecode",
-        "getscriptclosure", "getscripthash", "getscriptraw", "decompile",
-        "saveinstance", "gethiddenproperty", "sethiddenproperty", "gethui",
-        "getconnections", "firesignal", "firesignal", "getsignalfunctions"
-    }
-    
-    local availableFunctions = {}
-    for _, funcName in ipairs(executorFunctions) do
-        local success, exists = pcall(function()
-            return getfenv()[funcName] ~= nil or _G[funcName] ~= nil
-        end)
-        if success and exists then
-            table.insert(availableFunctions, funcName)
-        end
-    end
-    
-    -- Method 3: Check for specific executor environment markers
-    local envMarkers = {
-        "syn", "KRNL", "Flux", "Delta", "Codex", "Arceus", "Vega", 
-        "Wave", "Hydrogen", "Electron", "ScriptWare", "Oxygen"
-    }
-    
-    for _, marker in ipairs(envMarkers) do
-        local success, exists = pcall(function()
-            return _G[marker] ~= nil or getfenv()[marker] ~= nil
-        end)
-        if success and exists then
-            local matched = false
-            for category, executors in pairs(shhhhnayy05_Config.ExecutorDatabase) do
-                for execName, execData in pairs(executors) do
-                    if marker:lower() == execName:lower() or 
-                       marker:lower() == execName:gsub(" ", ""):lower() or
-                       marker:lower() == execName:gsub("X", " X"):lower() then
-                        table.insert(detectedExecutors, {
-                            Name = execName,
-                            Category = category,
-                            Platform = execData.Platform,
-                            RiskLevel = execData.RiskLevel,
-                            Color = execData.Color,
-                            DetectionMethod = "Environment Marker: " .. marker
-                        })
-                        matched = true
-                        break
-                    end
-                end
-                if matched then break end
-            end
-            
-            if not matched then
-                table.insert(detectedExecutors, {
-                    Name = marker,
-                    Category = "Unknown",
-                    Platform = "Unknown",
-                    RiskLevel = "Unknown",
-                    Color = shhhhnayy05_Config.Colors.Warning,
-                    DetectionMethod = "Environment Marker"
-                })
-            end
-        end
-    end
-    
-    return detectedExecutors, availableFunctions
-end
-
-function shhhhnayy05_Detector.DetectActiveScripts(player)
-    local detectedScripts = {}
-    
-    -- Method 1: Check PlayerGui for suspicious GUIs
-    local success, playerGui = pcall(function()
-        return player:WaitForChild("PlayerGui", 1)
-    end)
-    
-    if success and playerGui then
-        for _, gui in ipairs(playerGui:GetChildren()) do
-            local guiName = gui.Name:lower()
-            for scriptType, patterns in pairs(shhhhnayy05_Config.ScriptPatterns) do
-                for _, pattern in ipairs(patterns) do
-                    if guiName:find(pattern:lower()) then
-                        table.insert(detectedScripts, {
-                            Type = scriptType,
-                            Name = gui.Name,
-                            Location = "PlayerGui",
-                            Pattern = pattern
-                        })
-                        break
-                    end
-                end
-            end
-            
-            local execGUIs = {"synapse", "krnl", "fluxus", "delta", "codex", 
-                             "arceus", "vega", "wave", "hydrogen", "electron",
-                             "exploit", "hack", "cheat", "admin", "cmd"}
-            for _, execGui in ipairs(execGUIs) do
-                if guiName:find(execGui) then
-                    table.insert(detectedScripts, {
-                        Type = "Executor GUI",
-                        Name = gui.Name,
-                        Location = "PlayerGui",
-                        Pattern = execGui
-                    })
-                    break
-                end
-            end
-        end
-    end
-    
-    -- Method 2: Check Character for suspicious objects
-    local success, character = pcall(function()
-        return player.Character
-    end)
-    
-    if success and character then
-        for _, obj in ipairs(character:GetDescendants()) do
-            if obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
-                local scriptName = obj.Name:lower()
-                for scriptType, patterns in pairs(shhhhnayy05_Config.ScriptPatterns) do
-                    for _, pattern in ipairs(patterns) do
-                        if scriptName:find(pattern:lower()) then
-                            table.insert(detectedScripts, {
-                                Type = scriptType,
-                                Name = obj.Name,
-                                Location = "Character",
-                                Pattern = pattern
-                            })
-                            break
-                        end
-                    end
-                end
-            end
-            
-            if obj:IsA("BodyGyro") or obj:IsA("BodyVelocity") or obj:IsA("BodyPosition") then
-                table.insert(detectedScripts, {
-                    Type = "Fly/Physics Hack",
-                    Name = obj.ClassName,
-                    Location = "Character." .. obj.Parent.Name,
-                    Pattern = obj.ClassName
-                })
-            end
-            
-            if obj:IsA("Humanoid") then
-                if obj.WalkSpeed > 16 then
-                    table.insert(detectedScripts, {
-                        Type = "Speed Hack",
-                        Name = "WalkSpeed: " .. tostring(obj.WalkSpeed),
-                        Location = "Humanoid",
-                        Pattern = "WalkSpeed > 16"
-                    })
-                end
-                if obj.JumpPower > 50 then
-                    table.insert(detectedScripts, {
-                        Type = "Super Jump",
-                        Name = "JumpPower: " .. tostring(obj.JumpPower),
-                        Location = "Humanoid",
-                        Pattern = "JumpPower > 50"
-                    })
-                end
-                if obj.Health > obj.MaxHealth then
-                    table.insert(detectedScripts, {
-                        Type = "God Mode",
-                        Name = "Health > MaxHealth",
-                        Location = "Humanoid",
-                        Pattern = "Health manipulation"
-                    })
-                end
-            end
-        end
-    end
-    
-    -- Method 3: Check Backpack for suspicious tools
-    local success, backpack = pcall(function()
-        return player:WaitForChild("Backpack", 1)
-    end)
-    
-    if success and backpack then
-        for _, tool in ipairs(backpack:GetChildren()) do
-            local toolName = tool.Name:lower()
-            local suspiciousTools = {"kill", "sword", "gun", "weapon", "admin", 
-                                   "ban", "kick", "crash", "lag", "exploit"}
-            for _, susp in ipairs(suspiciousTools) do
-                if toolName:find(susp) then
-                    table.insert(detectedScripts, {
-                        Type = "Suspicious Tool",
-                        Name = tool.Name,
-                        Location = "Backpack",
-                        Pattern = susp
-                    })
-                    break
-                end
-            end
-        end
-    end
-    
-    return detectedScripts
-end
-
-function shhhhnayy05_Detector.AnalyzePlayer(player)
-    local analysis = {
-        Player = player,
-        DeviceType = "Unknown",
-        Platform = "Unknown",
-        Executors = {},
-        ActiveScripts = {},
-        Functions = {},
-        Timestamp = os.time(),
-        RiskScore = 0
-    }
-    
-    analysis.DeviceType, analysis.Platform = shhhhnayy05_Detector.DetectDeviceType(player)
-    analysis.Executors, analysis.Functions = shhhhnayy05_Detector.DetectExecutor(player)
-    analysis.ActiveScripts = shhhhnayy05_Detector.DetectActiveScripts(player)
-    analysis.RiskScore = #analysis.Executors * 25 + #analysis.ActiveScripts * 10
-    
-    return analysis
-end
-
--- shhhhnayy05 Teleport System
-local shhhhnayy05_Teleport = {}
-
-function shhhhnayy05_Teleport.ToPlayer(targetPlayer)
-    if not targetPlayer then
-        return false, "No player selected"
-    end
-    
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        return false, "Your character not found"
-    end
-    
-    local targetCharacter = targetPlayer.Character
-    if not targetCharacter or not targetCharacter:FindFirstChild("HumanoidRootPart") then
-        return false, "Target player character not found"
-    end
-    
-    local targetPosition = targetCharacter.HumanoidRootPart.Position + shhhhnayy05_System.TeleportOffset
-    
-    -- Teleport using CFrame
-    local success, error = pcall(function()
-        LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(targetPosition))
-    end)
-    
-    if success then
-        return true, "Teleported to " .. targetPlayer.Name
+        StatusLabel.Text = "Teleported to: " .. checkpoint.name
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
     else
-        -- Try alternative method
-        success, error = pcall(function()
-            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition)
-        end)
-        
-        if success then
-            return true, "Teleported to " .. targetPlayer.Name
-        else
-            return false, "Teleport failed: " .. tostring(error)
-        end
+        StatusLabel.Text = "Error: Cannot teleport to " .. checkpoint.name
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
     end
 end
 
-function shhhhnayy05_Teleport.ToPosition(position)
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        return false, "Your character not found"
+--// Reveal hidden checkpoints (buat visible)
+local function revealHiddenCheckpoints()
+    local revealed = 0
+    
+    for _, checkpoint in ipairs(CheckpointData.stored) do
+        if checkpoint.isHidden and checkpoint.instance then
+            pcall(function()
+                --// Buat part baru di posisi checkpoint yang tersembunyi
+                if checkpoint.instance:IsA("BasePart") then
+                    checkpoint.instance.Transparency = 0
+                    checkpoint.instance.CanCollide = true
+                    
+                    --// Tambah highlight
+                    local selectionBox = Instance.new("SelectionBox")
+                    selectionBox.Name = "CheckpointHighlight"
+                    selectionBox.Adornee = checkpoint.instance
+                    selectionBox.Color3 = Color3.fromRGB(255, 0, 255)
+                    selectionBox.LineThickness = 0.05
+                    selectionBox.Parent = checkpoint.instance
+                end
+                
+                revealed = revealed + 1
+                checkpoint.isHidden = false
+                checkpoint.isActive = true
+            end)
+        end
     end
     
-    local success, error = pcall(function()
-        LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(position))
-    end)
+    --// Update UI
+    updateCheckpointList()
     
-    if success then
-        return true, "Teleported to position"
+    StatusLabel.Text = string.format("Revealed %d hidden checkpoints", revealed)
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 255)
+end
+
+--// Fungsi Format Nama
+local function formatName(name)
+    if #name > 25 then
+        return string.sub(name, 1, 22) .. "..."
+    end
+    return name
+end
+
+--// Fungsi Ambil Angka dari Nama
+local function extractNumber(name)
+    local num = string.match(name, "%d+")
+    if num then
+        return tonumber(num)
+    end
+    return 0
+end
+
+--// Fungsi Cek Apakah Valid Part
+local function isValidPart(instance)
+    return instance:IsA("BasePart") or instance:IsA("MeshPart") or instance:IsA("UnionOperation") or instance:IsA("Part")
+end
+
+--// Fungsi Dapatkan Icon
+local function getIcon(instance)
+    if instance:IsA("Folder") then
+        return "📁"
+    elseif instance:IsA("Model") then
+        return "🧊"
+    elseif instance:IsA("Part") then
+        return "🟦"
+    elseif instance:IsA("MeshPart") then
+        return "🔷"
+    elseif instance:IsA("UnionOperation") then
+        return "⬡"
     else
-        return false, "Teleport failed: " .. tostring(error)
+        return "📦"
     end
 end
 
--- shhhhnayy05 UI Controller
-local shhhhnayy05_UI = {}
-shhhhnayy05_UI.Elements = {}
+--// FUNGSI CEK: Apakah item memiliki sub-item?
+local function hasSubItems(instance)
+    for _, child in ipairs(instance:GetChildren()) do
+        if child:IsA("Folder") or child:IsA("Model") then
+            return true
+        end
+    end
+    return false
+end
 
-function shhhhnayy05_UI.Initialize()
-    shhhhnayy05_UI.Elements = shhhhnayy05_CreateGUI()
+--// Fungsi Teleport LANGSUNG
+local function teleportToItem(item)
+    local character = LocalPlayer.Character
+    if not character then return end
     
-    local UI = shhhhnayy05_UI.Elements
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
     
-    -- Minimize functionality
-    local minimized = false
-    UI.MinimizeBtn.MouseButton1Click:Connect(function()
-        minimized = not minimized
-        if minimized then
-            UI.MainFrame.Visible = false
-            UI.MinimizedIcon.Visible = true
-            -- POSISI ATAS KANAN
-            UI.MinimizedIcon.Position = UDim2.new(1, -55, 0, 10)
+    local targetPosition = nil
+    
+    if isValidPart(item) then
+        targetPosition = item.Position + Vector3.new(0, 5, 0)
+    elseif item:IsA("Model") then
+        local primaryPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+        if primaryPart then
+            targetPosition = primaryPart.Position + Vector3.new(0, 5, 0)
         end
-    end)
+    end
     
-    UI.MinimizedIcon.MouseButton1Click:Connect(function()
-        minimized = false
-        UI.MinimizedIcon.Visible = false
-        UI.MainFrame.Visible = true
-    end)
+    if targetPosition then
+        humanoidRootPart.CFrame = CFrame.new(targetPosition)
+    end
+end
+
+--// FUNGSI AUTO SEARCH
+local function performAutoSearch(searchText)
+    if #currentItems == 0 then return false end
+    if searchText == "" or searchText == nil then return false end
     
-    -- Close functionality
-    UI.CloseBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05_ESPSystem.ClearESP()
-        UI.ScreenGui:Destroy()
-        shhhhnayy05_System.Monitoring = false
-    end)
+    searchText = string.lower(searchText)
     
-    -- Scan button
-    UI.ScanBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05_UI.ScanAllPlayers()
-    end)
+    local searchNumber = tonumber(searchText)
+    local foundIndex = nil
     
-    -- Monitor toggle
-    UI.MonitorBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05_System.Monitoring = not shhhhnayy05_System.Monitoring
-        if shhhhnayy05_System.Monitoring then
-            UI.MonitorBtn.Text = "⏸️ Stop"
-            UI.MonitorBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Success
-            UI.Stats.ActiveMonitors.Text = "📊 Monitoring: ON"
-            UI.Stats.ActiveMonitors.TextColor3 = shhhhnayy05_Config.Colors.Success
-            shhhhnayy05_UI.StartMonitoring()
-        else
-            UI.MonitorBtn.Text = "▶️ Monitor"
-            UI.MonitorBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Warning
-            UI.Stats.ActiveMonitors.Text = "📊 Monitoring: OFF"
-            UI.Stats.ActiveMonitors.TextColor3 = shhhhnayy05_Config.Colors.Danger
-        end
-    end)
-    
-    -- ESP Toggle
-    UI.ESPBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05_Config.ESPEnabled = not shhhhnayy05_Config.ESPEnabled
+    for i, item in ipairs(currentItems) do
+        local match = false
         
-        if shhhhnayy05_Config.ESPEnabled then
-            UI.ESPBtn.Text = "👁️ ESP: ON"
-            UI.ESPBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Success
-            shhhhnayy05_ESPSystem.RefreshESP()
-            shhhhnayy05_UI.ShowNotification("✅ ESP Enabled", "Showing username + executor above players", shhhhnayy05_Config.Colors.Success)
-        else
-            UI.ESPBtn.Text = "👁️ ESP: OFF"
-            UI.ESPBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Danger
-            shhhhnayy05_ESPSystem.ClearESP()
-            shhhhnayy05_UI.ShowNotification("❌ ESP Disabled", "ESP turned off", shhhhnayy05_Config.Colors.Danger)
-        end
-    end)
-    
-    -- Teleport Button
-    UI.TeleportBtn.MouseButton1Click:Connect(function()
-        if shhhhnayy05_System.SelectedPlayer then
-            local success, message = shhhhnayy05_Teleport.ToPlayer(shhhhnayy05_System.SelectedPlayer)
-            if success then
-                shhhhnayy05_UI.ShowNotification("🚀 Teleport Success", message, shhhhnayy05_Config.Colors.Success)
+        if searchNumber then
+            if i == searchNumber then
+                match = true
             else
-                shhhhnayy05_UI.ShowNotification("❌ Teleport Failed", message, shhhhnayy05_Config.Colors.Danger)
+                local itemNum = extractNumber(item.Name)
+                if itemNum == searchNumber then
+                    match = true
+                end
             end
         else
-            shhhhnayy05_UI.ShowNotification("⚠️ No Selection", "Please select a player first!", shhhhnayy05_Config.Colors.Warning)
+            if string.find(string.lower(item.Name), searchText) then
+                match = true
+            end
         end
-    end)
-    
-    -- Clear button
-    UI.ClearBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05_System.DetectedPlayers = {}
-        shhhhnayy05_System.ActiveScripts = {}
-        shhhhnayy05_ESPSystem.ClearESP()
-        shhhhnayy05_UI.UpdatePlayerList()
-        shhhhnayy05_UI.UpdateStats()
-        shhhhnayy05_UI.ClearDetails()
-    end)
-    
-    -- Make draggable
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
-    
-    UI.MainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = UI.MainFrame.Position
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
-                        input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            UI.MainFrame.Position = UDim2.new(
-                startPos.X.Scale, 
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale, 
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-    
-    -- ESP Update Loop
-    RunService.RenderStepped:Connect(function()
-        if shhhhnayy05_Config.ESPEnabled then
-            shhhhnayy05_ESPSystem.UpdateESP()
-        end
-    end)
-    
-    -- Initial scan
-    shhhhnayy05_UI.ScanAllPlayers()
-end
-
-function shhhhnayy05_UI.UpdateStats()
-    local UI = shhhhnayy05_UI.Elements
-    local totalDetected = 0
-    local mobileCount = 0
-    local pcCount = 0
-    local scriptCount = 0
-    
-    for _, data in pairs(shhhhnayy05_System.DetectedPlayers) do
-        totalDetected = totalDetected + 1
-        if data.DeviceType == "Mobile" then
-            mobileCount = mobileCount + 1
-        elseif data.DeviceType == "PC" then
-            pcCount = pcCount + 1
-        end
-        scriptCount = scriptCount + #data.ActiveScripts
-    end
-    
-    UI.Stats.TotalDetected.Text = "👥 Detected: " .. totalDetected
-    UI.Stats.MobileCount.Text = "📱 Mobile: " .. mobileCount
-    UI.Stats.PCCount.Text = "💻 PC: " .. pcCount
-    UI.Stats.ScriptCount.Text = "📜 Scripts: " .. scriptCount
-end
-
-function shhhhnayy05_UI.CreatePlayerButton(player, data)
-    local UI = shhhhnayy05_UI.Elements
-    
-    local PlayerBtn = Instance.new("TextButton")
-    PlayerBtn.Name = player.Name .. "_Btn"
-    PlayerBtn.Size = UDim2.new(1, -10, 0, 40)
-    PlayerBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Secondary
-    PlayerBtn.Text = ""
-    PlayerBtn.AutoButtonColor = true
-    PlayerBtn.Parent = UI.PlayerListScroll
-    
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 6)
-    BtnCorner.Parent = PlayerBtn
-    
-    -- Risk indicator
-    local RiskIndicator = Instance.new("Frame")
-    RiskIndicator.Name = "RiskIndicator"
-    RiskIndicator.Size = UDim2.new(0, 4, 1, -10)
-    RiskIndicator.Position = UDim2.new(0, 5, 0, 5)
-    RiskIndicator.BorderSizePixel = 0
-    RiskIndicator.Parent = PlayerBtn
-    
-    if data.RiskScore >= 50 then
-        RiskIndicator.BackgroundColor3 = shhhhnayy05_Config.Colors.Danger
-    elseif data.RiskScore >= 25 then
-        RiskIndicator.BackgroundColor3 = shhhhnayy05_Config.Colors.Warning
-    else
-        RiskIndicator.BackgroundColor3 = shhhhnayy05_Config.Colors.Success
-    end
-    
-    local RiskCorner = Instance.new("UICorner")
-    RiskCorner.CornerRadius = UDim.new(0, 2)
-    RiskCorner.Parent = RiskIndicator
-    
-    -- Player name
-    local NameLabel = Instance.new("TextLabel")
-    NameLabel.Name = "NameLabel"
-    NameLabel.Size = UDim2.new(1, -80, 0, 18)
-    NameLabel.Position = UDim2.new(0, 15, 0, 2)
-    NameLabel.BackgroundTransparency = 1
-    NameLabel.Text = player.Name
-    NameLabel.TextColor3 = shhhhnayy05_Config.Colors.Text
-    NameLabel.TextSize = 13
-    NameLabel.Font = Enum.Font.GothamSemibold
-    NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    NameLabel.Parent = PlayerBtn
-    
-    -- Device icon
-    local DeviceIcon = Instance.new("TextLabel")
-    DeviceIcon.Name = "DeviceIcon"
-    DeviceIcon.Size = UDim2.new(0, 20, 0, 18)
-    DeviceIcon.Position = UDim2.new(1, -60, 0, 2)
-    DeviceIcon.BackgroundTransparency = 1
-    DeviceIcon.Text = data.DeviceType == "Mobile" and "📱" or "💻"
-    DeviceIcon.TextSize = 14
-    DeviceIcon.Parent = PlayerBtn
-    
-    -- Executor info
-    local execText = #data.Executors > 0 and data.Executors[1].Name or "Clean"
-    if #data.Executors > 1 then
-        execText = execText .. " (+" .. (#data.Executors - 1) .. ")"
-    end
-    
-    local ExecLabel = Instance.new("TextLabel")
-    ExecLabel.Name = "ExecLabel"
-    ExecLabel.Size = UDim2.new(1, -70, 0, 15)
-    ExecLabel.Position = UDim2.new(0, 15, 0, 20)
-    ExecLabel.BackgroundTransparency = 1
-    ExecLabel.Text = (#data.Executors > 0 and "🚨 " or "✅ ") .. execText
-    ExecLabel.TextColor3 = #data.Executors > 0 and shhhhnayy05_Config.Colors.Danger or shhhhnayy05_Config.Colors.Success
-    ExecLabel.TextSize = 10
-    ExecLabel.Font = Enum.Font.Gotham
-    ExecLabel.TextXAlignment = Enum.TextXAlignment.Left
-    ExecLabel.Parent = PlayerBtn
-    
-    -- Click event
-    PlayerBtn.MouseButton1Click:Connect(function()
-        shhhhnayy05_System.SelectedPlayer = player
-        shhhhnayy05_UI.ShowPlayerDetails(player, data)
         
-        -- Highlight selected
-        for _, child in ipairs(UI.PlayerListScroll:GetChildren()) do
-            if child:IsA("TextButton") then
-                child.BackgroundColor3 = shhhhnayy05_Config.Colors.Secondary
-            end
-        end
-        PlayerBtn.BackgroundColor3 = shhhhnayy05_Config.Colors.Accent
-    end)
-    
-    return PlayerBtn
-end
-
-function shhhhnayy05_UI.UpdatePlayerList()
-    local UI = shhhhnayy05_UI.Elements
-    
-    for _, child in ipairs(UI.PlayerListScroll:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
+        if match then
+            foundIndex = i
+            break
         end
     end
     
-    for player, data in pairs(shhhhnayy05_System.DetectedPlayers) do
-        shhhhnayy05_UI.CreatePlayerButton(player, data)
-    end
-    
-    local contentHeight = #UI.PlayerListScroll:GetChildren() * 45
-    UI.PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
-end
-
-function shhhhnayy05_UI.CreateDetailItem(title, value, color)
-    local UI = shhhhnayy05_UI.Elements
-    
-    local ItemFrame = Instance.new("Frame")
-    ItemFrame.Name = title .. "_Item"
-    ItemFrame.Size = UDim2.new(1, -10, 0, 50)
-    ItemFrame.BackgroundColor3 = shhhhnayy05_Config.Colors.Secondary
-    ItemFrame.BorderSizePixel = 0
-    ItemFrame.Parent = UI.DetailsScroll
-    
-    local ItemCorner = Instance.new("UICorner")
-    ItemCorner.CornerRadius = UDim.new(0, 6)
-    ItemCorner.Parent = ItemFrame
-    
-    local TitleLabel = Instance.new("TextLabel")
-    TitleLabel.Name = "Title"
-    TitleLabel.Size = UDim2.new(1, -10, 0, 20)
-    TitleLabel.Position = UDim2.new(0, 5, 0, 5)
-    TitleLabel.BackgroundTransparency = 1
-    TitleLabel.Text = title
-    TitleLabel.TextColor3 = shhhhnayy05_Config.Colors.SubText
-    TitleLabel.TextSize = 11
-    TitleLabel.Font = Enum.Font.Gotham
-    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TitleLabel.Parent = ItemFrame
-    
-    local ValueLabel = Instance.new("TextLabel")
-    ValueLabel.Name = "Value"
-    ValueLabel.Size = UDim2.new(1, -10, 0, 25)
-    ValueLabel.Position = UDim2.new(0, 5, 0, 22)
-    ValueLabel.BackgroundTransparency = 1
-    ValueLabel.Text = value
-    ValueLabel.TextColor3 = color or shhhhnayy05_Config.Colors.Text
-    ValueLabel.TextSize = 12
-    ValueLabel.Font = Enum.Font.GothamSemibold
-    ValueLabel.TextXAlignment = Enum.TextXAlignment.Left
-    ValueLabel.TextWrapped = true
-    ValueLabel.Parent = ItemFrame
-    
-    return ItemFrame
-end
-
-function shhhhnayy05_UI.ShowPlayerDetails(player, data)
-    local UI = shhhhnayy05_UI.Elements
-    
-    for _, child in ipairs(UI.DetailsScroll:GetChildren()) do
-        if child:IsA("Frame") then
-            child:Destroy()
+    if foundIndex then
+        currentIndex = foundIndex
+        
+        CounterLabel.Text = currentIndex .. " / " .. #currentItems
+        local item = currentItems[currentIndex]
+        if item then
+            SelectedItemLabel.Text = getIcon(item) .. " " .. formatName(item.Name)
+            teleportToItem(item)
         end
-    end
-    
-    -- Basic Info
-    shhhhnayy05_UI.CreateDetailItem("👤 Player Name", player.Name, shhhhnayy05_Config.Colors.Accent)
-    shhhhnayy05_UI.CreateDetailItem("📱 Device Type", data.DeviceType, 
-        data.DeviceType == "Mobile" and shhhhnayy05_Config.Colors.Warning or shhhhnayy05_Config.Colors.Accent)
-    shhhhnayy05_UI.CreateDetailItem("🖥️ Platform", data.Platform, shhhhnayy05_Config.Colors.Text)
-    shhhhnayy05_UI.CreateDetailItem("⚠️ Risk Score", tostring(data.RiskScore) .. "/100", 
-        data.RiskScore >= 50 and shhhhnayy05_Config.Colors.Danger or 
-        (data.RiskScore >= 25 and shhhhnayy05_Config.Colors.Warning or shhhhnayy05_Config.Colors.Success))
-    
-    -- Executors
-    if #data.Executors > 0 then
-        local execNames = {}
-        for _, exec in ipairs(data.Executors) do
-            table.insert(execNames, exec.Name .. " (" .. exec.Platform .. ")")
-        end
-        shhhhnayy05_UI.CreateDetailItem("🚨 Detected Executors", table.concat(execNames, "\n"), shhhhnayy05_Config.Colors.Danger)
-    else
-        shhhhnayy05_UI.CreateDetailItem("✅ Executors", "None detected", shhhhnayy05_Config.Colors.Success)
-    end
-    
-    -- Active Scripts
-    if #data.ActiveScripts > 0 then
-        local scriptNames = {}
-        for _, script in ipairs(data.ActiveScripts) do
-            table.insert(scriptNames, script.Type .. ": " .. script.Name)
-        end
-        shhhhnayy05_UI.CreateDetailItem("📜 Active Scripts", table.concat(scriptNames, "\n"), shhhhnayy05_Config.Colors.Warning)
-    else
-        shhhhnayy05_UI.CreateDetailItem("✅ Scripts", "None detected", shhhhnayy05_Config.Colors.Success)
-    end
-    
-    -- Available Functions
-    if #data.Functions > 0 then
-        local funcPreview = table.concat(data.Functions, ", ")
-        if #funcPreview > 50 then
-            funcPreview = funcPreview:sub(1, 50) .. "..."
-        end
-        shhhhnayy05_UI.CreateDetailItem("⚙️ Suspicious Functions", funcPreview, shhhhnayy05_Config.Colors.Warning)
-    end
-    
-    local contentHeight = #UI.DetailsScroll:GetChildren() * 55
-    UI.DetailsScroll.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
-end
-
-function shhhhnayy05_UI.ClearDetails()
-    local UI = shhhhnayy05_UI.Elements
-    for _, child in ipairs(UI.DetailsScroll:GetChildren()) do
-        if child:IsA("Frame") then
-            child:Destroy()
-        end
-    end
-    UI.DetailsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-end
-
-function shhhhnayy05_UI.ShowNotification(title, message, color)
-    local UI = shhhhnayy05_UI.Elements
-    
-    UI.Notification.Title.Text = title
-    UI.Notification.Title.TextColor3 = color or shhhhnayy05_Config.Colors.Danger
-    UI.Notification.Text.Text = message
-    
-    UI.Notification.Frame.Visible = true
-    UI.Notification.Frame.Position = UDim2.new(0.5, -150, 0, -100)
-    
-    TweenService:Create(UI.Notification.Frame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), 
-        {Position = UDim2.new(0.5, -150, 0, 20)}):Play()
-    
-    task.delay(shhhhnayy05_Config.NotificationDuration, function()
-        TweenService:Create(UI.Notification.Frame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), 
-            {Position = UDim2.new(0.5, -150, 0, -100)}):Play()
-        task.wait(0.5)
-        UI.Notification.Frame.Visible = false
-    end)
-end
-
-function shhhhnayy05_UI.ScanAllPlayers()
-    local UI = shhhhnayy05_UI.Elements
-    
-    shhhhnayy05_System.DetectedPlayers = {}
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local analysis = shhhhnayy05_Detector.AnalyzePlayer(player)
-            shhhhnayy05_System.DetectedPlayers[player] = analysis
-            
-            if #analysis.Executors > 0 then
-                local execNames = {}
-                for _, exec in ipairs(analysis.Executors) do
-                    table.insert(execNames, exec.Name)
-                end
-                shhhhnayy05_UI.ShowNotification(
-                    "🚨 Executor Detected!", 
-                    player.Name .. " using: " .. table.concat(execNames, ", "),
-                    shhhhnayy05_Config.Colors.Danger
-                )
-            end
-        end
-    end
-    
-    shhhhnayy05_UI.UpdatePlayerList()
-    shhhhnayy05_UI.UpdateStats()
-    
-    -- Refresh ESP if enabled
-    if shhhhnayy05_Config.ESPEnabled then
-        shhhhnayy05_ESPSystem.RefreshESP()
-    end
-    
-    shhhhnayy05_UI.ShowNotification("✅ Scan Complete", "Scanned " .. tostring(#Players:GetPlayers() - 1) .. " players", shhhhnayy05_Config.Colors.Success)
-end
-
-function shhhhnayy05_UI.StartMonitoring()
-    task.spawn(function()
-        while shhhhnayy05_System.Monitoring do
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer then
-                    local analysis = shhhhnayy05_Detector.AnalyzePlayer(player)
-                    local oldData = shhhhnayy05_System.DetectedPlayers[player]
-                    
-                    -- Check for new executors
-                    if oldData and #analysis.Executors > #oldData.Executors then
-                        local newExecutors = {}
-                        for i = #oldData.Executors + 1, #analysis.Executors do
-                            table.insert(newExecutors, analysis.Executors[i].Name)
-                        end
-                        shhhhnayy05_UI.ShowNotification(
-                            "🚨 New Executor Detected!",
-                            player.Name .. " started using: " .. table.concat(newExecutors, ", "),
-                            shhhhnayy05_Config.Colors.Danger
-                        )
+        
+        -- SCROLL OTOMATIS
+        local itemHeight = 38
+        local targetPosition = (foundIndex - 1) * itemHeight
+        local maxScroll = math.max(0, TeleportContent.CanvasSize.Y.Offset - TeleportContent.AbsoluteSize.Y)
+        local clampedPosition = math.clamp(targetPosition, 0, maxScroll)
+        
+        TeleportContent.CanvasPosition = Vector2.new(0, clampedPosition)
+        
+        -- Highlight
+        for _, child in ipairs(TeleportContent:GetChildren()) do
+            if child:IsA("Frame") then
+                local btn = child:FindFirstChild("ItemButton")
+                if btn then
+                    if child.Name == item.Name .. "_TeleportItem" then
+                        child.BackgroundColor3 = Color3.fromRGB(80, 100, 150)
+                        
+                        TweenService:Create(child, TweenInfo.new(0.2), {
+                            BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+                        }):Play()
+                        
+                        delay(0.3, function()
+                            if child and child.Parent then
+                                TweenService:Create(child, TweenInfo.new(0.3), {
+                                    BackgroundColor3 = Color3.fromRGB(80, 100, 150)
+                                }):Play()
+                            end
+                        end)
+                    else
+                        child.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
                     end
-                    
-                    shhhhnayy05_System.DetectedPlayers[player] = analysis
                 end
             end
+        end
+        
+        return true
+    end
+    
+    return false
+end
+
+--// Fungsi Update Navigasi
+local function updateNavigation()
+    if #currentItems == 0 then
+        CounterLabel.Text = "0 / 0"
+        SelectedItemLabel.Text = "🧊 No items"
+        return
+    end
+    
+    CounterLabel.Text = currentIndex .. " / " .. #currentItems
+    local item = currentItems[currentIndex]
+    if item then
+        SelectedItemLabel.Text = getIcon(item) .. " " .. formatName(item.Name)
+        teleportToItem(item)
+        
+        for _, child in ipairs(TeleportContent:GetChildren()) do
+            if child:IsA("Frame") then
+                local btn = child:FindFirstChild("ItemButton")
+                if btn then
+                    if child.Name == item.Name .. "_TeleportItem" then
+                        child.BackgroundColor3 = Color3.fromRGB(80, 100, 150)
+                    else
+                        child.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+                    end
+                end
+            end
+        end
+    end
+end
+
+--// Fungsi Sort
+local function sortItems(items)
+    if sortMode == "numeric" then
+        table.sort(items, function(a, b)
+            local numA = extractNumber(a.Name)
+            local numB = extractNumber(b.Name)
+            if numA ~= numB then
+                return numA < numB
+            else
+                return string.lower(a.Name) < string.lower(b.Name)
+            end
+        end)
+    else
+        table.sort(items, function(a, b)
+            return string.lower(a.Name) < string.lower(b.Name)
+        end)
+    end
+    return items
+end
+
+--// Fungsi Start Auto Loop
+local function startAutoLoop()
+    if isLoopRunning then return end
+    if #currentItems == 0 then return end
+    
+    isLoopRunning = true
+    StartLoopBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    StopLoopBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    
+    local lastTime = tick()
+    
+    loopConnection = RunService.Heartbeat:Connect(function()
+        if not isLoopRunning then return end
+        
+        local currentTime = tick()
+        if currentTime - lastTime >= loopSpeed then
+            lastTime = currentTime
             
-            shhhhnayy05_UI.UpdatePlayerList()
-            shhhhnayy05_UI.UpdateStats()
+            currentIndex = currentIndex + 1
+            if currentIndex > #currentItems then
+                currentIndex = 1
+            end
             
-            task.wait(shhhhnayy05_Config.UpdateInterval)
+            updateNavigation()
         end
     end)
 end
 
--- Player Added/Removed Events
-Players.PlayerAdded:Connect(function(player)
-    if shhhhnayy05_System.Monitoring then
-        task.wait(2) -- Wait for player to load
-        local analysis = shhhhnayy05_Detector.AnalyzePlayer(player)
-        shhhhnayy05_System.DetectedPlayers[player] = analysis
-        
-        if #analysis.Executors > 0 then
-            local execNames = {}
-            for _, exec in ipairs(analysis.Executors) do
-                table.insert(execNames, exec.Name)
+--// Fungsi Stop Auto Loop
+local function stopAutoLoop()
+    isLoopRunning = false
+    StartLoopBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    StopLoopBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    
+    if loopConnection then
+        loopConnection:Disconnect()
+        loopConnection = nil
+    end
+end
+
+--// Fungsi Update Speed Display
+local function updateSpeedDisplay()
+    SpeedValueLabel.Text = string.format("%.1f", loopSpeed)
+end
+
+--// Fungsi Buat Item Teleport
+local function createTeleportItem(item, index)
+    local itemFrame = Instance.new("Frame")
+    itemFrame.Name = item.Name .. "_TeleportItem"
+    itemFrame.Size = UDim2.new(1, -10, 0, 35)
+    itemFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    itemFrame.BorderSizePixel = 0
+    itemFrame.LayoutOrder = index
+    
+    local itemCorner = Instance.new("UICorner")
+    itemCorner.CornerRadius = UDim.new(0, 6)
+    itemCorner.Parent = itemFrame
+    
+    local numberLabel = Instance.new("TextLabel")
+    numberLabel.Name = "Number"
+    numberLabel.Size = UDim2.new(0, 40, 1, 0)
+    numberLabel.BackgroundTransparency = 1
+    numberLabel.Text = tostring(index) .. "."
+    numberLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    numberLabel.TextSize = 14
+    numberLabel.Font = Enum.Font.GothamBold
+    numberLabel.TextXAlignment = Enum.TextXAlignment.Right
+    numberLabel.Parent = itemFrame
+    
+    local itemButton = Instance.new("TextButton")
+    itemButton.Name = "ItemButton"
+    itemButton.Size = UDim2.new(1, -45, 1, 0)
+    itemButton.Position = UDim2.new(0, 45, 0, 0)
+    itemButton.BackgroundTransparency = 1
+    itemButton.Text = getIcon(item) .. " " .. formatName(item.Name)
+    itemButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    itemButton.TextSize = 13
+    itemButton.Font = Enum.Font.Gotham
+    itemButton.TextXAlignment = Enum.TextXAlignment.Left
+    itemButton.Parent = itemFrame
+    
+    itemFrame.MouseEnter:Connect(function()
+        if currentItems[currentIndex] ~= item then
+            TweenService:Create(itemFrame, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+            }):Play()
+        end
+    end)
+    
+    itemFrame.MouseLeave:Connect(function()
+        if currentItems[currentIndex] ~= item then
+            TweenService:Create(itemFrame, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            }):Play()
+        end
+    end)
+    
+    itemButton.MouseButton1Click:Connect(function()
+        for i, v in ipairs(currentItems) do
+            if v == item then
+                currentIndex = i
+                updateNavigation()
+                break
             end
-            shhhhnayy05_UI.ShowNotification(
-                "🚨 New Player with Executor!",
-                player.Name .. " joined using: " .. table.concat(execNames, ", "),
-                shhhhnayy05_Config.Colors.Danger
-            )
+        end
+    end)
+    
+    return itemFrame
+end
+
+--// Fungsi Buka Teleport GUI
+local function openTeleportGUI(folder)
+    currentFolder = folder
+    currentIndex = 1
+    
+    -- Clear search box
+    TeleportSearchBox.Text = ""
+    
+    -- Stop loop jika berjalan
+    stopAutoLoop()
+    
+    for _, child in ipairs(TeleportContent:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+    
+    TeleportTitleText.Text = "📂 " .. formatName(folder.Name)
+    
+    currentItems = {}
+    for _, item in ipairs(folder:GetChildren()) do
+        if isValidPart(item) or item:IsA("Model") then
+            table.insert(currentItems, item)
+        end
+    end
+    
+    currentItems = sortItems(currentItems)
+    
+    for index, item in ipairs(currentItems) do
+        local teleportItem = createTeleportItem(item, index)
+        teleportItem.Parent = TeleportContent
+    end
+    
+    if #currentItems == 0 then
+        local emptyLabel = Instance.new("TextLabel")
+        emptyLabel.Name = "EmptyLabel"
+        emptyLabel.Size = UDim2.new(1, -10, 0, 50)
+        emptyLabel.BackgroundTransparency = 1
+        emptyLabel.Text = "No parts found"
+        emptyLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        emptyLabel.TextSize = 12
+        emptyLabel.Font = Enum.Font.Gotham
+        emptyLabel.Parent = TeleportContent
+    end
+    
+    TeleportContent.CanvasSize = UDim2.new(0, 0, 0, TeleportLayout.AbsoluteContentSize.Y + 10)
+    updateNavigation()
+    
+    TeleportFrame.Visible = true
+    TeleportFrame.Size = UDim2.new(0, 350, 0, 450)
+    TeleportFrame.Position = UDim2.new(0.5, -175, 0.5, -225)
+    
+    TweenService:Create(TeleportFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 350, 0, 450),
+        Position = UDim2.new(0.5, -175, 0.5, -225)
+    }):Play()
+end
+
+--// Event Tombol Navigasi
+LeftBtn.MouseButton1Click:Connect(function()
+    if #currentItems == 0 then return end
+    if isLoopRunning then return end
+    
+    currentIndex = currentIndex - 1
+    if currentIndex < 1 then
+        currentIndex = #currentItems
+    end
+    updateNavigation()
+end)
+
+RightBtn.MouseButton1Click:Connect(function()
+    if #currentItems == 0 then return end
+    if isLoopRunning then return end
+    
+    currentIndex = currentIndex + 1
+    if currentIndex > #currentItems then
+        currentIndex = 1
+    end
+    updateNavigation()
+end)
+
+--// Event Auto Search
+TeleportSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local searchText = TeleportSearchBox.Text
+    if searchText and #searchText > 0 then
+        delay(0.1, function()
+            if TeleportSearchBox.Text == searchText then
+                performAutoSearch(searchText)
+            end
+        end)
+    end
+end)
+
+TeleportSearchBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        performAutoSearch(TeleportSearchBox.Text)
+    end
+end)
+
+--// Event Mode Otomatis
+AutoModeBtn.MouseButton1Click:Connect(function()
+    AutoLoopFrame.Visible = true
+    AutoLoopFrame.Size = UDim2.new(0, 260, 0, 0)
+    AutoLoopFrame.Position = UDim2.new(0.5, -130, 0.5, 0)
+    
+    TweenService:Create(AutoLoopFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 280, 0, 200),
+        Position = UDim2.new(0.5, -140, 0.5, -100)
+    }):Play()
+end)
+
+--// Event Auto Loop GUI
+CloseAutoLoopBtn.MouseButton1Click:Connect(function()
+    TweenService:Create(AutoLoopFrame, TweenInfo.new(0.2), {
+        Size = UDim2.new(0, 260, 0, 0),
+        Position = UDim2.new(0.5, -130, 0.5, 0)
+    }):Play()
+    wait(0.2)
+    AutoLoopFrame.Visible = false
+end)
+
+StartLoopBtn.MouseButton1Click:Connect(function()
+    startAutoLoop()
+end)
+
+StopLoopBtn.MouseButton1Click:Connect(function()
+    stopAutoLoop()
+end)
+
+MinusBtn.MouseButton1Click:Connect(function()
+    loopSpeed = math.max(0.1, loopSpeed - 0.1)
+    updateSpeedDisplay()
+end)
+
+PlusBtn.MouseButton1Click:Connect(function()
+    loopSpeed = loopSpeed + 0.1
+    updateSpeedDisplay()
+end)
+
+--// Event Tombol Sort
+SortBtn.MouseButton1Click:Connect(function()
+    if sortMode == "numeric" then
+        sortMode = "alphabet"
+        SortBtn.Text = "📊 Sort: A-Z (Alphabet)"
+    else
+        sortMode = "numeric"
+        SortBtn.Text = "📊 Sort: 1-1000 (Numeric)"
+    end
+    
+    if currentFolder then
+        openTeleportGUI(currentFolder)
+    end
+end)
+
+--// FUNGSI UTAMA: Cek apakah harus buka GUI atau langsung teleport
+local function handleItemClick(instance)
+    if instance:IsA("Folder") then
+        openTeleportGUI(instance)
+        return
+    end
+    
+    if instance:IsA("Model") then
+        if hasSubItems(instance) then
+            openTeleportGUI(instance)
         else
-            shhhhnayy05_UI.ShowNotification("👤 Player Joined", player.Name .. " joined the game", shhhhnayy05_Config.Colors.Accent)
+            teleportToItem(instance)
         end
-        
-        shhhhnayy05_UI.UpdatePlayerList()
-        shhhhnayy05_UI.UpdateStats()
-        
-        if shhhhnayy05_Config.ESPEnabled then
-            shhhhnayy05_ESPSystem.CreateESP(player, analysis)
-        end
-    end
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    shhhhnayy05_System.DetectedPlayers[player] = nil
-    
-    if shhhhnayy05_System.ESPObjects[player] then
-        if shhhhnayy05_System.ESPObjects[player].Billboard then
-            shhhhnayy05_System.ESPObjects[player].Billboard:Destroy()
-        end
-        shhhhnayy05_System.ESPObjects[player] = nil
+        return
     end
     
-    if shhhhnayy05_System.SelectedPlayer == player then
-        shhhhnayy05_System.SelectedPlayer = nil
-        shhhhnayy05_UI.ClearDetails()
+    if isValidPart(instance) then
+        teleportToItem(instance)
+        return
+    end
+end
+
+--// Fungsi Buat Folder Item
+local function createFolderItem(instance, index)
+    local itemFrame = Instance.new("Frame")
+    itemFrame.Name = instance.Name .. "_Item"
+    itemFrame.Size = UDim2.new(1, -10, 0, 30)
+    itemFrame.BackgroundTransparency = 1
+    itemFrame.LayoutOrder = index
+    
+    local itemButton = Instance.new("TextButton")
+    itemButton.Name = "ItemButton"
+    itemButton.Size = UDim2.new(1, 0, 1, 0)
+    itemButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    itemButton.BorderSizePixel = 0
+    itemButton.Text = getIcon(instance) .. " " .. formatName(instance.Name)
+    itemButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    itemButton.TextSize = 13
+    itemButton.Font = Enum.Font.Gotham
+    itemButton.TextXAlignment = Enum.TextXAlignment.Left
+    itemButton.Parent = itemFrame
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = itemButton
+    
+    itemButton.MouseEnter:Connect(function()
+        TweenService:Create(itemButton, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+        }):Play()
+    end)
+    
+    itemButton.MouseLeave:Connect(function()
+        TweenService:Create(itemButton, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        }):Play()
+    end)
+    
+    itemButton.MouseButton1Click:Connect(function()
+        handleItemClick(instance)
+    end)
+    
+    local showIndicator = false
+    if instance:IsA("Folder") then
+        showIndicator = true
+    elseif instance:IsA("Model") and hasSubItems(instance) then
+        showIndicator = true
     end
     
-    shhhhnayy05_UI.UpdatePlayerList()
-    shhhhnayy05_UI.UpdateStats()
+    if showIndicator then
+        local indicator = Instance.new("TextLabel")
+        indicator.Name = "Indicator"
+        indicator.Size = UDim2.new(0, 20, 1, 0)
+        indicator.Position = UDim2.new(1, -25, 0, 0)
+        indicator.BackgroundTransparency = 1
+        indicator.Text = "›"
+        indicator.TextColor3 = Color3.fromRGB(150, 150, 150)
+        indicator.TextSize = 18
+        indicator.Font = Enum.Font.GothamBold
+        indicator.Parent = itemButton
+    end
+    
+    return itemFrame
+end
+
+--// Fungsi Scan Workspace
+local function scanWorkspace()
+    for _, child in ipairs(ContentFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+    
+  local workspaceItems = {}
+for _, item in ipairs(workspace:GetChildren()) do
+  table.insert(workspaceItems, item)
+end
+
+table.sort(workspaceItems, function(a, b)
+  return string.lower(a.Name) < string.lower(b.Name)
 end)
 
--- Initialize System
-shhhhnayy05_UI.Initialize()
+for index, item in ipairs(workspaceItems) do
+  local folderItem = createFolderItem(item, index)
+  folderItem.Parent = ContentFrame
+end
 
--- Auto-notification on load
-task.delay(1, function()
-    shhhhnayy05_UI.ShowNotification(
-        "✅ shhhhnayy05 Detector Loaded", 
-        "Version " .. shhhhnayy05_Config.Version .. " | Press 🔍 to open",
-        shhhhnayy05_Config.Colors.Success
-    )
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 10)
+end
+
+--// EVENT HANDLERS
+
+--// Drag Main Frame
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+TitleBar.InputBegan:Connect(function(input)
+  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+      dragging = true
+      dragStart = input.Position
+      startPos = MainFrame.Position
+      
+      input.Changed:Connect(function()
+          if input.UserInputState == Enum.UserInputState.End then
+              dragging = false
+          end
+      end)
+  end
 end)
 
-print("[[ shhhhnayy05 Executor Detector System v5.0 Loaded ]]")
-print("[[ Creator: shhhhnayy05 | Support: Level 7-8 Executor ]]")
+TitleBar.InputChanged:Connect(function(input)
+  if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+      dragInput = input
+  end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+  if input == dragInput and dragging then
+      local delta = input.Position - dragStart
+      MainFrame.Position = UDim2.new(
+          startPos.X.Scale,
+          startPos.X.Offset + delta.X,
+          startPos.Y.Scale,
+          startPos.Y.Offset + delta.Y
+      )
+  end
+end)
+
+--// Drag Checkpoint Frame
+local cpDragging = false
+local cpDragInput = nil
+local cpDragStart = nil
+local cpStartPos = nil
+
+CheckpointTitleBar.InputBegan:Connect(function(input)
+  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+      cpDragging = true
+      cpDragStart = input.Position
+      cpStartPos = CheckpointFrame.Position
+      
+      input.Changed:Connect(function()
+          if input.UserInputState == Enum.UserInputState.End then
+              cpDragging = false
+          end
+      end)
+  end
+end)
+
+CheckpointTitleBar.InputChanged:Connect(function(input)
+  if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+      cpDragInput = input
+  end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+  if input == cpDragInput and cpDragging then
+      local delta = input.Position - cpDragStart
+      CheckpointFrame.Position = UDim2.new(
+          cpStartPos.X.Scale,
+          cpStartPos.X.Offset + delta.X,
+          cpStartPos.Y.Scale,
+          cpStartPos.Y.Offset + delta.Y
+      )
+  end
+end)
+
+--// Drag Teleport Frame
+local tpDragging = false
+local tpDragInput = nil
+local tpDragStart = nil
+local tpStartPos = nil
+
+TeleportTitleBar.InputBegan:Connect(function(input)
+  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+      tpDragging = true
+      tpDragStart = input.Position
+      tpStartPos = TeleportFrame.Position
+      
+      input.Changed:Connect(function()
+          if input.UserInputState == Enum.UserInputState.End then
+              tpDragging = false
+          end
+      end)
+  end
+end)
+
+TeleportTitleBar.InputChanged:Connect(function(input)
+  if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+      tpDragInput = input
+  end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+  if input == tpDragInput and tpDragging then
+      local delta = input.Position - tpDragStart
+      TeleportFrame.Position = UDim2.new(
+          tpStartPos.X.Scale,
+          tpStartPos.X.Offset + delta.X,
+          tpStartPos.Y.Scale,
+          tpStartPos.Y.Offset + delta.Y
+      )
+  end
+end)
+
+--// Drag Auto Loop Frame
+local autoDragging = false
+local autoDragInput = nil
+local autoDragStart = nil
+local autoStartPos = nil
+
+AutoLoopTitleBar.InputBegan:Connect(function(input)
+  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+      autoDragging = true
+      autoDragStart = input.Position
+      autoStartPos = AutoLoopFrame.Position
+      
+      input.Changed:Connect(function()
+          if input.UserInputState == Enum.UserInputState.End then
+              autoDragging = false
+          end
+      end)
+  end
+end)
+
+AutoLoopTitleBar.InputChanged:Connect(function(input)
+  if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+      autoDragInput = input
+  end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+  if input == autoDragInput and autoDragging then
+      local delta = input.Position - autoDragStart
+      AutoLoopFrame.Position = UDim2.new(
+          autoStartPos.X.Scale,
+          autoStartPos.X.Offset + delta.X,
+          autoStartPos.Y.Scale,
+          autoStartPos.Y.Offset + delta.Y
+      )
+  end
+end)
+
+--// Tombol Minimize
+MinimizeBtn.MouseButton1Click:Connect(function()
+  isMinimized = not isMinimized
+  
+  if isMinimized then
+      TweenService:Create(MainFrame, TweenInfo.new(0.3), {
+          Size = UDim2.new(0, 350, 0, 35)
+      }):Play()
+      
+      wait(0.3)
+      MainFrame.Visible = false
+      MinimizeIcon.Visible = true
+      
+      TweenService:Create(MinimizeIcon, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+          Size = UDim2.new(0, 50, 0, 50)
+      }):Play()
+  end
+end)
+
+--// Minimize Icon Click
+MinimizeIcon.MouseButton1Click:Connect(function()
+  isMinimized = false
+  MinimizeIcon.Visible = false
+  MainFrame.Visible = true
+  
+  TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+      Size = UDim2.new(0, 350, 0, 450)
+  }):Play()
+end)
+
+--// Tombol Close
+CloseBtn.MouseButton1Click:Connect(function()
+  shhhhnayy05Explorer:Destroy()
+  CheckpointGui:Destroy()
+  TeleportGui:Destroy()
+  AutoLoopGui:Destroy()
+  stopAutoLoop()
+end)
+
+--// Tombol Close Checkpoint
+CloseCheckpointBtn.MouseButton1Click:Connect(function()
+  CheckpointFrame.Visible = false
+end)
+
+--// Tombol Close Teleport
+CloseTeleportBtn.MouseButton1Click:Connect(function()
+  TeleportFrame.Visible = false
+  stopAutoLoop()
+end)
+
+--// Tombol Scan Checkpoint (di TitleBar)
+ScanCheckpointBtn.MouseButton1Click:Connect(function()
+  CheckpointFrame.Visible = true
+  TweenService:Create(CheckpointFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+      Size = UDim2.new(0, 350, 0, 450),
+      Position = UDim2.new(0.5, -175, 0.5, -225)
+  }):Play()
+end)
+
+--// Tombol Scan New Checkpoint (di Checkpoint GUI)
+ScanNewCheckpointBtn.MouseButton1Click:Connect(function()
+  scanAllCheckpoints()
+end)
+
+--// Tombol Clear All Checkpoints
+ClearAllBtn.MouseButton1Click:Connect(function()
+  CheckpointData.stored = {}
+  updateCheckpointList()
+  TotalCheckpointLabel.Text = "📊 Total: 0 | 🎯 Active: 0 | 👻 Hidden: 0"
+  StatusLabel.Text = "Status: Cleared"
+  StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+end)
+
+--// Tombol Reveal Hidden
+RevealHiddenBtn.MouseButton1Click:Connect(function()
+  revealHiddenCheckpoints()
+end)
+
+--// Search Box Handler
+SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+  local searchText = string.lower(SearchBox.Text)
+  
+  for _, child in ipairs(ContentFrame:GetChildren()) do
+      if child:IsA("Frame") and child.Name ~= "UIListLayout" then
+          local button = child:FindFirstChild("ItemButton")
+          if button then
+              local itemText = string.lower(button.Text)
+              if searchText == "" or string.find(itemText, searchText) then
+                  child.Visible = true
+              else
+                  child.Visible = false
+              end
+          end
+      end
+  end
+  
+  ContentFrame.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 10)
+end)
+
+--// Checkpoint Search Handler
+CheckpointSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+  local searchText = string.lower(CheckpointSearchBox.Text)
+  
+  for _, child in ipairs(CheckpointContent:GetChildren()) do
+      if child:IsA("Frame") then
+          local nameLabel = child:FindFirstChild("Name")
+          local numberLabel = child:FindFirstChild("Number")
+          
+          local match = false
+          if nameLabel then
+              local itemText = string.lower(nameLabel.Text)
+              if searchText == "" or string.find(itemText, searchText) then
+                  match = true
+              end
+          end
+          
+          if numberLabel and not match then
+              local numText = string.lower(numberLabel.Text)
+              if string.find(numText, searchText) then
+                  match = true
+              end
+          end
+          
+          child.Visible = match
+      end
+  end
+  
+  CheckpointContent.CanvasSize = UDim2.new(0, 0, 0, CheckpointLayout.AbsoluteContentSize.Y + 10)
+end)
+
+--// Initialize
+scanWorkspace()
+
+--// Auto refresh workspace setiap 5 detik
+spawn(function()
+  while wait(5) do
+      if shhhhnayy05Explorer and shhhhnayy05Explorer.Parent then
+          scanWorkspace()
+      else
+          break
+      end
+  end
+end)
+
+--// Notifikasi startup
+spawn(function()
+  local notification = Instance.new("Frame")
+  notification.Name = "Notification"
+  notification.Size = UDim2.new(0, 250, 0, 50)
+  notification.Position = UDim2.new(0.5, -125, 0, -60)
+  notification.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+  notification.BorderSizePixel = 0
+  notification.Parent = shhhhnayy05Explorer
+  
+  local notifCorner = Instance.new("UICorner")
+  notifCorner.CornerRadius = UDim.new(0, 8)
+  notifCorner.Parent = notification
+  
+  local notifText = Instance.new("TextLabel")
+  notifText.Name = "Text"
+  notifText.Size = UDim2.new(1, -20, 1, 0)
+  notifText.Position = UDim2.new(0, 10, 0, 0)
+  notifText.BackgroundTransparency = 1
+  notifText.Text = "✅ shhhhnayy05 Explorer Loaded!\n📁 Click items to explore | 🎯 Scan for checkpoints"
+  notifText.TextColor3 = Color3.fromRGB(255, 255, 255)
+  notifText.TextSize = 12
+  notifText.Font = Enum.Font.Gotham
+  notifText.TextWrapped = true
+  notifText.Parent = notification
+  
+  TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+      Position = UDim2.new(0.5, -125, 0, 20)
+  }):Play()
+  
+  wait(3)
+  
+  TweenService:Create(notification, TweenInfo.new(0.5), {
+      Position = UDim2.new(0.5, -125, 0, -60)
+  }):Play()
+  
+  wait(0.5)
+  notification:Destroy()
+end)
+
+print("✅ shhhhnayy05 Explorer & Teleport System - ELBRUZH EDITION Loaded!")
+print("📁 Features: Workspace Explorer | 🎯 Checkpoint Scanner | 🚀 Teleport System | 🤖 Auto Loop")
+
+       
