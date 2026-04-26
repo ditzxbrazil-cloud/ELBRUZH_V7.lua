@@ -231,11 +231,31 @@ local function SafeTeleport(position)
     local hrp = GetHumanoidRootPart()
     if hrp then
         if Data.GhostTPEnabled then
-            -- FITUR BARU: Ghost TP (Diam di tempat tapi nyentuh CP)
+            -- LOGIKA BARU: Kunci kamera agar tidak lag render, dan beri jeda untuk server
+            local cam = workspace.CurrentCamera
             local originalCFrame = hrp.CFrame
+            local originalCamType = cam.CameraType
+            local originalCamCFrame = cam.CFrame
+            
+            -- 1. Kunci Kamera di tempat asli
+            cam.CameraType = Enum.CameraType.Scriptable
+            cam.CFrame = originalCamCFrame
+            
+            -- 2. Pindahkan Character
             hrp.CFrame = CFrame.new(position)
-            task.wait() -- Tunggu 1 frame agar physics engine mencatat sentuhan checkpoint
+            
+            -- 3. Beri waktu sedikit (0.2s) agar server merespons sentuhan checkpoint (anti-gagal)
+            task.wait(0.2) 
+            
+            -- 4. Kembalikan Character ke tempat semula
             hrp.CFrame = originalCFrame
+            
+            -- 5. Normalkan kembali Kamera
+            cam.CameraType = originalCamType
+            local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                cam.CameraSubject = humanoid
+            end
         else
             -- Teleport normal
             hrp.CFrame = CFrame.new(position)
@@ -714,7 +734,7 @@ local function CreateGUI()
     scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
     scrollLayout.Parent = ScrollFrame
 
-    --// Settings Window (UKURAN DIPERBESAR UNTUK TOMBOL BARU)
+    --// Settings Window
     local SettingsWindow = Instance.new("Frame")
     SettingsWindow.Name = "SettingsWindow"
     SettingsWindow.BackgroundColor3 = CONFIG.COLORS.Background
