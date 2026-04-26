@@ -1,6 +1,6 @@
---// shhhhnayy05 - Auto Teleport GUI (Updated with Enhanced Collect CP System)
+--// shhhhnayy05 - Auto Teleport GUI (Updated with Fixed Collect CP & UI Layout)
 --// Support: Executor Level 7-8
---// Features: Permanent Save, Delete Confirmation, Anti-Close on Respawn, Auto Reset Script, Enhanced Auto Collect CP
+--// Features: Permanent Save, Delete Confirmation, Anti-Close on Respawn, Auto Reset Script, Fixed Sequential Auto Collect
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -57,22 +57,21 @@ if not getgenv().shhhhnayy05_TeleportData then
         
         -- Variables for Auto Reset Loop
         ResetScript = "",
-        ResetDelay = 0.5, -- dalam detik (s)
-        StartLoopDelay = 1.0, -- delay setelah reset sebelum mulai ke CP1 (s)
+        ResetDelay = 0.5,
+        StartLoopDelay = 1.0,
         AutoResetEnabled = false,
-        IsResetting = false, -- Mencegah spam saat reset manual berjalan
+        IsResetting = false,
         
-        -- Variables for Collect CP Feature
+        -- Variables for Collect CP Feature (Hanya Urut)
         CollectAutoOn = false,
-        CollectSequential = false, -- Mode Bertahan (Berurutan CP1 -> Akhir)
-        CollectDelay = 1.0, -- Delay bertahap
+        CollectDelay = 1.0, 
         CollectRadius = 9999999
     }
 end
 
 local Data = getgenv().shhhhnayy05_TeleportData
 
---// File System Functions (PERMANENT SAVE)
+--// File System Functions
 local function SaveToFile()
     local success, err = pcall(function()
         local saveData = {
@@ -105,7 +104,6 @@ local function LoadFromFile()
     end
 end
 
---// Load data saat startup (HANYA SEKALI)
 if not Data.DataLoaded then
     LoadFromFile()
     Data.DataLoaded = true
@@ -243,7 +241,6 @@ end
 local function FirePromptSafely(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     
-    -- Fallback method manual manipulasi jarak dan penglihatan
     task.spawn(function()
         local oldDist = prompt.MaxActivationDistance
         local oldLOS = prompt.RequiresLineOfSight
@@ -251,11 +248,9 @@ local function FirePromptSafely(prompt)
         prompt.MaxActivationDistance = 9e9
         prompt.RequiresLineOfSight = false
         
-        -- Coba pakai fungsi bawaan executor jika ada
         if fireproximityprompt then
             pcall(function() fireproximityprompt(prompt, 1, true) end)
         else
-            -- Hold logic
             prompt:InputHoldBegin()
             task.wait(prompt.HoldDuration or 0)
             prompt:InputHoldEnd()
@@ -277,13 +272,11 @@ local function CreateGUI()
         oldGui:Destroy()
     end
     
-    --// Create Main GUI
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "shhhhnayy05_AutoTeleport"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = PlayerGui
 
-    --// Main Panel
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainPanel"
     MainFrame.BackgroundColor3 = CONFIG.COLORS.Background
@@ -303,7 +296,6 @@ local function CreateGUI()
     mainStroke.Thickness = 2
     mainStroke.Parent = MainFrame
 
-    --// Header
     local Header = Instance.new("Frame")
     Header.BackgroundColor3 = CONFIG.COLORS.Header
     Header.BorderSizePixel = 0
@@ -332,7 +324,6 @@ local function CreateGUI()
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.Parent = Header
 
-    --// Minimize Button
     local MinimizeBtn = Instance.new("TextButton")
     MinimizeBtn.BackgroundColor3 = CONFIG.COLORS.SpeedBtn
     MinimizeBtn.BorderSizePixel = 0
@@ -348,7 +339,6 @@ local function CreateGUI()
     minBtnCorner.CornerRadius = UDim.new(0, 6)
     minBtnCorner.Parent = MinimizeBtn
 
-    --// Split Layout
     local LeftPanel = Instance.new("Frame")
     LeftPanel.BackgroundTransparency = 1
     LeftPanel.Size = UDim2.new(0.55, 0, 1, -50)
@@ -361,7 +351,6 @@ local function CreateGUI()
     RightPanel.Position = UDim2.new(0.55, 10, 0, 50)
     RightPanel.Parent = MainFrame
 
-    --// Checkpoint List
     local CheckpointsScroll = Instance.new("ScrollingFrame")
     CheckpointsScroll.Name = "CheckpointsList"
     CheckpointsScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
@@ -387,7 +376,6 @@ local function CreateGUI()
     checkpointsPadding.PaddingBottom = UDim.new(0, 8)
     checkpointsPadding.Parent = CheckpointsScroll
 
-    --// Penanda Jumlah Total CP yang Tersimpan
     local TotalCPLabel = Instance.new("TextLabel")
     TotalCPLabel.BackgroundTransparency = 1
     TotalCPLabel.Size = UDim2.new(1, 0, 0, 25)
@@ -398,7 +386,6 @@ local function CreateGUI()
     TotalCPLabel.TextSize = 12
     TotalCPLabel.Parent = LeftPanel
 
-    --// Right Panel Controls (UIListLayout)
     local RightLayout = Instance.new("UIListLayout")
     RightLayout.Padding = UDim.new(0, 8)
     RightLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -440,7 +427,6 @@ local function CreateGUI()
     local LoadConfigBtn = CreateButton("LoadConfig", "LOAD CONFIG", CONFIG.COLORS.LoadConfig, "📂")
     LoadConfigBtn.LayoutOrder = 4
 
-    --// Speed Control
     local SpeedFrame = Instance.new("Frame")
     SpeedFrame.BackgroundTransparency = 1
     SpeedFrame.Size = UDim2.new(1, 0, 0, 50)
@@ -486,13 +472,26 @@ local function CreateGUI()
     plusCorner.CornerRadius = UDim.new(0, 6)
     plusCorner.Parent = PlusBtn
 
-    --// Tombol Settings & Menu Collect (Di bawah panel utama)
-    local SettingsBtn = CreateButton("SettingsBtn", "SETTINGS", CONFIG.COLORS.SettingsBtn, "⚙")
-    SettingsBtn.LayoutOrder = 6
-    
-    local OpenCollectCPBtn = CreateButton("OpenCollectCPBtn", "COLLECT CP", CONFIG.COLORS.CollectBtn, "🎒")
-    OpenCollectCPBtn.LayoutOrder = 7
+    --// Kumpulan Tombol Bawah (Sejajar horizontal agar muat)
+    local BottomButtonsFrame = Instance.new("Frame")
+    BottomButtonsFrame.BackgroundTransparency = 1
+    BottomButtonsFrame.Size = UDim2.new(1, 0, 0, 40)
+    BottomButtonsFrame.LayoutOrder = 6
+    BottomButtonsFrame.Parent = RightPanel
 
+    local bottomLayout = Instance.new("UIListLayout")
+    bottomLayout.FillDirection = Enum.FillDirection.Horizontal
+    bottomLayout.Padding = UDim.new(0, 8)
+    bottomLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    bottomLayout.Parent = BottomButtonsFrame
+
+    local SettingsBtn = CreateButton("SettingsBtn", "SETTINGS", CONFIG.COLORS.SettingsBtn, "⚙", BottomButtonsFrame)
+    SettingsBtn.Size = UDim2.new(0.5, -4, 1, 0)
+    SettingsBtn.LayoutOrder = 1
+    
+    local OpenCollectCPBtn = CreateButton("OpenCollectCPBtn", "COLLECT", CONFIG.COLORS.CollectBtn, "🎒", BottomButtonsFrame)
+    OpenCollectCPBtn.Size = UDim2.new(0.5, -4, 1, 0)
+    OpenCollectCPBtn.LayoutOrder = 2
 
     --// ICONS
     local CheckpointIcon = Instance.new("TextButton")
@@ -749,7 +748,7 @@ local function CreateGUI()
     scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
     scrollLayout.Parent = ScrollFrame
 
-    --// Settings Window (Hanya Script Reset)
+    --// Settings Window
     local SettingsWindow = Instance.new("Frame")
     SettingsWindow.Name = "SettingsWindow"
     SettingsWindow.BackgroundColor3 = CONFIG.COLORS.Background
@@ -946,14 +945,13 @@ local function CreateGUI()
         ToggleLoopBtn.Text = "AUTO RESET LOOP: " .. (Data.AutoResetEnabled and "ON" or "OFF")
     end)
 
-
-    --// COLLECT CP WINDOW //--
+    --// COLLECT CP WINDOW (Diperbarui hanya untuk Urut) //--
     local CollectCPWindow = Instance.new("Frame")
     CollectCPWindow.Name = "CollectCPWindow"
     CollectCPWindow.BackgroundColor3 = CONFIG.COLORS.Background
     CollectCPWindow.BorderSizePixel = 0
-    CollectCPWindow.Size = UDim2.new(0, 300, 0, 270)
-    CollectCPWindow.Position = UDim2.new(0.5, -150, 0.5, -135)
+    CollectCPWindow.Size = UDim2.new(0, 300, 0, 220) -- Ukuran vertikal dipangkas
+    CollectCPWindow.Position = UDim2.new(0.5, -150, 0.5, -110)
     CollectCPWindow.Visible = false
     CollectCPWindow.Parent = ScreenGui
 
@@ -1009,14 +1007,14 @@ local function CreateGUI()
     closeColCorner.CornerRadius = UDim.new(0, 6)
     closeColCorner.Parent = CloseCollectBtn
 
-    -- Auto Collect Toggle
+    -- Auto Collect (Urut) Toggle
     local ToggleAutoCollectBtn = Instance.new("TextButton")
     ToggleAutoCollectBtn.BackgroundColor3 = Data.CollectAutoOn and CONFIG.COLORS.StartLoop or CONFIG.COLORS.StopLoop
     ToggleAutoCollectBtn.BorderSizePixel = 0
     ToggleAutoCollectBtn.Size = UDim2.new(1, -20, 0, 40)
     ToggleAutoCollectBtn.Position = UDim2.new(0, 10, 0, 60)
     ToggleAutoCollectBtn.Font = Enum.Font.GothamBold
-    ToggleAutoCollectBtn.Text = "COLLECT ALL CP: " .. (Data.CollectAutoOn and "ON" or "OFF")
+    ToggleAutoCollectBtn.Text = "AUTO COLLECT (URUT): " .. (Data.CollectAutoOn and "ON" or "OFF")
     ToggleAutoCollectBtn.TextColor3 = CONFIG.COLORS.Text
     ToggleAutoCollectBtn.TextSize = 14
     ToggleAutoCollectBtn.Parent = CollectCPWindow
@@ -1029,39 +1027,16 @@ local function CreateGUI()
         CreateClickEffect(ToggleAutoCollectBtn)
         Data.CollectAutoOn = not Data.CollectAutoOn
         ToggleAutoCollectBtn.BackgroundColor3 = Data.CollectAutoOn and CONFIG.COLORS.StartLoop or CONFIG.COLORS.StopLoop
-        ToggleAutoCollectBtn.Text = "COLLECT ALL CP: " .. (Data.CollectAutoOn and "ON" or "OFF")
-    end)
-
-    -- Mode Bertahan Toggle
-    local ToggleModeBtn = Instance.new("TextButton")
-    ToggleModeBtn.BackgroundColor3 = Data.CollectSequential and CONFIG.COLORS.AddCheckpoint or Color3.fromRGB(100, 100, 100)
-    ToggleModeBtn.BorderSizePixel = 0
-    ToggleModeBtn.Size = UDim2.new(1, -20, 0, 40)
-    ToggleModeBtn.Position = UDim2.new(0, 10, 0, 110)
-    ToggleModeBtn.Font = Enum.Font.GothamBold
-    ToggleModeBtn.Text = "MODE BERTAHAN (URUT): " .. (Data.CollectSequential and "ON" or "OFF")
-    ToggleModeBtn.TextColor3 = CONFIG.COLORS.Text
-    ToggleModeBtn.TextSize = 13
-    ToggleModeBtn.Parent = CollectCPWindow
-
-    local tModCorner = Instance.new("UICorner")
-    tModCorner.CornerRadius = UDim.new(0, 8)
-    tModCorner.Parent = ToggleModeBtn
-
-    ToggleModeBtn.MouseButton1Click:Connect(function()
-        CreateClickEffect(ToggleModeBtn)
-        Data.CollectSequential = not Data.CollectSequential
-        ToggleModeBtn.BackgroundColor3 = Data.CollectSequential and CONFIG.COLORS.AddCheckpoint or Color3.fromRGB(100, 100, 100)
-        ToggleModeBtn.Text = "MODE BERTAHAN (URUT): " .. (Data.CollectSequential and "ON" or "OFF")
+        ToggleAutoCollectBtn.Text = "AUTO COLLECT (URUT): " .. (Data.CollectAutoOn and "ON" or "OFF")
     end)
 
     -- Collect Delay Settings
     local ColDelayTitle = Instance.new("TextLabel")
     ColDelayTitle.BackgroundTransparency = 1
     ColDelayTitle.Size = UDim2.new(0.6, 0, 0, 30)
-    ColDelayTitle.Position = UDim2.new(0, 10, 0, 160)
+    ColDelayTitle.Position = UDim2.new(0, 10, 0, 110)
     ColDelayTitle.Font = Enum.Font.GothamBold
-    ColDelayTitle.Text = "Delay Bertahap (s):"
+    ColDelayTitle.Text = "Delay Per CP (s):"
     ColDelayTitle.TextColor3 = CONFIG.COLORS.Text
     ColDelayTitle.TextSize = 12
     ColDelayTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -1071,7 +1046,7 @@ local function CreateGUI()
     ColDelayBox.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
     ColDelayBox.BorderSizePixel = 0
     ColDelayBox.Size = UDim2.new(0.35, 0, 0, 30)
-    ColDelayBox.Position = UDim2.new(0.6, 0, 0, 160)
+    ColDelayBox.Position = UDim2.new(0.6, 0, 0, 110)
     ColDelayBox.Font = Enum.Font.GothamBold
     ColDelayBox.Text = tostring(Data.CollectDelay)
     ColDelayBox.TextColor3 = CONFIG.COLORS.Text
@@ -1097,7 +1072,7 @@ local function CreateGUI()
     CollectStatusLabel = Instance.new("TextLabel")
     CollectStatusLabel.BackgroundTransparency = 1
     CollectStatusLabel.Size = UDim2.new(1, -20, 0, 30)
-    CollectStatusLabel.Position = UDim2.new(0, 10, 0, 210)
+    CollectStatusLabel.Position = UDim2.new(0, 10, 0, 160)
     CollectStatusLabel.Font = Enum.Font.GothamBold
     CollectStatusLabel.Text = "Target: Idle"
     CollectStatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -1198,7 +1173,6 @@ local function CreateGUI()
         end
     end
 
-    -- Logika Reset untuk Manual Teleport
     local function HandleManualAutoReset()
         if Data.AutoResetEnabled and Data.CurrentCheckpointIndex == #Data.Checkpoints and not Data.IsLooping then
             task.spawn(function()
@@ -1336,7 +1310,6 @@ local function CreateGUI()
         CheckpointsScroll.CanvasSize = UDim2.new(0, 0, 0, checkpointsLayout.AbsoluteContentSize.Y + 20)
     end
 
-    --// Refresh checkpoint list
     for i, cp in ipairs(Data.Checkpoints) do
         CreateCheckpointItem(i, cp.Position)
     end
@@ -1436,7 +1409,7 @@ local function CreateGUI()
         ShowNotification("Loop stopped!")
     end
 
-    --// Save Config dengan tombol CLOSE
+    --// Save Config
     local function SaveConfig()
         if #Data.Checkpoints == 0 then
             ShowNotification("No checkpoints to save!")
@@ -1580,7 +1553,6 @@ local function CreateGUI()
                     Checkpoints = checkpointsCopy,
                     Timestamp = os.time()
                 }
-                
                 SaveToFile()
                 ShowNotification("Config '" .. name .. "' saved permanently!")
                 CloseInputGUI()
@@ -1868,8 +1840,7 @@ local function CreateGUI()
         local dragInput, dragStart, startPos
         
         handle.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-                input.UserInputType == Enum.UserInputType.Touch then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 dragStart = input.Position
                 startPos = frame.Position
@@ -1883,8 +1854,7 @@ local function CreateGUI()
         end)
         
         handle.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement or 
-               input.UserInputType == Enum.UserInputType.Touch then
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                 dragInput = input
             end
         end)
@@ -1919,10 +1889,9 @@ local function CreateGUI()
         NavGui.Position = UDim2.new(1, -180, 0, 80)
         LoadConfigFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
         SettingsWindow.Position = UDim2.new(0.5, -160, 0.5, -140)
-        CollectCPWindow.Position = UDim2.new(0.5, -150, 0.5, -135)
+        CollectCPWindow.Position = UDim2.new(0.5, -150, 0.5, -110)
     end
 
-    --// Animation awal jika minimize
     if Data.IsMinimized then
         CreateTween(MinimizeIcon, {Size = UDim2.new(0, 60, 0, 60)}, 0.3, Enum.EasingStyle.Back):Play()
         task.delay(0.3, function()
@@ -1944,7 +1913,6 @@ local function GetPromptsAtPosition(targetPosition)
     
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("ProximityPrompt") then
-            -- Memfilter objek sesuai kondisi yang kamu minta
             if v.ObjectText == "Penuh!" or v.ActionText == "Kumpulkan" or (v.Parent and v.Parent.Name:find("Stone")) then
                 local parentPart = v.Parent
                 if parentPart and parentPart:IsA("BasePart") then
@@ -1959,43 +1927,30 @@ local function GetPromptsAtPosition(targetPosition)
     return targets
 end
 
--- Thread khusus untuk Auto Collect (Bypass Jarak)
+-- Thread khusus untuk Auto Collect (Teleport terlebih dahulu baru bypass Prompts)
 task.spawn(function()
     while task.wait(0.2) do
         if Data.CollectAutoOn and #Data.Checkpoints > 0 then
-            if Data.CollectSequential then
-                -- Mode Bertahan: Mengeksekusi Checkpoint Berurutan (CP1 -> Akhir)
-                for i, cp in ipairs(Data.Checkpoints) do
-                    if not Data.CollectAutoOn then break end 
-                    
-                    if CollectStatusLabel then
-                        CollectStatusLabel.Text = "Target: Area Checkpoint " .. i
-                        CollectStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-                    end
-                    
-                    local targetPrompts = GetPromptsAtPosition(cp.Position)
-                    for _, prompt in ipairs(targetPrompts) do
-                        FirePromptSafely(prompt)
-                    end
-                    
-                    task.wait(Data.CollectDelay)
-                end
-            else
-                -- Mode Normal: Sapu bersih seluruh Checkpoint sekaligus
+            -- Berjalan berurutan dari CP1 -> Akhir
+            for i, cp in ipairs(Data.Checkpoints) do
+                if not Data.CollectAutoOn then break end 
+                
                 if CollectStatusLabel then
-                    CollectStatusLabel.Text = "Target: Semua Area Checkpoint (Instan)"
-                    CollectStatusLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+                    CollectStatusLabel.Text = "Target: Area Checkpoint " .. i
+                    CollectStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
                 end
                 
-                for _, cp in ipairs(Data.Checkpoints) do
-                    local targetPrompts = GetPromptsAtPosition(cp.Position)
-                    for _, prompt in ipairs(targetPrompts) do
-                        FirePromptSafely(prompt)
-                    end
+                -- HARUS TELEPORT TERLEBIH DAHULU AGAR SERVER BISA MEMBACA POSISI
+                SafeTeleport(cp.Position)
+                task.wait(0.3) -- Diam sejenak agar karakter mendarat & diproses server
+                
+                local targetPrompts = GetPromptsAtPosition(cp.Position)
+                for _, prompt in ipairs(targetPrompts) do
+                    FirePromptSafely(prompt)
+                    task.wait(0.1) -- Jeda kecil antar prompt jika objek menumpuk
                 end
                 
-                -- Delay untuk mencegah crash server/klien karena eksekusi serentak
-                task.wait(Data.CollectDelay) 
+                task.wait(Data.CollectDelay)
             end
         else
             if CollectStatusLabel then
@@ -2025,4 +1980,4 @@ CreateGUI()
 ShowNotification("shhhhnayy05 - Auto Teleport & Collect CP Loaded!")
 
 print("shhhhnayy05 - Auto Teleport GUI Loaded Successfully!")
-print("Sistem Collect CP telah diperbarui dengan FirePromptSafely Bypass.")
+print("Sistem Collect CP telah diperbarui: Sekarang akan Teleport sebelum bypass (Mencegah server error).")
