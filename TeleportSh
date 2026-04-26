@@ -1,6 +1,6 @@
---// shhhhnayy05 - Auto Teleport GUI
+--// shhhhnayy05 - Auto Teleport GUI (Updated with Collect CP System)
 --// Support: Executor Level 7-8
---// Features: Permanent Save, Delete Confirmation, Anti-Close on Respawn, Auto Reset Script, Window Clone TP
+--// Features: Permanent Save, Delete Confirmation, Anti-Close on Respawn, Auto Reset Script, Auto Collect CP
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -29,7 +29,6 @@ local CONFIG = {
         Close = Color3.fromRGB(200, 50, 50),
         SpeedBtn = Color3.fromRGB(255, 200, 0),
         SettingsBtn = Color3.fromRGB(100, 100, 150),
-        CloneTPBtn = Color3.fromRGB(0, 150, 200),
         Text = Color3.fromRGB(255, 255, 255),
         Notification = Color3.fromRGB(0, 200, 200),
         CheckpointItem = Color3.fromRGB(35, 35, 40),
@@ -60,10 +59,13 @@ if not getgenv().shhhhnayy05_TeleportData then
         ResetDelay = 0.5, -- dalam detik (s)
         StartLoopDelay = 1.0, -- delay setelah reset sebelum mulai ke CP1 (s)
         AutoResetEnabled = false,
-        IsResetting = false,
+        IsResetting = false, -- Mencegah spam saat reset manual berjalan
         
-        -- Fitur Clone
-        CloneModel = nil
+        -- Variables for Collect CP Feature
+        CollectAutoOn = false,
+        CollectSequential = false, -- Mode Bertahan (Berurutan CP1 -> Akhir)
+        CollectDelay = 1.0, -- Delay bertahap
+        CollectRadius = 9999999
     }
 end
 
@@ -170,6 +172,7 @@ end
 local function ShowNotification(text, duration)
     duration = duration or 2
     
+    -- Hapus notifikasi lama jika ada
     for _, child in ipairs(PlayerGui:GetChildren()) do
         if child.Name == "shhhhnayy05_Notification" then
             child:Destroy()
@@ -235,6 +238,9 @@ local function SafeTeleport(position)
     end
     return false
 end
+
+--// Label Reference Global for Logic Thread
+local CollectStatusLabel = nil
 
 --// Create GUI Function
 local function CreateGUI()
@@ -376,7 +382,7 @@ local function CreateGUI()
         btn.Name = name
         btn.BackgroundColor3 = color
         btn.BorderSizePixel = 0
-        btn.Size = UDim2.new(1, 0, 0, 38) -- sedikit dikecilkan agar muat tombol baru
+        btn.Size = UDim2.new(1, 0, 0, 45)
         btn.Font = Enum.Font.GothamBold
         btn.Text = (icon and icon .. " " or "") .. text
         btn.TextColor3 = CONFIG.COLORS.Text
@@ -402,13 +408,13 @@ local function CreateGUI()
     --// Speed Control
     local SpeedFrame = Instance.new("Frame")
     SpeedFrame.BackgroundTransparency = 1
-    SpeedFrame.Size = UDim2.new(1, 0, 0, 45)
+    SpeedFrame.Size = UDim2.new(1, 0, 0, 50)
     SpeedFrame.LayoutOrder = 5
     SpeedFrame.Parent = RightPanel
 
     local SpeedLabel = Instance.new("TextLabel")
     SpeedLabel.BackgroundTransparency = 1
-    SpeedLabel.Size = UDim2.new(1, 0, 0, 15)
+    SpeedLabel.Size = UDim2.new(1, 0, 0, 20)
     SpeedLabel.Font = Enum.Font.GothamBold
     SpeedLabel.Text = "SPEED: " .. Data.Speed .. "s"
     SpeedLabel.TextColor3 = CONFIG.COLORS.Text
@@ -418,8 +424,8 @@ local function CreateGUI()
     local MinusBtn = Instance.new("TextButton")
     MinusBtn.BackgroundColor3 = CONFIG.COLORS.SpeedBtn
     MinusBtn.BorderSizePixel = 0
-    MinusBtn.Size = UDim2.new(0, 40, 0, 25)
-    MinusBtn.Position = UDim2.new(0.5, -45, 0, 18)
+    MinusBtn.Size = UDim2.new(0, 40, 0, 28)
+    MinusBtn.Position = UDim2.new(0.5, -45, 0, 22)
     MinusBtn.Font = Enum.Font.GothamBold
     MinusBtn.Text = "-"
     MinusBtn.TextColor3 = CONFIG.COLORS.Background
@@ -433,8 +439,8 @@ local function CreateGUI()
     local PlusBtn = Instance.new("TextButton")
     PlusBtn.BackgroundColor3 = CONFIG.COLORS.SpeedBtn
     PlusBtn.BorderSizePixel = 0
-    PlusBtn.Size = UDim2.new(0, 40, 0, 25)
-    PlusBtn.Position = UDim2.new(0.5, 5, 0, 18)
+    PlusBtn.Size = UDim2.new(0, 40, 0, 28)
+    PlusBtn.Position = UDim2.new(0.5, 5, 0, 22)
     PlusBtn.Font = Enum.Font.GothamBold
     PlusBtn.Text = "+"
     PlusBtn.TextColor3 = CONFIG.COLORS.Background
@@ -449,11 +455,6 @@ local function CreateGUI()
     local SettingsBtn = CreateButton("SettingsBtn", "SETTINGS", CONFIG.COLORS.SettingsBtn, "⚙")
     SettingsBtn.LayoutOrder = 6
     SettingsBtn.Parent = RightPanel
-
-    --// FITUR BARU: Tombol Menu Clone TP di bawah Settings
-    local CloneTPBtn = CreateButton("CloneTPBtn", "CLONE TP", CONFIG.COLORS.CloneTPBtn, "👥")
-    CloneTPBtn.LayoutOrder = 7
-    CloneTPBtn.Parent = RightPanel
 
     --// ICONS
     local CheckpointIcon = Instance.new("TextButton")
@@ -710,13 +711,13 @@ local function CreateGUI()
     scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
     scrollLayout.Parent = ScrollFrame
 
-    --// Settings Window
+    --// Settings Window (Diperbesar untuk muat tombol menu baru)
     local SettingsWindow = Instance.new("Frame")
     SettingsWindow.Name = "SettingsWindow"
     SettingsWindow.BackgroundColor3 = CONFIG.COLORS.Background
     SettingsWindow.BorderSizePixel = 0
-    SettingsWindow.Size = UDim2.new(0, 320, 0, 310)
-    SettingsWindow.Position = UDim2.new(0.5, -160, 0.5, -155)
+    SettingsWindow.Size = UDim2.new(0, 320, 0, 360) -- Tinggi diperbesar
+    SettingsWindow.Position = UDim2.new(0.5, -160, 0.5, -180)
     SettingsWindow.Visible = false
     SettingsWindow.Parent = ScreenGui
 
@@ -906,100 +907,180 @@ local function CreateGUI()
         ToggleLoopBtn.BackgroundColor3 = Data.AutoResetEnabled and CONFIG.COLORS.StartLoop or CONFIG.COLORS.StopLoop
         ToggleLoopBtn.Text = "AUTO RESET LOOP: " .. (Data.AutoResetEnabled and "ON" or "OFF")
     end)
+    
+    -- Jendela Collect CP Button
+    local OpenCollectCPBtn = Instance.new("TextButton")
+    OpenCollectCPBtn.BackgroundColor3 = Color3.fromRGB(80, 100, 200)
+    OpenCollectCPBtn.BorderSizePixel = 0
+    OpenCollectCPBtn.Size = UDim2.new(1, -20, 0, 40)
+    OpenCollectCPBtn.Position = UDim2.new(0, 10, 0, 290)
+    OpenCollectCPBtn.Font = Enum.Font.GothamBold
+    OpenCollectCPBtn.Text = "MENU COLLECT CP"
+    OpenCollectCPBtn.TextColor3 = CONFIG.COLORS.Text
+    OpenCollectCPBtn.TextSize = 14
+    OpenCollectCPBtn.Parent = SettingsWindow
 
-    --// FITUR BARU: JENDELA KHUSUS CLONE TP
-    local CloneWindow = Instance.new("Frame")
-    CloneWindow.Name = "CloneWindow"
-    CloneWindow.BackgroundColor3 = CONFIG.COLORS.Background
-    CloneWindow.BorderSizePixel = 0
-    CloneWindow.Size = UDim2.new(0, 300, 0, 180)
-    CloneWindow.Position = UDim2.new(0.5, -150, 0.5, -90)
-    CloneWindow.Visible = false
-    CloneWindow.Parent = ScreenGui
+    local openCollectCorner = Instance.new("UICorner")
+    openCollectCorner.CornerRadius = UDim.new(0, 8)
+    openCollectCorner.Parent = OpenCollectCPBtn
 
-    local cloneWinCorner = Instance.new("UICorner")
-    cloneWinCorner.CornerRadius = UDim.new(0, 12)
-    cloneWinCorner.Parent = CloneWindow
 
-    local cloneWinStroke = Instance.new("UIStroke")
-    cloneWinStroke.Color = CONFIG.COLORS.CloneTPBtn
-    cloneWinStroke.Thickness = 2
-    cloneWinStroke.Parent = CloneWindow
+    --// COLLECT CP WINDOW //--
+    local CollectCPWindow = Instance.new("Frame")
+    CollectCPWindow.Name = "CollectCPWindow"
+    CollectCPWindow.BackgroundColor3 = CONFIG.COLORS.Background
+    CollectCPWindow.BorderSizePixel = 0
+    CollectCPWindow.Size = UDim2.new(0, 300, 0, 270)
+    CollectCPWindow.Position = UDim2.new(0.5, -150, 0.5, -135)
+    CollectCPWindow.Visible = false
+    CollectCPWindow.Parent = ScreenGui
 
-    local CloneHeader = Instance.new("Frame")
-    CloneHeader.BackgroundColor3 = CONFIG.COLORS.CloneTPBtn
-    CloneHeader.BorderSizePixel = 0
-    CloneHeader.Size = UDim2.new(1, 0, 0, 40)
-    CloneHeader.Parent = CloneWindow
+    local collectWinCorner = Instance.new("UICorner")
+    collectWinCorner.CornerRadius = UDim.new(0, 12)
+    collectWinCorner.Parent = CollectCPWindow
 
-    local cloneHeaderCorner = Instance.new("UICorner")
-    cloneHeaderCorner.CornerRadius = UDim.new(0, 12)
-    cloneHeaderCorner.Parent = CloneHeader
+    local collectWinStroke = Instance.new("UIStroke")
+    collectWinStroke.Color = CONFIG.COLORS.Header
+    collectWinStroke.Thickness = 2
+    collectWinStroke.Parent = CollectCPWindow
 
-    local cloneHeaderCover = Instance.new("Frame")
-    cloneHeaderCover.BackgroundColor3 = CONFIG.COLORS.CloneTPBtn
-    cloneHeaderCover.BorderSizePixel = 0
-    cloneHeaderCover.Size = UDim2.new(1, 0, 0, 10)
-    cloneHeaderCover.Position = UDim2.new(0, 0, 1, -10)
-    cloneHeaderCover.Parent = CloneHeader
+    local CollectHeader = Instance.new("Frame")
+    CollectHeader.BackgroundColor3 = CONFIG.COLORS.Header
+    CollectHeader.BorderSizePixel = 0
+    CollectHeader.Size = UDim2.new(1, 0, 0, 40)
+    CollectHeader.Parent = CollectCPWindow
 
-    local CloneTitleLabel = Instance.new("TextLabel")
-    CloneTitleLabel.BackgroundTransparency = 1
-    CloneTitleLabel.Size = UDim2.new(1, -50, 1, 0)
-    CloneTitleLabel.Position = UDim2.new(0, 10, 0, 0)
-    CloneTitleLabel.Font = Enum.Font.GothamBold
-    CloneTitleLabel.Text = "CLONE TP SYSTEM"
-    CloneTitleLabel.TextColor3 = CONFIG.COLORS.Background
-    CloneTitleLabel.TextSize = 16
-    CloneTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    CloneTitleLabel.Parent = CloneHeader
+    local colHeaderCorner = Instance.new("UICorner")
+    colHeaderCorner.CornerRadius = UDim.new(0, 12)
+    colHeaderCorner.Parent = CollectHeader
 
-    local CloseCloneBtn = Instance.new("TextButton")
-    CloseCloneBtn.BackgroundColor3 = CONFIG.COLORS.Close
-    CloseCloneBtn.BorderSizePixel = 0
-    CloseCloneBtn.Size = UDim2.new(0, 35, 0, 30)
-    CloseCloneBtn.Position = UDim2.new(1, -40, 0, 5)
-    CloseCloneBtn.Font = Enum.Font.GothamBold
-    CloseCloneBtn.Text = "X"
-    CloseCloneBtn.TextColor3 = CONFIG.COLORS.Text
-    CloseCloneBtn.TextSize = 14
-    CloseCloneBtn.Parent = CloneHeader
+    local colHeaderCover = Instance.new("Frame")
+    colHeaderCover.BackgroundColor3 = CONFIG.COLORS.Header
+    colHeaderCover.BorderSizePixel = 0
+    colHeaderCover.Size = UDim2.new(1, 0, 0, 10)
+    colHeaderCover.Position = UDim2.new(0, 0, 1, -10)
+    colHeaderCover.Parent = CollectHeader
 
-    local closeCloneCorner = Instance.new("UICorner")
-    closeCloneCorner.CornerRadius = UDim.new(0, 6)
-    closeCloneCorner.Parent = CloseCloneBtn
+    local CollectTitleLabel = Instance.new("TextLabel")
+    CollectTitleLabel.BackgroundTransparency = 1
+    CollectTitleLabel.Size = UDim2.new(1, -50, 1, 0)
+    CollectTitleLabel.Position = UDim2.new(0, 10, 0, 0)
+    CollectTitleLabel.Font = Enum.Font.GothamBold
+    CollectTitleLabel.Text = "COLLECT CP SETTINGS"
+    CollectTitleLabel.TextColor3 = CONFIG.COLORS.Background
+    CollectTitleLabel.TextSize = 14
+    CollectTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    CollectTitleLabel.Parent = CollectHeader
 
-    -- Tombol Add Clone
-    local AddCloneBtn = Instance.new("TextButton")
-    AddCloneBtn.BackgroundColor3 = Data.CloneModel and CONFIG.COLORS.StopLoop or CONFIG.COLORS.StartLoop
-    AddCloneBtn.BorderSizePixel = 0
-    AddCloneBtn.Size = UDim2.new(1, -40, 0, 45)
-    AddCloneBtn.Position = UDim2.new(0, 20, 0, 60)
-    AddCloneBtn.Font = Enum.Font.GothamBold
-    AddCloneBtn.Text = Data.CloneModel and "REMOVE CLONE" or "ADD CLONE"
-    AddCloneBtn.TextColor3 = CONFIG.COLORS.Text
-    AddCloneBtn.TextSize = 14
-    AddCloneBtn.Parent = CloneWindow
+    local CloseCollectBtn = Instance.new("TextButton")
+    CloseCollectBtn.BackgroundColor3 = CONFIG.COLORS.Close
+    CloseCollectBtn.BorderSizePixel = 0
+    CloseCollectBtn.Size = UDim2.new(0, 35, 0, 30)
+    CloseCollectBtn.Position = UDim2.new(1, -40, 0, 5)
+    CloseCollectBtn.Font = Enum.Font.GothamBold
+    CloseCollectBtn.Text = "X"
+    CloseCollectBtn.TextColor3 = CONFIG.COLORS.Text
+    CloseCollectBtn.TextSize = 14
+    CloseCollectBtn.Parent = CollectHeader
 
-    local addCloneCorner = Instance.new("UICorner")
-    addCloneCorner.CornerRadius = UDim.new(0, 8)
-    addCloneCorner.Parent = AddCloneBtn
+    local closeColCorner = Instance.new("UICorner")
+    closeColCorner.CornerRadius = UDim.new(0, 6)
+    closeColCorner.Parent = CloseCollectBtn
 
-    -- Tombol Loop Clone
-    local LoopCloneBtn = Instance.new("TextButton")
-    LoopCloneBtn.BackgroundColor3 = CONFIG.COLORS.AddCheckpoint
-    LoopCloneBtn.BorderSizePixel = 0
-    LoopCloneBtn.Size = UDim2.new(1, -40, 0, 45)
-    LoopCloneBtn.Position = UDim2.new(0, 20, 0, 115)
-    LoopCloneBtn.Font = Enum.Font.GothamBold
-    LoopCloneBtn.Text = "LOOP CLONE"
-    LoopCloneBtn.TextColor3 = CONFIG.COLORS.Text
-    LoopCloneBtn.TextSize = 14
-    LoopCloneBtn.Parent = CloneWindow
+    -- Auto Collect Toggle
+    local ToggleAutoCollectBtn = Instance.new("TextButton")
+    ToggleAutoCollectBtn.BackgroundColor3 = Data.CollectAutoOn and CONFIG.COLORS.StartLoop or CONFIG.COLORS.StopLoop
+    ToggleAutoCollectBtn.BorderSizePixel = 0
+    ToggleAutoCollectBtn.Size = UDim2.new(1, -20, 0, 40)
+    ToggleAutoCollectBtn.Position = UDim2.new(0, 10, 0, 60)
+    ToggleAutoCollectBtn.Font = Enum.Font.GothamBold
+    ToggleAutoCollectBtn.Text = "COLLECT ALL CP: " .. (Data.CollectAutoOn and "ON" or "OFF")
+    ToggleAutoCollectBtn.TextColor3 = CONFIG.COLORS.Text
+    ToggleAutoCollectBtn.TextSize = 14
+    ToggleAutoCollectBtn.Parent = CollectCPWindow
 
-    local loopCloneCorner = Instance.new("UICorner")
-    loopCloneCorner.CornerRadius = UDim.new(0, 8)
-    loopCloneCorner.Parent = LoopCloneBtn
+    local tColCorner = Instance.new("UICorner")
+    tColCorner.CornerRadius = UDim.new(0, 8)
+    tColCorner.Parent = ToggleAutoCollectBtn
+
+    ToggleAutoCollectBtn.MouseButton1Click:Connect(function()
+        CreateClickEffect(ToggleAutoCollectBtn)
+        Data.CollectAutoOn = not Data.CollectAutoOn
+        ToggleAutoCollectBtn.BackgroundColor3 = Data.CollectAutoOn and CONFIG.COLORS.StartLoop or CONFIG.COLORS.StopLoop
+        ToggleAutoCollectBtn.Text = "COLLECT ALL CP: " .. (Data.CollectAutoOn and "ON" or "OFF")
+    end)
+
+    -- Mode Bertahan Toggle
+    local ToggleModeBtn = Instance.new("TextButton")
+    ToggleModeBtn.BackgroundColor3 = Data.CollectSequential and CONFIG.COLORS.AddCheckpoint or Color3.fromRGB(100, 100, 100)
+    ToggleModeBtn.BorderSizePixel = 0
+    ToggleModeBtn.Size = UDim2.new(1, -20, 0, 40)
+    ToggleModeBtn.Position = UDim2.new(0, 10, 0, 110)
+    ToggleModeBtn.Font = Enum.Font.GothamBold
+    ToggleModeBtn.Text = "MODE BERTAHAN (URUT): " .. (Data.CollectSequential and "ON" or "OFF")
+    ToggleModeBtn.TextColor3 = CONFIG.COLORS.Text
+    ToggleModeBtn.TextSize = 13
+    ToggleModeBtn.Parent = CollectCPWindow
+
+    local tModCorner = Instance.new("UICorner")
+    tModCorner.CornerRadius = UDim.new(0, 8)
+    tModCorner.Parent = ToggleModeBtn
+
+    ToggleModeBtn.MouseButton1Click:Connect(function()
+        CreateClickEffect(ToggleModeBtn)
+        Data.CollectSequential = not Data.CollectSequential
+        ToggleModeBtn.BackgroundColor3 = Data.CollectSequential and CONFIG.COLORS.AddCheckpoint or Color3.fromRGB(100, 100, 100)
+        ToggleModeBtn.Text = "MODE BERTAHAN (URUT): " .. (Data.CollectSequential and "ON" or "OFF")
+    end)
+
+    -- Collect Delay Settings
+    local ColDelayTitle = Instance.new("TextLabel")
+    ColDelayTitle.BackgroundTransparency = 1
+    ColDelayTitle.Size = UDim2.new(0.6, 0, 0, 30)
+    ColDelayTitle.Position = UDim2.new(0, 10, 0, 160)
+    ColDelayTitle.Font = Enum.Font.GothamBold
+    ColDelayTitle.Text = "Delay Bertahap (s):"
+    ColDelayTitle.TextColor3 = CONFIG.COLORS.Text
+    ColDelayTitle.TextSize = 12
+    ColDelayTitle.TextXAlignment = Enum.TextXAlignment.Left
+    ColDelayTitle.Parent = CollectCPWindow
+
+    local ColDelayBox = Instance.new("TextBox")
+    ColDelayBox.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    ColDelayBox.BorderSizePixel = 0
+    ColDelayBox.Size = UDim2.new(0.35, 0, 0, 30)
+    ColDelayBox.Position = UDim2.new(0.6, 0, 0, 160)
+    ColDelayBox.Font = Enum.Font.GothamBold
+    ColDelayBox.Text = tostring(Data.CollectDelay)
+    ColDelayBox.TextColor3 = CONFIG.COLORS.Text
+    ColDelayBox.TextSize = 14
+    ColDelayBox.ClearTextOnFocus = false
+    ColDelayBox.Parent = CollectCPWindow
+
+    local colDelayBoxCorner = Instance.new("UICorner")
+    colDelayBoxCorner.CornerRadius = UDim.new(0, 8)
+    colDelayBoxCorner.Parent = ColDelayBox
+
+    ColDelayBox.FocusLost:Connect(function()
+        local num = tonumber(ColDelayBox.Text)
+        if num then
+            Data.CollectDelay = num
+            ColDelayBox.Text = tostring(Data.CollectDelay)
+        else
+            ColDelayBox.Text = tostring(Data.CollectDelay)
+        end
+    end)
+
+    -- Status Label for Loop
+    CollectStatusLabel = Instance.new("TextLabel")
+    CollectStatusLabel.BackgroundTransparency = 1
+    CollectStatusLabel.Size = UDim2.new(1, -20, 0, 30)
+    CollectStatusLabel.Position = UDim2.new(0, 10, 0, 210)
+    CollectStatusLabel.Font = Enum.Font.GothamBold
+    CollectStatusLabel.Text = "Target: Idle"
+    CollectStatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    CollectStatusLabel.TextSize = 12
+    CollectStatusLabel.Parent = CollectCPWindow
 
 
     --// Delete Confirmation GUI
@@ -1095,6 +1176,7 @@ local function CreateGUI()
         end
     end
 
+    -- Logika Reset untuk Manual Teleport
     local function HandleManualAutoReset()
         if Data.AutoResetEnabled and Data.CurrentCheckpointIndex == #Data.Checkpoints and not Data.IsLooping then
             task.spawn(function()
@@ -1283,7 +1365,7 @@ local function CreateGUI()
         TeleportToCheckpoint(prevIndex)
     end
 
-    --// LOGIKA LOOP UTAMA (StartLoop Original)
+    --// LOGIKA LOOP UTAMA (Teleport Normal)
     local function StartLoop()
         if Data.IsLooping or #Data.Checkpoints == 0 then return end
         
@@ -1661,10 +1743,6 @@ local function CreateGUI()
 
     StopLoopBtn.MouseButton1Click:Connect(function()
         StopLoop()
-        if LoopCloneBtn.Text == "STOP CLONE LOOP" then
-            LoopCloneBtn.Text = "LOOP CLONE"
-            LoopCloneBtn.BackgroundColor3 = CONFIG.COLORS.AddCheckpoint
-        end
     end)
 
     SaveConfigBtn.MouseButton1Click:Connect(function()
@@ -1708,6 +1786,16 @@ local function CreateGUI()
         SettingsWindow.Visible = false
     end)
 
+    OpenCollectCPBtn.MouseButton1Click:Connect(function()
+        CreateClickEffect(OpenCollectCPBtn)
+        CollectCPWindow.Visible = not CollectCPWindow.Visible
+    end)
+
+    CloseCollectBtn.MouseButton1Click:Connect(function()
+        CreateClickEffect(CloseCollectBtn)
+        CollectCPWindow.Visible = false
+    end)
+
     YesBtn.MouseButton1Click:Connect(function()
         CreateClickEffect(YesBtn)
         ConfirmDelete()
@@ -1716,95 +1804,6 @@ local function CreateGUI()
     NoBtn.MouseButton1Click:Connect(function()
         CreateClickEffect(NoBtn)
         CancelDelete()
-    end)
-
-    --// LOGIKA CLONE TP SYSTEM
-    CloneTPBtn.MouseButton1Click:Connect(function()
-        CreateClickEffect(CloneTPBtn)
-        CloneWindow.Visible = not CloneWindow.Visible
-    end)
-
-    CloseCloneBtn.MouseButton1Click:Connect(function()
-        CreateClickEffect(CloseCloneBtn)
-        CloneWindow.Visible = false
-    end)
-
-    AddCloneBtn.MouseButton1Click:Connect(function()
-        CreateClickEffect(AddCloneBtn)
-        
-        if Data.CloneModel then
-            -- Remove Clone System
-            Data.CloneModel:Destroy()
-            Data.CloneModel = nil
-            
-            local char = LocalPlayer.Character
-            if char then
-                local cam = workspace.CurrentCamera
-                local hum = char:FindFirstChild("Humanoid")
-                if hum then
-                    cam.CameraSubject = hum
-                end
-            end
-            
-            AddCloneBtn.Text = "ADD CLONE"
-            AddCloneBtn.BackgroundColor3 = CONFIG.COLORS.StartLoop
-            ShowNotification("Clone Removed! Kamera kembali normal.")
-        else
-            -- Add Clone System
-            local char = LocalPlayer.Character
-            if not char then return end
-            
-            char.Archivable = true
-            local clone = char:Clone()
-            clone.Name = "shhhhnayy05_Dummy"
-            
-            for _, v in ipairs(clone:GetDescendants()) do
-                if v:IsA("Script") or v:IsA("LocalScript") then
-                    v.Enabled = false
-                elseif v:IsA("BasePart") then
-                    v.Anchored = true
-                    v.CanCollide = false
-                end
-            end
-            
-            clone.Parent = workspace
-            clone:PivotTo(char:GetPivot())
-            
-            local cam = workspace.CurrentCamera
-            local hum = clone:FindFirstChild("Humanoid")
-            if hum then
-                cam.CameraSubject = hum
-            end
-            
-            Data.CloneModel = clone
-            
-            AddCloneBtn.Text = "REMOVE CLONE"
-            AddCloneBtn.BackgroundColor3 = CONFIG.COLORS.StopLoop
-            ShowNotification("Clone Added! Karakter tertahan, kamera terkunci pada Clone.")
-        end
-    end)
-
-    LoopCloneBtn.MouseButton1Click:Connect(function()
-        CreateClickEffect(LoopCloneBtn)
-        
-        if not Data.CloneModel then
-            ShowNotification("Silahkan Add Clone terlebih dahulu!")
-            return
-        end
-        
-        if Data.IsLooping then
-            StopLoop()
-            LoopCloneBtn.Text = "LOOP CLONE"
-            LoopCloneBtn.BackgroundColor3 = CONFIG.COLORS.AddCheckpoint
-        else
-            if #Data.Checkpoints == 0 then
-                ShowNotification("No checkpoints to loop!")
-                return
-            end
-            StartLoop()
-            LoopCloneBtn.Text = "STOP CLONE LOOP"
-            LoopCloneBtn.BackgroundColor3 = CONFIG.COLORS.StopLoop
-        end
     end)
 
     --// Minimize System
@@ -1848,13 +1847,13 @@ local function CreateGUI()
         
         handle.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-               input.UserInputType == Enum.UserInputType.Touch then
+                input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 dragStart = input.Position
                 startPos = frame.Position
                 
                 input.Changed:Connect(function()
-                     if input.UserInputState == Enum.UserInputState.End then
+                    if input.UserInputState == Enum.UserInputState.End then
                         dragging = false
                     end
                 end)
@@ -1882,8 +1881,8 @@ local function CreateGUI()
     MakeDraggable(MainFrame, Header)
     MakeDraggable(LoadConfigFrame, LoadHeader)
     MakeDraggable(SettingsWindow, SettingsHeader)
-    MakeDraggable(CloneWindow, CloneHeader)
     MakeDraggable(NavGui, NavHeader)
+    MakeDraggable(CollectCPWindow, CollectHeader)
 
     --// Mobile Support
     if UserInputService.TouchEnabled then
@@ -1898,7 +1897,7 @@ local function CreateGUI()
         NavGui.Position = UDim2.new(1, -180, 0, 80)
         LoadConfigFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
         SettingsWindow.Position = UDim2.new(0.5, -160, 0.5, -155)
-        CloneWindow.Position = UDim2.new(0.5, -150, 0.5, -90)
+        CollectCPWindow.Position = UDim2.new(0.5, -150, 0.5, -135)
     end
 
     --// Animation awal jika minimize
@@ -1916,17 +1915,80 @@ local function CreateGUI()
     print("shhhhnayy05 - GUI Created/Restored")
 end
 
---// Character Respawn Handler - PENTING!
-local function OnCharacterAdded(character)
-    if Data.CloneModel then
-        Data.CloneModel:Destroy()
-        Data.CloneModel = nil
-        if Data.IsLooping then
-            Data.IsLooping = false
-            Data.LoopConnection = nil
+--// CORE LOGIC: COLLECT CP REMOTE SYSTEM //--
+local function GetPromptsAtPosition(targetPosition)
+    local targets = {}
+    local distLimit = Data.CollectRadius or 9999999
+    
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("ProximityPrompt") then
+            -- Deteksi filter dari user
+            if v.ObjectText == "Penuh!" or v.ActionText == "Kumpulkan" or (v.Parent and v.Parent.Name:find("Stone")) then
+                local parentPart = v.Parent
+                if parentPart and parentPart:IsA("BasePart") then
+                    -- Mengecek jarak dari Posisi TP/Checkpoint ke Part tujuan
+                    local d = (targetPosition - parentPart.Position).Magnitude
+                    if d <= distLimit then
+                        table.insert(targets, v)
+                    end
+                end
+            end
         end
     end
-    
+    return targets
+end
+
+-- Thread khusus untuk Auto Collect jarak jauh
+task.spawn(function()
+    while task.wait(0.2) do
+        -- Hanya jalan jika Fitur ON dan Minimal ada 1 TP
+        if Data.CollectAutoOn and #Data.Checkpoints > 0 then
+            if Data.CollectSequential then
+                -- Mode Bertahan: Berurutan CP1 - Terakhir
+                for i, cp in ipairs(Data.Checkpoints) do
+                    if not Data.CollectAutoOn then break end -- Break jika dimatikan di tengah jalan
+                    
+                    if CollectStatusLabel then
+                        CollectStatusLabel.Text = "Target: Mengambil dari area CP " .. i
+                        CollectStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+                    end
+                    
+                    local targetPrompts = GetPromptsAtPosition(cp.Position)
+                    for _, prompt in ipairs(targetPrompts) do
+                        -- Fire remote (bypass jarak aktual player jika executor mendukung)
+                        fireproximityprompt(prompt)
+                    end
+                    
+                    task.wait(Data.CollectDelay)
+                end
+            else
+                -- Mode Normal: Sapu bersih area dari seluruh CP secara Instan (Serentak)
+                if CollectStatusLabel then
+                    CollectStatusLabel.Text = "Target: Semua Area CP (Instan)"
+                    CollectStatusLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+                end
+                
+                for _, cp in ipairs(Data.Checkpoints) do
+                    local targetPrompts = GetPromptsAtPosition(cp.Position)
+                    for _, prompt in ipairs(targetPrompts) do
+                        fireproximityprompt(prompt)
+                    end
+                end
+                -- Beri sedikit delay agar executor/game tidak force close karena spam serentak
+                task.wait(Data.CollectDelay) 
+            end
+        else
+            if CollectStatusLabel then
+                CollectStatusLabel.Text = "Target: Idle"
+                CollectStatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+            end
+        end
+    end
+end)
+
+
+--// Character Respawn Handler - PENTING!
+local function OnCharacterAdded(character)
     local hrp = character:WaitForChild("HumanoidRootPart", 5)
     if hrp then
         ShowNotification("Character respawned! GUI tetap aktif.")
@@ -1940,7 +2002,7 @@ end)
 
 --// Jalankan GUI pertama kali
 CreateGUI()
-ShowNotification("shhhhnayy05 - Auto Teleport Loaded! File aman.")
+ShowNotification("shhhhnayy05 - Auto Teleport & Auto Collect Loaded!")
 
 print("shhhhnayy05 - Auto Teleport GUI Loaded Successfully!")
 print("File simpanan: " .. CONFIG.SAVE_FILE)
