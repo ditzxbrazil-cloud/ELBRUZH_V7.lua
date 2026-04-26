@@ -1,6 +1,6 @@
 --// shhhhnayy05 - Auto Teleport GUI
 --// Support: Executor Level 7-8
---// Features: Permanent Save, Delete Confirmation, Anti-Close on Respawn, Auto Reset Script, Ghost TP
+--// Features: Permanent Save, Delete Confirmation, Anti-Close on Respawn, Auto Reset Script, Clone TP
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -61,8 +61,10 @@ if not getgenv().shhhhnayy05_TeleportData then
         AutoResetEnabled = false,
         IsResetting = false, -- Mencegah spam saat reset manual berjalan
         
-        -- FITUR BARU: Ghost TP / Diam di tempat
-        GhostTPEnabled = false 
+        -- FITUR BARU: Clone TP / Diam di tempat
+        GhostTPEnabled = false,
+        CloneModel = nil,
+        OriginalPosition = nil
     }
 end
 
@@ -227,37 +229,76 @@ local function GetHumanoidRootPart()
     return nil
 end
 
+--// FUNGSI CLONE TP (BARU)
+local function CreateDummyClone()
+    if Data.CloneModel and Data.CloneModel.Parent then return end
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    Data.OriginalPosition = char:GetPivot()
+    char.Archivable = true
+    local clone = char:Clone()
+    clone.Name = "shhhhnayy05_Dummy"
+    
+    -- Nonaktifkan script & kunci posisi clone agar tidak jatuh/error
+    for _, v in ipairs(clone:GetDescendants()) do
+        if v:IsA("Script") or v:IsA("LocalScript") then
+            v.Enabled = false
+        elseif v:IsA("BasePart") then
+            v.Anchored = true
+            v.CanCollide = false
+        end
+    end
+    
+    clone.Parent = workspace
+    
+    -- Arahkan kamera ke si clone
+    local cam = workspace.CurrentCamera
+    local hum = clone:FindFirstChild("Humanoid")
+    if hum then
+        cam.CameraSubject = hum
+    end
+    
+    Data.CloneModel = clone
+end
+
+local function RemoveDummyClone()
+    if Data.CloneModel then
+        local char = LocalPlayer.Character
+        -- Kembalikan posisi asli pemain ke tempat clone berdiri
+        if char and Data.OriginalPosition then
+            char:PivotTo(Data.OriginalPosition)
+            local cam = workspace.CurrentCamera
+            local hum = char:FindFirstChild("Humanoid")
+            if hum then
+                cam.CameraSubject = hum
+            end
+        end
+        
+        Data.CloneModel:Destroy()
+        Data.CloneModel = nil
+    end
+end
+
 local function SafeTeleport(position)
     local hrp = GetHumanoidRootPart()
     if hrp then
         if Data.GhostTPEnabled then
-            -- LOGIKA BARU: Kunci kamera agar tidak lag render, dan beri jeda untuk server
-            local cam = workspace.CurrentCamera
-            local originalCFrame = hrp.CFrame
-            local originalCamType = cam.CameraType
-            local originalCamCFrame = cam.CFrame
-            
-            -- 1. Kunci Kamera di tempat asli
-            cam.CameraType = Enum.CameraType.Scriptable
-            cam.CFrame = originalCamCFrame
-            
-            -- 2. Pindahkan Character
-            hrp.CFrame = CFrame.new(position)
-            
-            -- 3. Beri waktu sedikit (0.2s) agar server merespons sentuhan checkpoint (anti-gagal)
-            task.wait(0.2) 
-            
-            -- 4. Kembalikan Character ke tempat semula
-            hrp.CFrame = originalCFrame
-            
-            -- 5. Normalkan kembali Kamera
-            cam.CameraType = originalCamType
-            local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
-            if humanoid then
-                cam.CameraSubject = humanoid
+            if Data.IsLooping then
+                -- Jika sedang loop, clone sudah dibuat di awal loop, tinggal memindahkan karakter asli
+                hrp.CFrame = CFrame.new(position)
+            else
+                -- Jika TP manual satu kali (klik tombol TP)
+                CreateDummyClone()
+                hrp.CFrame = CFrame.new(position)
+                task.wait(0.5) -- Beri waktu sedikit untuk server memproses sentuhan checkpoint
+                if not Data.IsLooping then -- Pastikan aman
+                    RemoveDummyClone()
+                end
             end
         else
-            -- Teleport normal
+            -- Teleport normal tanpa clone
             hrp.CFrame = CFrame.new(position)
         end
         return true
@@ -734,7 +775,7 @@ local function CreateGUI()
     scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
     scrollLayout.Parent = ScrollFrame
 
-    --// Settings Window
+    --// Settings Window (UKURAN DIPERBESAR UNTUK TOMBOL BARU)
     local SettingsWindow = Instance.new("Frame")
     SettingsWindow.Name = "SettingsWindow"
     SettingsWindow.BackgroundColor3 = CONFIG.COLORS.Background
@@ -931,14 +972,14 @@ local function CreateGUI()
         ToggleLoopBtn.Text = "AUTO RESET LOOP: " .. (Data.AutoResetEnabled and "ON" or "OFF")
     end)
 
-    -- FITUR BARU: Toggle Ghost TP (Diam di Tempat) UI
+    -- FITUR BARU: Toggle Clone TP (Diam di Tempat) UI
     local ToggleGhostBtn = Instance.new("TextButton")
     ToggleGhostBtn.BackgroundColor3 = Data.GhostTPEnabled and CONFIG.COLORS.StartLoop or CONFIG.COLORS.StopLoop
     ToggleGhostBtn.BorderSizePixel = 0
     ToggleGhostBtn.Size = UDim2.new(1, -20, 0, 40)
     ToggleGhostBtn.Position = UDim2.new(0, 10, 0, 280)
     ToggleGhostBtn.Font = Enum.Font.GothamBold
-    ToggleGhostBtn.Text = "GHOST TP (DIAM DI TEMPAT): " .. (Data.GhostTPEnabled and "ON" or "OFF")
+    ToggleGhostBtn.Text = "CLONE TP (DIAM DI TEMPAT): " .. (Data.GhostTPEnabled and "ON" or "OFF")
     ToggleGhostBtn.TextColor3 = CONFIG.COLORS.Text
     ToggleGhostBtn.TextSize = 13
     ToggleGhostBtn.Parent = SettingsWindow
@@ -951,7 +992,7 @@ local function CreateGUI()
         CreateClickEffect(ToggleGhostBtn)
         Data.GhostTPEnabled = not Data.GhostTPEnabled
         ToggleGhostBtn.BackgroundColor3 = Data.GhostTPEnabled and CONFIG.COLORS.StartLoop or CONFIG.COLORS.StopLoop
-        ToggleGhostBtn.Text = "GHOST TP (DIAM DI TEMPAT): " .. (Data.GhostTPEnabled and "ON" or "OFF")
+        ToggleGhostBtn.Text = "CLONE TP (DIAM DI TEMPAT): " .. (Data.GhostTPEnabled and "ON" or "OFF")
     end)
 
 
@@ -1048,18 +1089,15 @@ local function CreateGUI()
         end
     end
 
-    -- FUNGSI BARU: Logika Reset untuk Manual Teleport
+    -- FUNGSI: Logika Reset untuk Manual Teleport
     local function HandleManualAutoReset()
-        -- Hanya jalan jika setting Auto Reset "ON", posisi berada di CP terakhir, dan TIDAK sedang dalam StartLoop
         if Data.AutoResetEnabled and Data.CurrentCheckpointIndex == #Data.Checkpoints and not Data.IsLooping then
             task.spawn(function()
                 if Data.IsResetting then return end
                 Data.IsResetting = true
                 
-                -- Tunggu delay pertama (s)
                 task.wait(Data.ResetDelay or 0.5)
                 
-                -- Eksekusi Remote
                 if Data.ResetScript and Data.ResetScript ~= "" then
                     local success, result = pcall(function()
                         local func = loadstring(Data.ResetScript)
@@ -1070,10 +1108,8 @@ local function CreateGUI()
                     end
                 end
                 
-                -- Tunggu delay kedua (s) sebelum mulai ulang
                 task.wait(Data.StartLoopDelay or 1.0)
                 
-                -- Kembalikan ke CP 1
                 if Data.Checkpoints[1] then
                     SafeTeleport(Data.Checkpoints[1].Position)
                     Data.CurrentCheckpointIndex = 1
@@ -1097,7 +1133,6 @@ local function CreateGUI()
             UpdateCurrentIndexLabel()
             ShowNotification("Checkpoint " .. index)
             
-            -- Panggil auto reset jika menekan tombol Next/Prev ke CP terakhir
             HandleManualAutoReset()
         else
             ShowNotification("Character not ready!")
@@ -1165,7 +1200,6 @@ local function CreateGUI()
                 Data.CurrentCheckpointIndex = index
                 UpdateCurrentIndexLabel()
                 
-                -- Fitur Auto Reset juga memantau tombol TP di list utama
                 HandleManualAutoReset()
             else
                 ShowNotification("Character not ready!")
@@ -1251,6 +1285,11 @@ local function CreateGUI()
         Data.IsLooping = true
         Data.CurrentCheckpointIndex = 1
         
+        -- Aktifkan clone sebelum loop jika fitur menyala
+        if Data.GhostTPEnabled then
+            CreateDummyClone()
+        end
+        
         Data.LoopConnection = task.spawn(function()
             while Data.IsLooping do
                 if SafeTeleport(Data.Checkpoints[Data.CurrentCheckpointIndex].Position) then
@@ -1290,6 +1329,12 @@ local function CreateGUI()
     local function StopLoop()
         Data.IsLooping = false
         Data.LoopConnection = nil
+        
+        -- Hapus clone setelah loop berhenti
+        if Data.GhostTPEnabled then
+            RemoveDummyClone()
+        end
+        
         ShowNotification("Loop stopped!")
     end
 
@@ -1784,6 +1829,16 @@ end
 
 --// Character Respawn Handler - PENTING!
 local function OnCharacterAdded(character)
+    -- Bersihkan clone lama jika mati
+    if Data.CloneModel then
+        Data.CloneModel:Destroy()
+        Data.CloneModel = nil
+        if Data.IsLooping then
+            Data.IsLooping = false
+            Data.LoopConnection = nil
+        end
+    end
+    
     local hrp = character:WaitForChild("HumanoidRootPart", 5)
     if hrp then
         ShowNotification("Character respawned! GUI tetap aktif.")
