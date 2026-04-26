@@ -1,6 +1,6 @@
---// shhhhnayy05 - Auto Teleport GUI (Updated with Collect CP System)
+--// shhhhnayy05 - Auto Teleport GUI (Updated with Enhanced Collect CP System)
 --// Support: Executor Level 7-8
---// Features: Permanent Save, Delete Confirmation, Anti-Close on Respawn, Auto Reset Script, Auto Collect CP
+--// Features: Permanent Save, Delete Confirmation, Anti-Close on Respawn, Auto Reset Script, Enhanced Auto Collect CP
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -29,6 +29,7 @@ local CONFIG = {
         Close = Color3.fromRGB(200, 50, 50),
         SpeedBtn = Color3.fromRGB(255, 200, 0),
         SettingsBtn = Color3.fromRGB(100, 100, 150),
+        CollectBtn = Color3.fromRGB(80, 100, 200),
         Text = Color3.fromRGB(255, 255, 255),
         Notification = Color3.fromRGB(0, 200, 200),
         CheckpointItem = Color3.fromRGB(35, 35, 40),
@@ -172,7 +173,6 @@ end
 local function ShowNotification(text, duration)
     duration = duration or 2
     
-    -- Hapus notifikasi lama jika ada
     for _, child in ipairs(PlayerGui:GetChildren()) do
         if child.Name == "shhhhnayy05_Notification" then
             child:Destroy()
@@ -237,6 +237,34 @@ local function SafeTeleport(position)
         return true
     end
     return false
+end
+
+--// Robust Prompt Firing System
+local function FirePromptSafely(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return end
+    
+    -- Fallback method manual manipulasi jarak dan penglihatan
+    task.spawn(function()
+        local oldDist = prompt.MaxActivationDistance
+        local oldLOS = prompt.RequiresLineOfSight
+        
+        prompt.MaxActivationDistance = 9e9
+        prompt.RequiresLineOfSight = false
+        
+        -- Coba pakai fungsi bawaan executor jika ada
+        if fireproximityprompt then
+            pcall(function() fireproximityprompt(prompt, 1, true) end)
+        else
+            -- Hold logic
+            prompt:InputHoldBegin()
+            task.wait(prompt.HoldDuration or 0)
+            prompt:InputHoldEnd()
+        end
+        
+        task.wait(0.1)
+        prompt.MaxActivationDistance = oldDist
+        prompt.RequiresLineOfSight = oldLOS
+    end)
 end
 
 --// Label Reference Global for Logic Thread
@@ -370,7 +398,7 @@ local function CreateGUI()
     TotalCPLabel.TextSize = 12
     TotalCPLabel.Parent = LeftPanel
 
-    --// Right Panel Controls
+    --// Right Panel Controls (UIListLayout)
     local RightLayout = Instance.new("UIListLayout")
     RightLayout.Padding = UDim.new(0, 8)
     RightLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -401,9 +429,16 @@ local function CreateGUI()
     end
 
     local StartLoopBtn = CreateButton("StartLoop", "START LOOP", CONFIG.COLORS.StartLoop, "▶")
+    StartLoopBtn.LayoutOrder = 1
+    
     local StopLoopBtn = CreateButton("StopLoop", "STOP LOOP", CONFIG.COLORS.StopLoop, "⏹")
+    StopLoopBtn.LayoutOrder = 2
+    
     local SaveConfigBtn = CreateButton("SaveConfig", "SAVE CONFIG", CONFIG.COLORS.SaveConfig, "💾")
+    SaveConfigBtn.LayoutOrder = 3
+    
     local LoadConfigBtn = CreateButton("LoadConfig", "LOAD CONFIG", CONFIG.COLORS.LoadConfig, "📂")
+    LoadConfigBtn.LayoutOrder = 4
 
     --// Speed Control
     local SpeedFrame = Instance.new("Frame")
@@ -451,10 +486,13 @@ local function CreateGUI()
     plusCorner.CornerRadius = UDim.new(0, 6)
     plusCorner.Parent = PlusBtn
 
-    --// Tombol Settings
+    --// Tombol Settings & Menu Collect (Di bawah panel utama)
     local SettingsBtn = CreateButton("SettingsBtn", "SETTINGS", CONFIG.COLORS.SettingsBtn, "⚙")
     SettingsBtn.LayoutOrder = 6
-    SettingsBtn.Parent = RightPanel
+    
+    local OpenCollectCPBtn = CreateButton("OpenCollectCPBtn", "COLLECT CP", CONFIG.COLORS.CollectBtn, "🎒")
+    OpenCollectCPBtn.LayoutOrder = 7
+
 
     --// ICONS
     local CheckpointIcon = Instance.new("TextButton")
@@ -711,13 +749,13 @@ local function CreateGUI()
     scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
     scrollLayout.Parent = ScrollFrame
 
-    --// Settings Window (Diperbesar untuk muat tombol menu baru)
+    --// Settings Window (Hanya Script Reset)
     local SettingsWindow = Instance.new("Frame")
     SettingsWindow.Name = "SettingsWindow"
     SettingsWindow.BackgroundColor3 = CONFIG.COLORS.Background
     SettingsWindow.BorderSizePixel = 0
-    SettingsWindow.Size = UDim2.new(0, 320, 0, 360) -- Tinggi diperbesar
-    SettingsWindow.Position = UDim2.new(0.5, -160, 0.5, -180)
+    SettingsWindow.Size = UDim2.new(0, 320, 0, 280)
+    SettingsWindow.Position = UDim2.new(0.5, -160, 0.5, -140)
     SettingsWindow.Visible = false
     SettingsWindow.Parent = ScreenGui
 
@@ -907,22 +945,6 @@ local function CreateGUI()
         ToggleLoopBtn.BackgroundColor3 = Data.AutoResetEnabled and CONFIG.COLORS.StartLoop or CONFIG.COLORS.StopLoop
         ToggleLoopBtn.Text = "AUTO RESET LOOP: " .. (Data.AutoResetEnabled and "ON" or "OFF")
     end)
-    
-    -- Jendela Collect CP Button
-    local OpenCollectCPBtn = Instance.new("TextButton")
-    OpenCollectCPBtn.BackgroundColor3 = Color3.fromRGB(80, 100, 200)
-    OpenCollectCPBtn.BorderSizePixel = 0
-    OpenCollectCPBtn.Size = UDim2.new(1, -20, 0, 40)
-    OpenCollectCPBtn.Position = UDim2.new(0, 10, 0, 290)
-    OpenCollectCPBtn.Font = Enum.Font.GothamBold
-    OpenCollectCPBtn.Text = "MENU COLLECT CP"
-    OpenCollectCPBtn.TextColor3 = CONFIG.COLORS.Text
-    OpenCollectCPBtn.TextSize = 14
-    OpenCollectCPBtn.Parent = SettingsWindow
-
-    local openCollectCorner = Instance.new("UICorner")
-    openCollectCorner.CornerRadius = UDim.new(0, 8)
-    openCollectCorner.Parent = OpenCollectCPBtn
 
 
     --// COLLECT CP WINDOW //--
@@ -1896,7 +1918,7 @@ local function CreateGUI()
         
         NavGui.Position = UDim2.new(1, -180, 0, 80)
         LoadConfigFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
-        SettingsWindow.Position = UDim2.new(0.5, -160, 0.5, -155)
+        SettingsWindow.Position = UDim2.new(0.5, -160, 0.5, -140)
         CollectCPWindow.Position = UDim2.new(0.5, -150, 0.5, -135)
     end
 
@@ -1915,18 +1937,17 @@ local function CreateGUI()
     print("shhhhnayy05 - GUI Created/Restored")
 end
 
---// CORE LOGIC: COLLECT CP REMOTE SYSTEM //--
+--// CORE LOGIC: ENHANCED COLLECT CP REMOTE SYSTEM //--
 local function GetPromptsAtPosition(targetPosition)
     local targets = {}
     local distLimit = Data.CollectRadius or 9999999
     
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("ProximityPrompt") then
-            -- Deteksi filter dari user
+            -- Memfilter objek sesuai kondisi yang kamu minta
             if v.ObjectText == "Penuh!" or v.ActionText == "Kumpulkan" or (v.Parent and v.Parent.Name:find("Stone")) then
                 local parentPart = v.Parent
                 if parentPart and parentPart:IsA("BasePart") then
-                    -- Mengecek jarak dari Posisi TP/Checkpoint ke Part tujuan
                     local d = (targetPosition - parentPart.Position).Magnitude
                     if d <= distLimit then
                         table.insert(targets, v)
@@ -1938,43 +1959,42 @@ local function GetPromptsAtPosition(targetPosition)
     return targets
 end
 
--- Thread khusus untuk Auto Collect jarak jauh
+-- Thread khusus untuk Auto Collect (Bypass Jarak)
 task.spawn(function()
     while task.wait(0.2) do
-        -- Hanya jalan jika Fitur ON dan Minimal ada 1 TP
         if Data.CollectAutoOn and #Data.Checkpoints > 0 then
             if Data.CollectSequential then
-                -- Mode Bertahan: Berurutan CP1 - Terakhir
+                -- Mode Bertahan: Mengeksekusi Checkpoint Berurutan (CP1 -> Akhir)
                 for i, cp in ipairs(Data.Checkpoints) do
-                    if not Data.CollectAutoOn then break end -- Break jika dimatikan di tengah jalan
+                    if not Data.CollectAutoOn then break end 
                     
                     if CollectStatusLabel then
-                        CollectStatusLabel.Text = "Target: Mengambil dari area CP " .. i
+                        CollectStatusLabel.Text = "Target: Area Checkpoint " .. i
                         CollectStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
                     end
                     
                     local targetPrompts = GetPromptsAtPosition(cp.Position)
                     for _, prompt in ipairs(targetPrompts) do
-                        -- Fire remote (bypass jarak aktual player jika executor mendukung)
-                        fireproximityprompt(prompt)
+                        FirePromptSafely(prompt)
                     end
                     
                     task.wait(Data.CollectDelay)
                 end
             else
-                -- Mode Normal: Sapu bersih area dari seluruh CP secara Instan (Serentak)
+                -- Mode Normal: Sapu bersih seluruh Checkpoint sekaligus
                 if CollectStatusLabel then
-                    CollectStatusLabel.Text = "Target: Semua Area CP (Instan)"
+                    CollectStatusLabel.Text = "Target: Semua Area Checkpoint (Instan)"
                     CollectStatusLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
                 end
                 
                 for _, cp in ipairs(Data.Checkpoints) do
                     local targetPrompts = GetPromptsAtPosition(cp.Position)
                     for _, prompt in ipairs(targetPrompts) do
-                        fireproximityprompt(prompt)
+                        FirePromptSafely(prompt)
                     end
                 end
-                -- Beri sedikit delay agar executor/game tidak force close karena spam serentak
+                
+                -- Delay untuk mencegah crash server/klien karena eksekusi serentak
                 task.wait(Data.CollectDelay) 
             end
         else
@@ -1987,7 +2007,7 @@ task.spawn(function()
 end)
 
 
---// Character Respawn Handler - PENTING!
+--// Character Respawn Handler
 local function OnCharacterAdded(character)
     local hrp = character:WaitForChild("HumanoidRootPart", 5)
     if hrp then
@@ -2000,10 +2020,9 @@ LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     OnCharacterAdded(newCharacter)
 end)
 
---// Jalankan GUI pertama kali
+--// Jalankan GUI
 CreateGUI()
-ShowNotification("shhhhnayy05 - Auto Teleport & Auto Collect Loaded!")
+ShowNotification("shhhhnayy05 - Auto Teleport & Collect CP Loaded!")
 
 print("shhhhnayy05 - Auto Teleport GUI Loaded Successfully!")
-print("File simpanan: " .. CONFIG.SAVE_FILE)
-print("Data checkpoints: " .. tostring(#Data.Checkpoints) .. " items")
+print("Sistem Collect CP telah diperbarui dengan FirePromptSafely Bypass.")
