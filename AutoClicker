@@ -1,0 +1,1439 @@
+-- ═══════════════════════════════════════════════════
+-- ELBRUZH PROJECT - ELBRUZH EDITION
+-- shhhhnayy05 Auto Clicker Simulator
+-- ═══════════════════════════════════════════════════
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local Workspace = game:GetService("Workspace")
+local GuiService = game:GetService("GuiService")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Mouse = LocalPlayer:GetMouse()
+
+-- ═══════════════════════════════════════════════════
+-- DATA & CONFIG
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05 = {
+    Clicking = false,
+    TargetMode = "Mouse", -- Mouse, Player, Part, Position
+    SelectedPlayer = nil,
+    SelectedPart = nil,
+    TargetPosition = nil,
+    CPS = 10,
+    AutoTarget = false,
+    ClickType = "Left", -- Left, Right, Middle
+    HoldMode = false,
+    RandomDelay = false,
+    MinDelay = 0.05,
+    MaxDelay = 0.15,
+    VisualFeedback = true,
+    SoundEffect = true,
+    ShowTargetLine = true,
+    MultiClick = 1,
+    ClickArea = 50,
+    FollowTarget = true,
+    BreakOnDeath = true,
+    BreakOnToolChange = false,
+    Keybind = Enum.KeyCode.F,
+    GUIVisible = true,
+    Minimized = false,
+    Stats = {
+        TotalClicks = 0,
+        SessionClicks = 0,
+        StartTime = 0
+    }
+}
+
+local shhhhnayy05_Folder = Instance.new("Folder")
+shhhhnayy05_Folder.Name = "shhhhnayy05_AutoClicker"
+shhhhnayy05_Folder.Parent = Workspace
+
+-- ═══════════════════════════════════════════════════
+-- UTILITY FUNCTIONS
+-- ═══════════════════════════════════════════════════
+
+local function shhhhnayy05_Create(instanceType, properties)
+    local instance = Instance.new(instanceType)
+    for prop, value in pairs(properties) do
+        instance[prop] = value
+    end
+    return instance
+end
+
+local function shhhhnayy05_Tween(object, properties, duration, easingStyle, easingDirection)
+    local tween = TweenService:Create(object, TweenInfo.new(duration or 0.3, easingStyle or Enum.EasingStyle.Quad, easingDirection or Enum.EasingDirection.Out), properties)
+    tween:Play()
+    return tween
+end
+
+local function shhhhnayy05_Round(num, decimals)
+    decimals = decimals or 2
+    local mult = 10 ^ decimals
+    return math.floor(num * mult + 0.5) / mult
+end
+
+local function shhhhnayy05_FormatTime(seconds)
+    local mins = math.floor(seconds / 60)
+    local secs = math.floor(seconds % 60)
+    return string.format("%02d:%02d", mins, secs)
+end
+
+local function shhhhnayy05_GetDistance(pos1, pos2)
+    return (pos1 - pos2).Magnitude
+end
+
+local function shhhhnayy05_GetPlayerList()
+    local list = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            table.insert(list, player)
+        end
+    end
+    return list
+end
+
+local function shhhhnayy05_GetPartList()
+    local list = {}
+    for _, part in ipairs(Workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "shhhhnayy05_TargetLine" and part.Name ~= "shhhhnayy05_ClickEffect" then
+            table.insert(list, part)
+        end
+    end
+    return list
+end
+
+local function shhhhnayy05_WorldToScreen(position)
+    local camera = Workspace.CurrentCamera
+    local screenPos, onScreen = camera:WorldToViewportPoint(position)
+    return Vector2.new(screenPos.X, screenPos.Y), onScreen
+end
+
+-- ═══════════════════════════════════════════════════
+-- SOUND SYSTEM
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_Sound = shhhhnayy05_Create("Sound", {
+    Name = "shhhhnayy05_ClickSound",
+    SoundId = "rbxassetid://9113083740",
+    Volume = 0.3,
+    Parent = LocalPlayer
+})
+
+-- ═══════════════════════════════════════════════════
+-- VISUAL EFFECTS
+-- ═══════════════════════════════════════════════════
+
+local function shhhhnayy05_CreateClickEffect(position)
+    if not shhhhnayy05.VisualFeedback then return end
+    
+    local effect = shhhhnayy05_Create("Part", {
+        Name = "shhhhnayy05_ClickEffect",
+        Shape = Enum.PartType.Ball,
+        Size = Vector3.new(0.5, 0.5, 0.5),
+        Position = position,
+        Color = Color3.fromRGB(0, 255, 136),
+        Material = Enum.Material.Neon,
+        Transparency = 0.3,
+        CanCollide = false,
+        Anchored = true,
+        Parent = shhhhnayy05_Folder
+    })
+    
+    shhhhnayy05_Tween(effect, {
+        Size = Vector3.new(2, 2, 2),
+        Transparency = 1
+    }, 0.3)
+    
+    game:GetService("Debris"):AddItem(effect, 0.3)
+end
+
+local function shhhhnayy05_UpdateTargetLine()
+    if not shhhhnayy05.ShowTargetLine or not shhhhnayy05.Clicking then
+        for _, child in ipairs(shhhhnayy05_Folder:GetChildren()) do
+            if child.Name == "shhhhnayy05_TargetLine" then
+                child:Destroy()
+            end
+        end
+        return
+    end
+    
+    local targetPos = nil
+    
+    if shhhhnayy05.TargetMode == "Mouse" then
+        local mouseRay = Mouse.UnitRay
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        
+        local result = Workspace:Raycast(mouseRay.Origin, mouseRay.Direction * 1000, raycastParams)
+        if result then
+            targetPos = result.Position
+        end
+    elseif shhhhnayy05.TargetMode == "Player" and shhhhnayy05.SelectedPlayer then
+        local char = shhhhnayy05.SelectedPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            targetPos = char.HumanoidRootPart.Position
+        end
+    elseif shhhhnayy05.TargetMode == "Part" and shhhhnayy05.SelectedPart then
+        targetPos = shhhhnayy05.SelectedPart.Position
+    elseif shhhhnayy05.TargetMode == "Position" and shhhhnayy05.TargetPosition then
+        targetPos = shhhhnayy05.TargetPosition
+    end
+    
+    if targetPos then
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local existingLine = shhhhnayy05_Folder:FindFirstChild("shhhhnayy05_TargetLine")
+            if existingLine then
+                existingLine:Destroy()
+            end
+            
+            local distance = (targetPos - hrp.Position).Magnitude
+            local midPoint = (hrp.Position + targetPos) / 2
+            local line = shhhhnayy05_Create("Part", {
+                Name = "shhhhnayy05_TargetLine",
+                Size = Vector3.new(0.1, 0.1, distance),
+                CFrame = CFrame.lookAt(midPoint, targetPos),
+                Color = Color3.fromRGB(255, 50, 50),
+                Material = Enum.Material.Neon,
+                Transparency = 0.5,
+                CanCollide = false,
+                Anchored = true,
+                Parent = shhhhnayy05_Folder
+            })
+        end
+    end
+end
+
+-- ═══════════════════════════════════════════════════
+-- CLICK LOGIC
+-- ═══════════════════════════════════════════════════
+
+local function shhhhnayy05_PerformClick()
+    if not shhhhnayy05.Clicking then return end
+    
+    local targetPos = nil
+    local targetInstance = nil
+    
+    if shhhhnayy05.TargetMode == "Mouse" then
+        local mouseRay = Mouse.UnitRay
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        
+        local result = Workspace:Raycast(mouseRay.Origin, mouseRay.Direction * 1000, raycastParams)
+        if result then
+            targetPos = result.Position
+            targetInstance = result.Instance
+        end
+    elseif shhhhnayy05.TargetMode == "Player" and shhhhnayy05.SelectedPlayer then
+        local char = shhhhnayy05.SelectedPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            targetPos = char.HumanoidRootPart.Position
+            targetInstance = char.HumanoidRootPart
+        end
+    elseif shhhhnayy05.TargetMode == "Part" and shhhhnayy05.SelectedPart then
+        targetPos = shhhhnayy05.SelectedPart.Position
+        targetInstance = shhhhnayy05.SelectedPart
+    elseif shhhhnayy05.TargetMode == "Position" and shhhhnayy05.TargetPosition then
+        targetPos = shhhhnayy05.TargetPosition
+    end
+    
+    if targetPos then
+        for i = 1, shhhhnayy05.MultiClick do
+            -- Simulate click based on type
+            if shhhhnayy05.ClickType == "Left" then
+                if targetInstance then
+                    -- Fire click detectors
+                    for _, v in ipairs(targetInstance:GetDescendants()) do
+                        if v:IsA("ClickDetector") then
+                            fireclickdetector(v)
+                        end
+                    end
+                    -- Fire proximity prompts
+                    for _, v in ipairs(targetInstance:GetDescendants()) do
+                        if v:IsA("ProximityPrompt") then
+                            fireproximityprompt(v)
+                        end
+                    end
+                end
+                
+                -- Virtual input for UI
+                local vim = game:GetService("VirtualInputManager")
+                vim:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, true, game, 0)
+                task.wait(0.01)
+                vim:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, false, game, 0)
+                
+            elseif shhhhnayy05.ClickType == "Right" then
+                local vim = game:GetService("VirtualInputManager")
+                vim:SendMouseButtonEvent(Mouse.X, Mouse.Y, 1, true, game, 0)
+                task.wait(0.01)
+                vim:SendMouseButtonEvent(Mouse.X, Mouse.Y, 1, false, game, 0)
+                
+            elseif shhhhnayy05.ClickType == "Middle" then
+                local vim = game:GetService("VirtualInputManager")
+                vim:SendMouseButtonEvent(Mouse.X, Mouse.Y, 2, true, game, 0)
+                task.wait(0.01)
+                vim:SendMouseButtonEvent(Mouse.X, Mouse.Y, 2, false, game, 0)
+            end
+            
+            shhhhnayy05.Stats.TotalClicks = shhhhnayy05.Stats.TotalClicks + 1
+            shhhhnayy05.Stats.SessionClicks = shhhhnayy05.Stats.SessionClicks + 1
+            
+            if shhhhnayy05.SoundEffect then
+                shhhhnayy05_Sound:Play()
+            end
+            
+            shhhhnayy05_CreateClickEffect(targetPos)
+        end
+    end
+end
+
+-- ═══════════════════════════════════════════════════
+-- MAIN CLICK LOOP
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_ClickConnection = nil
+
+local function shhhhnayy05_StartClicking()
+    if shhhhnayy05.Clicking then return end
+    
+    shhhhnayy05.Clicking = true
+    shhhhnayy05.Stats.SessionClicks = 0
+    shhhhnayy05.Stats.StartTime = tick()
+    
+    shhhhnayy05_ClickConnection = task.spawn(function()
+        while shhhhnayy05.Clicking do
+            if shhhhnayy05.BreakOnDeath then
+                local char = LocalPlayer.Character
+                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid.Health <= 0 then
+                    shhhhnayy05.StopClicking()
+                    break
+                end
+            end
+            
+            shhhhnayy05_PerformClick()
+            shhhhnayy05_UpdateTargetLine()
+            
+            local delayTime = 1 / shhhhnayy05.CPS
+            if shhhhnayy05.RandomDelay then
+                delayTime = math.random(shhhhnayy05.MinDelay * 100, shhhhnayy05.MaxDelay * 100) / 100
+            end
+            
+            task.wait(delayTime)
+        end
+    end)
+end
+
+function shhhhnayy05.StopClicking()
+    shhhhnayy05.Clicking = false
+    if shhhhnayy05_ClickConnection then
+        shhhhnayy05_ClickConnection = nil
+    end
+    
+    for _, child in ipairs(shhhhnayy05_Folder:GetChildren()) do
+        if child.Name == "shhhhnayy05_TargetLine" then
+            child:Destroy()
+        end
+    end
+end
+
+-- ═══════════════════════════════════════════════════
+-- GUI CREATION - MAIN FRAME
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_ScreenGui = shhhhnayy05_Create("ScreenGui", {
+    Name = "shhhhnayy05_AutoClickerGUI",
+    Parent = PlayerGui,
+    ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+})
+
+local shhhhnayy05_MainFrame = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_MainFrame",
+    Size = UDim2.new(0, 400, 0, 520),
+    Position = UDim2.new(0.5, -200, 0.5, -260),
+    BackgroundColor3 = Color3.fromRGB(25, 25, 35),
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+    Parent = shhhhnayy05_ScreenGui
+})
+
+local shhhhnayy05_Corner = shhhhnayy05_Create("UICorner", {
+    CornerRadius = UDim.new(0, 12),
+    Parent = shhhhnayy05_MainFrame
+})
+
+local shhhhnayy05_Gradient = shhhhnayy05_Create("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 45)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 30))
+    }),
+    Parent = shhhhnayy05_MainFrame
+})
+
+-- Title Bar
+local shhhhnayy05_TitleBar = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_TitleBar",
+    Size = UDim2.new(1, 0, 0, 40),
+    BackgroundColor3 = Color3.fromRGB(35, 35, 50),
+    BorderSizePixel = 0,
+    Parent = shhhhnayy05_MainFrame
+})
+
+shhhhnayy05_Create("UICorner", {
+    CornerRadius = UDim.new(0, 12),
+    Parent = shhhhnayy05_TitleBar
+})
+
+local shhhhnayy05_Title = shhhhnayy05_Create("TextLabel", {
+    Name = "shhhhnayy05_Title",
+    Size = UDim2.new(0.6, 0, 1, 0),
+    Position = UDim2.new(0, 15, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "⚡ shhhhnayy05 Auto Clicker",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 16,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_TitleBar
+})
+
+local shhhhnayy05_StatusDot = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_StatusDot",
+    Size = UDim2.new(0, 8, 0, 8),
+    Position = UDim2.new(0, 280, 0.5, -4),
+    BackgroundColor3 = Color3.fromRGB(255, 50, 50),
+    BorderSizePixel = 0,
+    Parent = shhhhnayy05_TitleBar
+})
+
+shhhhnayy05_Create("UICorner", {
+    CornerRadius = UDim.new(1, 0),
+    Parent = shhhhnayy05_StatusDot
+})
+
+local shhhhnayy05_StatusText = shhhhnayy05_Create("TextLabel", {
+    Name = "shhhhnayy05_StatusText",
+    Size = UDim2.new(0, 60, 1, 0),
+    Position = UDim2.new(0, 295, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "OFF",
+    TextColor3 = Color3.fromRGB(255, 50, 50),
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_TitleBar
+})
+
+-- Close Button
+local shhhhnayy05_CloseBtn = shhhhnayy05_Create("TextButton", {
+    Name = "shhhhnayy05_CloseBtn",
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(1, -35, 0.5, -15),
+    BackgroundColor3 = Color3.fromRGB(255, 50, 50),
+    Text = "✕",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_TitleBar
+})
+
+shhhhnayy05_Create("UICorner", {
+    CornerRadius = UDim.new(0, 6),
+    Parent = shhhhnayy05_CloseBtn
+})
+
+-- Minimize Button
+local shhhhnayy05_MinimizeBtn = shhhhnayy05_Create("TextButton", {
+    Name = "shhhhnayy05_MinimizeBtn",
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(1, -70, 0.5, -15),
+    BackgroundColor3 = Color3.fromRGB(255, 170, 0),
+    Text = "−",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 18,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_TitleBar
+})
+
+shhhhnayy05_Create("UICorner", {
+    CornerRadius = UDim.new(0, 6),
+    Parent = shhhhnayy05_MinimizeBtn
+})
+
+-- ═══════════════════════════════════════════════════
+-- SCROLLING CONTENT
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_ScrollFrame = shhhhnayy05_Create("ScrollingFrame", {
+    Name = "shhhhnayy05_ScrollFrame",
+    Size = UDim2.new(1, -20, 1, -50),
+    Position = UDim2.new(0, 10, 0, 45),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Color3.fromRGB(0, 255, 136),
+    CanvasSize = UDim2.new(0, 0, 0, 900),
+    Parent = shhhhnayy05_MainFrame
+})
+
+local shhhhnayy05_Layout = shhhhnayy05_Create("UIListLayout", {
+    Padding = UDim.new(0, 10),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Parent = shhhhnayy05_ScrollFrame
+})
+
+-- ═══════════════════════════════════════════════════
+-- SECTION: MAIN TOGGLE
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_Section1 = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_Section1",
+    Size = UDim2.new(1, 0, 0, 80),
+    BackgroundColor3 = Color3.fromRGB(35, 35, 50),
+    BorderSizePixel = 0,
+    LayoutOrder = 1,
+    Parent = shhhhnayy05_ScrollFrame
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = shhhhnayy05_Section1})
+
+local shhhhnayy05_ToggleBtn = shhhhnayy05_Create("TextButton", {
+    Name = "shhhhnayy05_ToggleBtn",
+    Size = UDim2.new(0.45, 0, 0, 50),
+    Position = UDim2.new(0.025, 0, 0.5, -25),
+    BackgroundColor3 = Color3.fromRGB(0, 200, 100),
+    Text = "▶ START",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 16,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_Section1
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = shhhhnayy05_ToggleBtn})
+
+local shhhhnayy05_StopBtn = shhhhnayy05_Create("TextButton", {
+    Name = "shhhhnayy05_StopBtn",
+    Size = UDim2.new(0.45, 0, 0, 50),
+    Position = UDim2.new(0.525, 0, 0.5, -25),
+    BackgroundColor3 = Color3.fromRGB(200, 50, 50),
+    Text = "⏹ STOP",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 16,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_Section1
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = shhhhnayy05_StopBtn})
+
+-- ═══════════════════════════════════════════════════
+-- SECTION: TARGET MODE
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_Section2 = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_Section2",
+    Size = UDim2.new(1, 0, 0, 120),
+    BackgroundColor3 = Color3.fromRGB(35, 35, 50),
+    BorderSizePixel = 0,
+    LayoutOrder = 2,
+    Parent = shhhhnayy05_ScrollFrame
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = shhhhnayy05_Section2})
+
+local shhhhnayy05_TargetLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(1, -20, 0, 25),
+    Position = UDim2.new(0, 10, 0, 5),
+    BackgroundTransparency = 1,
+    Text = "🎯 TARGET MODE",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section2
+})
+
+local shhhhnayy05_TargetModes = {"Mouse", "Player", "Part", "Position"}
+local shhhhnayy05_TargetButtons = {}
+
+for i, mode in ipairs(shhhhnayy05_TargetModes) do
+    local btn = shhhhnayy05_Create("TextButton", {
+        Name = "shhhhnayy05_Target_" .. mode,
+        Size = UDim2.new(0.22, -5, 0, 35),
+        Position = UDim2.new((i-1) * 0.25 + 0.02, 0, 0, 35),
+        BackgroundColor3 = mode == "Mouse" and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 80),
+        Text = mode,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 12,
+        Font = Enum.Font.GothamSemibold,
+        Parent = shhhhnayy05_Section2
+    })
+    shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = btn})
+    shhhhnayy05_TargetButtons[mode] = btn
+end
+
+-- Target Selection Display
+local shhhhnayy05_TargetDisplay = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(1, -20, 0, 25),
+    Position = UDim2.new(0, 10, 0, 80),
+    BackgroundTransparency = 1,
+    Text = "Current: Mouse Position",
+    TextColor3 = Color3.fromRGB(200, 200, 200),
+    TextSize = 12,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section2
+})
+
+-- Select Player Button
+local shhhhnayy05_SelectPlayerBtn = shhhhnayy05_Create("TextButton", {
+    Name = "shhhhnayy05_SelectPlayerBtn",
+    Size = UDim2.new(0.45, 0, 0, 30),
+    Position = UDim2.new(0.025, 0, 0, 80),
+    BackgroundColor3 = Color3.fromRGB(80, 60, 120),
+    Text = "👤 Select Player",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 11,
+    Font = Enum.Font.GothamSemibold,
+    Visible = false,
+    Parent = shhhhnayy05_Section2
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = shhhhnayy05_SelectPlayerBtn})
+
+-- Select Part Button
+local shhhhnayy05_SelectPartBtn = shhhhnayy05_Create("TextButton", {
+    Name = "shhhhnayy05_SelectPartBtn",
+    Size = UDim2.new(0.45, 0, 0, 30),
+    Position = UDim2.new(0.525, 0, 0, 80),
+    BackgroundColor3 = Color3.fromRGB(80, 60, 120),
+    Text = "🧊 Select Part",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 11,
+    Font = Enum.Font.GothamSemibold,
+    Visible = false,
+    Parent = shhhhnayy05_Section2
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = shhhhnayy05_SelectPartBtn})
+
+-- ═══════════════════════════════════════════════════
+-- SECTION: CPS & SPEED
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_Section3 = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_Section3",
+    Size = UDim2.new(1, 0, 0, 100),
+    BackgroundColor3 = Color3.fromRGB(35, 35, 50),
+    BorderSizePixel = 0,
+    LayoutOrder = 3,
+    Parent = shhhhnayy05_ScrollFrame
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = shhhhnayy05_Section3})
+
+local shhhhnayy05_CPSLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(1, -20, 0, 25),
+    Position = UDim2.new(0, 10, 0, 5),
+    BackgroundTransparency = 1,
+    Text = "⚡ CLICKS PER SECOND (CPS)",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section3
+})
+
+local shhhhnayy05_CPSValue = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(0, 80, 0, 30),
+    Position = UDim2.new(0.5, -40, 0, 30),
+    BackgroundColor3 = Color3.fromRGB(20, 20, 30),
+    Text = "10",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 18,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_Section3
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = shhhhnayy05_CPSValue})
+
+local shhhhnayy05_CPSMinus = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0, 40, 0, 30),
+    Position = UDim2.new(0.5, -90, 0, 30),
+    BackgroundColor3 = Color3.fromRGB(200, 50, 50),
+    Text = "−",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 20,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_Section3
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = shhhhnayy05_CPSMinus})
+
+local shhhhnayy05_CPSPlus = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0, 40, 0, 30),
+    Position = UDim2.new(0.5, 50, 0, 30),
+    BackgroundColor3 = Color3.fromRGB(0, 200, 100),
+    Text = "+",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 20,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_Section3
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = shhhhnayy05_CPSPlus})
+
+local shhhhnayy05_CPSlider = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0.9, 0, 0, 8),
+    Position = UDim2.new(0.05, 0, 0, 75),
+    BackgroundColor3 = Color3.fromRGB(60, 60, 80),
+    Text = "",
+    AutoButtonColor = false,
+    Parent = shhhhnayy05_Section3
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_CPSlider})
+
+local shhhhnayy05_CPSliderFill = shhhhnayy05_Create("Frame", {
+    Size = UDim2.new(0.1, 0, 1, 0),
+    BackgroundColor3 = Color3.fromRGB(0, 255, 136),
+    BorderSizePixel = 0,
+    Parent = shhhhnayy05_CPSlider
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_CPSliderFill})
+
+-- ═══════════════════════════════════════════════════
+-- SECTION: CLICK SETTINGS
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_Section4 = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_Section4",
+    Size = UDim2.new(1, 0, 0, 140),
+    BackgroundColor3 = Color3.fromRGB(35, 35, 50),
+    BorderSizePixel = 0,
+    LayoutOrder = 4,
+    Parent = shhhhnayy05_ScrollFrame
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = shhhhnayy05_Section4})
+
+local shhhhnayy05_SettingsLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(1, -20, 0, 25),
+    Position = UDim2.new(0, 10, 0, 5),
+    BackgroundTransparency = 1,
+    Text = "⚙️ CLICK SETTINGS",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section4
+})
+
+-- Click Type
+local shhhhnayy05_ClickTypes = {"Left", "Right", "Middle"}
+local shhhhnayy05_TypeButtons = {}
+
+for i, ctype in ipairs(shhhhnayy05_ClickTypes) do
+    local btn = shhhhnayy05_Create("TextButton", {
+        Name = "shhhhnayy05_Type_" .. ctype,
+        Size = UDim2.new(0.3, -5, 0, 30),
+        Position = UDim2.new((i-1) * 0.33 + 0.02, 0, 0, 35),
+        BackgroundColor3 = ctype == "Left" and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 80),
+        Text = ctype .. " Click",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 11,
+        Font = Enum.Font.GothamSemibold,
+        Parent = shhhhnayy05_Section4
+    })
+    shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = btn})
+    shhhhnayy05_TypeButtons[ctype] = btn
+end
+
+-- Multi Click
+local shhhhnayy05_MultiLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(0.4, 0, 0, 25),
+    Position = UDim2.new(0, 10, 0, 75),
+    BackgroundTransparency = 1,
+    Text = "Multi-Click:",
+    TextColor3 = Color3.fromRGB(200, 200, 200),
+    TextSize = 12,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section4
+})
+
+local shhhhnayy05_MultiValue = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(0, 50, 0, 25),
+    Position = UDim2.new(0.4, 0, 0, 75),
+    BackgroundColor3 = Color3.fromRGB(20, 20, 30),
+    Text = "1",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_Section4
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_MultiValue})
+
+local shhhhnayy05_MultiMinus = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0, 30, 0, 25),
+    Position = UDim2.new(0.55, 0, 0, 75),
+    BackgroundColor3 = Color3.fromRGB(200, 50, 50),
+    Text = "−",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 16,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_Section4
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_MultiMinus})
+
+local shhhhnayy05_MultiPlus = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0, 30, 0, 25),
+    Position = UDim2.new(0.65, 0, 0, 75),
+    BackgroundColor3 = Color3.fromRGB(0, 200, 100),
+    Text = "+",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 16,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_Section4
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_MultiPlus})
+
+-- Toggles Row
+local shhhhnayy05_HoldToggle = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0.3, -5, 0, 25),
+    Position = UDim2.new(0.02, 0, 0, 110),
+    BackgroundColor3 = Color3.fromRGB(60, 60, 80),
+    Text = "Hold: OFF",
+    TextColor3 = Color3.fromRGB(200, 200, 200),
+    TextSize = 10,
+    Font = Enum.Font.GothamSemibold,
+    Parent = shhhhnayy05_Section4
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_HoldToggle})
+
+local shhhhnayy05_RandomToggle = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0.3, -5, 0, 25),
+    Position = UDim2.new(0.35, 0, 0, 110),
+    BackgroundColor3 = Color3.fromRGB(60, 60, 80),
+    Text = "Random: OFF",
+    TextColor3 = Color3.fromRGB(200, 200, 200),
+    TextSize = 10,
+    Font = Enum.Font.GothamSemibold,
+    Parent = shhhhnayy05_Section4
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_RandomToggle})
+
+local shhhhnayy05_SoundToggle = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0.3, -5, 0, 25),
+    Position = UDim2.new(0.68, 0, 0, 110),
+    BackgroundColor3 = Color3.fromRGB(0, 150, 255),
+    Text = "Sound: ON",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 10,
+    Font = Enum.Font.GothamSemibold,
+    Parent = shhhhnayy05_Section4
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_SoundToggle})
+
+-- ═══════════════════════════════════════════════════
+-- SECTION: VISUAL & ADVANCED
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_Section5 = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_Section5",
+    Size = UDim2.new(1, 0, 0, 120),
+    BackgroundColor3 = Color3.fromRGB(35, 35, 50),
+    BorderSizePixel = 0,
+    LayoutOrder = 5,
+    Parent = shhhhnayy05_ScrollFrame
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = shhhhnayy05_Section5})
+
+local shhhhnayy05_VisualLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(1, -20, 0, 25),
+    Position = UDim2.new(0, 10, 0, 5),
+    BackgroundTransparency = 1,
+    Text = "👁️ VISUAL & ADVANCED",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section5
+})
+
+local shhhhnayy05_VisualToggle = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0.3, -5, 0, 30),
+    Position = UDim2.new(0.02, 0, 0, 35),
+    BackgroundColor3 = Color3.fromRGB(0, 150, 255),
+    Text = "Effects: ON",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 10,
+    Font = Enum.Font.GothamSemibold,
+    Parent = shhhhnayy05_Section5
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_VisualToggle})
+
+local shhhhnayy05_LineToggle = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0.3, -5, 0, 30),
+    Position = UDim2.new(0.35, 0, 0, 35),
+    BackgroundColor3 = Color3.fromRGB(0, 150, 255),
+    Text = "Target Line: ON",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 10,
+    Font = Enum.Font.GothamSemibold,
+    Parent = shhhhnayy05_Section5
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_LineToggle})
+
+local shhhhnayy05_FollowToggle = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0.3, -5, 0, 30),
+    Position = UDim2.new(0.68, 0, 0, 35),
+    BackgroundColor3 = Color3.fromRGB(0, 150, 255),
+    Text = "Follow: ON",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 10,
+    Font = Enum.Font.GothamSemibold,
+    Parent = shhhhnayy05_Section5
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_FollowToggle})
+
+local shhhhnayy05_DeathToggle = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0.45, -5, 0, 30),
+    Position = UDim2.new(0.02, 0, 0, 75),
+    BackgroundColor3 = Color3.fromRGB(0, 150, 255),
+    Text = "Break on Death: ON",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 10,
+    Font = Enum.Font.GothamSemibold,
+    Parent = shhhhnayy05_Section5
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_DeathToggle})
+
+local shhhhnayy05_KeybindBtn = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0.45, -5, 0, 30),
+    Position = UDim2.new(0.52, 0, 0, 75),
+    BackgroundColor3 = Color3.fromRGB(80, 60, 120),
+    Text = "Keybind: F",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 10,
+    Font = Enum.Font.GothamSemibold,
+    Parent = shhhhnayy05_Section5
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = shhhhnayy05_KeybindBtn})
+
+-- ═══════════════════════════════════════════════════
+-- SECTION: STATS
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_Section6 = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_Section6",
+    Size = UDim2.new(1, 0, 0, 100),
+    BackgroundColor3 = Color3.fromRGB(35, 35, 50),
+    BorderSizePixel = 0,
+    LayoutOrder = 6,
+    Parent = shhhhnayy05_ScrollFrame
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = shhhhnayy05_Section6})
+
+local shhhhnayy05_StatsLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(1, -20, 0, 25),
+    Position = UDim2.new(0, 10, 0, 5),
+    BackgroundTransparency = 1,
+    Text = "📊 STATISTICS",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section6
+})
+
+local shhhhnayy05_TotalClicksLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(0.45, 0, 0, 25),
+    Position = UDim2.new(0.02, 0, 0, 35),
+    BackgroundTransparency = 1,
+    Text = "Total: 0",
+    TextColor3 = Color3.fromRGB(200, 200, 200),
+    TextSize = 12,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section6
+})
+
+local shhhhnayy05_SessionClicksLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(0.45, 0, 0, 25),
+    Position = UDim2.new(0.52, 0, 0, 35),
+    BackgroundTransparency = 1,
+    Text = "Session: 0",
+    TextColor3 = Color3.fromRGB(200, 200, 200),
+    TextSize = 12,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section6
+})
+
+local shhhhnayy05_CPSRealLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(0.45, 0, 0, 25),
+    Position = UDim2.new(0.02, 0, 0, 65),
+    BackgroundTransparency = 1,
+    Text = "Real CPS: 0",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section6
+})
+
+local shhhhnayy05_TimeLabel = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(0.45, 0, 0, 25),
+    Position = UDim2.new(0.52, 0, 0, 65),
+    BackgroundTransparency = 1,
+    Text = "Time: 00:00",
+    TextColor3 = Color3.fromRGB(200, 200, 200),
+    TextSize = 12,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_Section6
+})
+
+-- ═══════════════════════════════════════════════════
+-- PLAYER SELECTION WINDOW
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_PlayerWindow = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_PlayerWindow",
+    Size = UDim2.new(0, 300, 0, 350),
+    Position = UDim2.new(0.5, -150, 0.5, -175),
+    BackgroundColor3 = Color3.fromRGB(25, 25, 35),
+    BorderSizePixel = 0,
+    Visible = false,
+    ZIndex = 10,
+    Parent = shhhhnayy05_ScreenGui
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = shhhhnayy05_PlayerWindow})
+
+local shhhhnayy05_PWTitle = shhhhnayy05_Create("Frame", {
+    Size = UDim2.new(1, 0, 0, 35),
+    BackgroundColor3 = Color3.fromRGB(35, 35, 50),
+    BorderSizePixel = 0,
+    Parent = shhhhnayy05_PlayerWindow
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = shhhhnayy05_PWTitle})
+
+local shhhhnayy05_PWTitleText = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(0.7, 0, 1, 0),
+    Position = UDim2.new(0, 15, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "👤 Select Player",
+    TextColor3 = Color3.fromRGB(0, 255, 136),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = shhhhnayy05_PWTitle
+})
+
+local shhhhnayy05_PWClose = shhhhnayy05_Create("TextButton", {
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(1, -35, 0.5, -15),
+    BackgroundColor3 = Color3.fromRGB(255, 50, 50),
+    Text = "✕",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_PWTitle
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = shhhhnayy05_PWClose})
+
+local shhhhnayy05_PWScroll = shhhhnayy05_Create("ScrollingFrame", {
+    Size = UDim2.new(1, -20, 1, -50),
+    Position = UDim2.new(0, 10, 0, 40),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Color3.fromRGB(0, 255, 136),
+    CanvasSize = UDim2.new(0, 0, 0, 0),
+    Parent = shhhhnayy05_PlayerWindow
+})
+
+local shhhhnayy05_PWLayout = shhhhnayy05_Create("UIListLayout", {
+    Padding = UDim.new(0, 5),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Parent = shhhhnayy05_PWScroll
+})
+
+-- ═══════════════════════════════════════════════════
+-- MINIMIZE ICON
+-- ═══════════════════════════════════════════════════
+
+local shhhhnayy05_MinimizeIcon = shhhhnayy05_Create("TextButton", {
+    Name = "shhhhnayy05_MinimizeIcon",
+    Size = UDim2.new(0, 50, 0, 50),
+    Position = UDim2.new(0.1, 0, 0.1, 0),
+    BackgroundColor3 = Color3.fromRGB(0, 255, 136),
+    Text = "⚡",
+    TextColor3 = Color3.fromRGB(25, 25, 35),
+    TextSize = 24,
+    Font = Enum.Font.GothamBold,
+    Visible = false,
+    Parent = shhhhnayy05_ScreenGui
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = shhhhnayy05_MinimizeIcon})
+
+shhhhnayy05_Create("UIStroke", {
+    Color = Color3.fromRGB(0, 200, 100),
+    Thickness = 2,
+    Parent = shhhhnayy05_MinimizeIcon
+})
+
+-- ═══════════════════════════════════════════════════
+-- DRAG SYSTEM
+-- ═══════════════════════════════════════════════════
+
+local function shhhhnayy05_MakeDraggable(frame, handle)
+    handle = handle or frame
+    local dragging = false
+    local dragInput, dragStart, startPos
+    
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    handle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+shhhhnayy05_MakeDraggable(shhhhnayy05_MainFrame, shhhhnayy05_TitleBar)
+shhhhnayy05_MakeDraggable(shhhhnayy05_PlayerWindow, shhhhnayy05_PWTitle)
+shhhhnayy05_MakeDraggable(shhhhnayy05_MinimizeIcon)
+
+-- ═══════════════════════════════════════════════════
+-- UPDATE FUNCTIONS
+-- ═══════════════════════════════════════════════════
+
+local function shhhhnayy05_UpdateStatus()
+    if shhhhnayy05.Clicking then
+        shhhhnayy05_StatusDot.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+        shhhhnayy05_StatusText.Text = "ON"
+        shhhhnayy05_StatusText.TextColor3 = Color3.fromRGB(0, 255, 100)
+        shhhhnayy05_ToggleBtn.Text = "⏸ PAUSE"
+        shhhhnayy05_ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+    else
+        shhhhnayy05_StatusDot.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        shhhhnayy05_StatusText.Text = "OFF"
+        shhhhnayy05_StatusText.TextColor3 = Color3.fromRGB(255, 50, 50)
+        shhhhnayy05_ToggleBtn.Text = "▶ START"
+        shhhhnayy05_ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    end
+end
+
+local function shhhhnayy05_UpdateStats()
+    shhhhnayy05_TotalClicksLabel.Text = "Total: " .. shhhhnayy05.Stats.TotalClicks
+    shhhhnayy05_SessionClicksLabel.Text = "Session: " .. shhhhnayy05.Stats.SessionClicks
+    
+    if shhhhnayy05.Clicking and shhhhnayy05.Stats.StartTime > 0 then
+        local elapsed = tick() - shhhhnayy05.Stats.StartTime
+        local realCPS = elapsed > 0 and shhhhnayy05_Round(shhhhnayy05.Stats.SessionClicks / elapsed, 1) or 0
+        shhhhnayy05_CPSRealLabel.Text = "Real CPS: " .. realCPS
+        shhhhnayy05_TimeLabel.Text = "Time: " .. shhhhnayy05_FormatTime(elapsed)
+    else
+        shhhhnayy05_CPSRealLabel.Text = "Real CPS: 0"
+    end
+end
+
+local function shhhhnayy05_UpdateTargetDisplay()
+    if shhhhnayy05.TargetMode == "Mouse" then
+        shhhhnayy05_TargetDisplay.Text = "Current: Mouse Position"
+        shhhhnayy05_SelectPlayerBtn.Visible = false
+        shhhhnayy05_SelectPartBtn.Visible = false
+    elseif shhhhnayy05.TargetMode == "Player" then
+        local name = shhhhnayy05.SelectedPlayer and shhhhnayy05.SelectedPlayer.Name or "None"
+        shhhhnayy05_TargetDisplay.Text = "Current: " .. name
+        shhhhnayy05_SelectPlayerBtn.Visible = true
+        shhhhnayy05_SelectPartBtn.Visible = false
+    elseif shhhhnayy05.TargetMode == "Part" then
+        local name = shhhhnayy05.SelectedPart and shhhhnayy05.SelectedPart.Name or "None"
+        shhhhnayy05_TargetDisplay.Text = "Current: " .. name
+        shhhhnayy05_SelectPlayerBtn.Visible = false
+        shhhhnayy05_SelectPartBtn.Visible = true
+    elseif shhhhnayy05.TargetMode == "Position" then
+        local pos = shhhhnayy05.TargetPosition and tostring(shhhhnayy05_Round(shhhhnayy05.TargetPosition.X)) .. "," .. tostring(shhhhnayy05_Round(shhhhnayy05.TargetPosition.Y)) .. "," .. tostring(shhhhnayy05_Round(shhhhnayy05.TargetPosition.Z)) or "None"
+        shhhhnayy05_TargetDisplay.Text = "Current: " .. pos
+        shhhhnayy05_SelectPlayerBtn.Visible = false
+        shhhhnayy05_SelectPartBtn.Visible = false
+    end
+end
+
+local function shhhhnayy05_RefreshPlayerList()
+    for _, child in ipairs(shhhhnayy05_PWScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    local players = shhhhnayy05_GetPlayerList()
+    for _, player in ipairs(players) do
+        local btn = shhhhnayy05_Create("TextButton", {
+            Size = UDim2.new(1, -10, 0, 35),
+            BackgroundColor3 = Color3.fromRGB(45, 45, 65),
+            Text = player.Name,
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            TextSize = 13,
+            Font = Enum.Font.GothamSemibold,
+            Parent = shhhhnayy05_PWScroll
+        })
+        shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = btn})
+        
+        btn.MouseButton1Click:Connect(function()
+            shhhhnayy05.SelectedPlayer = player
+            shhhhnayy05_UpdateTargetDisplay()
+            shhhhnayy05_PlayerWindow.Visible = false
+        end)
+    end
+    
+    shhhhnayy05_PWScroll.CanvasSize = UDim2.new(0, 0, 0, #players * 40)
+end
+
+-- ═══════════════════════════════════════════════════
+-- BUTTON CONNECTIONS
+-- ═══════════════════════════════════════════════════
+
+shhhhnayy05_ToggleBtn.MouseButton1Click:Connect(function()
+    if shhhhnayy05.Clicking then
+        shhhhnayy05.StopClicking()
+    else
+        shhhhnayy05_StartClicking()
+    end
+    shhhhnayy05_UpdateStatus()
+end)
+
+shhhhnayy05_StopBtn.MouseButton1Click:Connect(function()
+    shhhhnayy05.StopClicking()
+    shhhhnayy05_UpdateStatus()
+end)
+
+-- Target Mode Buttons
+for mode, btn in pairs(shhhhnayy05_TargetButtons) do
+    btn.MouseButton1Click:Connect(function()
+        shhhhnayy05.TargetMode = mode
+        for _, b in pairs(shhhhnayy05_TargetButtons) do
+            b.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        shhhhnayy05_UpdateTargetDisplay()
+    end)
+end
+
+shhhhnayy05_SelectPlayerBtn.MouseButton1Click:Connect(function()
+    shhhhnayy05_RefreshPlayerList()
+    shhhhnayy05_PlayerWindow.Visible = true
+end)
+
+shhhhnayy05_PWClose.MouseButton1Click:Connect(function()
+    shhhhnayy05_PlayerWindow.Visible = false
+end)
+
+shhhhnayy05_SelectPartBtn.MouseButton1Click:Connect(function()
+    -- Click on part to select
+    local connection
+    connection = UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mouseRay = Mouse.UnitRay
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+            
+            local result = Workspace:Raycast(mouseRay.Origin, mouseRay.Direction * 1000, raycastParams)
+            if result and result.Instance then
+                shhhhnayy05.SelectedPart = result.Instance
+                shhhhnayy05_UpdateTargetDisplay()
+            end
+            connection:Disconnect()
+        end
+    end)
+end)
+
+-- CPS Controls
+shhhhnayy05_CPSMinus.MouseButton1Click:Connect(function()
+    shhhhnayy05.CPS = math.max(1, shhhhnayy05.CPS - 1)
+    shhhhnayy05_CPSValue.Text = tostring(shhhhnayy05.CPS)
+    shhhhnayy05_CPSliderFill.Size = UDim2.new(shhhhnayy05.CPS / 100, 0, 1, 0)
+end)
+
+shhhhnayy05_CPSPlus.MouseButton1Click:Connect(function()
+    shhhhnayy05.CPS = math.min(100, shhhhnayy05.CPS + 1)
+    shhhhnayy05_CPSValue.Text = tostring(shhhhnayy05.CPS)
+    shhhhnayy05_CPSliderFill.Size = UDim2.new(shhhhnayy05.CPS / 100, 0, 1, 0)
+end)
+
+shhhhnayy05_CPSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local connection
+        connection = RunService.RenderStepped:Connect(function()
+            if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+                connection:Disconnect()
+                return
+            end
+            local mousePos = UserInputService:GetMouseLocation()
+            local sliderPos = shhhhnayy05_CPSlider.AbsolutePosition
+            local sliderSize = shhhhnayy05_CPSlider.AbsoluteSize
+            local relativeX = math.clamp((mousePos.X - sliderPos.X) / sliderSize.X, 0, 1)
+            shhhhnayy05.CPS = math.floor(relativeX * 100)
+            if shhhhnayy05.CPS < 1 then shhhhnayy05.CPS = 1 end
+            shhhhnayy05_CPSValue.Text = tostring(shhhhnayy05.CPS)
+            shhhhnayy05_CPSliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+        end)
+    end
+end)
+
+-- Click Type
+for ctype, btn in pairs(shhhhnayy05_TypeButtons) do
+    btn.MouseButton1Click:Connect(function()
+        shhhhnayy05.ClickType = ctype
+        for _, b in pairs(shhhhnayy05_TypeButtons) do
+            b.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    end)
+end
+
+-- Multi Click
+shhhhnayy05_MultiMinus.MouseButton1Click:Connect(function()
+    shhhhnayy05.MultiClick = math.max(1, shhhhnayy05.MultiClick - 1)
+    shhhhnayy05_MultiValue.Text = tostring(shhhhnayy05.MultiClick)
+end)
+
+shhhhnayy05_MultiPlus.MouseButton1Click:Connect(function()
+    shhhhnayy05.MultiClick = math.min(10, shhhhnayy05.MultiClick + 1)
+    shhhhnayy05_MultiValue.Text = tostring(shhhhnayy05.MultiClick)
+end)
+
+-- Toggles
+local function shhhhnayy05_ToggleButton(btn, value, onText, offText, onColor, offColor)
+    value = not value
+    if value then
+        btn.Text = onText
+        btn.BackgroundColor3 = onColor
+    else
+        btn.Text = offText
+        btn.BackgroundColor3 = offColor
+    end
+    return value
+end
+
+shhhhnayy05_HoldToggle.MouseButton1Click:Connect(function()
+    shhhhnayy05.HoldMode = shhhhnayy05_ToggleButton(shhhhnayy05_HoldToggle, shhhhnayy05.HoldMode, "Hold: ON", "Hold: OFF", Color3.fromRGB(0, 200, 100), Color3.fromRGB(60, 60, 80))
+end)
+
+shhhhnayy05_RandomToggle.MouseButton1Click:Connect(function()
+    shhhhnayy05.RandomDelay = shhhhnayy05_ToggleButton(shhhhnayy05_RandomToggle, shhhhnayy05.RandomDelay, "Random: ON", "Random: OFF", Color3.fromRGB(0, 200, 100), Color3.fromRGB(60, 60, 80))
+end)
+
+shhhhnayy05_SoundToggle.MouseButton1Click:Connect(function()
+    shhhhnayy05.SoundEffect = shhhhnayy05_ToggleButton(shhhhnayy05_SoundToggle, shhhhnayy05.SoundEffect, "Sound: ON", "Sound: OFF", Color3.fromRGB(0, 150, 255), Color3.fromRGB(60, 60, 80))
+end)
+
+shhhhnayy05_VisualToggle.MouseButton1Click:Connect(function()
+    shhhhnayy05.VisualFeedback = shhhhnayy05_ToggleButton(shhhhnayy05_VisualToggle, shhhhnayy05.VisualFeedback, "Effects: ON", "Effects: OFF", Color3.fromRGB(0, 150, 255), Color3.fromRGB(60, 60, 80))
+end)
+
+shhhhnayy05_LineToggle.MouseButton1Click:Connect(function()
+    shhhhnayy05.ShowTargetLine = shhhhnayy05_ToggleButton(shhhhnayy05_LineToggle, shhhhnayy05.ShowTargetLine, "Target Line: ON", "Target Line: OFF", Color3.fromRGB(0, 150, 255), Color3.fromRGB(60, 60, 80))
+    if not shhhhnayy05.ShowTargetLine then
+        for _, child in ipairs(shhhhnayy05_Folder:GetChildren()) do
+            if child.Name == "shhhhnayy05_TargetLine" then
+                child:Destroy()
+            end
+        end
+    end
+end)
+
+shhhhnayy05_FollowToggle.MouseButton1Click:Connect(function()
+    shhhhnayy05.FollowTarget = shhhhnayy05_ToggleButton(shhhhnayy05_FollowToggle, shhhhnayy05.FollowTarget, "Follow: ON", "Follow: OFF", Color3.fromRGB(0, 150, 255), Color3.fromRGB(60, 60, 80))
+end)
+
+shhhhnayy05_DeathToggle.MouseButton1Click:Connect(function()
+    shhhhnayy05.BreakOnDeath = shhhhnayy05_ToggleButton(shhhhnayy05_DeathToggle, shhhhnayy05.BreakOnDeath, "Break on Death: ON", "Break on Death: OFF", Color3.fromRGB(0, 150, 255), Color3.fromRGB(60, 60, 80))
+end)
+
+-- Keybind
+local shhhhnayy05_WaitingForKey = false
+shhhhnayy05_KeybindBtn.MouseButton1Click:Connect(function()
+    shhhhnayy05_WaitingForKey = true
+    shhhhnayy05_KeybindBtn.Text = "Press Key..."
+    shhhhnayy05_KeybindBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if shhhhnayy05_WaitingForKey and not gameProcessed then
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            shhhhnayy05.Keybind = input.KeyCode
+            shhhhnayy05_KeybindBtn.Text = "Keybind: " .. tostring(input.KeyCode):gsub("Enum.KeyCode.", "")
+            shhhhnayy05_KeybindBtn.BackgroundColor3 = Color3.fromRGB(80, 60, 120)
+            shhhhnayy05_WaitingForKey = false
+        end
+    elseif input.KeyCode == shhhhnayy05.Keybind and not gameProcessed then
+        if shhhhnayy05.Clicking then
+            shhhhnayy05.StopClicking()
+        else
+            shhhhnayy05_StartClicking()
+        end
+        shhhhnayy05_UpdateStatus()
+    end
+end)
+
+-- Window Controls
+shhhhnayy05_CloseBtn.MouseButton1Click:Connect(function()
+    shhhhnayy05_ScreenGui:Destroy()
+    shhhhnayy05_Folder:Destroy()
+    shhhhnayy05.StopClicking()
+end)
+
+shhhhnayy05_MinimizeBtn.MouseButton1Click:Connect(function()
+    shhhhnayy05.Minimized = true
+    shhhhnayy05_MainFrame.Visible = false
+    shhhhnayy05_MinimizeIcon.Visible =
