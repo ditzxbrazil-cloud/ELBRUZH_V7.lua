@@ -1436,4 +1436,157 @@ end)
 shhhhnayy05_MinimizeBtn.MouseButton1Click:Connect(function()
     shhhhnayy05.Minimized = true
     shhhhnayy05_MainFrame.Visible = false
-    shhhhnayy05_MinimizeIcon.Visible =
+    shhhhnayy05_MinimizeIcon.Visible = true
+    shhhhnayy05_Tween(shhhhnayy05_MinimizeIcon, {Size = UDim2.new(0, 50, 0, 50)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+end)
+
+shhhhnayy05_MinimizeIcon.MouseButton1Click:Connect(function()
+    shhhhnayy05.Minimized = false
+    shhhhnayy05_MainFrame.Visible = true
+    shhhhnayy05_Tween(shhhhnayy05_MainFrame, {Size = UDim2.new(0, 400, 0, 520)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    shhhhnayy05_MinimizeIcon.Visible = false
+end)
+
+-- ═══════════════════════════════════════════════════
+-- POSITION SETTING (TAP ON SCREEN)
+-- ═══════════════════════════════════════════════════
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if shhhhnayy05.TargetMode == "Position" and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local mouseRay = Mouse.UnitRay
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        
+        local result = Workspace:Raycast(mouseRay.Origin, mouseRay.Direction * 1000, raycastParams)
+        if result then
+            shhhhnayy05.TargetPosition = result.Position
+            shhhhnayy05_UpdateTargetDisplay()
+            shhhhnayy05_CreateClickEffect(result.Position)
+        end
+    end
+end)
+
+-- ═══════════════════════════════════════════════════
+-- AUTO TARGET SYSTEM
+-- ═══════════════════════════════════════════════════
+
+RunService.RenderStepped:Connect(function()
+    if shhhhnayy05.AutoTarget and shhhhnayy05.TargetMode == "Player" then
+        local players = shhhhnayy05_GetPlayerList()
+        local closest = nil
+        local closestDist = math.huge
+        
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            for _, player in ipairs(players) do
+                local char = player.Character
+                local targetHrp = char and char:FindFirstChild("HumanoidRootPart")
+                if targetHrp then
+                    local dist = (targetHrp.Position - hrp.Position).Magnitude
+                    if dist < closestDist and dist < shhhhnayy05.ClickArea then
+                        closestDist = dist
+                        closest = player
+                    end
+                end
+            end
+        end
+        
+        shhhhnayy05.SelectedPlayer = closest
+        shhhhnayy05_UpdateTargetDisplay()
+    end
+end)
+
+-- ═══════════════════════════════════════════════════
+-- STATS UPDATE LOOP
+-- ═══════════════════════════════════════════════════
+
+task.spawn(function()
+    while shhhhnayy05_ScreenGui and shhhhnayy05_ScreenGui.Parent do
+        shhhhnayy05_UpdateStats()
+        task.wait(0.5)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════
+-- HOLD MODE (KEY HOLD)
+-- ═══════════════════════════════════════════════════
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if shhhhnayy05.HoldMode and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        shhhhnayy05_StartClicking()
+        shhhhnayy05_UpdateStatus()
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if shhhhnayy05.HoldMode and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        shhhhnayy05.StopClicking()
+        shhhhnayy05_UpdateStatus()
+    end
+end)
+
+-- ═══════════════════════════════════════════════════
+-- MOBILE TOUCH SUPPORT
+-- ═══════════════════════════════════════════════════
+
+UserInputService.TouchTapInWorld:Connect(function(position, gameProcessed)
+    if gameProcessed then return end
+    if shhhhnayy05.TargetMode == "Position" then
+        local camera = Workspace.CurrentCamera
+        local ray = camera:ViewportPointToRay(position.X, position.Y)
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        
+        local result = Workspace:Raycast(ray.Origin, ray.Direction * 1000, raycastParams)
+        if result then
+            shhhhnayy05.TargetPosition = result.Position
+            shhhhnayy05_UpdateTargetDisplay()
+            shhhhnayy05_CreateClickEffect(result.Position)
+        end
+    end
+end)
+
+-- ═══════════════════════════════════════════════════
+-- INITIALIZE
+-- ═══════════════════════════════════════════════════
+
+shhhhnayy05_UpdateStatus()
+shhhhnayy05_UpdateTargetDisplay()
+
+-- Notification
+local shhhhnayy05_Notif = shhhhnayy05_Create("Frame", {
+    Name = "shhhhnayy05_Notification",
+    Size = UDim2.new(0, 250, 0, 50),
+    Position = UDim2.new(0.5, -125, 0, -60),
+    BackgroundColor3 = Color3.fromRGB(0, 200, 100),
+    BorderSizePixel = 0,
+    Parent = shhhhnayy05_ScreenGui
+})
+
+shhhhnayy05_Create("UICorner", {CornerRadius = UDim.new(0, 10), Parent = shhhhnayy05_Notif})
+
+local shhhhnayy05_NotifText = shhhhnayy05_Create("TextLabel", {
+    Size = UDim2.new(1, -20, 1, 0),
+    Position = UDim2.new(0, 10, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "✅ shhhhnayy05 Auto Clicker Loaded!",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    Parent = shhhhnayy05_Notif
+})
+
+shhhhnayy05_Tween(shhhhnayy05_Notif, {Position = UDim2.new(0.5, -125, 0, 20)}, 0.5, Enum.EasingStyle.Back)
+task.wait(3)
+shhhhnayy05_Tween(shhhhnayy05_Notif, {Position = UDim2.new(0.5, -125, 0, -60)}, 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+task.wait(0.5)
+shhhhnayy05_Notif:Destroy()
+
+-- ═══════════════════════════════════════════════════
+-- ELBRUZH PROJECT - ELBRUZH EDITION
+-- shhhhnayy05 Auto Clicker - READY TO USE
+-- ═══════════════════════════════════════════════════
