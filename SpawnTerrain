@@ -1,4 +1,432 @@
-local _a=game:GetService(string.char(80,108,97,121,101,114,115))local _b=game:GetService(string.char(82,117,110,83,101,114,118,105,99,101))local _c=game:GetService(string.char(85,115,101,114,73,110,112,117,116,83,101,114,118,105,99,101))local _d=game:GetService(string.char(84,119,101,101,110,83,101,114,118,105,99,101))local _e=game:GetService(string.char(87,111,114,107,115,112,97,99,101))local _f=_e:WaitForChild(string.char(84,101,114,114,97,105,110))local _g=_a._g local _h=_e.CurrentCamera local _i={{name=string.char(72,105,106,97,117,32,77,117,100,97),_wd=Color3.fromRGB(150,220,120)},{name=string.char(72,105,106,97,117,32,67,101,114,97,104),_wd=Color3.fromRGB(120,200,100)},{name=string.char(72,105,106,97,117,32,78,111,114,109,97,108),_wd=Color3.fromRGB(75,151,75)},{name=string.char(72,105,106,97,117,32,83,101,100,97,110,103),_wd=Color3.fromRGB(60,140,70)},{name=string.char(72,105,106,97,117,32,84,117,97),_wd=Color3.fromRGB(45,120,55)},{name=string.char(72,105,106,97,117,32,71,101,108,97,112),_wd=Color3.fromRGB(30,100,40)},{name=string.char(72,105,106,97,117,32,76,117,109,117,116),_wd=Color3.fromRGB(80,120,60)},{name=string.char(72,105,106,97,117,32,90,97,109,114,117,100),_wd=Color3.fromRGB(50,180,100)},{name=string.char(72,105,106,97,117,32,77,105,110,116),_wd=Color3.fromRGB(170,230,150)},{name=string.char(72,105,106,97,117,32,68,97,117,110),_wd=Color3.fromRGB(70,160,80)},{name=string.char(72,105,106,97,117,32,72,117,116,97,110),_wd=Color3.fromRGB(40,90,50)},{name=string.char(72,105,106,97,117,32,90,97,105,116,117,110),_wd=Color3.fromRGB(85,107,47)},{name=string.char(72,105,106,97,117,32,80,105,110,117,115),_wd=Color3.fromRGB(50,100,60)},{name=string.char(72,105,106,97,117,32,84,114,111,112,105,115),_wd=Color3.fromRGB(90,180,110)},{name=string.char(72,105,106,97,117,32,80,97,115,116,101,108),_wd=Color3.fromRGB(140,210,130)},{name=string.char(72,105,106,97,117,32,78,101,111,110),_wd=Color3.fromRGB(100,255,150)},{name=string.char(72,105,106,97,117,32,65,112,101,108),_wd=Color3.fromRGB(140,200,100)},{name=string.char(72,105,106,97,117,32,84,111,115,107,97),_wd=Color3.fromRGB(100,180,140)},{name=string.char(72,105,106,97,117,32,65,114,109,121),_wd=Color3.fromRGB(70,85,50)},{name=string.char(72,105,106,97,117,32,66,111,116,111,108),_wd=Color3.fromRGB(40,70,45)}}local _j=3 local _k={{name=string.char(68,97,117,110,32,77,117,100,97),_wd=Color3.fromRGB(140,220,100)},{name=string.char(68,97,117,110,32,67,101,114,97,104),_wd=Color3.fromRGB(110,200,80)},{name=string.char(68,97,117,110,32,78,111,114,109,97,108),_wd=Color3.fromRGB(85,170,60)},{name=string.char(68,97,117,110,32,83,101,100,97,110,103),_wd=Color3.fromRGB(70,150,50)},{name=string.char(68,97,117,110,32,84,117,97),_wd=Color3.fromRGB(55,130,40)},{name=string.char(68,97,117,110,32,71,101,108,97,112),_wd=Color3.fromRGB(40,110,30)},{name=string.char(68,97,117,110,32,72,117,116,97,110),_wd=Color3.fromRGB(60,140,45)},{name=string.char(68,97,117,110,32,90,97,109,114,117,100),_wd=Color3.fromRGB(45,160,70)},{name=string.char(68,97,117,110,32,77,105,110,116),_wd=Color3.fromRGB(160,240,130)},{name=string.char(68,97,117,110,32,76,105,109,101),_wd=Color3.fromRGB(130,220,60)},{name=string.char(68,97,117,110,32,83,97,103,101),_wd=Color3.fromRGB(100,160,90)},{name=string.char(68,97,117,110,32,79,108,105,118,101),_wd=Color3.fromRGB(90,130,50)},{name=string.char(68,97,117,110,32,70,101,114,110),_wd=Color3.fromRGB(75,145,65)},{name=string.char(68,97,117,110,32,77,111,115,115),_wd=Color3.fromRGB(85,125,70)},{name=string.char(68,97,117,110,32,74,117,110,103,108,101),_wd=Color3.fromRGB(50,120,40)},{name=string.char(68,97,117,110,32,83,112,114,105,110,103),_wd=Color3.fromRGB(120,210,100)},{name=string.char(68,97,117,110,32,65,112,112,108,101),_wd=Color3.fromRGB(100,190,70)},{name=string.char(68,97,117,110,32,75,101,108,108,121),_wd=Color3.fromRGB(65,160,55)},{name=string.char(68,97,117,110,32,70,111,114,101,115,116),_wd=Color3.fromRGB(45,100,35)},{name=string.char(68,97,117,110,32,78,101,111,110),_wd=Color3.fromRGB(90,255,100)}}local _l=3 local _m={{name=string.char(67,111,107,108,97,116,32,77,117,100,97),_wd=Color3.fromRGB(160,120,80)},{name=string.char(67,111,107,108,97,116,32,78,111,114,109,97,108),_wd=Color3.fromRGB(120,85,50)},{name=string.char(67,111,107,108,97,116,32,84,97,110,97,104),_wd=Color3.fromRGB(102,92,59)},{name=string.char(67,111,107,108,97,116,32,84,117,97),_wd=Color3.fromRGB(75,55,30)},{name=string.char(67,111,107,108,97,116,32,71,101,108,97,112),_wd=Color3.fromRGB(50,35,15)},}local _n=2 local _o={{Name=string.char(71,114,97,115,115),Color=Color3.fromRGB(86,125,70),Mat=Enum.Material.Grass},{Name=string.char(76,101,97,102,121,71,114,97,115,115),Color=Color3.fromRGB(85,170,60),Mat=Enum.Material.LeafyGrass},{Name=string.char(82,111,99,107),Color=Color3.fromRGB(102,102,102),Mat=Enum.Material.Rock},{Name=string.char(83,97,110,100),Color=Color3.fromRGB(234,203,154),Mat=Enum.Material.Sand},{Name=string.char(87,97,116,101,114),Color=Color3.fromRGB(15,82,186),Mat=Enum.Material.Water},{Name=string.char(83,110,111,119),Color=Color3.fromRGB(255,255,255),Mat=Enum.Material.Snow},{Name=string.char(77,117,100),Color=Color3.fromRGB(86,66,54),Mat=Enum.Material.Mud},{Name=string.char(71,114,111,117,110,100),Color=Color3.fromRGB(112,85,63),Mat=Enum.Material.Ground},{Name=string.char(65,115,112,104,97,108,116),Color=Color3.fromRGB(80,80,80),Mat=Enum.Material.Asphalt},{Name=string.char(66,114,105,99,107),Color=Color3.fromRGB(150,75,60),Mat=Enum.Material.Brick},{Name=string.char(87,111,111,100),Color=Color3.fromRGB(139,109,79),Mat=Enum.Material.WoodPlanks},{Name=string.char(67,111,110,99,114,101,116,101),Color=Color3.fromRGB(127,127,127),Mat=Enum.Material.Concrete},{Name=string.char(73,99,101),Color=Color3.fromRGB(200,230,255),Mat=Enum.Material.Ice}}local _p=_o[1]local _q=string.char(66,97,108,108)local _r=string.char(66,117,105,108,100)local _s,_t,_u=6,6,6 local _v,_w,_x=0,0,0 local _y=nil local _z=nil local _A={}local _B={}local _C={}local _D=0.65 local _E=false local _F=false local _H=10 local _I={X=true,Y=false,Z=true}local _J=false local _K={}local _L=false local _M={string.char(83,111,102,116,32,69,100,103,101),string.char(71,114,97,100,105,101,110,116),string.char(78,111,105,115,101),string.char(66,108,101,110,100)}local _N=1 local _O=2 local function _P()local _Q=Vector2.new(_h.ViewportSize.X/2,_h.ViewportSize.Y/2)local _R=_h:ViewportPointToRay(_Q.X,_Q.Y)local _S=RaycastParams.new()_S.FilterType=Enum.RaycastFilterType.Blacklist local _T={}if _z then table.insert(_T,_z)end if _E then table.insert(_T,_f)end _S.FilterDescendantsInstances=_T return _e:Raycast(_R.Origin,_R.Direction*1000,_S)end local function _U()if _z then _z:Destroy()end _z=Instance.new(string.char(80,97,114,116))if _q==string.char(66,97,108,108)then _z.Shape=Enum.PartType.Ball elseif _q==string.char(87,101,100,103,101)then _z.Shape=Enum.PartType.Wedge else _z.Shape=Enum.PartType.Block end _z.Material=Enum.Material.ForceField _z.Color=Color3.fromRGB(255,255,255)_z.Transparency=_D _z.CanCollide=false _z.Anchored=true _z.CastShadow=false _z.Parent=_e local _V=Instance.new(string.char(83,101,108,101,99,116,105,111,110,66,111,120))_V.Name=string.char(69,100,103,101,79,117,116,108,105,110,101)_V.LineThickness=0.05 _V.Color3=Color3.fromRGB(0,255,255)_V.SurfaceColor3=Color3.fromRGB(0,255,255)_V.SurfaceTransparency=1 _V.Adornee=_z _V.Parent=_z end local function _W(_X)if not _F then return _X end local _Y,_Z,_aa=_X.X,_X.Y,_X.Z if _I.X then _Y=math.floor(_X.X/_H+0.5)*_H end if _I.Y then _Z=math.floor(_X.Y/_H+0.5)*_H end if _I.Z then _aa=math.floor(_X.Z/_H+0.5)*_H end return Vector3.new(_Y,_Z,_aa)end local function _ba()for _ca,_da in ipairs(_K)do _da:Destroy()end _K={}if not _J then return end local _ea=_g.Character and _g.Character:FindFirstChild(string.char(72,117,109,97,110,111,105,100,82,111,111,116,80,97,114,116))and _g.Character.HumanoidRootPart.Position if not _ea then return end local _fa=100 local _ga=math.floor((_ea.X-_fa)/_H)*_H local _ha=math.floor((_ea.X+_fa)/_H)*_H local _ia=math.floor((_ea.Z-_fa)/_H)*_H local _ja=math.floor((_ea.Z+_fa)/_H)*_H for _ka=_ia,_ja,_H do local _da=Instance.new(string.char(80,97,114,116))_da.Size=Vector3.new(_fa*2,0.1,0.1)_da.CFrame=CFrame.new(_ea.X,_ea.Y-1,_ka)_da.Anchored=true;_da.CanCollide=false;_da.Transparency=0.8;_da.Color=Color3.fromRGB(255,255,0);_da.Material=Enum.Material.Neon;_da.Parent=_e table.insert(_K,_da)end for _la=_ga,_ha,_H do local _da=Instance.new(string.char(80,97,114,116))_da.Size=Vector3.new(0.1,0.1,_fa*2)_da.CFrame=CFrame.new(_la,_ea.Y-1,_ea.Z)_da.Anchored=true;_da.CanCollide=false;_da.Transparency=0.8;_da.Color=Color3.fromRGB(255,255,0);_da.Material=Enum.Material.Neon;_da.Parent=_e table.insert(_K,_da)end end spawn(function()while wait(2)do if _J then _ba()end end end)local function _ma()if not _z then _U()end local _na=_P()if _na then local _oa=_na.Position local _pa=_F and _W(_oa)or _oa _y=_pa local _qa=CFrame.new(_pa)*CFrame.Angles(math._Fa(_v),math._Fa(_w),math._Fa(_x))_z.CFrame=_qa if _r==string.char(80,97,105,110,116)then _z.Size=Vector3.new(_s,1,_u)else _z.Size=Vector3.new(_s,_t,_u)end _z.Transparency=_D _z.EdgeOutline.Transparency=0 if _F then _z.Color=Color3.fromRGB(100,255,150)_z.EdgeOutline.Color3=Color3.fromRGB(100,255,150)else _z.Color=Color3.fromRGB(255,255,255)_z.EdgeOutline.Color3=Color3.fromRGB(0,255,255)end else _z.Transparency=1 _z.EdgeOutline.Transparency=1 end end local function _ra()pcall(function()_f:SetMaterialColor(Enum.Material.Grass,_i[_j]._wd)end)pcall(function()_f:SetMaterialColor(Enum.Material.LeafyGrass,_k[_l]._wd)end)pcall(function()_f:SetMaterialColor(Enum.Material.Ground,_m[_n]._wd)end)end local function _sa(_ta,_ua,_va,_wa,_xa)local _ya=math.max(_ua.X,_ua.Y,_ua.Z)/2 local _za=_wa or 2 for _Aa=1,_za do local _Ba=_ya+(_Aa*2)local _Ca=math.max(2,6-_Aa)local _Da=360/(8*_Aa)for _Ea=0,359,_Da do local _Fa=math._Fa(_Ea)local _Ga=0 if _xa==string.char(78,111,105,115,101)then _Ga=math.random(-4,4)elseif _xa==string.char(71,114,97,100,105,101,110,116)then _Ga=math.random(-2,2)end local _Ha=Vector3.new(math.cos(_Fa)*_Ba,_Ga,math.sin(_Fa)*_Ba)local _X=_ta+_Ha if _xa==string.char(83,111,102,116,32,69,100,103,101)then _f:FillBall(_X,_Ca/1.5,_va)elseif _xa==string.char(78,111,105,115,101)then if math.random()>0.4 then _f:FillBall(_X,_Ca/2,_va)end elseif _xa==string.char(71,114,97,100,105,101,110,116)then if math.random()>0.2 then _f:FillBall(_X,_Ca/2,_va)end elseif _xa==string.char(66,108,101,110,100)then _f:FillBall(_X,_Ca,_va)end end end end local function _Ia(_Ja)local _X=Vector3.new(_Ja[1],_Ja[2],_Ja[3])local _Ka,_La,_Ma=_Ja[4],_Ja[5],_Ja[6]local _Na=_Ja[7]local _Oa=_Ja[8]orstring.char(66,97,108,108)local _Pa=_Ja[9]or _j local _Qa=_Ja[10]or _l local _Ra=_Ja[11]or _n local _Sa,_Ta,_Ua=_Ja[12]or 0,_Ja[13]or 0,_Ja[14]or 0 local _Va=_Ja[15]or false local _Wa=_Ja[16]orstring.char(83,111,102,116,32,69,100,103,101)local _Xa=_Ja[17]or 2 local _Ya=_Ja[18]orstring.char(66,117,105,108,100)local _Za=Enum.Material.Grass for _ca,_ab in ipairs(_o)do if _ab.Name==_Na then _Za=_ab.Mat break end end _ra()local _ua=Vector3.new(_Ka,_La,_Ma)local _qa=CFrame.new(_X)*CFrame.Angles(math._Fa(_Sa),math._Fa(_Ta),math._Fa(_Ua))if _Ya==string.char(80,97,105,110,116)then local _bb=_ua/2 local _cb=Region3.new(_X-_bb,_X+_bb):ExpandToGrid(4)local _db,_eb=_f:ReadVoxels(_cb,4)local _fb=false local _ya=math.max(_Ka,_La,_Ma)/2 local _gb=_cb.CFrame.Position-(_cb.Size/2)for _la=1,_db.Size.X do for _hb=1,_db.Size.Y do for _ka=1,_db.Size.Z do if _db[_la][_hb][_ka]~=Enum.Material.Air and _db[_la][_hb][_ka]~=_Za then local _ib=true if _Oa==string.char(66,97,108,108)then local _jb=_gb+Vector3.new(_la*4-2,_hb*4-2,_ka*4-2)if(_jb-_X).Magnitude>_ya then _ib=false end end if _ib then _db[_la][_hb][_ka]=_Za _fb=true end end end end end if _fb then _f:WriteVoxels(_cb,4,_db,_eb)end elseif _Ya==string.char(70,108,97,116,116,101,110)then local _kb=CFrame.new(_X)*CFrame.Angles(0,math._Fa(_Ta),0)if _Oa==string.char(66,97,108,108)then _f:FillBall(_X-Vector3.new(0,_La/4,0),math.max(_Ka,_Ma)/2,_Za)_f:FillBlock(_kb*CFrame.new(0,_La/2,0),Vector3.new(_Ka,_La,_Ma),Enum.Material.Air)else _f:FillBlock(_kb,Vector3.new(_Ka,2,_Ma),_Za)_f:FillBlock(_kb*CFrame.new(0,(_La/2)+1,0),Vector3.new(_Ka,_La,_Ma),Enum.Material.Air)end else if _Oa==string.char(66,108,111,99,107)then _f:FillBlock(_qa,_ua,_Za)elseif _Oa==string.char(87,101,100,103,101)then _f:FillWedge(_qa,_ua,_Za)else _f:FillBall(_X,math.max(_Ka,_La,_Ma)/2,_Za)end end if _Va and _Ya~=string.char(80,97,105,110,116)and _Ya~=string.char(70,108,97,116,116,101,110)then _sa(_X,_ua,_Za,_Xa,_Wa)end return _Ja end local function _lb()if not _y then return false end local _mb=math.max(_s,_t,_u)local _nb=_L and(_O*6)or 4 local _ob=Vector3.new(_mb/2+_nb,_mb/2+_nb,_mb/2+_nb)local _cb=Region3.new(_y-_ob,_y+_ob):ExpandToGrid(4)local _pb,_qb=_f:ReadVoxels(_cb,4)local _rb={math.floor(_y.X),math.floor(_y.Y),math.floor(_y.Z),_s,_t,_u,_p.Name,_q,_j,_l,_n,_v,_w,_x,_L,_M[_N],_O,_r}_Ia(_rb)local _sb,_tb=_f:ReadVoxels(_cb,4)table.insert(_B,{Region=_cb,BeforeMats=_pb,BeforeOccs=_qb,AfterMats=_sb,AfterOccs=_tb,Data=_rb})_C={}table.insert(_A,_rb)return true end local function _ub()if#_B==0 then return false,string.char(78,111,116,104,105,110,103,32,116,111,32,117,110,100,111)end local _vb=table.remove(_B)table.insert(_C,_vb)for _wb=#_A,1,-1 do if _A[_wb]==_vb.Data then table.remove(_A,_wb)break end end _f:WriteVoxels(_vb.Region,4,_vb.BeforeMats,_vb.BeforeOccs)return true,string.char(85,110,100,111,110,101,32,49,32,116,101,114,114,97,105,110)end local function _xb()if#_C==0 then return false,string.char(78,111,116,104,105,110,103,32,116,111,32,114,101,100,111)end local _yb=table.remove(_C)table.insert(_B,_yb)table.insert(_A,_yb.Data)_f:WriteVoxels(_yb.Region,4,_yb.AfterMats,_yb.AfterOccs)return true,string.char(82,101,100,111,110,101,32,49,32,116,101,114,114,97,105,110)end local function _zb()if#_A==0 then returnstring.char(45,45,32,78,111,32,116,101,114,114,97,105,110,32,115,112,97,119,110,101,100,32,121,101,116,33)end local _Ab=string.char(45,45,47,47,32,84,101,114,114,97,105,110,32,83,112,97,119,110,32,83,99,114,105,112,116,10,45,45,47,47,32,84,111,116,97,108,58,32)..#_A..string.char(32,116,101,114,114,97,105,110,115,10,10)_Ab=_Ab..string.char(108,111,99,97,108,32,84,101,114,114,97,105,110,32,61,32,119,111,114,107,115,112,97,99,101,58,87,97,105,116,70,111,114,67,104,105,108,100,40,39,84,101,114,114,97,105,110,39,41,10,10)_Ab=_Ab..string.char(45,45,47,47,32,67,111,108,111,114,32,84,97,98,108,101,115,10)_Ab=_Ab..string.char(108,111,99,97,108,32,103,114,97,115,115,67,111,108,111,114,115,32,61,32,123)for _wb,_Bb in ipairs(_i)do _Ab=_Ab..(_wb>1 andstring.char(44)or"")..string.char(67,111,108,111,114,51,46,102,114,111,109,82,71,66,40)..math.floor(_Bb._wd.R*255)..string.char(44)..math.floor(_Bb._wd.G*255)..string.char(44)..math.floor(_Bb._wd.B*255)..string.char(41)end _Ab=_Ab..string.char(125,10,108,111,99,97,108,32,108,101,97,102,121,71,114,97,115,115,67,111,108,111,114,115,32,61,32,123)for _wb,_Bb in ipairs(_k)do _Ab=_Ab..(_wb>1 andstring.char(44)or"")..string.char(67,111,108,111,114,51,46,102,114,111,109,82,71,66,40)..math.floor(_Bb._wd.R*255)..string.char(44)..math.floor(_Bb._wd.G*255)..string.char(44)..math.floor(_Bb._wd.B*255)..string.char(41)end _Ab=_Ab..string.char(125,10,108,111,99,97,108,32,103,114,111,117,110,100,67,111,108,111,114,115,32,61,32,123)for _wb,_Bb in ipairs(_m)do _Ab=_Ab..(_wb>1 andstring.char(44)or"")..string.char(67,111,108,111,114,51,46,102,114,111,109,82,71,66,40)..math.floor(_Bb._wd.R*255)..string.char(44)..math.floor(_Bb._wd.G*255)..string.char(44)..math.floor(_Bb._wd.B*255)..string.char(41)end _Ab=_Ab..string.char(125,10,10)_Ab=_Ab..[[
+--// TERRAIN BY ELBRUZH 
+--// Terrain Editor v16.2 - Smooth Terrain (Auto Blend), Snap to Grid, Flatten Mode, Paint Mode
+--// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (Voxel Snapshot Undo System)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local Terrain = Workspace:WaitForChild("Terrain")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+--// GRASS COLORS
+local grassColors = {
+	{name="Hijau Muda",   color=Color3.fromRGB(150,220,120)},
+	{name="Hijau Cerah",  color=Color3.fromRGB(120,200,100)},
+	{name="Hijau Normal", color=Color3.fromRGB(75,151,75)},
+	{name="Hijau Sedang", color=Color3.fromRGB(60,140,70)},
+	{name="Hijau Tua",    color=Color3.fromRGB(45,120,55)},
+	{name="Hijau Gelap",  color=Color3.fromRGB(30,100,40)},
+	{name="Hijau Lumut",  color=Color3.fromRGB(80,120,60)},
+	{name="Hijau Zamrud", color=Color3.fromRGB(50,180,100)},
+	{name="Hijau Mint",   color=Color3.fromRGB(170,230,150)},
+	{name="Hijau Daun",   color=Color3.fromRGB(70,160,80)},
+	{name="Hijau Hutan",  color=Color3.fromRGB(40,90,50)},
+	{name="Hijau Zaitun", color=Color3.fromRGB(85,107,47)},
+	{name="Hijau Pinus",  color=Color3.fromRGB(50,100,60)},
+	{name="Hijau Tropis", color=Color3.fromRGB(90,180,110)},
+	{name="Hijau Pastel", color=Color3.fromRGB(140,210,130)},
+	{name="Hijau Neon",   color=Color3.fromRGB(100,255,150)},
+	{name="Hijau Apel",   color=Color3.fromRGB(140,200,100)},
+	{name="Hijau Toska",  color=Color3.fromRGB(100,180,140)},
+	{name="Hijau Army",   color=Color3.fromRGB(70,85,50)},
+	{name="Hijau Botol",  color=Color3.fromRGB(40,70,45)}
+}
+local currentGrassColorIndex = 3
+
+--// LEAFYGRASS COLORS
+local leafyGrassColors = {
+	{name="Daun Muda",    color=Color3.fromRGB(140,220,100)},
+	{name="Daun Cerah",   color=Color3.fromRGB(110,200,80)},
+	{name="Daun Normal",  color=Color3.fromRGB(85,170,60)},
+	{name="Daun Sedang",  color=Color3.fromRGB(70,150,50)},
+	{name="Daun Tua",     color=Color3.fromRGB(55,130,40)},
+	{name="Daun Gelap",   color=Color3.fromRGB(40,110,30)},
+	{name="Daun Hutan",   color=Color3.fromRGB(60,140,45)},
+	{name="Daun Zamrud",  color=Color3.fromRGB(45,160,70)},
+	{name="Daun Mint",    color=Color3.fromRGB(160,240,130)},
+	{name="Daun Lime",    color=Color3.fromRGB(130,220,60)},
+	{name="Daun Sage",    color=Color3.fromRGB(100,160,90)},
+	{name="Daun Olive",   color=Color3.fromRGB(90,130,50)},
+	{name="Daun Fern",    color=Color3.fromRGB(75,145,65)},
+	{name="Daun Moss",    color=Color3.fromRGB(85,125,70)},
+	{name="Daun Jungle",  color=Color3.fromRGB(50,120,40)},
+	{name="Daun Spring",  color=Color3.fromRGB(120,210,100)},
+	{name="Daun Apple",   color=Color3.fromRGB(100,190,70)},
+	{name="Daun Kelly",   color=Color3.fromRGB(65,160,55)},
+	{name="Daun Forest",  color=Color3.fromRGB(45,100,35)},
+	{name="Daun Neon",    color=Color3.fromRGB(90,255,100)}
+}
+local currentLeafyGrassColorIndex = 3
+
+--// GROUND COLORS
+local groundColors = {
+	{name="Coklat Muda",   color=Color3.fromRGB(160,120,80)},
+	{name="Coklat Normal", color=Color3.fromRGB(120,85,50)},
+	{name="Coklat Tanah",  color=Color3.fromRGB(102,92,59)},
+	{name="Coklat Tua",    color=Color3.fromRGB(75,55,30)},
+	{name="Coklat Gelap",  color=Color3.fromRGB(50,35,15)},
+}
+local currentGroundColorIndex = 2
+
+--// Materials
+local Materials = {
+    {Name = "Grass", Color = Color3.fromRGB(86, 125, 70), Mat = Enum.Material.Grass},
+    {Name = "LeafyGrass", Color = Color3.fromRGB(85, 170, 60), Mat = Enum.Material.LeafyGrass},
+    {Name = "Rock", Color = Color3.fromRGB(102, 102, 102), Mat = Enum.Material.Rock},
+    {Name = "Sand", Color = Color3.fromRGB(234, 203, 154), Mat = Enum.Material.Sand},
+    {Name = "Water", Color = Color3.fromRGB(15, 82, 186), Mat = Enum.Material.Water},
+    {Name = "Snow", Color = Color3.fromRGB(255, 255, 255), Mat = Enum.Material.Snow},
+    {Name = "Mud", Color = Color3.fromRGB(86, 66, 54), Mat = Enum.Material.Mud},
+    {Name = "Ground", Color = Color3.fromRGB(112, 85, 63), Mat = Enum.Material.Ground},
+    {Name = "Asphalt", Color = Color3.fromRGB(80, 80, 80), Mat = Enum.Material.Asphalt},
+    {Name = "Brick", Color = Color3.fromRGB(150, 75, 60), Mat = Enum.Material.Brick},
+    {Name = "Wood", Color = Color3.fromRGB(139, 109, 79), Mat = Enum.Material.WoodPlanks},
+    {Name = "Concrete", Color = Color3.fromRGB(127, 127, 127), Mat = Enum.Material.Concrete},
+    {Name = "Ice", Color = Color3.fromRGB(200, 230, 255), Mat = Enum.Material.Ice}
+}
+
+--// State
+local CurrentMaterial = Materials[1]
+local CurrentShape = "Ball"
+local SizeX, SizeY, SizeZ = 6, 6, 6
+local RotX, RotY, RotZ = 0, 0, 0
+local PreviewPos = nil
+local PreviewPart = nil
+local SpawnedData = {}
+local UndoHistory = {}
+local RedoHistory = {}
+
+--// SNAP SETTINGS
+local SnapEnabled = false
+local GridSize = 10
+local SnapAxis = {X = true, Y = false, Z = true}
+local ShowGridVisual = false
+local GridLines = {}
+
+--// SMOOTH SETTINGS
+local SmoothEnabled = false
+local SmoothModes = {"Soft Edge", "Gradient", "Noise", "Blend"}
+local CurrentSmoothModeIndex = 1
+local SmoothIntensity = 2
+
+--// Raycast
+local function GetRaycast()
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local ray = Camera:ViewportPointToRay(center.X, center.Y)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    if PreviewPart then params.FilterDescendantsInstances = {PreviewPart} end
+    return Workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+end
+
+--// Create Preview
+local function CreatePreview()
+    if PreviewPart then PreviewPart:Destroy() end
+    PreviewPart = Instance.new("Part")
+    
+    if CurrentShape == "Ball" then
+        PreviewPart.Shape = Enum.PartType.Ball
+    elseif CurrentShape == "Wedge" then
+        PreviewPart.Shape = Enum.PartType.Wedge
+    else
+        PreviewPart.Shape = Enum.PartType.Block
+    end
+    
+    PreviewPart.Material = Enum.Material.ForceField
+    PreviewPart.Color = Color3.fromRGB(255, 255, 255)
+    PreviewPart.Transparency = 0.7
+    PreviewPart.CanCollide = false
+    PreviewPart.Anchored = true
+    PreviewPart.CastShadow = false
+    PreviewPart.Parent = Workspace
+    
+    local selectionBox = Instance.new("SelectionBox")
+    selectionBox.Name = "EdgeOutline"
+    selectionBox.LineThickness = 0.05
+    selectionBox.Color3 = Color3.fromRGB(0, 255, 255)
+    selectionBox.SurfaceColor3 = Color3.fromRGB(0, 255, 255)
+    selectionBox.SurfaceTransparency = 1
+    selectionBox.Adornee = PreviewPart
+    selectionBox.Parent = PreviewPart
+end
+
+--// SNAP FUNCTION
+local function SnapPosition(pos)
+    if not SnapEnabled then return pos end
+    local snappedX, snappedY, snappedZ = pos.X, pos.Y, pos.Z
+    
+    if SnapAxis.X then snappedX = math.floor(pos.X / GridSize + 0.5) * GridSize end
+    if SnapAxis.Y then snappedY = math.floor(pos.Y / GridSize + 0.5) * GridSize end
+    if SnapAxis.Z then snappedZ = math.floor(pos.Z / GridSize + 0.5) * GridSize end
+    
+    return Vector3.new(snappedX, snappedY, snappedZ)
+end
+
+--// VISUAL GRID FUNCTION
+local function UpdateGridVisual()
+    for _, line in ipairs(GridLines) do line:Destroy() end
+    GridLines = {}
+    if not ShowGridVisual then return end
+    
+    local playerPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
+    if not playerPos then return end
+    
+    local range = 100 
+    local startX = math.floor((playerPos.X - range) / GridSize) * GridSize
+    local endX = math.floor((playerPos.X + range) / GridSize) * GridSize
+    local startZ = math.floor((playerPos.Z - range) / GridSize) * GridSize
+    local endZ = math.floor((playerPos.Z + range) / GridSize) * GridSize
+    
+    for z = startZ, endZ, GridSize do
+        local line = Instance.new("Part")
+        line.Size = Vector3.new(range * 2, 0.1, 0.1)
+        line.CFrame = CFrame.new(playerPos.X, playerPos.Y - 1, z)
+        line.Anchored = true; line.CanCollide = false; line.Transparency = 0.8; line.Color = Color3.fromRGB(255, 255, 0); line.Material = Enum.Material.Neon; line.Parent = Workspace
+        table.insert(GridLines, line)
+    end
+    for x = startX, endX, GridSize do
+        local line = Instance.new("Part")
+        line.Size = Vector3.new(0.1, 0.1, range * 2)
+        line.CFrame = CFrame.new(x, playerPos.Y - 1, playerPos.Z)
+        line.Anchored = true; line.CanCollide = false; line.Transparency = 0.8; line.Color = Color3.fromRGB(255, 255, 0); line.Material = Enum.Material.Neon; line.Parent = Workspace
+        table.insert(GridLines, line)
+    end
+end
+
+spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end end end)
+
+--// Update Preview
+local function UpdatePreview()
+    if not PreviewPart then CreatePreview() end
+    local result = GetRaycast()
+    if result then
+        local rawPos = result.Position
+        local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
+        PreviewPos = displayPos
+        
+        PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+        
+        if CurrentShape == "Flatten" then
+            local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
+            PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
+        elseif CurrentShape == "Paint" then
+            local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0)
+            PreviewPart.CFrame = cf
+            PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ) -- Paint preview is flat
+        else
+            local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
+            PreviewPart.CFrame = cf
+        end
+        PreviewPart.Transparency = 0.65
+        PreviewPart.EdgeOutline.Transparency = 0
+        
+        if SnapEnabled then
+            PreviewPart.Color = Color3.fromRGB(100, 255, 150)
+            PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
+        else
+            PreviewPart.Color = Color3.fromRGB(255, 255, 255)
+            PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
+        end
+    else
+        PreviewPart.Transparency = 1
+        PreviewPart.EdgeOutline.Transparency = 1
+    end
+end
+
+--// Apply Material Colors
+local function ApplyMaterialColors()
+    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[currentGrassColorIndex].color) end)
+    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[currentLeafyGrassColorIndex].color) end)
+    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[currentGroundColorIndex].color) end)
+end
+
+--// SMOOTH TERRAIN ALGORITHM
+local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
+    local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
+    local layers = intensity or 2
+    
+    for layer = 1, layers do
+        local layerRadius = radius + (layer * 2)
+        local layerSize = math.max(2, 6 - layer)
+        local angleStep = 360 / (8 * layer)
+        
+        for angle = 0, 359, angleStep do
+            local rad = math.rad(angle)
+            local offsetY = 0
+            
+            if mode == "Noise" then 
+                offsetY = math.random(-4, 4) 
+            elseif mode == "Gradient" then
+                offsetY = math.random(-2, 2)
+            end
+            
+            local offset = Vector3.new(
+                math.cos(rad) * layerRadius,
+                offsetY,
+                math.sin(rad) * layerRadius
+            )
+            local pos = centerPos + offset
+            
+            if mode == "Soft Edge" then
+                Terrain:FillBall(pos, layerSize / 1.5, material)
+            elseif mode == "Noise" then
+                if math.random() > 0.4 then
+                    Terrain:FillBall(pos, layerSize / 2, material)
+                end
+            elseif mode == "Gradient" then
+                if math.random() > 0.2 then
+                    Terrain:FillBall(pos, layerSize / 2, material)
+                end
+            elseif mode == "Blend" then
+                Terrain:FillBall(pos, layerSize, material)
+            end
+        end
+    end
+end
+
+--// BL Function (Execute Terrain)
+local function BL(d)
+    local pos = Vector3.new(d[1], d[2], d[3])
+    local sx, sy, sz = d[4], d[5], d[6]
+    local matName = d[7]
+    local shape = d[8] or "Ball"
+    local grassIdx = d[9] or currentGrassColorIndex
+    local leafyIdx = d[10] or currentLeafyGrassColorIndex
+    local groundIdx = d[11] or currentGroundColorIndex
+    local rx, ry, rz = d[12] or 0, d[13] or 0, d[14] or 0
+    local smoothOn = d[15] or false
+    local smoothMode = d[16] or "Soft Edge"
+    local smoothInt = d[17] or 2
+    
+    local mat = Enum.Material.Grass
+    for _, m in ipairs(Materials) do
+        if m.Name == matName then mat = m.Mat break end
+    end
+    
+    ApplyMaterialColors()
+    
+    local sizeVec = Vector3.new(sx, sy, sz)
+    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
+    
+    if shape == "Block" then
+        Terrain:FillBlock(cf, sizeVec, mat)
+    elseif shape == "Wedge" then
+        Terrain:FillWedge(cf, sizeVec, mat)
+    elseif shape == "Flatten" then
+        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(ry), 0)
+        Terrain:FillBlock(baseCf, Vector3.new(sx, 2, sz), mat)
+        Terrain:FillBlock(baseCf * CFrame.new(0, (sy/2) + 1, 0), Vector3.new(sx, sy, sz), Enum.Material.Air)
+    elseif shape == "Paint" then
+        local halfSize = sizeVec / 2
+        local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)
+        local mats, occs = Terrain:ReadVoxels(region, 4)
+        local changed = false
+        for x = 1, mats.Size.X do
+            for y = 1, mats.Size.Y do
+                for z = 1, mats.Size.Z do
+                    if mats[x][y][z] ~= Enum.Material.Air and mats[x][y][z] ~= mat then
+                        mats[x][y][z] = mat
+                        changed = true
+                    end
+                end
+            end
+        end
+        if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
+    else
+        Terrain:FillBall(pos, math.max(sx, sy, sz)/2, mat)
+    end
+    
+    if smoothOn and shape ~= "Flatten" and shape ~= "Paint" then
+        ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode)
+    end
+    
+    return d
+end
+
+--// Spawn Terrain (DIPERBAIKI: Menggunakan Voxel Snapshot)
+local function SpawnTerrain()
+    if not PreviewPos then return false end
+    
+    local maxDim = math.max(SizeX, SizeY, SizeZ)
+    local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
+    local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
+    local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds):ExpandToGrid(4)
+
+    local beforeMats, beforeOccs = Terrain:ReadVoxels(region, 4)
+
+    local data = {
+        math.floor(PreviewPos.X), math.floor(PreviewPos.Y), math.floor(PreviewPos.Z),
+        SizeX, SizeY, SizeZ, CurrentMaterial.Name, CurrentShape,
+        currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
+        RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity
+    }
+    
+    BL(data)
+
+    local afterMats, afterOccs = Terrain:ReadVoxels(region, 4)
+
+    table.insert(UndoHistory, {
+        Region = region,
+        BeforeMats = beforeMats,
+        BeforeOccs = beforeOccs,
+        AfterMats = afterMats,
+        AfterOccs = afterOccs,
+        Data = data
+    })
+    
+    RedoHistory = {}
+    table.insert(SpawnedData, data)
+    return true
+end
+
+--// UNDO / REDO (DIPERBAIKI: Mengembalikan Voxel spesifik)
+local function Undo()
+    if #UndoHistory == 0 then return false, "Nothing to undo" end
+    local lastNode = table.remove(UndoHistory)
+    table.insert(RedoHistory, lastNode)
+    
+    for i = #SpawnedData, 1, -1 do
+        if SpawnedData[i] == lastNode.Data then
+            table.remove(SpawnedData, i)
+            break
+        end
+    end
+    
+    Terrain:WriteVoxels(lastNode.Region, 4, lastNode.BeforeMats, lastNode.BeforeOccs)
+    
+    return true, "Undone 1 terrain"
+end
+
+local function Redo()
+    if #RedoHistory == 0 then return false, "Nothing to redo" end
+    local node = table.remove(RedoHistory)
+    table.insert(UndoHistory, node)
+    table.insert(SpawnedData, node.Data)
+    
+    Terrain:WriteVoxels(node.Region, 4, node.AfterMats, node.AfterOccs)
+    
+    return true, "Redone 1 terrain"
+end
+
+--// Generate Script
+local function GenerateScript()
+    if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
+    local code = "--// Terrain Spawn Script\n--// Total: " .. #SpawnedData .. " terrains\n\n"
+    code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
+    code = code .. "--// Color Tables\n"
+    code = code .. "local grassColors = {"
+    for i, c in ipairs(grassColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
+    code = code .. "}\nlocal leafyGrassColors = {"
+    for i, c in ipairs(leafyGrassColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
+    code = code .. "}\nlocal groundColors = {"
+    for i, c in ipairs(groundColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
+    code = code .. "}\n\n"
+    
+    code = code .. [[
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
@@ -19,8 +447,562 @@ local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
         end
     end
 end
-]]_Ab=_Ab..[[
-local function BL(d)
-    local pos = Vector3.new(d[1], d[2], d[3])
-    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Brick=Enum.Material.Brick,Wood=Enum.Material.WoodPlanks,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice}
-    local mat = mats[d[7]]or Enum.Material.Grass local _Oa=_Ja[8]orstring.char(66,97,108,108)local _Ya=_Ja[18]orstring.char(66,117,105,108,100)local _ua=Vector3.new(_Ja[4],_Ja[5],_Ja[6])pcall(function()_f:SetMaterialColor(Enum.Material.Grass,_i[_Ja[9]or 3])end)pcall(function()_f:SetMaterialColor(Enum.Material.LeafyGrass,_k[_Ja[10]or 3])end)pcall(function()_f:SetMaterialColor(Enum.Material.Ground,_m[_Ja[11]or 2])end)local _qa=CFrame.new(_X)*CFrame.Angles(math._Fa(_Ja[12]or 0),math._Fa(_Ja[13]or 0),math._Fa(_Ja[14]or 0))if _Ya==string.char(80,97,105,110,116)then local _bb=_ua/2 local _cb=Region3.new(_X-_bb,_X+_bb):ExpandToGrid(4)local _ab,_Cb=_f:ReadVoxels(_cb,4)local _ya=math.max(_Ja[4],_Ja[5],_Ja[6])/2 local _Db=_cb.CFrame.Position-(_cb.Size/2)for _la=1,_ab.Size.X do for _hb=1,_ab.Size.Y do for _ka=1,_ab.Size.Z do if _ab[_la][_hb][_ka]~=Enum.Material.Air and _ab[_la][_hb][_ka]~=_Za then local _ib=true if _Oa==string.char(66,97,108,108)then local _Eb=_Db+Vector3.new(_la*4-2,_hb*4-2,_ka*4-2)if(_Eb-_X).Magnitude>_ya then _ib=false end end if _ib then _ab[_la][_hb][_ka]=_Za end end end end end _f:WriteVoxels(_cb,4,_ab,_Cb)elseif _Ya==string.char(70,108,97,116,116,101,110)then local _kb=CFrame.new(_X)*CFrame.Angles(0,math._Fa(_Ja[13]or 0),0)if _Oa==string.char(66,97,108,108)then _f:FillBall(_X-Vector3.new(0,_Ja[5]/4,0),math.max(_Ja[4],_Ja[6])/2,_Za)_f:FillBlock(_kb*CFrame.new(0,_Ja[5]/2,0),Vector3.new(_Ja[4],_Ja[5],_Ja[6]),Enum.Material.Air)else _f:FillBlock(_kb,Vector3.new(_Ja[4],2,_Ja[6]),_Za)_f:FillBlock(_kb*CFrame.new(0,(_Ja[5]/2)+1,0),Vector3.new(_Ja[4],_Ja[5],_Ja[6]),Enum.Material.Air)end else if _Oa==string.char(66,108,111,99,107)then _f:FillBlock(_qa,_ua,_Za)elseif _Oa==string.char(87,101,100,103,101)then _f:FillWedge(_qa,_ua,_Za)else _f:FillBall(_X,math.max(_Ja[4],_Ja[5],_Ja[6])/2,_Za)end end if _Ja[15]and _Ya~=string.char(80,97,105,110,116)and _Ya~=string.char(70,108,97,116,116,101,110)then _sa(_X,_ua,_Za,_Ja[17],_Ja[16])end end]]local _Fb=20 local _Gb=math.ceil(#_A/_Fb)for _Hb=1,_Gb do _Ab=_Ab..string.char(102,111,114,32,95,44,100,32,105,110,32,105,112,97,105,114,115,40,123)local _Ib=(_Hb-1)*_Fb+1 local _Jb=math.min(_Hb*_Fb,#_A)for _wb=_Ib,_Jb do local _Ja=_A[_wb]local _Kb=_Ja[15]andstring.char(116,114,117,101)orstring.char(102,97,108,115,101)_Ab=_Ab..string.char(123).._Ja[1]..string.char(44).._Ja[2]..string.char(44).._Ja[3]..string.char(44).._Ja[4]..string.char(44).._Ja[5]..string.char(44).._Ja[6]..string.char(44,39).._Ja[7]..string.char(39,44,39)..(_Ja[8]orstring.char(66,97,108,108))..string.char(39,44)..(_Ja[9]or 3)..string.char(44)..(_Ja[10]or 3)..string.char(44)..(_Ja[11]or 2)..string.char(44)..(_Ja[12]or 0)..string.char(44)..(_Ja[13]or 0)..string.char(44)..(_Ja[14]or 0)..string.char(44).._Kb..string.char(44,39)..(_Ja[16]orstring.char(83,111,102,116,32,69,100,103,101))..string.char(39,44)..(_Ja[17]or 2)..string.char(44,39)..(_Ja[18]orstring.char(66,117,105,108,100))..string.char(39,125)if _wb<_Jb then _Ab=_Ab..string.char(44)end end _Ab=_Ab..string.char(125,41,100,111,32,66,76,40,100,41,101,110,100,10)end _Ab=_Ab..string.char(10,112,114,105,110,116,40,39,91,84,101,114,114,97,105,110,93,32)..#_A..string.char(32,98,108,111,99,107,115,32,115,112,97,119,110,101,100,33,39,41)return _Ab end local _Lb=Instance.new(string.char(83,99,114,101,101,110,71,117,105))_Lb.Name=string.char(84,101,114,114,97,105,110,69,100,105,116,111,114)_Lb.ResetOnSpawn=false _Lb.Parent=_g:WaitForChild(string.char(80,108,97,121,101,114,71,117,105))local _Mb=Instance.new(string.char(70,114,97,109,101),_Lb)_Mb.Size,_Mb.Position,_Mb.BackgroundTransparency=UDim2.new(0,20,0,20),UDim2.new(0.5,-10,0.5,-10),1 local _Nb=Instance.new(string.char(70,114,97,109,101),_Mb)_Nb.Size,_Nb.Position,_Nb.BackgroundColor3,_Nb.BorderSizePixel=UDim2.new(0,4,0,4),UDim2.new(0.5,-2,0.5,-2),Color3.fromRGB(0,255,255),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_Nb)local _Ob=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Lb)_Ob.Name,_Ob.Size,_Ob.Position,_Ob.BackgroundColor3=string.char(83,112,97,119,110,66,116,110),UDim2.new(0,50,0,50),UDim2.new(0,4,0,50),Color3.fromRGB(0,200,100)_Ob.Text,_Ob.TextSize,_Ob.Font=string.char(55356,57263),30,Enum.Font.GothamBlack Instance.new(string.char(85,73,67,111,114,110,101,114),_Ob).CornerRadius=UDim.new(1,0)local _Pb=Instance.new(string.char(85,73,83,116,114,111,107,101),_Ob)_Pb.Color,_Pb.Thickness=Color3.fromRGB(255,255,255),3 local _Qb=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Lb)_Qb.Name,_Qb.Size,_Qb.Position,_Qb.BackgroundColor3=string.char(77,105,110,73,99,111,110),UDim2.new(0,45,0,45),UDim2.new(0,6,0,105),Color3.fromRGB(0,150,255)_Qb.Text,_Qb.TextSize,_Qb.Font,_Qb.Visible,_Qb.Active=string.char(9881,65039),22,Enum.Font.GothamBold,false,true Instance.new(string.char(85,73,67,111,114,110,101,114),_Qb).CornerRadius=UDim.new(1,0)local _Rb=Instance.new(string.char(85,73,83,116,114,111,107,101),_Qb)_Rb.Color,_Rb.Thickness=Color3.fromRGB(255,255,255),2 local _Sb=Instance.new(string.char(70,114,97,109,101),_Lb)_Sb.Name,_Sb.Size,_Sb.Position,_Sb.BackgroundColor3,_Sb.BorderSizePixel=string.char(77,97,105,110,80,97,110,101,108),UDim2.new(0,300,0,450),UDim2.new(1,-310,1,-460),Color3.fromRGB(30,30,40),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_Sb).CornerRadius=UDim.new(0,12)local _Tb=Instance.new(string.char(85,73,83,116,114,111,107,101),_Sb)_Tb.Color,_Tb.Thickness=Color3.fromRGB(0,255,255),2 local _Ub=Instance.new(string.char(70,114,97,109,101),_Sb)_Ub.Size,_Ub.BackgroundColor3,_Ub.BorderSizePixel=UDim2.new(1,0,0,35),Color3.fromRGB(40,40,55),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_Ub).CornerRadius=UDim.new(0,12)local _Vb=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Ub)_Vb.Size,_Vb.Position,_Vb.BackgroundTransparency=UDim2.new(1,-80,1,0),UDim2.new(0,10,0,0),1 _Vb.Text,_Vb.TextColor3,_Vb.TextSize,_Vb.Font,_Vb.TextXAlignment=string.char(9881,65039,32,84,101,114,114,97,105,110,32,69,100,105,116,111,114,32,69,76,66,82,85,90,72,32,118,49,54,46,51),Color3.fromRGB(0,255,255),14,Enum.Font.GothamBold,Enum.TextXAlignment.Left local _Wb=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Ub)_Wb.Size,_Wb.Position,_Wb.BackgroundColor3=UDim2.new(0,28,0,28),UDim2.new(1,-65,0.5,-14),Color3.fromRGB(60,60,75)_Wb.Text,_Wb.TextColor3,_Wb.TextSize,_Wb.Font=string.char(8722),Color3.fromRGB(255,255,255),18,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Wb).CornerRadius=UDim.new(0,6)local _Xb=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Ub)_Xb.Size,_Xb.Position,_Xb.BackgroundColor3=UDim2.new(0,28,0,28),UDim2.new(1,-33,0.5,-14),Color3.fromRGB(200,60,60)_Xb.Text,_Xb.TextColor3,_Xb.TextSize,_Xb.Font=string.char(88),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Xb).CornerRadius=UDim.new(0,6)local _Yb=Instance.new(string.char(83,99,114,111,108,108,105,110,103,70,114,97,109,101),_Sb)_Yb.Size,_Yb.Position,_Yb.BackgroundTransparency,_Yb.ScrollBarThickness,_Yb.CanvasSize=UDim2.new(1,-8,1,-42),UDim2.new(0,4,0,38),1,3,UDim2.new(0,0,0,1550)local _Zb=Instance.new(string.char(85,73,76,105,115,116,76,97,121,111,117,116),_Yb)_Zb.Padding=UDim.new(0,6)local _ac=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Yb)_ac.Size,_ac.BackgroundTransparency,_ac.Text,_ac.TextColor3,_ac.TextSize,_ac.Font=UDim2.new(1,-8,0,18),1,string.char(65,105,109,32,38,32,116,97,112,32,55356,57263,32,116,111,32,115,112,97,119,110),Color3.fromRGB(0,255,150),10,Enum.Font.Gotham local function _bc(_cc,_dc,_ec,_fc,_gc)local _hc=Instance.new(string.char(70,114,97,109,101),_cc)_hc.Size,_hc.BackgroundColor3,_hc.BorderSizePixel=UDim2.new(1,-8,0,50),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_hc).CornerRadius=UDim.new(0,8)local _ic=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_hc)_ic.Size,_ic.Position,_ic.BackgroundTransparency,_ic.Text,_ic.TextColor3,_ic.TextSize,_ic.Font=UDim2.new(1,0,0,18),UDim2.new(0,0,0,2),1,_dc,_fc,11,Enum.Font.GothamBold local _jc=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_hc)_jc.Size,_jc.Position,_jc.BackgroundColor3,_jc.Text,_jc.TextColor3,_jc.TextSize,_jc.Font=UDim2.new(0,28,0,22),UDim2.new(0,5,0,24),Color3.fromRGB(60,60,75),string.char(8592),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_jc).CornerRadius=UDim.new(0,6)local _kc=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_hc)_kc.Size,_kc.Position,_kc.BackgroundColor3,_kc.Text,_kc.TextColor3,_kc.TextSize,_kc.Font=UDim2.new(1,-74,0,22),UDim2.new(0,38,0,24),_ec[_gc]._wd,_ec[_gc].name,Color3.fromRGB(255,255,255),10,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_kc).CornerRadius=UDim.new(0,6)local _lc=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_hc)_lc.Size,_lc.Position,_lc.BackgroundColor3,_lc.Text,_lc.TextColor3,_lc.TextSize,_lc.Font=UDim2.new(0,28,0,22),UDim2.new(1,-33,0,24),Color3.fromRGB(60,60,75),string.char(8594),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_lc).CornerRadius=UDim.new(0,6)return _jc,_lc,_kc end local _mc,_nc,_oc=_bc(_Yb,string.char(55356,57151,32,71,114,97,115,115,32,67,111,108,111,114),_i,Color3.fromRGB(0,255,100),_j)local _pc,_qc,_rc=_bc(_Yb,string.char(55356,57155,32,76,101,97,102,121,71,114,97,115,115,32,67,111,108,111,114),_k,Color3.fromRGB(100,220,80),_l)local _sc,_tc,_uc=_bc(_Yb,string.char(55357,57323,32,71,114,111,117,110,100,32,67,111,108,111,114),_m,Color3.fromRGB(200,150,100),_n)local _vc=Instance.new(string.char(70,114,97,109,101),_Yb)_vc.Size,_vc.BackgroundColor3,_vc.BorderSizePixel=UDim2.new(1,-8,0,55),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_vc).CornerRadius=UDim.new(0,8)local _wc=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_vc)_wc.Size,_wc.Position,_wc.BackgroundTransparency,_wc.Text,_wc.TextColor3,_wc.TextSize,_wc.Font=UDim2.new(1,0,0,18),UDim2.new(0,0,0,2),1,string.char(55357,57056,65039,32,84,111,111,108,32,77,111,100,101),Color3.fromRGB(255,150,0),11,Enum.Font.GothamBold local function _xc(_yc,_zc)local _Ac=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_vc)_Ac.Size,_Ac.Position,_Ac.BackgroundColor3,_Ac.Text,_Ac.TextColor3,_Ac.TextSize,_Ac.Font=UDim2.new(0.3,0,0,28),UDim2.new(_zc,0,0,25),Color3.fromRGB(65,65,80),_yc,Color3.fromRGB(255,255,255),10,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Ac).CornerRadius=UDim.new(0,6)return _Ac end local _Bc=_xc(string.char(66,117,105,108,100),0.02)_Bc.BackgroundColor3=Color3.fromRGB(0,150,255)local _Cc=_xc(string.char(70,108,97,116,116,101,110),0.35)local _Dc=_xc(string.char(80,97,105,110,116),0.68)local _Ec=Instance.new(string.char(70,114,97,109,101),_Yb)_Ec.Size,_Ec.BackgroundColor3,_Ec.BorderSizePixel=UDim2.new(1,-8,0,55),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_Ec).CornerRadius=UDim.new(0,8)local _Fc=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Ec)_Fc.Size,_Fc.Position,_Fc.BackgroundTransparency,_Fc.Text,_Fc.TextColor3,_Fc.TextSize,_Fc.Font=UDim2.new(1,0,0,18),UDim2.new(0,0,0,2),1,string.char(55357,56631,32,83,104,97,112,101,32,40,66,97,115,101,32,77,111,100,101,108,41),Color3.fromRGB(0,200,255),11,Enum.Font.GothamBold local function _Gc(_yc,_zc)local _Ac=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Ec)_Ac.Size,_Ac.Position,_Ac.BackgroundColor3,_Ac.Text,_Ac.TextColor3,_Ac.TextSize,_Ac.Font=UDim2.new(0.3,0,0,28),UDim2.new(_zc,0,0,25),Color3.fromRGB(65,65,80),_yc,Color3.fromRGB(255,255,255),10,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Ac).CornerRadius=UDim.new(0,6)return _Ac end local _Hc=_Gc(string.char(66,97,108,108),0.02)_Hc.BackgroundColor3=Color3.fromRGB(0,150,255)local _Ic=_Gc(string.char(66,108,111,99,107),0.35)local _Jc=_Gc(string.char(87,101,100,103,101),0.68)local _Kc=Instance.new(string.char(70,114,97,109,101),_Yb)_Kc.Size,_Kc.BackgroundColor3,_Kc.BorderSizePixel=UDim2.new(1,-8,0,80),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_Kc).CornerRadius=UDim.new(0,8)local _Lc=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Kc)_Lc.Size,_Lc.Position,_Lc.BackgroundTransparency,_Lc.Text,_Lc.TextColor3,_Lc.TextSize,_Lc.Font=UDim2.new(1,0,0,18),UDim2.new(0,0,0,2),1,string.char(55357,56385,65039,32,80,114,101,118,105,101,119,32,83,101,116,116,105,110,103,115),Color3.fromRGB(200,100,255),11,Enum.Font.GothamBold local _Mc=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Kc)_Mc.Size,_Mc.Position,_Mc.BackgroundTransparency,_Mc.Text,_Mc.TextColor3,_Mc.TextSize,_Mc.Font=UDim2.new(0,80,0,20),UDim2.new(0,6,0,25),1,string.char(84,114,97,110,115,112,97,114,101,110,99,121,58),Color3.fromRGB(200,200,200),11,Enum.Font.GothamBold local _Nc=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Kc)_Nc.Size,_Nc.Position,_Nc.BackgroundColor3,_Nc.Text,_Nc.TextColor3,_Nc.TextSize,_Nc.Font=UDim2.new(0,25,0,20),UDim2.new(0,95,0,25),Color3.fromRGB(60,60,75),string.char(45),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Nc).CornerRadius=UDim.new(0,4)local _Oc=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Kc)_Oc.Size,_Oc.Position,_Oc.BackgroundColor3,_Oc.Text,_Oc.TextColor3,_Oc.TextSize,_Oc.Font=UDim2.new(0,35,0,20),UDim2.new(0,125,0,25),Color3.fromRGB(40,40,50),string.char(48,46,54,53),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Oc).CornerRadius=UDim.new(0,4)local _Pc=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Kc)_Pc.Size,_Pc.Position,_Pc.BackgroundColor3,_Pc.Text,_Pc.TextColor3,_Pc.TextSize,_Pc.Font=UDim2.new(0,25,0,20),UDim2.new(0,165,0,25),Color3.fromRGB(60,60,75),string.char(43),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Pc).CornerRadius=UDim.new(0,4)local _Qc=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Kc)_Qc.Size,_Qc.Position,_Qc.BackgroundColor3,_Qc.Text,_Qc.TextColor3,_Qc.TextSize,_Qc.Font=UDim2.new(0,200,0,22),UDim2.new(0,6,0,50),Color3.fromRGB(200,60,60),string.char(84,101,109,98,117,115,32,84,101,114,114,97,105,110,32,47,32,87,97,116,101,114,58,32,79,70,70),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Qc).CornerRadius=UDim.new(0,4)local _Rc=Instance.new(string.char(70,114,97,109,101),_Yb)_Rc.Size,_Rc.BackgroundColor3,_Rc.BorderSizePixel=UDim2.new(1,-8,0,80),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_Rc).CornerRadius=UDim.new(0,8)local _Sc=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Rc)_Sc.Size,_Sc.Position,_Sc.BackgroundTransparency,_Sc.Text,_Sc.TextColor3,_Sc.TextSize,_Sc.Font=UDim2.new(1,0,0,18),UDim2.new(0,0,0,2),1,string.char(10024,32,83,109,111,111,116,104,32,84,101,114,114,97,105,110),Color3.fromRGB(255,100,200),11,Enum.Font.GothamBold local _Tc=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Rc)_Tc.Size,_Tc.Position,_Tc.BackgroundColor3,_Tc.Text,_Tc.TextColor3,_Tc.TextSize,_Tc.Font=UDim2.new(0,60,0,22),UDim2.new(0,6,0,25),Color3.fromRGB(200,60,60),string.char(79,70,70,32,9660),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Tc).CornerRadius=UDim.new(0,4)local _Uc=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Rc)_Uc.Size,_Uc.Position,_Uc.BackgroundColor3,_Uc.Text,_Uc.TextColor3,_Uc.TextSize,_Uc.Font=UDim2.new(0,190,0,22),UDim2.new(0,72,0,25),Color3.fromRGB(60,60,75),_M[1],Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Uc).CornerRadius=UDim.new(0,4)local _Vc=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Rc)_Vc.Size,_Vc.Position,_Vc.BackgroundTransparency,_Vc.Text,_Vc.TextColor3,_Vc.TextSize,_Vc.Font=UDim2.new(0,60,0,20),UDim2.new(0,6,0,53),1,string.char(73,110,116,101,110,115,105,116,121,58),Color3.fromRGB(200,200,200),11,Enum.Font.GothamBold local _Wc=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Rc)_Wc.Size,_Wc.Position,_Wc.BackgroundColor3,_Wc.Text,_Wc.TextColor3,_Wc.TextSize,_Wc.Font=UDim2.new(0,25,0,20),UDim2.new(0,72,0,53),Color3.fromRGB(60,60,75),string.char(45),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Wc).CornerRadius=UDim.new(0,4)local _Xc=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Rc)_Xc.Size,_Xc.Position,_Xc.BackgroundColor3,_Xc.Text,_Xc.TextColor3,_Xc.TextSize,_Xc.Font=UDim2.new(0,30,0,20),UDim2.new(0,100,0,53),Color3.fromRGB(40,40,50),tostring(_O),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Xc).CornerRadius=UDim.new(0,4)local _Yc=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Rc)_Yc.Size,_Yc.Position,_Yc.BackgroundColor3,_Yc.Text,_Yc.TextColor3,_Yc.TextSize,_Yc.Font=UDim2.new(0,25,0,20),UDim2.new(0,133,0,53),Color3.fromRGB(60,60,75),string.char(43),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Yc).CornerRadius=UDim.new(0,4)local _Zc=Instance.new(string.char(70,114,97,109,101),_Yb)_Zc.Size,_Zc.BackgroundColor3,_Zc.BorderSizePixel=UDim2.new(1,-8,0,105),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_Zc).CornerRadius=UDim.new(0,8)local _ad=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Zc)_ad.Size,_ad.Position,_ad.BackgroundTransparency,_ad.Text,_ad.TextColor3,_ad.TextSize,_ad.Font=UDim2.new(1,0,0,18),UDim2.new(0,0,0,2),1,string.char(55357,56528,32,83,110,97,112,32,116,111,32,71,114,105,100),Color3.fromRGB(255,255,100),11,Enum.Font.GothamBold local _bd=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Zc)_bd.Size,_bd.Position,_bd.BackgroundColor3,_bd.Text,_bd.TextColor3,_bd.TextSize,_bd.Font=UDim2.new(0,60,0,22),UDim2.new(0,6,0,25),Color3.fromRGB(200,60,60),string.char(79,70,70),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_bd).CornerRadius=UDim.new(0,4)local _cd=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Zc)_cd.Size,_cd.Position,_cd.BackgroundColor3,_cd.Text,_cd.TextColor3,_cd.TextSize,_cd.Font=UDim2.new(0,190,0,22),UDim2.new(0,72,0,25),Color3.fromRGB(60,60,75),string.char(86,105,115,117,97,108,32,71,117,105,100,101,58,32,79,70,70),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_cd).CornerRadius=UDim.new(0,4)local _dd=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Zc)_dd.Size,_dd.Position,_dd.BackgroundTransparency,_dd.Text,_dd.TextColor3,_dd.TextSize,_dd.Font=UDim2.new(0,60,0,20),UDim2.new(0,6,0,53),1,string.char(71,114,105,100,32,83,105,122,101,58),Color3.fromRGB(200,200,200),11,Enum.Font.GothamBold local function _ed(_la,_fd)local _Hb=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Zc)_Hb.Size,_Hb.Position,_Hb.BackgroundColor3,_Hb.Text,_Hb.TextColor3,_Hb.TextSize,_Hb.Font=UDim2.new(0,25,0,20),UDim2.new(0,_la,0,53),Color3.fromRGB(80,80,100),tostring(_fd),Color3.fromRGB(255,255,255),10,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Hb).CornerRadius=UDim.new(0,4)return _Hb end local _gd=_ed(72,5)local _hd=_ed(100,10)local _id=_ed(128,20)local _jd=_ed(156,50)_hd.BackgroundColor3=Color3.fromRGB(0,150,200)local _kd=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Zc)_kd.Size,_kd.Position,_kd.BackgroundTransparency,_kd.Text,_kd.TextColor3,_kd.TextSize,_kd.Font=UDim2.new(0,60,0,20),UDim2.new(0,6,0,78),1,string.char(65,120,105,115,58),Color3.fromRGB(200,200,200),11,Enum.Font.GothamBold local function _ld(_la,_md,_nd)local _Hb=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Zc)_Hb.Size,_Hb.Position,_Hb.BackgroundColor3,_Hb.Text,_Hb.TextColor3,_Hb.TextSize,_Hb.Font=UDim2.new(0,25,0,20),UDim2.new(0,_la,0,78),_nd and Color3.fromRGB(0,150,100)or Color3.fromRGB(200,60,60),_md,Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Hb).CornerRadius=UDim.new(0,4)return _Hb end local _od=_ld(72,string.char(88),_I.X)local _pd=_ld(100,string.char(89),_I.Y)local _qd=_ld(128,string.char(90),_I.Z)local _rd=Instance.new(string.char(70,114,97,109,101),_Yb)_rd.Size,_rd.BackgroundColor3,_rd.BorderSizePixel=UDim2.new(1,-8,0,105),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_rd).CornerRadius=UDim.new(0,8)local _sd=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_rd)_sd.Size,_sd.Position,_sd.BackgroundTransparency,_sd.Text,_sd.TextColor3,_sd.TextSize,_sd.Font=UDim2.new(1,0,0,18),UDim2.new(0,0,0,2),1,string.char(55357,56528,32,83,105,122,101,32,40,67,117,115,116,111,109,32,84,101,120,116,32,77,97,120,32,53,48,48,41),Color3.fromRGB(0,200,255),11,Enum.Font.GothamBold local function _td(_ud,_vd,_wd,_xd)local _yd=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_rd)_yd.Size,_yd.Position,_yd.BackgroundTransparency,_yd.Text,_yd.TextColor3,_yd.TextSize,_yd.Font=UDim2.new(0,18,0,20),UDim2.new(0,6,0,_ud),1,_vd,_wd,11,Enum.Font.GothamBold local _ab=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_rd)_ab.Size,_ab.Position,_ab.BackgroundColor3,_ab.Text,_ab.TextColor3,_ab.TextSize,_ab.Font=UDim2.new(0,32,0,20),UDim2.new(0,24,0,_ud),Color3.fromRGB(200,60,60),string.char(45),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_ab).CornerRadius=UDim.new(0,4)local _zd=Instance.new(string.char(84,101,120,116,66,111,120),_rd)_zd.Size,_zd.Position,_zd.BackgroundColor3,_zd.Text,_zd.TextColor3,_zd.TextSize,_zd.Font,_zd.ClearTextOnFocus=UDim2.new(0,36,0,20),UDim2.new(0,58,0,_ud),Color3.fromRGB(60,60,75),tostring(_xd),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold,false Instance.new(string.char(85,73,67,111,114,110,101,114),_zd).CornerRadius=UDim.new(0,4)local _Ad=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_rd)_Ad.Size,_Ad.Position,_Ad.BackgroundColor3,_Ad.Text,_Ad.TextColor3,_Ad.TextSize,_Ad.Font=UDim2.new(0,32,0,20),UDim2.new(0,96,0,_ud),Color3.fromRGB(0,150,100),string.char(43),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Ad).CornerRadius=UDim.new(0,4)return _ab,_zd,_Ad end local _Bd,_Cd,_Dd=_td(25,string.char(88,58),Color3.fromRGB(255,100,100),_s)local _Ed,_Fd,_Gd=_td(48,string.char(89,58),Color3.fromRGB(100,255,100),_t)local _Hd,_Id,_Jd=_td(71,string.char(90,58),Color3.fromRGB(100,100,255),_u)local function _Kd(_la,_hb,_fd)local _Hb=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_rd)_Hb.Size,_Hb.Position,_Hb.BackgroundColor3,_Hb.Text,_Hb.TextColor3,_Hb.TextSize,_Hb.Font=UDim2.new(0,30,0,20),UDim2.new(0,_la,0,_hb),Color3.fromRGB(80,80,100),tostring(_fd),Color3.fromRGB(255,255,255),10,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Hb).CornerRadius=UDim.new(0,4)return _Hb end local _Ld=_Kd(140,25,5)local _Md=_Kd(173,25,10)_Md.BackgroundColor3=Color3.fromRGB(0,150,200)local _Nd=_Kd(206,25,20)local _Od=_Kd(140,48,30)local _Pd=_Kd(173,48,40)local _Qd=_Kd(206,48,50)local _Rd=Instance.new(string.char(70,114,97,109,101),_Yb)_Rd.Size,_Rd.BackgroundColor3,_Rd.BorderSizePixel=UDim2.new(1,-8,0,105),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_Rd).CornerRadius=UDim.new(0,8)local _Sd=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Rd)_Sd.Size,_Sd.Position,_Sd.BackgroundTransparency,_Sd.Text,_Sd.TextColor3,_Sd.TextSize,_Sd.Font=UDim2.new(1,0,0,18),UDim2.new(0,0,0,2),1,string.char(55357,56580,32,82,111,116,97,116,105,111,110,32,40,88,45,89,45,90,41),Color3.fromRGB(255,180,0),11,Enum.Font.GothamBold local function _Td(_ud,_vd,_wd,_xd)local _yd=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Rd)_yd.Size,_yd.Position,_yd.BackgroundTransparency,_yd.Text,_yd.TextColor3,_yd.TextSize,_yd.Font=UDim2.new(0,18,0,20),UDim2.new(0,6,0,_ud),1,_vd,_wd,11,Enum.Font.GothamBold local _ab=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Rd)_ab.Size,_ab.Position,_ab.BackgroundColor3,_ab.Text,_ab.TextColor3,_ab.TextSize,_ab.Font=UDim2.new(0,32,0,20),UDim2.new(0,24,0,_ud),Color3.fromRGB(200,60,60),string.char(45,49,53,176),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_ab).CornerRadius=UDim.new(0,4)local _zd=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_Rd)_zd.Size,_zd.Position,_zd.BackgroundColor3,_zd.Text,_zd.TextColor3,_zd.TextSize,_zd.Font=UDim2.new(0,46,0,20),UDim2.new(0,58,0,_ud),Color3.fromRGB(60,60,75),tostring(_xd)..string.char(176),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_zd).CornerRadius=UDim.new(0,4)local _Ad=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Rd)_Ad.Size,_Ad.Position,_Ad.BackgroundColor3,_Ad.Text,_Ad.TextColor3,_Ad.TextSize,_Ad.Font=UDim2.new(0,32,0,20),UDim2.new(0,106,0,_ud),Color3.fromRGB(0,150,100),string.char(43,49,53,176),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_Ad).CornerRadius=UDim.new(0,4)return _ab,_zd,_Ad end local _Ud,_Vd,_Wd=_Td(25,string.char(88,58),Color3.fromRGB(255,100,100),_v)local _Xd,_Yd,_Zd=_Td(48,string.char(89,58),Color3.fromRGB(100,255,100),_w)local _ae,_be,_ce=_Td(71,string.char(90,58),Color3.fromRGB(100,100,255),_x)local _de=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Rd)_de.Size,_de.Position,_de.BackgroundColor3,_de.Text,_de.TextColor3,_de.TextSize,_de.Font=UDim2.new(0,60,0,20),UDim2.new(0,150,0,48),Color3.fromRGB(150,150,150),string.char(82,101,115,101,116,32,48,176),Color3.fromRGB(0,0,0),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_de).CornerRadius=UDim.new(0,4)local _ee=Instance.new(string.char(70,114,97,109,101),_Yb)_ee.Size,_ee.BackgroundColor3,_ee.BorderSizePixel=UDim2.new(1,-8,0,42),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_ee).CornerRadius=UDim.new(0,8)local _fe=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_ee)_fe.Size,_fe.Position,_fe.BackgroundColor3,_fe.Text,_fe.TextColor3,_fe.TextSize,_fe.Font=UDim2.new(0.48,0,0,30),UDim2.new(0.01,0,0.5,-15),Color3.fromRGB(200,150,50),string.char(8617,65039,32,85,110,100,111),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_fe).CornerRadius=UDim.new(0,6)local _ge=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_ee)_ge.Size,_ge.Position,_ge.BackgroundColor3,_ge.Text,_ge.TextColor3,_ge.TextSize,_ge.Font=UDim2.new(0.48,0,0,30),UDim2.new(0.51,0,0.5,-15),Color3.fromRGB(80,120,200),string.char(8618,65039,32,82,101,100,111),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_ge).CornerRadius=UDim.new(0,6)local _he=Instance.new(string.char(70,114,97,109,101),_Yb)_he.Size,_he.BackgroundColor3,_he.BorderSizePixel=UDim2.new(1,-8,0,80),Color3.fromRGB(45,45,60),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_he).CornerRadius=UDim.new(0,8)local _ie=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_he)_ie.Size,_ie.Position,_ie.BackgroundTransparency,_ie.Text,_ie.TextColor3,_ie.TextSize,_ie.Font=UDim2.new(1,0,0,18),UDim2.new(0,0,0,2),1,string.char(55356,57256,32,77,97,116,101,114,105,97,108,115),Color3.fromRGB(0,200,255),11,Enum.Font.GothamBold local _je=Instance.new(string.char(83,99,114,111,108,108,105,110,103,70,114,97,109,101),_he)_je.Size,_je.Position,_je.BackgroundTransparency,_je.ScrollBarThickness,_je.CanvasSize,_je.ScrollingDirection=UDim2.new(1,-10,0,48),UDim2.new(0,5,0,26),1,3,UDim2.new(0,#_o*55,0,0),Enum.ScrollingDirection.X for _wb,_ab in ipairs(_o)do local _Ac=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_je)_Ac.Size,_Ac.Position,_Ac.BackgroundColor3,_Ac.Text,_Ac.TextColor3,_Ac.TextSize,_Ac.Font,_Ac.TextStrokeTransparency=UDim2.new(0,48,0,40),UDim2.new(0,5+(_wb-1)*53,0,0),_ab.Color,_ab.Name,Color3.fromRGB(255,255,255),8,Enum.Font.GothamBold,0.5 _Ac.MouseButton1Click:Connect(function()_p=_ab _ac.Text=string.char(77,97,116,101,114,105,97,108,58,32).._ab.Name end)end local _ke=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Yb)_ke.Size,_ke.BackgroundColor3,_ke.Text,_ke.TextColor3,_ke.TextSize,_ke.Font=UDim2.new(1,-8,0,32),Color3.fromRGB(120,80,200),string.char(55357,56523,32,71,101,116,32,83,99,114,105,112,116,32,67,111,100,101),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_ke).CornerRadius=UDim.new(0,8)local _le=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_Yb)_le.Size,_le.BackgroundColor3,_le.Text,_le.TextColor3,_le.TextSize,_le.Font=UDim2.new(1,-8,0,32),Color3.fromRGB(180,60,60),string.char(55357,56785,65039,32,67,108,101,97,114,32,65,108,108),Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_le).CornerRadius=UDim.new(0,8)local _me=Instance.new(string.char(70,114,97,109,101),_Lb)_me.Name,_me.Size,_me.Position,_me.BackgroundColor3,_me.BorderSizePixel,_me.Visible,_me.Active,_me.Draggable=string.char(83,99,114,105,112,116,87,105,110,100,111,119),UDim2.new(0,400,0,350),UDim2.new(0.5,-200,0.5,-175),Color3.fromRGB(30,30,35),0,false,true,true Instance.new(string.char(85,73,67,111,114,110,101,114),_me).CornerRadius=UDim.new(0,12)local _ne=Instance.new(string.char(85,73,83,116,114,111,107,101),_me)_ne.Color,_ne.Thickness=Color3.fromRGB(120,80,200),2 local _oe=Instance.new(string.char(70,114,97,109,101),_me)_oe.Size,_oe.BackgroundColor3,_oe.BorderSizePixel=UDim2.new(1,0,0,40),Color3.fromRGB(45,45,55),0 Instance.new(string.char(85,73,67,111,114,110,101,114),_oe).CornerRadius=UDim.new(0,12)local _pe=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_oe)_pe.Size,_pe.Position,_pe.BackgroundTransparency,_pe.Text,_pe.TextColor3,_pe.TextSize,_pe.Font,_pe.TextXAlignment=UDim2.new(1,-110,1,0),UDim2.new(0,12,0,0),1,string.char(55357,56523,32,71,101,110,101,114,97,116,101,100,32,83,99,114,105,112,116),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold,Enum.TextXAlignment.Left local _qe=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_oe)_qe.Size,_qe.Position,_qe.BackgroundColor3,_qe.Text,_qe.TextColor3,_qe.TextSize,_qe.Font=UDim2.new(0,50,0,30),UDim2.new(1,-120,0.5,-15),Color3.fromRGB(0,150,100),string.char(67,111,112,121),Color3.fromRGB(255,255,255),12,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_qe).CornerRadius=UDim.new(0,6)local _re=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_oe)_re.Size,_re.Position,_re.BackgroundColor3,_re.Text,_re.TextColor3,_re.TextSize,_re.Font=UDim2.new(0,80,0,30),UDim2.new(1,-210,0.5,-15),Color3.fromRGB(150,0,255),string.char(83,97,118,101,32,70,105,108,101),Color3.fromRGB(255,255,255),12,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_re).CornerRadius=UDim.new(0,6)local _se=Instance.new(string.char(84,101,120,116,66,117,116,116,111,110),_oe)_se.Size,_se.Position,_se.BackgroundColor3,_se.Text,_se.TextColor3,_se.TextSize,_se.Font=UDim2.new(0,30,0,30),UDim2.new(1,-40,0.5,-15),Color3.fromRGB(200,60,60),string.char(88),Color3.fromRGB(255,255,255),14,Enum.Font.GothamBold Instance.new(string.char(85,73,67,111,114,110,101,114),_se).CornerRadius=UDim.new(0,6)local _te=Instance.new(string.char(83,99,114,111,108,108,105,110,103,70,114,97,109,101),_me)_te.Size,_te.Position,_te.BackgroundColor3,_te.BorderSizePixel,_te.ScrollBarThickness=UDim2.new(1,-16,1,-100),UDim2.new(0,8,0,48),Color3.fromRGB(20,20,25),0,5 Instance.new(string.char(85,73,67,111,114,110,101,114),_te).CornerRadius=UDim.new(0,6)local _ue=Instance.new(string.char(84,101,120,116,76,97,98,101,108),_te)_ue.Size,_ue.Position,_ue.BackgroundTransparency,_ue.Text,_ue.TextColor3,_ue.TextSize,_ue.Font,_ue.TextXAlignment,_ue.TextYAlignment,_ue.AutomaticSize,_ue.TextWrapped=UDim2.new(1,-12,0,0),UDim2.new(0,6,0,6),1,string.char(45,45,32,78,111,32,116,101,114,114,97,105,110,32,115,112,97,119,110,101,100,32,121,101,116,32,45,45),Color3.fromRGB(200,200,200),11,Enum.Font.Code,Enum.TextXAlignment.Left,Enum.TextYAlignment.Top,Enum.AutomaticSize.Y,true local function _ve(_yd,_we,_kc,_xe,_ye,_ze)_yd.MouseButton1Click:Connect(function()_ye._zd=_ye._zd-1 if _ye._zd<1 then _ye._zd=#_xe end _kc.Text=_xe[_ye._zd].name _kc.BackgroundColor3=_xe[_ye._zd]._wd _ze()end)_we.MouseButton1Click:Connect(function()_ye._zd=_ye._zd+1 if _ye._zd>#_xe then _ye._zd=1 end _kc.Text=_xe[_ye._zd].name _kc.BackgroundColor3=_xe[_ye._zd]._wd _ze()end)end _ve(_mc,_nc,_oc,_i,{_zd=_j},function()_ra()end)_ve(_pc,_qc,_rc,_k,{_zd=_l},function()_ra()end)_ve(_sc,_tc,_uc,_m,{_zd=_n},function()_ra()end)local function _Ae(_Be,_Ce)_r=_Be _Bc.BackgroundColor3=Color3.fromRGB(65,65,80)_Cc.BackgroundColor3=Color3.fromRGB(65,65,80)_Dc.BackgroundColor3=Color3.fromRGB(65,65,80)_Ce.BackgroundColor3=Color3.fromRGB(0,150,255)_ma()end _Bc.MouseButton1Click:Connect(function()_Ae(string.char(66,117,105,108,100),_Bc)end)_Cc.MouseButton1Click:Connect(function()_Ae(string.char(70,108,97,116,116,101,110),_Cc)end)_Dc.MouseButton1Click:Connect(function()_Ae(string.char(80,97,105,110,116),_Dc)end)local function _De(_Ee,_Ce)_q=_Ee _Hc.BackgroundColor3=Color3.fromRGB(65,65,80)_Ic.BackgroundColor3=Color3.fromRGB(65,65,80)_Jc.BackgroundColor3=Color3.fromRGB(65,65,80)_Ce.BackgroundColor3=Color3.fromRGB(0,150,255)_U()end _Hc.MouseButton1Click:Connect(function()_De(string.char(66,97,108,108),_Hc)end)_Ic.MouseButton1Click:Connect(function()_De(string.char(66,108,111,99,107),_Ic)end)_Jc.MouseButton1Click:Connect(function()_De(string.char(87,101,100,103,101),_Jc)end)_Nc.MouseButton1Click:Connect(function()_D=math.max(0,_D-0.05)_Oc.Text=string.format(string.char(37,46,50,102),_D)if _z then _z.Transparency=_D end end)_Pc.MouseButton1Click:Connect(function()_D=math.min(1,_D+0.05)_Oc.Text=string.format(string.char(37,46,50,102),_D)if _z then _z.Transparency=_D end end)_Qc.MouseButton1Click:Connect(function()_E=not _E if _E then _Qc.BackgroundColor3=Color3.fromRGB(0,150,100)_Qc.Text=string.char(84,101,109,98,117,115,32,84,101,114,114,97,105,110,32,47,32,87,97,116,101,114,58,32,79,78,32,9745,65039)else _Qc.BackgroundColor3=Color3.fromRGB(200,60,60)_Qc.Text=string.char(84,101,109,98,117,115,32,84,101,114,114,97,105,110,32,47,32,87,97,116,101,114,58,32,79,70,70)end end)_Tc.MouseButton1Click:Connect(function()_L=not _L if _L then _Tc.Text=string.char(79,78,32,10024)_Tc.BackgroundColor3=Color3.fromRGB(0,150,100)else _Tc.Text=string.char(79,70,70,32,9660)_Tc.BackgroundColor3=Color3.fromRGB(200,60,60)end end)_Uc.MouseButton1Click:Connect(function()_N=_N+1 if _N>#_M then _N=1 end _Uc.Text=_M[_N]end)_Wc.MouseButton1Click:Connect(function()_O=math.max(1,_O-1);_Xc.Text=tostring(_O)end)_Yc.MouseButton1Click:Connect(function()_O=math.min(5,_O+1);_Xc.Text=tostring(_O)end)_bd.MouseButton1Click:Connect(function()_F=not _F if _F then _bd.Text=string.char(79,78,32,9745,65039)_bd.BackgroundColor3=Color3.fromRGB(0,150,100)else _bd.Text=string.char(79,70,70)_bd.BackgroundColor3=Color3.fromRGB(200,60,60)end _ma();_ba()end)_cd.MouseButton1Click:Connect(function()_J=not _J if _J then _cd.Text=string.char(86,105,115,117,97,108,32,71,117,105,100,101,58,32,79,78)_cd.BackgroundColor3=Color3.fromRGB(0,150,100)else _cd.Text=string.char(86,105,115,117,97,108,32,71,117,105,100,101,58,32,79,70,70)_cd.BackgroundColor3=Color3.fromRGB(60,60,75)end _ba()end)local function _Fe(_Ge,_Ac)_H=_Ge _gd.BackgroundColor3=Color3.fromRGB(80,80,100);_hd.BackgroundColor3=Color3.fromRGB(80,80,100);_id.BackgroundColor3=Color3.fromRGB(80,80,100);_jd.BackgroundColor3=Color3.fromRGB(80,80,100)_Ac.BackgroundColor3=Color3.fromRGB(0,150,200)_ma();_ba()end _gd.MouseButton1Click:Connect(function()_Fe(5,_gd)end)_hd.MouseButton1Click:Connect(function()_Fe(10,_hd)end)_id.MouseButton1Click:Connect(function()_Fe(20,_id)end)_jd.MouseButton1Click:Connect(function()_Fe(50,_jd)end)local function _He(_Ie,_Ac)_I[_Ie]=not _I[_Ie]if _I[_Ie]then _Ac.BackgroundColor3=Color3.fromRGB(0,150,100)else _Ac.BackgroundColor3=Color3.fromRGB(200,60,60)end _ma()end _od.MouseButton1Click:Connect(function()_He(string.char(88),_od)end)_pd.MouseButton1Click:Connect(function()_He(string.char(89),_pd)end)_qd.MouseButton1Click:Connect(function()_He(string.char(90),_qd)end)local function _Je(_Ke,type)local _fd=tonumber(_Ke.Text)if _fd then local _Le=math.clamp(math.floor(_fd),1,500)if type==string.char(88)then _s=_Le;_Ke.Text=tostring(_s)elseif type==string.char(89)then _t=_Le;_Ke.Text=tostring(_t)elseif type==string.char(90)then _u=_Le;_Ke.Text=tostring(_u)end _ma()end end _Cd.FocusLost:Connect(function()_Je(_Cd,string.char(88))end)_Fd.FocusLost:Connect(function()_Je(_Fd,string.char(89))end)_Id.FocusLost:Connect(function()_Je(_Id,string.char(90))end)_Bd.MouseButton1Click:Connect(function()_s=math.max(1,_s-1);_Cd.Text=tostring(_s);_ma()end)_Dd.MouseButton1Click:Connect(function()_s=math.min(500,_s+1);_Cd.Text=tostring(_s);_ma()end)_Ed.MouseButton1Click:Connect(function()_t=math.max(1,_t-1);_Fd.Text=tostring(_t);_ma()end)_Gd.MouseButton1Click:Connect(function()_t=math.min(500,_t+1);_Fd.Text=tostring(_t);_ma()end)_Hd.MouseButton1Click:Connect(function()_u=math.max(1,_u-1);_Id.Text=tostring(_u);_ma()end)_Jd.MouseButton1Click:Connect(function()_u=math.min(500,_u+1);_Id.Text=tostring(_u);_ma()end)local function _Me(_Ge)_s,_t,_u=_Ge,_Ge,_Ge _Cd.Text,_Fd.Text,_Id.Text=tostring(_s),tostring(_t),tostring(_u)_ma()end _Ld.MouseButton1Click:Connect(function()_Me(5)end)_Md.MouseButton1Click:Connect(function()_Me(10)end)_Nd.MouseButton1Click:Connect(function()_Me(20)end)_Od.MouseButton1Click:Connect(function()_Me(30)end)_Pd.MouseButton1Click:Connect(function()_Me(40)end)_Qd.MouseButton1Click:Connect(function()_Me(50)end)_Ud.MouseButton1Click:Connect(function()_v=(_v-15)%360;_Vd.Text=tostring(_v)..string.char(176);_ma()end)_Wd.MouseButton1Click:Connect(function()_v=(_v+15)%360;_Vd.Text=tostring(_v)..string.char(176);_ma()end)_Xd.MouseButton1Click:Connect(function()_w=(_w-15)%360;_Yd.Text=tostring(_w)..string.char(176);_ma()end)_Zd.MouseButton1Click:Connect(function()_w=(_w+15)%360;_Yd.Text=tostring(_w)..string.char(176);_ma()end)_ae.MouseButton1Click:Connect(function()_x=(_x-15)%360;_be.Text=tostring(_x)..string.char(176);_ma()end)_ce.MouseButton1Click:Connect(function()_x=(_x+15)%360;_be.Text=tostring(_x)..string.char(176);_ma()end)_de.MouseButton1Click:Connect(function()_v,_w,_x=0,0,0;_Vd.Text,_Yd.Text,_be.Text=string.char(48,176),string.char(48,176),string.char(48,176);_ma()end)_fe.MouseButton1Click:Connect(function()local _Ne,_Oe=_ub();_ac.Text=_Ne and(string.char(8617,65039,32).._Oe..string.char(32,40)..#_A..string.char(41))or(string.char(8617,65039,32).._Oe);_ac.TextColor3=_Ne and Color3.fromRGB(255,200,100)or Color3.fromRGB(255,100,100)end)_ge.MouseButton1Click:Connect(function()local _Ne,_Oe=_xb();_ac.Text=_Ne and(string.char(8618,65039,32).._Oe..string.char(32,40)..#_A..string.char(41))or(string.char(8618,65039,32).._Oe);_ac.TextColor3=_Ne and Color3.fromRGB(100,200,255)or Color3.fromRGB(255,100,100)end)_Wb.MouseButton1Click:Connect(function()_Sb.Visible=false;_Qb.Visible=true end)_Qb.MouseButton1Click:Connect(function()_Qb.Visible=false;_Sb.Visible=true end)_Xb.MouseButton1Click:Connect(function()_Lb:Destroy()end)_ke.MouseButton1Click:Connect(function()local _Ab=_zb()_me:SetAttribute(string.char(70,117,108,108,67,111,100,101),_Ab)if string.len(_Ab)>15000 then _ue.Text=string.sub(_Ab,1,15000)..string.char(10,10,45,45,32,47,47,47,32,75,79,68,69,32,84,69,82,76,65,76,85,32,80,65,78,74,65,78,71,32,85,78,84,85,75,32,68,73,84,65,77,80,73,76,75,65,78,32,40)..#_A..string.char(32,84,101,114,114,97,105,110,41,32,47,47,47,10,45,45,32,47,47,47,32,83,73,76,65,75,65,78,32,75,76,73,75,32,84,79,77,66,79,76,32,39,83,65,86,69,32,70,73,76,69,39,32,85,78,84,85,75,32,77,69,78,89,73,77,80,65,78,78,89,65,32,40,78,79,32,67,85,84,32,79,70,70,41,32,47,47,47)else _ue.Text=_Ab end _me.Visible=true end)_se.MouseButton1Click:Connect(function()_me.Visible=false end)_qe.MouseButton1Click:Connect(function()if setclipboard then setclipboard(_me:GetAttribute(string.char(70,117,108,108,67,111,100,101))or _ue.Text);_qe.Text=string.char(67,111,112,105,101,100,33);delay(1.5,function()_qe.Text=string.char(67,111,112,121)end)end end)_re.MouseButton1Click:Connect(function()local _Ab=_me:GetAttribute(string.char(70,117,108,108,67,111,100,101))or _ue.Text if writefile then local _Pe=string.char(69,76,66,82,85,90,72,95,84,101,114,114,97,105,110,95)..os.time()..string.char(46,108,117,97)writefile(_Pe,_Ab)_re.Text=string.char(83,97,118,101,100,32,105,110,32,87,111,114,107,115,112,97,99,101,33)else _re.Text=string.char(69,120,101,99,117,116,111,114,32,71,97,32,83,117,112,112,111,114,116)end delay(2,function()_re.Text=string.char(83,97,118,101,32,70,105,108,101)end)end)_le.MouseButton1Click:Connect(function()while#_B>0 do _ub()end _A,_B,_C={},{},{}_ac.Text=string.char(55357,56785,65039,32,83,101,115,115,105,111,110,32,99,108,101,97,114,101,100,33)_ac.TextColor3=Color3.fromRGB(255,100,100)end)_Ob.MouseButton1Click:Connect(function()if _y then _d:Create(_Ob,TweenInfo.new(0.1),{Size=UDim2.new(0,45,0,45)}):Play()wait(0.1)_d:Create(_Ob,TweenInfo.new(0.2),{Size=UDim2.new(0,50,0,50)}):Play()if _lb()then _ac.Text=string.char(9989,32,83,112,97,119,110,101,100,33,32,40)..#_A..string.char(32,116,111,116,97,108,41)_ac.TextColor3=Color3.fromRGB(0,255,100)else _ac.Text=string.char(10060,32,70,97,105,108,101,100,33)_ac.TextColor3=Color3.fromRGB(255,100,100)end else _ac.Text=string.char(10060,32,65,105,109,32,97,116,32,103,114,111,117,110,100,33)_ac.TextColor3=Color3.fromRGB(255,100,100)end end)local _Qe=false local _Db,_Re _Ub.InputBegan:Connect(function(_Se)if _Se.UserInputType==Enum.UserInputType.MouseButton1 or _Se.UserInputType==Enum.UserInputType.Touch then _Qe=true;_Db=_Se.Position;_Re=_Sb.Position end end)_Ub.InputEnded:Connect(function()_Qe=false end)_c.InputChanged:Connect(function(_Se)if _Qe and(_Se.UserInputType==Enum.UserInputType.MouseMovement or _Se.UserInputType==Enum.UserInputType.Touch)then local _Te=_Se.Position-_Db _Sb.Position=UDim2.new(_Re.X.Scale,_Re.X.Offset+_Te.X,_Re.Y.Scale,_Re.Y.Offset+_Te.Y)end end)_b.RenderStepped:Connect(_ma)print(string.char(9989,32,84,101,114,114,97,105,110,32,69,100,105,116,111,114,32,118,49,54,46,51,32,76,111,97,100,101,100,33))print(string.char(55357,57056,65039,32,70,105,120,101,100,58,32,84,111,111,108,32,77,111,100,101,32,116,101,114,112,105,115,97,104,32,100,97,114,105,32,66,97,115,101,32,83,104,97,112,101,32,40,66,97,108,108,32,70,108,97,116,116,101,110,47,80,97,105,110,116,32,83,117,112,112,111,114,116,101,100,41))print(string.char(10024,32,65,100,100,101,100,58,32,84,101,109,98,117,115,32,87,97,116,101,114,47,84,101,114,114,97,105,110,32,40,82,97,121,99,97,115,116,32,73,103,110,111,114,101,41,32,38,32,80,114,101,118,105,101,119,32,84,114,97,110,115,112,97,114,101,110,99,121))print(string.char(55357,56513,32,65,100,100,101,100,58,32,83,97,118,101,32,70,105,108,101,32,47,32,87,114,105,116,101,102,105,108,101,32,117,110,116,117,107,32,115,99,114,105,112,116,32,114,97,107,115,97,115,97,32,40,62,53,48,48,48,32,116,101,114,114,97,105,110,41,32,97,103,97,114,32,116,105,100,97,107,32,99,117,116,45,111,102,102,46))
+]]
+    
+    code = code .. "local function BL(d)\n"
+    code = code .. "    local pos = Vector3.new(d[1], d[2], d[3])\n"
+    code = code .. "    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Brick=Enum.Material.Brick,Wood=Enum.Material.WoodPlanks,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice}\n"
+    code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
+    code = code .. "    local sizeVec = Vector3.new(d[4], d[5], d[6])\n"
+    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[d[9] or 3]) end)\n"
+    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3]) end)\n"
+    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2]) end)\n"
+    code = code .. "    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(d[12] or 0), math.rad(d[13] or 0), math.rad(d[14] or 0))\n"
+    code = code .. "    if d[8] == 'Block' then\n"
+    code = code .. "        Terrain:FillBlock(cf, sizeVec, mat)\n"
+    code = code .. "    elseif d[8] == 'Wedge' then\n"
+    code = code .. "        Terrain:FillWedge(cf, sizeVec, mat)\n"
+    code = code .. "    elseif d[8] == 'Flatten' then\n"
+    code = code .. "        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
+    code = code .. "        Terrain:FillBlock(baseCf, Vector3.new(d[4], 2, d[6]), mat)\n"
+    code = code .. "        Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2) + 1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
+    code = code .. "    elseif d[8] == 'Paint' then\n"
+    code = code .. "        local halfSize = sizeVec / 2\n"
+    code = code .. "        local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)\n"
+    code = code .. "        local m, o = Terrain:ReadVoxels(region, 4)\n"
+    code = code .. "        for x = 1, m.Size.X do for y = 1, m.Size.Y do for z = 1, m.Size.Z do\n"
+    code = code .. "            if m[x][y][z] ~= Enum.Material.Air and m[x][y][z] ~= mat then m[x][y][z] = mat end\n"
+    code = code .. "        end end end\n"
+    code = code .. "        Terrain:WriteVoxels(region, 4, m, o)\n"
+    code = code .. "    else\n"
+    code = code .. "        Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat)\n"
+    code = code .. "    end\n"
+    code = code .. "    if d[15] and d[8] ~= 'Flatten' and d[8] ~= 'Paint' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16]) end\n"
+    code = code .. "end\n\n"
+    
+    local batchSize = 20
+    local numBatches = math.ceil(#SpawnedData / batchSize)
+    for b = 1, numBatches do
+        code = code .. "for _,d in ipairs({"
+        local startIdx = (b-1) * batchSize + 1
+        local endIdx = math.min(b * batchSize, #SpawnedData)
+        for i = startIdx, endIdx do
+            local d = SpawnedData[i]
+            local sEnabled = d[15] and "true" or "false"
+            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 2) .. "}"
+            if i < endIdx then code = code .. "," end
+        end
+        code = code .. "})do BL(d)end\n"
+    end
+    code = code .. "\nprint('[Terrain] " .. #SpawnedData .. " blocks spawned!')"
+    return code
+end
+
+--// GUI SETUP
+local gui = Instance.new("ScreenGui")
+gui.Name = "TerrainEditor"
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local ch = Instance.new("Frame", gui)
+ch.Size, ch.Position, ch.BackgroundTransparency = UDim2.new(0, 20, 0, 20), UDim2.new(0.5, -10, 0.5, -10), 1
+local dot = Instance.new("Frame", ch)
+dot.Size, dot.Position, dot.BackgroundColor3, dot.BorderSizePixel = UDim2.new(0, 4, 0, 4), UDim2.new(0.5, -2, 0.5, -2), Color3.fromRGB(255, 255, 255), 0
+Instance.new("UICorner", dot)
+
+local spawnBtn = Instance.new("TextButton", gui)
+spawnBtn.Name, spawnBtn.Size, spawnBtn.Position, spawnBtn.BackgroundColor3 = "SpawnBtn", UDim2.new(0, 50, 0, 50), UDim2.new(0, 4, 0, 50), Color3.fromRGB(0, 200, 100)
+spawnBtn.Text, spawnBtn.TextSize, spawnBtn.Font = "🎯", 30, Enum.Font.GothamBlack
+Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(1, 0)
+local spawnStroke = Instance.new("UIStroke", spawnBtn)
+spawnStroke.Color, spawnStroke.Thickness = Color3.fromRGB(255, 255, 255), 3
+
+local minIcon = Instance.new("TextButton", gui)
+minIcon.Name, minIcon.Size, minIcon.Position, minIcon.BackgroundColor3 = "MinIcon", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 105), Color3.fromRGB(0, 150, 255)
+minIcon.Text, minIcon.TextSize, minIcon.Font, minIcon.Visible, minIcon.Active = "⚙️", 22, Enum.Font.GothamBold, false, true
+Instance.new("UICorner", minIcon).CornerRadius = UDim.new(1, 0)
+local minIconStroke = Instance.new("UIStroke", minIcon)
+minIconStroke.Color, minIconStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
+
+local panel = Instance.new("Frame", gui)
+panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 450), UDim2.new(1, -300, 1, -460), Color3.fromRGB(30, 30, 40), 0
+Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
+local panelStroke = Instance.new("UIStroke", panel)
+panelStroke.Color, panelStroke.Thickness = Color3.fromRGB(0, 150, 255), 2
+
+local titleBar = Instance.new("Frame", panel)
+titleBar.Size, titleBar.BackgroundColor3, titleBar.BorderSizePixel = UDim2.new(1, 0, 0, 35), Color3.fromRGB(40, 40, 55), 0
+Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
+
+local titleText = Instance.new("TextLabel", titleBar)
+titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.2", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+
+local minBtn = Instance.new("TextButton", titleBar)
+minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
+minBtn.Text, minBtn.TextColor3, minBtn.TextSize, minBtn.Font = "−", Color3.fromRGB(255, 255, 255), 18, Enum.Font.GothamBold
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
+
+local closeBtn = Instance.new("TextButton", titleBar)
+closeBtn.Size, closeBtn.Position, closeBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -33, 0.5, -14), Color3.fromRGB(200, 60, 60)
+closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+
+local scroll = Instance.new("ScrollingFrame", panel)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1450)
+local layout = Instance.new("UIListLayout", scroll)
+layout.Padding = UDim.new(0, 6)
+
+local status = Instance.new("TextLabel", scroll)
+status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, status.TextSize, status.Font = UDim2.new(1, -8, 0, 18), 1, "Aim & tap 🎯 to spawn", Color3.fromRGB(0, 255, 150), 10, Enum.Font.Gotham
+
+--// COLORS
+local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx)
+    local sec = Instance.new("Frame", parent)
+    sec.Size, sec.BackgroundColor3, sec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
+    Instance.new("UICorner", sec).CornerRadius = UDim.new(0, 8)
+    local t = Instance.new("TextLabel", sec)
+    t.Size, t.Position, t.BackgroundTransparency, t.Text, t.TextColor3, t.TextSize, t.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, titleStr, titleColor, 11, Enum.Font.GothamBold
+    local lBtn = Instance.new("TextButton", sec)
+    lBtn.Size, lBtn.Position, lBtn.BackgroundColor3, lBtn.Text, lBtn.TextColor3, lBtn.TextSize, lBtn.Font = UDim2.new(0, 28, 0, 22), UDim2.new(0, 5, 0, 24), Color3.fromRGB(60, 60, 75), "←", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+    Instance.new("UICorner", lBtn).CornerRadius = UDim.new(0, 6)
+    local disp = Instance.new("TextLabel", sec)
+    disp.Size, disp.Position, disp.BackgroundColor3, disp.Text, disp.TextColor3, disp.TextSize, disp.Font = UDim2.new(1, -74, 0, 22), UDim2.new(0, 38, 0, 24), colorArr[initialIdx].color, colorArr[initialIdx].name, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+    Instance.new("UICorner", disp).CornerRadius = UDim.new(0, 6)
+    local rBtn = Instance.new("TextButton", sec)
+    rBtn.Size, rBtn.Position, rBtn.BackgroundColor3, rBtn.Text, rBtn.TextColor3, rBtn.TextSize, rBtn.Font = UDim2.new(0, 28, 0, 22), UDim2.new(1, -33, 0, 24), Color3.fromRGB(60, 60, 75), "→", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+    Instance.new("UICorner", rBtn).CornerRadius = UDim.new(0, 6)
+    return lBtn, rBtn, disp
+end
+
+local grassLeft, grassRight, grassDisplay = CreateColorSec(scroll, "🌿 Grass Color", grassColors, Color3.fromRGB(0, 255, 100), currentGrassColorIndex)
+local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGrass Color", leafyGrassColors, Color3.fromRGB(100, 220, 80), currentLeafyGrassColorIndex)
+local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
+
+--// SHAPE SECTION (WITH PAINT MODE)
+local shapeSec = Instance.new("Frame", scroll)
+shapeSec.Size, shapeSec.BackgroundColor3, shapeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", shapeSec).CornerRadius = UDim.new(0, 8)
+local shapeTitle = Instance.new("TextLabel", shapeSec)
+shapeTitle.Size, shapeTitle.Position, shapeTitle.BackgroundTransparency, shapeTitle.Text, shapeTitle.TextColor3, shapeTitle.TextSize, shapeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔷 Shape", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
+
+local function CreateShapeBtn(txt, xPos)
+    local btn = Instance.new("TextButton", shapeSec)
+    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font = UDim2.new(0.18, 0, 0, 28), UDim2.new(xPos, 0, 0, 25), Color3.fromRGB(65, 65, 80), txt, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
+
+local ballBtn = CreateShapeBtn("Ball", 0.02)
+ballBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+local blockBtn = CreateShapeBtn("Block", 0.21)
+local wedgeBtn = CreateShapeBtn("Wedge", 0.40)
+local flatBtn = CreateShapeBtn("Flat", 0.59)
+local paintBtn = CreateShapeBtn("Paint", 0.78)
+
+--// SMOOTH TERRAIN GUI SECTION
+local smoothSec = Instance.new("Frame", scroll)
+smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
+local smoothTitle = Instance.new("TextLabel", smoothSec)
+smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
+
+local smoothToggleBtn = Instance.new("TextButton", smoothSec)
+smoothToggleBtn.Size, smoothToggleBtn.Position, smoothToggleBtn.BackgroundColor3, smoothToggleBtn.Text, smoothToggleBtn.TextColor3, smoothToggleBtn.TextSize, smoothToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF ▼", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", smoothToggleBtn).CornerRadius = UDim.new(0, 4)
+
+local smoothModeBtn = Instance.new("TextButton", smoothSec)
+smoothModeBtn.Size, smoothModeBtn.Position, smoothModeBtn.BackgroundColor3, smoothModeBtn.Text, smoothModeBtn.TextColor3, smoothModeBtn.TextSize, smoothModeBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), SmoothModes[1], Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", smoothModeBtn).CornerRadius = UDim.new(0, 4)
+
+local intL = Instance.new("TextLabel", smoothSec)
+intL.Size, intL.Position, intL.BackgroundTransparency, intL.Text, intL.TextColor3, intL.TextSize, intL.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Intensity:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
+
+local intMinus = Instance.new("TextButton", smoothSec)
+intMinus.Size, intMinus.Position, intMinus.BackgroundColor3, intMinus.Text, intMinus.TextColor3, intMinus.TextSize, intMinus.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 72, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", intMinus).CornerRadius = UDim.new(0, 4)
+
+local intDisp = Instance.new("TextLabel", smoothSec)
+intDisp.Size, intDisp.Position, intDisp.BackgroundColor3, intDisp.Text, intDisp.TextColor3, intDisp.TextSize, intDisp.Font = UDim2.new(0, 30, 0, 20), UDim2.new(0, 100, 0, 53), Color3.fromRGB(40, 40, 50), tostring(SmoothIntensity), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", intDisp).CornerRadius = UDim.new(0, 4)
+
+local intPlus = Instance.new("TextButton", smoothSec)
+intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 133, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", intPlus).CornerRadius = UDim.new(0, 4)
+
+--// SNAP TO GRID GUI SECTION
+local snapSec = Instance.new("Frame", scroll)
+snapSec.Size, snapSec.BackgroundColor3, snapSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", snapSec).CornerRadius = UDim.new(0, 8)
+local snapTitle = Instance.new("TextLabel", snapSec)
+snapTitle.Size, snapTitle.Position, snapTitle.BackgroundTransparency, snapTitle.Text, snapTitle.TextColor3, snapTitle.TextSize, snapTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📐 Snap to Grid", Color3.fromRGB(255, 255, 100), 11, Enum.Font.GothamBold
+
+local snapToggleBtn = Instance.new("TextButton", snapSec)
+snapToggleBtn.Size, snapToggleBtn.Position, snapToggleBtn.BackgroundColor3, snapToggleBtn.Text, snapToggleBtn.TextColor3, snapToggleBtn.TextSize, snapToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", snapToggleBtn).CornerRadius = UDim.new(0, 4)
+
+local visualBtn = Instance.new("TextButton", snapSec)
+visualBtn.Size, visualBtn.Position, visualBtn.BackgroundColor3, visualBtn.Text, visualBtn.TextColor3, visualBtn.TextSize, visualBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), "Visual Guide: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", visualBtn).CornerRadius = UDim.new(0, 4)
+
+local gridSizeL = Instance.new("TextLabel", snapSec)
+gridSizeL.Size, gridSizeL.Position, gridSizeL.BackgroundTransparency, gridSizeL.Text, gridSizeL.TextColor3, gridSizeL.TextSize, gridSizeL.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Grid Size:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
+
+local function CreateSnapPreset(x, val)
+    local b = Instance.new("TextButton", snapSec)
+    b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, x, 0, 53), Color3.fromRGB(80, 80, 100), tostring(val), Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    return b
+end
+local sPreset5 = CreateSnapPreset(72, 5)
+local sPreset10 = CreateSnapPreset(100, 10)
+local sPreset20 = CreateSnapPreset(128, 20)
+local sPreset50 = CreateSnapPreset(156, 50)
+sPreset10.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+
+local snapAxisL = Instance.new("TextLabel", snapSec)
+snapAxisL.Size, snapAxisL.Position, snapAxisL.BackgroundTransparency, snapAxisL.Text, snapAxisL.TextColor3, snapAxisL.TextSize, snapAxisL.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 6, 0, 78), 1, "Axis:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
+
+local function CreateAxisToggle(x, axisStr, isEnabled)
+    local b = Instance.new("TextButton", snapSec)
+    b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, x, 0, 78), isEnabled and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(200, 60, 60), axisStr, Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    return b
+end
+local axisXBtn = CreateAxisToggle(72, "X", SnapAxis.X)
+local axisYBtn = CreateAxisToggle(100, "Y", SnapAxis.Y)
+local axisZBtn = CreateAxisToggle(128, "Z", SnapAxis.Z)
+
+
+--// SIZE SECTION
+local sizeSec = Instance.new("Frame", scroll)
+sizeSec.Size, sizeSec.BackgroundColor3, sizeSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", sizeSec).CornerRadius = UDim.new(0, 8)
+
+local sizeTitle = Instance.new("TextLabel", sizeSec)
+sizeTitle.Size, sizeTitle.Position, sizeTitle.BackgroundTransparency, sizeTitle.Text, sizeTitle.TextColor3, sizeTitle.TextSize, sizeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📐 Size (Custom Text Max 500)", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
+
+local function CreateSizeRow(yPos, labelStr, color, initialVal)
+    local l = Instance.new("TextLabel", sizeSec)
+    l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
+    local m = Instance.new("TextButton", sizeSec)
+    m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 24, 0, yPos), Color3.fromRGB(200, 60, 60), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+    Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
+    local v = Instance.new("TextBox", sizeSec)
+    v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font, v.ClearTextOnFocus = UDim2.new(0, 36, 0, 20), UDim2.new(0, 58, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold, false
+    Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
+    local p = Instance.new("TextButton", sizeSec)
+    p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 96, 0, yPos), Color3.fromRGB(0, 150, 100), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
+    return m, v, p
+end
+
+local xMinus, xValue, xPlus = CreateSizeRow(25, "X:", Color3.fromRGB(255, 100, 100), SizeX)
+local yMinus, yValue, yPlus = CreateSizeRow(48, "Y:", Color3.fromRGB(100, 255, 100), SizeY)
+local zMinus, zValue, zPlus = CreateSizeRow(71, "Z:", Color3.fromRGB(100, 100, 255), SizeZ)
+
+local function CreatePresetBtn(x, y, val)
+    local b = Instance.new("TextButton", sizeSec)
+    b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 30, 0, 20), UDim2.new(0, x, 0, y), Color3.fromRGB(80, 80, 100), tostring(val), Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    return b
+end
+local preset5 = CreatePresetBtn(140, 25, 5)
+local preset10 = CreatePresetBtn(173, 25, 10)
+preset10.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+local preset20 = CreatePresetBtn(206, 25, 20)
+local preset30 = CreatePresetBtn(140, 48, 30)
+local preset40 = CreatePresetBtn(173, 48, 40)
+local preset50 = CreatePresetBtn(206, 48, 50)
+
+--// ROTATION SECTION
+local rotSec = Instance.new("Frame", scroll)
+rotSec.Size, rotSec.BackgroundColor3, rotSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", rotSec).CornerRadius = UDim.new(0, 8)
+local rotTitle = Instance.new("TextLabel", rotSec)
+rotTitle.Size, rotTitle.Position, rotTitle.BackgroundTransparency, rotTitle.Text, rotTitle.TextColor3, rotTitle.TextSize, rotTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔄 Rotation (X-Y-Z)", Color3.fromRGB(255, 180, 0), 11, Enum.Font.GothamBold
+
+local function CreateRotRow(yPos, labelStr, color, initialVal)
+    local l = Instance.new("TextLabel", rotSec)
+    l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
+    local m = Instance.new("TextButton", rotSec)
+    m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 24, 0, yPos), Color3.fromRGB(200, 60, 60), "-15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+    Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
+    local v = Instance.new("TextLabel", rotSec)
+    v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font = UDim2.new(0, 46, 0, 20), UDim2.new(0, 58, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal).."°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+    Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
+    local p = Instance.new("TextButton", rotSec)
+    p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 106, 0, yPos), Color3.fromRGB(0, 150, 100), "+15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
+    return m, v, p
+end
+
+local rxMinus, rxValue, rxPlus = CreateRotRow(25, "X:", Color3.fromRGB(255, 100, 100), RotX)
+local ryMinus, ryValue, ryPlus = CreateRotRow(48, "Y:", Color3.fromRGB(100, 255, 100), RotY)
+local rzMinus, rzValue, rzPlus = CreateRotRow(71, "Z:", Color3.fromRGB(100, 100, 255), RotZ)
+
+local rotResetBtn = Instance.new("TextButton", rotSec)
+rotResetBtn.Size, rotResetBtn.Position, rotResetBtn.BackgroundColor3, rotResetBtn.Text, rotResetBtn.TextColor3, rotResetBtn.TextSize, rotResetBtn.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 150, 0, 48), Color3.fromRGB(150, 150, 150), "Reset 0°", Color3.fromRGB(0, 0, 0), 11, Enum.Font.GothamBold
+Instance.new("UICorner", rotResetBtn).CornerRadius = UDim.new(0, 4)
+
+--// UNDO/REDO & MATERIALS
+local undoSec = Instance.new("Frame", scroll)
+undoSec.Size, undoSec.BackgroundColor3, undoSec.BorderSizePixel = UDim2.new(1, -8, 0, 42), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", undoSec).CornerRadius = UDim.new(0, 8)
+local undoBtn = Instance.new("TextButton", undoSec)
+undoBtn.Size, undoBtn.Position, undoBtn.BackgroundColor3, undoBtn.Text, undoBtn.TextColor3, undoBtn.TextSize, undoBtn.Font = UDim2.new(0.48, 0, 0, 30), UDim2.new(0.01, 0, 0.5, -15), Color3.fromRGB(200, 150, 50), "↩️ Undo", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", undoBtn).CornerRadius = UDim.new(0, 6)
+local redoBtn = Instance.new("TextButton", undoSec)
+redoBtn.Size, redoBtn.Position, redoBtn.BackgroundColor3, redoBtn.Text, redoBtn.TextColor3, redoBtn.TextSize, redoBtn.Font = UDim2.new(0.48, 0, 0, 30), UDim2.new(0.51, 0, 0.5, -15), Color3.fromRGB(80, 120, 200), "↪️ Redo", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", redoBtn).CornerRadius = UDim.new(0, 6)
+
+local matSec = Instance.new("Frame", scroll)
+matSec.Size, matSec.BackgroundColor3, matSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", matSec).CornerRadius = UDim.new(0, 8)
+local matTitle = Instance.new("TextLabel", matSec)
+matTitle.Size, matTitle.Position, matTitle.BackgroundTransparency, matTitle.Text, matTitle.TextColor3, matTitle.TextSize, matTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🎨 Materials", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
+
+local matScroll = Instance.new("ScrollingFrame", matSec)
+matScroll.Size, matScroll.Position, matScroll.BackgroundTransparency, matScroll.ScrollBarThickness, matScroll.CanvasSize, matScroll.ScrollingDirection = UDim2.new(1, -10, 0, 48), UDim2.new(0, 5, 0, 26), 1, 3, UDim2.new(0, #Materials * 55, 0, 0), Enum.ScrollingDirection.X
+for i, m in ipairs(Materials) do
+    local btn = Instance.new("TextButton", matScroll)
+    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font, btn.TextStrokeTransparency = UDim2.new(0, 48, 0, 40), UDim2.new(0, 5 + (i-1) * 53, 0, 0), m.Color, m.Name, Color3.fromRGB(255, 255, 255), 8, Enum.Font.GothamBold, 0.5
+    btn.MouseButton1Click:Connect(function() CurrentMaterial = m status.Text = "Material: " .. m.Name end)
+end
+
+local scriptBtn = Instance.new("TextButton", scroll)
+scriptBtn.Size, scriptBtn.BackgroundColor3, scriptBtn.Text, scriptBtn.TextColor3, scriptBtn.TextSize, scriptBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(120, 80, 200), "📋 Get Script Code", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", scriptBtn).CornerRadius = UDim.new(0, 8)
+
+local clearBtn = Instance.new("TextButton", scroll)
+clearBtn.Size, clearBtn.BackgroundColor3, clearBtn.Text, clearBtn.TextColor3, clearBtn.TextSize, clearBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(180, 60, 60), "🗑️ Clear All", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 8)
+
+--// SCRIPT WINDOW
+local scriptWin = Instance.new("Frame", gui)
+scriptWin.Name, scriptWin.Size, scriptWin.Position, scriptWin.BackgroundColor3, scriptWin.BorderSizePixel, scriptWin.Visible, scriptWin.Active, scriptWin.Draggable = "ScriptWindow", UDim2.new(0, 400, 0, 350), UDim2.new(0.5, -200, 0.5, -175), Color3.fromRGB(30, 30, 35), 0, false, true, true
+Instance.new("UICorner", scriptWin).CornerRadius = UDim.new(0, 12)
+local scriptWinStroke = Instance.new("UIStroke", scriptWin)
+scriptWinStroke.Color, scriptWinStroke.Thickness = Color3.fromRGB(120, 80, 200), 2
+
+local scriptTitle = Instance.new("Frame", scriptWin)
+scriptTitle.Size, scriptTitle.BackgroundColor3, scriptTitle.BorderSizePixel = UDim2.new(1, 0, 0, 40), Color3.fromRGB(45, 45, 55), 0
+Instance.new("UICorner", scriptTitle).CornerRadius = UDim.new(0, 12)
+local scriptTitleText = Instance.new("TextLabel", scriptTitle)
+scriptTitleText.Size, scriptTitleText.Position, scriptTitleText.BackgroundTransparency, scriptTitleText.Text, scriptTitleText.TextColor3, scriptTitleText.TextSize, scriptTitleText.Font, scriptTitleText.TextXAlignment = UDim2.new(1, -110, 1, 0), UDim2.new(0, 12, 0, 0), 1, "📋 Generated Script", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+
+local copyBtn = Instance.new("TextButton", scriptTitle)
+copyBtn.Size, copyBtn.Position, copyBtn.BackgroundColor3, copyBtn.Text, copyBtn.TextColor3, copyBtn.TextSize, copyBtn.Font = UDim2.new(0, 60, 0, 30), UDim2.new(1, -130, 0.5, -15), Color3.fromRGB(0, 150, 100), "Copy", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold
+Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 6)
+
+local closeScriptBtn = Instance.new("TextButton", scriptTitle)
+closeScriptBtn.Size, closeScriptBtn.Position, closeScriptBtn.BackgroundColor3, closeScriptBtn.Text, closeScriptBtn.TextColor3, closeScriptBtn.TextSize, closeScriptBtn.Font = UDim2.new(0, 30, 0, 30), UDim2.new(1, -40, 0.5, -15), Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", closeScriptBtn).CornerRadius = UDim.new(0, 6)
+
+local codeScroll = Instance.new("ScrollingFrame", scriptWin)
+codeScroll.Size, codeScroll.Position, codeScroll.BackgroundColor3, codeScroll.BorderSizePixel, codeScroll.ScrollBarThickness = UDim2.new(1, -16, 1, -100), UDim2.new(0, 8, 0, 48), Color3.fromRGB(20, 20, 25), 0, 5
+Instance.new("UICorner", codeScroll).CornerRadius = UDim.new(0, 6)
+local codeText = Instance.new("TextLabel", codeScroll)
+codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text, codeText.TextColor3, codeText.TextSize, codeText.Font, codeText.TextXAlignment, codeText.TextYAlignment, codeText.AutomaticSize, codeText.TextWrapped = UDim2.new(1, -12, 0, 0), UDim2.new(0, 6, 0, 6), 1, "-- No terrain spawned yet --", Color3.fromRGB(200, 200, 200), 11, Enum.Font.Code, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top, Enum.AutomaticSize.Y, true
+
+--// EVENT CONNECTIONS
+
+-- Colors
+local function setupColorBtn(l, r, disp, arr, idxRef, cb)
+    l.MouseButton1Click:Connect(function() idxRef.v = idxRef.v - 1 if idxRef.v < 1 then idxRef.v = #arr end disp.Text = arr[idxRef.v].name disp.BackgroundColor3 = arr[idxRef.v].color cb() end)
+    r.MouseButton1Click:Connect(function() idxRef.v = idxRef.v + 1 if idxRef.v > #arr then idxRef.v = 1 end disp.Text = arr[idxRef.v].name disp.BackgroundColor3 = arr[idxRef.v].color cb() end)
+end
+setupColorBtn(grassLeft, grassRight, grassDisplay, grassColors, {v=currentGrassColorIndex}, function() ApplyMaterialColors() end)
+setupColorBtn(leafyLeft, leafyRight, leafyDisplay, leafyGrassColors, {v=currentLeafyGrassColorIndex}, function() ApplyMaterialColors() end)
+setupColorBtn(groundLeft, groundRight, groundDisplay, groundColors, {v=currentGroundColorIndex}, function() ApplyMaterialColors() end)
+
+-- Shape Selection
+local function SelectShape(shapeName, selectedBtn)
+    CurrentShape = shapeName
+    ballBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
+    blockBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
+    wedgeBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
+    flatBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
+    paintBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
+    selectedBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    CreatePreview()
+end
+ballBtn.MouseButton1Click:Connect(function() SelectShape("Ball", ballBtn) end)
+blockBtn.MouseButton1Click:Connect(function() SelectShape("Block", blockBtn) end)
+wedgeBtn.MouseButton1Click:Connect(function() SelectShape("Wedge", wedgeBtn) end)
+flatBtn.MouseButton1Click:Connect(function() SelectShape("Flatten", flatBtn) end)
+paintBtn.MouseButton1Click:Connect(function() SelectShape("Paint", paintBtn) end)
+
+-- Smooth Events
+smoothToggleBtn.MouseButton1Click:Connect(function()
+    SmoothEnabled = not SmoothEnabled
+    if SmoothEnabled then
+        smoothToggleBtn.Text = "ON ✨"
+        smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    else
+        smoothToggleBtn.Text = "OFF ▼"
+        smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    end
+end)
+
+smoothModeBtn.MouseButton1Click:Connect(function()
+    CurrentSmoothModeIndex = CurrentSmoothModeIndex + 1
+    if CurrentSmoothModeIndex > #SmoothModes then CurrentSmoothModeIndex = 1 end
+    smoothModeBtn.Text = SmoothModes[CurrentSmoothModeIndex]
+end)
+
+intMinus.MouseButton1Click:Connect(function() SmoothIntensity = math.max(1, SmoothIntensity - 1); intDisp.Text = tostring(SmoothIntensity) end)
+intPlus.MouseButton1Click:Connect(function() SmoothIntensity = math.min(5, SmoothIntensity + 1); intDisp.Text = tostring(SmoothIntensity) end)
+
+-- Snap Events
+snapToggleBtn.MouseButton1Click:Connect(function()
+    SnapEnabled = not SnapEnabled
+    if SnapEnabled then
+        snapToggleBtn.Text = "ON ☑️"
+        snapToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    else
+        snapToggleBtn.Text = "OFF"
+        snapToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    end
+    UpdatePreview(); UpdateGridVisual()
+end)
+
+visualBtn.MouseButton1Click:Connect(function()
+    ShowGridVisual = not ShowGridVisual
+    if ShowGridVisual then
+        visualBtn.Text = "Visual Guide: ON"
+        visualBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    else
+        visualBtn.Text = "Visual Guide: OFF"
+        visualBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+    end
+    UpdateGridVisual()
+end)
+
+local function SetGridSize(size, btn)
+    GridSize = size
+    sPreset5.BackgroundColor3 = Color3.fromRGB(80, 80, 100); sPreset10.BackgroundColor3 = Color3.fromRGB(80, 80, 100); sPreset20.BackgroundColor3 = Color3.fromRGB(80, 80, 100); sPreset50.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+    UpdatePreview(); UpdateGridVisual()
+end
+sPreset5.MouseButton1Click:Connect(function() SetGridSize(5, sPreset5) end)
+sPreset10.MouseButton1Click:Connect(function() SetGridSize(10, sPreset10) end)
+sPreset20.MouseButton1Click:Connect(function() SetGridSize(20, sPreset20) end)
+sPreset50.MouseButton1Click:Connect(function() SetGridSize(50, sPreset50) end)
+
+local function ToggleAxis(axisKey, btn)
+    SnapAxis[axisKey] = not SnapAxis[axisKey]
+    if SnapAxis[axisKey] then btn.BackgroundColor3 = Color3.fromRGB(0, 150, 100) else btn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end
+    UpdatePreview()
+end
+axisXBtn.MouseButton1Click:Connect(function() ToggleAxis("X", axisXBtn) end)
+axisYBtn.MouseButton1Click:Connect(function() ToggleAxis("Y", axisYBtn) end)
+axisZBtn.MouseButton1Click:Connect(function() ToggleAxis("Z", axisZBtn) end)
+
+-- TEXTBOX CUSTOM SIZES
+local function handleSizeInput(box, type)
+    local val = tonumber(box.Text)
+    if val then
+        local clamped = math.clamp(math.floor(val), 1, 500)
+        if type == "X" then SizeX = clamped; box.Text = tostring(SizeX)
+        elseif type == "Y" then SizeY = clamped; box.Text = tostring(SizeY)
+        elseif type == "Z" then SizeZ = clamped; box.Text = tostring(SizeZ) end
+        UpdatePreview()
+    end
+end
+xValue.FocusLost:Connect(function() handleSizeInput(xValue, "X") end)
+yValue.FocusLost:Connect(function() handleSizeInput(yValue, "Y") end)
+zValue.FocusLost:Connect(function() handleSizeInput(zValue, "Z") end)
+
+xMinus.MouseButton1Click:Connect(function() SizeX = math.max(1, SizeX - 1); xValue.Text = tostring(SizeX); UpdatePreview() end)
+xPlus.MouseButton1Click:Connect(function() SizeX = math.min(500, SizeX + 1); xValue.Text = tostring(SizeX); UpdatePreview() end)
+yMinus.MouseButton1Click:Connect(function() SizeY = math.max(1, SizeY - 1); yValue.Text = tostring(SizeY); UpdatePreview() end)
+yPlus.MouseButton1Click:Connect(function() SizeY = math.min(500, SizeY + 1); yValue.Text = tostring(SizeY); UpdatePreview() end)
+zMinus.MouseButton1Click:Connect(function() SizeZ = math.max(1, SizeZ - 1); zValue.Text = tostring(SizeZ); UpdatePreview() end)
+zPlus.MouseButton1Click:Connect(function() SizeZ = math.min(500, SizeZ + 1); zValue.Text = tostring(SizeZ); UpdatePreview() end)
+
+local function setPreset(size)
+    SizeX, SizeY, SizeZ = size, size, size
+    xValue.Text, yValue.Text, zValue.Text = tostring(SizeX), tostring(SizeY), tostring(SizeZ)
+    UpdatePreview()
+end
+preset5.MouseButton1Click:Connect(function() setPreset(5) end)
+preset10.MouseButton1Click:Connect(function() setPreset(10) end)
+preset20.MouseButton1Click:Connect(function() setPreset(20) end)
+preset30.MouseButton1Click:Connect(function() setPreset(30) end)
+preset40.MouseButton1Click:Connect(function() setPreset(40) end)
+preset50.MouseButton1Click:Connect(function() setPreset(50) end)
+
+-- Rotation
+rxMinus.MouseButton1Click:Connect(function() RotX = (RotX - 15) % 360; rxValue.Text = tostring(RotX) .. "°"; UpdatePreview() end)
+rxPlus.MouseButton1Click:Connect(function() RotX = (RotX + 15) % 360; rxValue.Text = tostring(RotX) .. "°"; UpdatePreview() end)
+ryMinus.MouseButton1Click:Connect(function() RotY = (RotY - 15) % 360; ryValue.Text = tostring(RotY) .. "°"; UpdatePreview() end)
+ryPlus.MouseButton1Click:Connect(function() RotY = (RotY + 15) % 360; ryValue.Text = tostring(RotY) .. "°"; UpdatePreview() end)
+rzMinus.MouseButton1Click:Connect(function() RotZ = (RotZ - 15) % 360; rzValue.Text = tostring(RotZ) .. "°"; UpdatePreview() end)
+rzPlus.MouseButton1Click:Connect(function() RotZ = (RotZ + 15) % 360; rzValue.Text = tostring(RotZ) .. "°"; UpdatePreview() end)
+rotResetBtn.MouseButton1Click:Connect(function() RotX, RotY, RotZ = 0, 0, 0; rxValue.Text, ryValue.Text, rzValue.Text = "0°", "0°", "0°"; UpdatePreview() end)
+
+-- Undo/Redo
+undoBtn.MouseButton1Click:Connect(function() local success, msg = Undo(); status.Text = success and ("↩️ " .. msg .. " (" .. #SpawnedData .. ")") or ("↩️ " .. msg); status.TextColor3 = success and Color3.fromRGB(255, 200, 100) or Color3.fromRGB(255, 100, 100) end)
+redoBtn.MouseButton1Click:Connect(function() local success, msg = Redo(); status.Text = success and ("↪️ " .. msg .. " (" .. #SpawnedData .. ")") or ("↪️ " .. msg); status.TextColor3 = success and Color3.fromRGB(100, 200, 255) or Color3.fromRGB(255, 100, 100) end)
+
+-- Window Controls
+minBtn.MouseButton1Click:Connect(function() panel.Visible = false; minIcon.Visible = true end)
+minIcon.MouseButton1Click:Connect(function() minIcon.Visible = false; panel.Visible = true end)
+closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+scriptBtn.MouseButton1Click:Connect(function() codeText.Text = GenerateScript(); scriptWin.Visible = true end)
+closeScriptBtn.MouseButton1Click:Connect(function() scriptWin.Visible = false end)
+copyBtn.MouseButton1Click:Connect(function() if setclipboard then setclipboard(codeText.Text); copyBtn.Text = "Copied!"; delay(1.5, function() copyBtn.Text = "Copy" end) end end)
+
+-- DIPERBAIKI: Tombol Clear hanya menghapus terrain sesi saat ini
+clearBtn.MouseButton1Click:Connect(function()
+    while #UndoHistory > 0 do
+        Undo()
+    end
+    SpawnedData, UndoHistory, RedoHistory = {}, {}, {}
+    status.Text = "🗑️ Session cleared!"
+    status.TextColor3 = Color3.fromRGB(255, 100, 100)
+end)
+
+spawnBtn.MouseButton1Click:Connect(function()
+    if PreviewPos then
+        TweenService:Create(spawnBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 45, 0, 45)}):Play()
+        wait(0.1)
+        TweenService:Create(spawnBtn, TweenInfo.new(0.2), {Size = UDim2.new(0, 50, 0, 50)}):Play()
+        
+        if SpawnTerrain() then
+            status.Text = "✅ Spawned! (" .. #SpawnedData .. " total)"
+            status.TextColor3 = Color3.fromRGB(0, 255, 100)
+        else
+            status.Text = "❌ Failed!"
+            status.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
+    else
+        status.Text = "❌ Aim at ground!"
+        status.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+end)
+
+-- Drag Panel
+local drag = false
+local startPos, startFrame
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        drag = true
+        startPos = input.Position
+        startFrame = panel.Position
+    end
+end)
+titleBar.InputEnded:Connect(function() drag = false end)
+UserInputService.InputChanged:Connect(function(input)
+    if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - startPos
+        panel.Position = UDim2.new(startFrame.X.Scale, startFrame.X.Offset + delta.X, startFrame.Y.Scale, startFrame.Y.Offset + delta.Y)
+    end
+end)
+
+RunService.RenderStepped:Connect(UpdatePreview)
+
+print("✅ Terrain Editor v16.2 Loaded!")
+print("🛠️ Fixed: Voxel Snapshot Undo System (Tidak merusak terrain hasil load)")
+print("✨ Added: Paint Mode (Untuk pembuatan jalan)")
