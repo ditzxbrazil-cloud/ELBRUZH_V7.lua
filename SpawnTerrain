@@ -134,7 +134,7 @@ local function GetRaycast()
     return Workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 end
 
---// Create Preview (TRANSPARANSI DITINGKATKAN)
+--// Create Preview
 local function CreatePreview()
     if PreviewPart then PreviewPart:Destroy() end
     PreviewPart = Instance.new("Part")
@@ -219,7 +219,7 @@ local function UpdatePreview()
             PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
         elseif CurrentMode == "Paint" then
             if CurrentShape == "Ball" then
-                PreviewPart.Size = Vector3.new(SizeX, SizeX, SizeX) -- Paint with ball radius
+                PreviewPart.Size = Vector3.new(SizeX, SizeX, SizeX)
             else
                 PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
             end
@@ -303,7 +303,7 @@ local function BL(d)
         elseif shape == "Wedge" then
             Terrain:FillWedge(cf, sizeVec, mat)
             Terrain:FillBlock(baseCf * CFrame.new(0, (sy/2) + 1, 0), Vector3.new(sx, sy, sz), Enum.Material.Air)
-        else -- Ball
+        else
             local radius = math.max(sx, sy, sz)/2
             Terrain:FillBall(pos, radius, mat)
             Terrain:FillBlock(baseCf * CFrame.new(0, radius, 0), Vector3.new(sx, radius*2, sz), Enum.Material.Air)
@@ -363,19 +363,21 @@ limitTitle.Text, limitTitle.TextColor3, limitTitle.TextSize, limitTitle.Font = "
 local limitText = Instance.new("TextLabel", limitPopup)
 limitText.Size, limitText.Position, limitText.BackgroundTransparency = UDim2.new(1, -40, 1, -120), UDim2.new(0, 20, 0, 60), 1
 limitText.Text = "SCRIPT TERRAIN SUDAH PENUH,CARA MENGATASINYA HARUS SALIN ALL HASIL TERRAIN DAN PASTE HASIL SCRIPT KE WORKPLACE,SETALAH ITU HAPUS ALL TERRAIN DI PANEL EDITOR TERRAIN JIKA SUDAH DI PASTE KE WORKPLACE,SETELAH ITU SAVE MAP,DAN KELUAR DARI STUDIO LITE,LALU MASUK LAGI DAN LOAD, SETALAH LOAD PENCET PLAY UNTUK MEMUAT SEMUA TERRAIN,PASTIKAN TUNGGU HINGGA TERRAIN SELESAI MEMUAT,SETALAH ITU KALIAN TINGGAL EDIT LAGI YANG KURANG"
-limitText.TextColor3, limitText.TextSize, limitText.Font, limitText.TextWrapped = Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold, true
+limitText.TextColor3, limitText.TextSize, limitText.Font, limitText.TextWrapped, limitText.TextScaled = Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold, true, true
 
+-- Tombol close dipindah ke kiri atas
 local closeLimitBtn = Instance.new("TextButton", limitPopup)
-closeLimitBtn.Size, closeLimitBtn.Position, closeLimitBtn.BackgroundColor3 = UDim2.new(0, 120, 0, 40), UDim2.new(0.5, -60, 1, -50), Color3.fromRGB(200, 60, 60)
-closeLimitBtn.Text, closeLimitBtn.TextColor3, closeLimitBtn.TextSize, closeLimitBtn.Font = "TUTUP", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", closeLimitBtn).CornerRadius = UDim.new(0, 8)
+closeLimitBtn.Size, closeLimitBtn.Position, closeLimitBtn.BackgroundColor3 = UDim2.new(0, 30, 0, 30), UDim2.new(0, 10, 0, 10), Color3.fromRGB(200, 60, 60)
+closeLimitBtn.Text, closeLimitBtn.TextColor3, closeLimitBtn.TextSize, closeLimitBtn.Font = "X", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", closeLimitBtn).CornerRadius = UDim.new(0, 6)
 closeLimitBtn.MouseButton1Click:Connect(function() limitPopup.Visible = false end)
 
 --// SPAWN COUNTER GUI
 local spawnCounter = Instance.new("TextLabel", gui)
 spawnCounter.Name = "SpawnCounter"
 spawnCounter.Size = UDim2.new(0, 70, 0, 20)
-spawnCounter.Position = UDim2.new(0, 4, 0, 28)
+-- Digeser ke kiri penuh (offset 0)
+spawnCounter.Position = UDim2.new(0, 0, 0, 28)
 spawnCounter.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 spawnCounter.Text = "┃ 0 / 1500 ┃"
 spawnCounter.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -383,7 +385,8 @@ spawnCounter.TextSize = 10
 spawnCounter.Font = Enum.Font.GothamBold
 Instance.new("UICorner", spawnCounter).CornerRadius = UDim.new(0, 4)
 local scStroke = Instance.new("UIStroke", spawnCounter)
-scStroke.Color, scStroke.Thickness = Color3.fromRGB(0, 150, 255), 1
+-- Efek neon dihapus (ubah jadi warna solid gelap biasa)
+scStroke.Color, scStroke.Thickness = Color3.fromRGB(0, 0, 0), 1
 spawnCounter.Visible = LimitWarningEnabled
 
 local function UpdateSpawnCounter()
@@ -698,7 +701,6 @@ buildBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
 local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.35, 0.25)
 local paintBtn = CreateUIBtn(modeSec, "Paint", 0.65, 0.25)
 
-
 --// SMOOTH TERRAIN GUI SECTION
 local smoothSec = Instance.new("Frame", scroll)
 smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
@@ -775,7 +777,6 @@ end
 local axisXBtn = CreateAxisToggle(72, "X", SnapAxis.X)
 local axisYBtn = CreateAxisToggle(100, "Y", SnapAxis.Y)
 local axisZBtn = CreateAxisToggle(128, "Z", SnapAxis.Z)
-
 
 --// SIZE SECTION
 local sizeSec = Instance.new("Frame", scroll)
@@ -1073,7 +1074,9 @@ rotResetBtn.MouseButton1Click:Connect(function() RotX, RotY, RotZ = 0, 0, 0; rxV
 
 undoBtn.MouseButton1Click:Connect(function() local success, msg = Undo(); status.Text = success and ("↩️ " .. msg .. " (" .. #SpawnedData .. ")") or ("↩️ " .. msg); status.TextColor3 = success and Color3.fromRGB(255, 200, 100) or Color3.fromRGB(255, 100, 100) end)
 
-closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+-- Fungsi Close Button di-override menjadi Minimize (menutup panel dan menampilkan tombol buka panel)
+closeBtn.MouseButton1Click:Connect(function() panel.Visible = false; openPanelBtn.Visible = true end)
+
 scriptBtn.MouseButton1Click:Connect(function() codeText.Text = GenerateScript(); scriptWin.Visible = true end)
 closeScriptBtn.MouseButton1Click:Connect(function() scriptWin.Visible = false end)
 copyBtn.MouseButton1Click:Connect(function() if setclipboard then setclipboard(codeText.Text); copyBtn.Text = "Copied!"; delay(1.5, function() copyBtn.Text = "Copy" end) end end)
@@ -1128,4 +1131,4 @@ end)
 
 RunService.RenderStepped:Connect(UpdatePreview)
 
-print("✅ Terrain Editor v16.3 Loaded with Mode & Shape Split, Extended Sizes, and Tembus Mode!")
+print("✅ Terrain Editor v16.3 Loaded with Custom Positions, Plain Colors, and Protection Setup!")
