@@ -72,16 +72,16 @@ local groundColors = {
 }
 local currentGroundColorIndex = 2
 
---// Materials
+--// Materials (DIURUTKAN SESUAI PERMINTAAN)
 local Materials = {
-    {Name = "Grass", Color = Color3.fromRGB(86, 125, 70), Mat = Enum.Material.Grass},
-    {Name = "LeafyGrass", Color = Color3.fromRGB(85, 170, 60), Mat = Enum.Material.LeafyGrass},
-    {Name = "Rock", Color = Color3.fromRGB(102, 102, 102), Mat = Enum.Material.Rock},
+    {Name = "Grass", Color = Color3.fromRGB(86, 125, 70), Mat = Enum.Material.Grass},           -- 1
+    {Name = "Ground", Color = Color3.fromRGB(112, 85, 63), Mat = Enum.Material.Ground},         -- 2
+    {Name = "LeafyGrass", Color = Color3.fromRGB(85, 170, 60), Mat = Enum.Material.LeafyGrass}, -- 3
+    {Name = "Rock", Color = Color3.fromRGB(102, 102, 102), Mat = Enum.Material.Rock},           -- 4
+    {Name = "Water", Color = Color3.fromRGB(15, 82, 186), Mat = Enum.Material.Water},           -- 5
     {Name = "Sand", Color = Color3.fromRGB(234, 203, 154), Mat = Enum.Material.Sand},
-    {Name = "Water", Color = Color3.fromRGB(15, 82, 186), Mat = Enum.Material.Water},
     {Name = "Snow", Color = Color3.fromRGB(255, 255, 255), Mat = Enum.Material.Snow},
     {Name = "Mud", Color = Color3.fromRGB(86, 66, 54), Mat = Enum.Material.Mud},
-    {Name = "Ground", Color = Color3.fromRGB(112, 85, 63), Mat = Enum.Material.Ground},
     {Name = "Asphalt", Color = Color3.fromRGB(80, 80, 80), Mat = Enum.Material.Asphalt},
     {Name = "Brick", Color = Color3.fromRGB(150, 75, 60), Mat = Enum.Material.Brick},
     {Name = "Wood", Color = Color3.fromRGB(139, 109, 79), Mat = Enum.Material.WoodPlanks},
@@ -347,7 +347,7 @@ local function BL(d)
     return d
 end
 
---// Spawn Terrain (DIPERBAIKI: Menggunakan Voxel Snapshot)
+--// Spawn Terrain
 local function SpawnTerrain()
     if not PreviewPos then return false end
     
@@ -383,7 +383,7 @@ local function SpawnTerrain()
     return true
 end
 
---// UNDO / REDO (DIPERBAIKI: Mengembalikan Voxel spesifik)
+--// UNDO / REDO
 local function Undo()
     if #UndoHistory == 0 then return false, "Nothing to undo" end
     local lastNode = table.remove(UndoHistory)
@@ -517,7 +517,7 @@ Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(1, 0)
 local spawnStroke = Instance.new("UIStroke", spawnBtn)
 spawnStroke.Color, spawnStroke.Thickness = Color3.fromRGB(255, 255, 255), 3
 
---// UNDO BUTTON (Berdiri Sendiri di Bawah Spawn)
+--// UNDO BUTTON
 local undoBtn = Instance.new("TextButton", gui)
 undoBtn.Name, undoBtn.Size, undoBtn.Position, undoBtn.BackgroundColor3 = "UndoBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 105), Color3.fromRGB(200, 150, 50)
 undoBtn.Text, undoBtn.TextSize, undoBtn.Font = "↩️", 22, Enum.Font.GothamBlack
@@ -525,7 +525,7 @@ Instance.new("UICorner", undoBtn).CornerRadius = UDim.new(1, 0)
 local undoStroke = Instance.new("UIStroke", undoBtn)
 undoStroke.Color, undoStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
---// MATERIAL ICON BUTTON (Di Bawah Undo)
+--// MATERIAL ICON BUTTON
 local matIconBtn = Instance.new("TextButton", gui)
 matIconBtn.Name, matIconBtn.Size, matIconBtn.Position, matIconBtn.BackgroundColor3 = "MatIconBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 155), Color3.fromRGB(80, 120, 200)
 matIconBtn.Text, matIconBtn.TextSize, matIconBtn.Font = "🎨", 22, Enum.Font.GothamBlack
@@ -533,7 +533,15 @@ Instance.new("UICorner", matIconBtn).CornerRadius = UDim.new(1, 0)
 local matIconStroke = Instance.new("UIStroke", matIconBtn)
 matIconStroke.Color, matIconStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
---// UNHIDE BUTTON (Tombol Kecil untuk Menonaktifkan Hide)
+--// OPEN PANEL (MINIMIZE ICON) - TEPAT DI BAWAH MATERIAL ICON
+local openPanelBtn = Instance.new("TextButton", gui)
+openPanelBtn.Name, openPanelBtn.Size, openPanelBtn.Position, openPanelBtn.BackgroundColor3 = "OpenPanelBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 205), Color3.fromRGB(60, 60, 75)
+openPanelBtn.Text, openPanelBtn.TextSize, openPanelBtn.Font, openPanelBtn.Visible = "⚙️", 22, Enum.Font.GothamBlack, false
+Instance.new("UICorner", openPanelBtn).CornerRadius = UDim.new(1, 0)
+local openPanelStroke = Instance.new("UIStroke", openPanelBtn)
+openPanelStroke.Color, openPanelStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
+
+--// UNHIDE BUTTON
 local unhideBtn = Instance.new("TextButton", gui)
 unhideBtn.Name, unhideBtn.Size, unhideBtn.Position, unhideBtn.BackgroundColor3 = "UnhideBtn", UDim2.new(0, 25, 0, 25), UDim2.new(0, 16, 0, 165), Color3.fromRGB(0, 150, 255)
 unhideBtn.Text, unhideBtn.TextSize, unhideBtn.Font, unhideBtn.Visible, unhideBtn.Active = "👁️", 12, Enum.Font.GothamBold, false, true
@@ -541,7 +549,7 @@ Instance.new("UICorner", unhideBtn).CornerRadius = UDim.new(1, 0)
 local unhideStroke = Instance.new("UIStroke", unhideBtn)
 unhideStroke.Color, unhideStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
---// MATERIAL WINDOW (Jendela Kecil untuk Material)
+--// MATERIAL WINDOW
 local matWin = Instance.new("Frame", gui)
 matWin.Name, matWin.Size, matWin.Position, matWin.BackgroundColor3, matWin.Visible = "MatWindow", UDim2.new(0, 200, 0, 70), UDim2.new(0, 60, 0, 155), Color3.fromRGB(45, 45, 60), false
 Instance.new("UICorner", matWin).CornerRadius = UDim.new(0, 8)
@@ -562,7 +570,7 @@ for i, m in ipairs(Materials) do
 end
 matIconBtn.MouseButton1Click:Connect(function() matWin.Visible = not matWin.Visible end)
 
---// MAIN PANEL (Dipindahkan Paling Bawah)
+--// MAIN PANEL
 local panel = Instance.new("Frame", gui)
 panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 450), UDim2.new(0, 6, 1, -460), Color3.fromRGB(30, 30, 40), 0
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
@@ -623,7 +631,7 @@ local grassLeft, grassRight, grassDisplay = CreateColorSec(scroll, "🌿 Grass C
 local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGrass Color", leafyGrassColors, Color3.fromRGB(100, 220, 80), currentLeafyGrassColorIndex)
 local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
 
---// SHAPE SECTION (WITH PAINT MODE)
+--// SHAPE SECTION
 local shapeSec = Instance.new("Frame", scroll)
 shapeSec.Size, shapeSec.BackgroundColor3, shapeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", shapeSec).CornerRadius = UDim.new(0, 8)
@@ -826,23 +834,40 @@ codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text
 
 --// EVENT CONNECTIONS
 
--- HIDE GUI / MINIMIZE LOGIC
+-- LOGIKA HIDE GUI & MINIMIZE BARU
 local function HideAllGui()
     panel.Visible = false
     matIconBtn.Visible = false
+    openPanelBtn.Visible = false
     matWin.Visible = false
     unhideBtn.Visible = true
 end
 
 local function ShowAllGui()
-    panel.Visible = true
+    -- Saat mata (Unhide) diaktifkan, memunculkan icon panel dan icon material, tetapi PANEL UTAMA TETAP TERTUTUP
+    panel.Visible = false 
     matIconBtn.Visible = true
+    openPanelBtn.Visible = true 
     unhideBtn.Visible = false
 end
 
+-- Tombol Hide GUI (Menyembunyikan Semuanya kecuali mata)
 hideGuiBtn.MouseButton1Click:Connect(HideAllGui)
-minBtn.MouseButton1Click:Connect(HideAllGui)
+
+-- Tombol Minimize (-) (Hanya Menyembunyikan Panel Utama dan Memunculkan Icon Buka Panel)
+minBtn.MouseButton1Click:Connect(function()
+    panel.Visible = false
+    openPanelBtn.Visible = true
+end)
+
+-- Tombol Mata (Membatalkan Hide GUI)
 unhideBtn.MouseButton1Click:Connect(ShowAllGui)
+
+-- Tombol Membuka Panel Kembali
+openPanelBtn.MouseButton1Click:Connect(function()
+    openPanelBtn.Visible = false
+    panel.Visible = true
+end)
 
 -- Colors
 local function setupColorBtn(l, r, disp, arr, idxRef, cb)
@@ -988,7 +1013,6 @@ scriptBtn.MouseButton1Click:Connect(function() codeText.Text = GenerateScript();
 closeScriptBtn.MouseButton1Click:Connect(function() scriptWin.Visible = false end)
 copyBtn.MouseButton1Click:Connect(function() if setclipboard then setclipboard(codeText.Text); copyBtn.Text = "Copied!"; delay(1.5, function() copyBtn.Text = "Copy" end) end end)
 
--- DIPERBAIKI: Tombol Clear hanya menghapus terrain sesi saat ini
 clearBtn.MouseButton1Click:Connect(function()
     while #UndoHistory > 0 do
         Undo()
@@ -1038,5 +1062,4 @@ end)
 RunService.RenderStepped:Connect(UpdatePreview)
 
 print("✅ Terrain Editor v16.2 Loaded!")
-print("🛠️ Fixed: Voxel Snapshot Undo System (Tidak merusak terrain hasil load)")
-print("✨ Added: Paint Mode (Untuk pembuatan jalan)")
+print("🛠️ UI Logic Updated: Separate Minimize and Hide functionality")
