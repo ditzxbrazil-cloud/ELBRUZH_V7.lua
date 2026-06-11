@@ -1,6 +1,7 @@
 --// TERRAIN BY ELBRUZH 
 --// Terrain Editor v16.2 - Smooth Terrain (Auto Blend), Snap to Grid, Flatten Mode, Paint Mode
 --// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (Voxel Snapshot Undo System)
+--// ADDED: Mirror/Symmetry Mode & Stairs/Ramp Generator
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -99,6 +100,19 @@ local PreviewPart = nil
 local SpawnedData = {}
 local UndoHistory = {}
 local RedoHistory = {}
+
+--// MIRROR & GENERATOR STATE
+local MirrorEnabled = false
+local MirrorAxisIndex = 1
+local MirrorAxes = {"X", "Z", "XZ"}
+local MirrorOffset = 0
+
+local GenModeIndex = 1
+local GenModes = {"OFF", "Stairs", "Ramp"}
+local GenSteps = 10
+local GenHeight = 3
+local GenWidth = 15
+local GenLength = 50
 
 --// SNAP SETTINGS
 local SnapEnabled = false
@@ -208,12 +222,23 @@ local function UpdatePreview()
         local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
         PreviewPos = displayPos
         
-        PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+        if GenModes[GenModeIndex] == "Stairs" or GenModes[GenModeIndex] == "Ramp" then
+            -- Generator preview (shows approximate bounding box)
+            if GenModes[GenModeIndex] == "Stairs" then
+                PreviewPart.Size = Vector3.new(GenWidth, GenHeight, GenLength/GenSteps)
+                PreviewPart.Shape = Enum.PartType.Block
+            else
+                PreviewPart.Size = Vector3.new(GenWidth, GenHeight * GenSteps, GenLength)
+                PreviewPart.Shape = Enum.PartType.Wedge
+            end
+        else
+            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+        end
         
-        if CurrentShape == "Flatten" then
+        if CurrentShape == "Flatten" and GenModes[GenModeIndex] == "OFF" then
             local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
             PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
-        elseif CurrentShape == "Paint" then
+        elseif CurrentShape == "Paint" and GenModes[GenModeIndex] == "OFF" then
             local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0)
             PreviewPart.CFrame = cf
             PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ) -- Paint preview is flat
@@ -347,69 +372,126 @@ local function BL(d)
     return d
 end
 
---// Spawn Terrain (DIPERBAIKI: Menggunakan Voxel Snapshot)
+--// Spawn Terrain (DIPERBAIKI: Menggunakan Batch System untuk Generator & Mirror)
 local function SpawnTerrain()
     if not PreviewPos then return false end
     
-    local maxDim = math.max(SizeX, SizeY, SizeZ)
-    local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
-    local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
-    local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds):ExpandToGrid(4)
-
-    local beforeMats, beforeOccs = Terrain:ReadVoxels(region, 4)
-
-    local data = {
-        math.floor(PreviewPos.X), math.floor(PreviewPos.Y), math.floor(PreviewPos.Z),
-        SizeX, SizeY, SizeZ, CurrentMaterial.Name, CurrentShape,
-        currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
-        RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity
-    }
+    local spawns = {}
     
-    BL(data)
+    -- 1. Setup Base Shapes
+    if GenModes[GenModeIndex] == "Stairs" then
+        local stepLength = GenLength / GenSteps
+        local dir = CFrame.Angles(0, math.rad(RotY), 0).LookVector
+        for i = 0, GenSteps - 1 do
+            local offsetVec = Vector3.new(0, (i * GenHeight) + (GenHeight/2), 0) + (dir * (i * stepLength))
+            local stepPos = PreviewPos + offsetVec
+            table.insert(spawns, {
+                Pos = stepPos, SizeX = GenWidth, SizeY = GenHeight, SizeZ = stepLength,
+                Shape = "Block", RotX = RotX, RotY = RotY, RotZ = RotZ
+            })
+        end
+    elseif GenModes[GenModeIndex] == "Ramp" then
+        table.insert(spawns, {
+            Pos = PreviewPos + Vector3.new(0, (GenHeight * GenSteps)/2, 0),
+            SizeX = GenWidth, SizeY = GenHeight * GenSteps, SizeZ = GenLength,
+            Shape = "Wedge", RotX = RotX, RotY = RotY, RotZ = RotZ
+        })
+    else
+        table.insert(spawns, {
+            Pos = PreviewPos, SizeX = SizeX, SizeY = SizeY, SizeZ = SizeZ,
+            Shape = CurrentShape, RotX = RotX, RotY = RotY, RotZ = RotZ
+        })
+    end
 
-    local afterMats, afterOccs = Terrain:ReadVoxels(region, 4)
+    -- 2. Apply Mirror Mode
+    if MirrorEnabled then
+        local mirrored = {}
+        for _, s in ipairs(spawns) do
+            local axis = MirrorAxes[MirrorAxisIndex]
+            if axis == "X" or axis == "XZ" then
+                table.insert(mirrored, {Pos = Vector3.new(-s.Pos.X + MirrorOffset, s.Pos.Y, s.Pos.Z), SizeX=s.SizeX, SizeY=s.SizeY, SizeZ=s.SizeZ, Shape=s.Shape, RotX=s.RotX, RotY=-s.RotY, RotZ=s.RotZ})
+            end
+            if axis == "Z" or axis == "XZ" then
+                table.insert(mirrored, {Pos = Vector3.new(s.Pos.X, s.Pos.Y, -s.Pos.Z + MirrorOffset), SizeX=s.SizeX, SizeY=s.SizeY, SizeZ=s.SizeZ, Shape=s.Shape, RotX=s.RotX, RotY=180-s.RotY, RotZ=s.RotZ})
+            end
+            if axis == "XZ" then
+                table.insert(mirrored, {Pos = Vector3.new(-s.Pos.X + MirrorOffset, s.Pos.Y, -s.Pos.Z + MirrorOffset), SizeX=s.SizeX, SizeY=s.SizeY, SizeZ=s.SizeZ, Shape=s.Shape, RotX=s.RotX, RotY=180+s.RotY, RotZ=s.RotZ})
+            end
+        end
+        for _, m in ipairs(mirrored) do table.insert(spawns, m) end
+    end
 
-    table.insert(UndoHistory, {
-        Region = region,
-        BeforeMats = beforeMats,
-        BeforeOccs = beforeOccs,
-        AfterMats = afterMats,
-        AfterOccs = afterOccs,
-        Data = data
-    })
+    -- 3. Execute and Record History via Batching
+    local batchUndo = { Snapshots = {}, Data = {} }
     
+    for _, s in ipairs(spawns) do
+        local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
+        local maxDim = math.max(s.SizeX, s.SizeY, s.SizeZ)
+        local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
+        local region = Region3.new(s.Pos - halfBounds, s.Pos + halfBounds):ExpandToGrid(4)
+        local beforeMats, beforeOccs = Terrain:ReadVoxels(region, 4)
+
+        local data = {
+            math.floor(s.Pos.X), math.floor(s.Pos.Y), math.floor(s.Pos.Z),
+            s.SizeX, s.SizeY, s.SizeZ, CurrentMaterial.Name, s.Shape,
+            currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
+            s.RotX, s.RotY, s.RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity
+        }
+        
+        BL(data)
+        
+        local afterMats, afterOccs = Terrain:ReadVoxels(region, 4)
+        
+        table.insert(SpawnedData, data)
+        table.insert(batchUndo.Data, data)
+        table.insert(batchUndo.Snapshots, {
+            Region = region, BeforeMats = beforeMats, BeforeOccs = beforeOccs, 
+            AfterMats = afterMats, AfterOccs = afterOccs
+        })
+    end
+
+    table.insert(UndoHistory, batchUndo)
     RedoHistory = {}
-    table.insert(SpawnedData, data)
     return true
 end
 
---// UNDO / REDO (DIPERBAIKI: Mengembalikan Voxel spesifik)
+--// UNDO / REDO (DIPERBAIKI: Mengembalikan Voxel secara Batch untuk Generator)
 local function Undo()
     if #UndoHistory == 0 then return false, "Nothing to undo" end
     local lastNode = table.remove(UndoHistory)
     table.insert(RedoHistory, lastNode)
     
-    for i = #SpawnedData, 1, -1 do
-        if SpawnedData[i] == lastNode.Data then
-            table.remove(SpawnedData, i)
-            break
+    for _, d in ipairs(lastNode.Data) do
+        for i = #SpawnedData, 1, -1 do
+            if SpawnedData[i] == d then
+                table.remove(SpawnedData, i)
+                break
+            end
         end
     end
     
-    Terrain:WriteVoxels(lastNode.Region, 4, lastNode.BeforeMats, lastNode.BeforeOccs)
+    for i = #lastNode.Snapshots, 1, -1 do
+        local snap = lastNode.Snapshots[i]
+        Terrain:WriteVoxels(snap.Region, 4, snap.BeforeMats, snap.BeforeOccs)
+    end
     
-    return true, "Undone 1 terrain"
+    return true, "Undone " .. #lastNode.Data .. " items"
 end
 
 local function Redo()
     if #RedoHistory == 0 then return false, "Nothing to redo" end
     local node = table.remove(RedoHistory)
     table.insert(UndoHistory, node)
-    table.insert(SpawnedData, node.Data)
     
-    Terrain:WriteVoxels(node.Region, 4, node.AfterMats, node.AfterOccs)
+    for _, d in ipairs(node.Data) do
+        table.insert(SpawnedData, d)
+    end
     
-    return true, "Redone 1 terrain"
+    for _, snap in ipairs(node.Snapshots) do
+        Terrain:WriteVoxels(snap.Region, 4, snap.AfterMats, snap.AfterOccs)
+    end
+    
+    return true, "Redone " .. #node.Data .. " items"
 end
 
 --// Generate Script
@@ -549,7 +631,7 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1450)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1850)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
@@ -599,6 +681,64 @@ local blockBtn = CreateShapeBtn("Block", 0.21)
 local wedgeBtn = CreateShapeBtn("Wedge", 0.40)
 local flatBtn = CreateShapeBtn("Flat", 0.59)
 local paintBtn = CreateShapeBtn("Paint", 0.78)
+
+--// GENERATOR SECTION (STAIRS & RAMP)
+local genSec = Instance.new("Frame", scroll)
+genSec.Size, genSec.BackgroundColor3, genSec.BorderSizePixel = UDim2.new(1, -8, 0, 150), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", genSec).CornerRadius = UDim.new(0, 8)
+local genTitle = Instance.new("TextLabel", genSec)
+genTitle.Size, genTitle.Position, genTitle.BackgroundTransparency, genTitle.Text, genTitle.TextColor3, genTitle.TextSize, genTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🪜 Stairs / Ramp Generator", Color3.fromRGB(255, 150, 50), 11, Enum.Font.GothamBold
+
+local genModeBtn = Instance.new("TextButton", genSec)
+genModeBtn.Size, genModeBtn.Position, genModeBtn.BackgroundColor3, genModeBtn.Text, genModeBtn.TextColor3, genModeBtn.TextSize, genModeBtn.Font = UDim2.new(0, 120, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "Mode: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", genModeBtn).CornerRadius = UDim.new(0, 4)
+
+local function CreateGenRow(yPos, labelStr, color, initialVal)
+    local l = Instance.new("TextLabel", genSec)
+    l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 50, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
+    local m = Instance.new("TextButton", genSec)
+    m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 60, 0, yPos), Color3.fromRGB(200, 60, 60), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+    Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
+    local v = Instance.new("TextBox", genSec)
+    v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font, v.ClearTextOnFocus = UDim2.new(0, 36, 0, 20), UDim2.new(0, 88, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold, false
+    Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
+    local p = Instance.new("TextButton", genSec)
+    p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 127, 0, yPos), Color3.fromRGB(0, 150, 100), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
+    return m, v, p
+end
+
+local stepM, stepV, stepP = CreateGenRow(52, "Steps:", Color3.fromRGB(200, 200, 200), GenSteps)
+local gHeightM, gHeightV, gHeightP = CreateGenRow(75, "Height:", Color3.fromRGB(200, 200, 200), GenHeight)
+local gWidthM, gWidthV, gWidthP = CreateGenRow(98, "Width:", Color3.fromRGB(200, 200, 200), GenWidth)
+local gLenM, gLenV, gLenP = CreateGenRow(121, "Length:", Color3.fromRGB(200, 200, 200), GenLength)
+
+--// MIRROR SECTION
+local mirrorSec = Instance.new("Frame", scroll)
+mirrorSec.Size, mirrorSec.BackgroundColor3, mirrorSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", mirrorSec).CornerRadius = UDim.new(0, 8)
+local mirrorTitle = Instance.new("TextLabel", mirrorSec)
+mirrorTitle.Size, mirrorTitle.Position, mirrorTitle.BackgroundTransparency, mirrorTitle.Text, mirrorTitle.TextColor3, mirrorTitle.TextSize, mirrorTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔄 Mirror / Symmetry Mode", Color3.fromRGB(150, 200, 255), 11, Enum.Font.GothamBold
+
+local mirrorToggleBtn = Instance.new("TextButton", mirrorSec)
+mirrorToggleBtn.Size, mirrorToggleBtn.Position, mirrorToggleBtn.BackgroundColor3, mirrorToggleBtn.Text, mirrorToggleBtn.TextColor3, mirrorToggleBtn.TextSize, mirrorToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", mirrorToggleBtn).CornerRadius = UDim.new(0, 4)
+
+local mirrorAxisBtn = Instance.new("TextButton", mirrorSec)
+mirrorAxisBtn.Size, mirrorAxisBtn.Position, mirrorAxisBtn.BackgroundColor3, mirrorAxisBtn.Text, mirrorAxisBtn.TextColor3, mirrorAxisBtn.TextSize, mirrorAxisBtn.Font = UDim2.new(0, 80, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), "Axis: X", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", mirrorAxisBtn).CornerRadius = UDim.new(0, 4)
+
+local mirOffM = Instance.new("TextButton", mirrorSec)
+mirOffM.Size, mirOffM.Position, mirOffM.BackgroundColor3, mirOffM.Text, mirOffM.TextColor3, mirOffM.TextSize, mirOffM.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 6, 0, 52), Color3.fromRGB(200, 60, 60), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", mirOffM).CornerRadius = UDim.new(0, 4)
+
+local mirOffV = Instance.new("TextBox", mirrorSec)
+mirOffV.Size, mirOffV.Position, mirOffV.BackgroundColor3, mirOffV.Text, mirOffV.TextColor3, mirOffV.TextSize, mirOffV.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 35, 0, 52), Color3.fromRGB(60, 60, 75), "Offset: 0", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+Instance.new("UICorner", mirOffV).CornerRadius = UDim.new(0, 4)
+
+local mirOffP = Instance.new("TextButton", mirrorSec)
+mirOffP.Size, mirOffP.Position, mirOffP.BackgroundColor3, mirOffP.Text, mirOffP.TextColor3, mirOffP.TextSize, mirOffP.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 99, 0, 52), Color3.fromRGB(0, 150, 100), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", mirOffP).CornerRadius = UDim.new(0, 4)
 
 --// SMOOTH TERRAIN GUI SECTION
 local smoothSec = Instance.new("Frame", scroll)
@@ -833,6 +973,69 @@ wedgeBtn.MouseButton1Click:Connect(function() SelectShape("Wedge", wedgeBtn) end
 flatBtn.MouseButton1Click:Connect(function() SelectShape("Flatten", flatBtn) end)
 paintBtn.MouseButton1Click:Connect(function() SelectShape("Paint", paintBtn) end)
 
+-- Generator Events
+genModeBtn.MouseButton1Click:Connect(function()
+    GenModeIndex = GenModeIndex + 1
+    if GenModeIndex > #GenModes then GenModeIndex = 1 end
+    local mode = GenModes[GenModeIndex]
+    if mode == "OFF" then
+        genModeBtn.Text = "Mode: OFF"
+        genModeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    else
+        genModeBtn.Text = "Mode: " .. mode
+        genModeBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    end
+    UpdatePreview()
+end)
+
+local function handleGenInput(box, varName)
+    local val = tonumber(box.Text)
+    if val then
+        if varName == "Steps" then GenSteps = math.max(1, math.floor(val)); box.Text = tostring(GenSteps)
+        elseif varName == "Height" then GenHeight = val; box.Text = tostring(GenHeight)
+        elseif varName == "Width" then GenWidth = val; box.Text = tostring(GenWidth)
+        elseif varName == "Length" then GenLength = val; box.Text = tostring(GenLength) end
+        UpdatePreview()
+    end
+end
+stepV.FocusLost:Connect(function() handleGenInput(stepV, "Steps") end)
+gHeightV.FocusLost:Connect(function() handleGenInput(gHeightV, "Height") end)
+gWidthV.FocusLost:Connect(function() handleGenInput(gWidthV, "Width") end)
+gLenV.FocusLost:Connect(function() handleGenInput(gLenV, "Length") end)
+
+stepM.MouseButton1Click:Connect(function() GenSteps = math.max(1, GenSteps - 1); stepV.Text = tostring(GenSteps); UpdatePreview() end)
+stepP.MouseButton1Click:Connect(function() GenSteps = GenSteps + 1; stepV.Text = tostring(GenSteps); UpdatePreview() end)
+gHeightM.MouseButton1Click:Connect(function() GenHeight = math.max(1, GenHeight - 1); gHeightV.Text = tostring(GenHeight); UpdatePreview() end)
+gHeightP.MouseButton1Click:Connect(function() GenHeight = GenHeight + 1; gHeightV.Text = tostring(GenHeight); UpdatePreview() end)
+gWidthM.MouseButton1Click:Connect(function() GenWidth = math.max(1, GenWidth - 1); gWidthV.Text = tostring(GenWidth); UpdatePreview() end)
+gWidthP.MouseButton1Click:Connect(function() GenWidth = GenWidth + 1; gWidthV.Text = tostring(GenWidth); UpdatePreview() end)
+gLenM.MouseButton1Click:Connect(function() GenLength = math.max(1, GenLength - 1); gLenV.Text = tostring(GenLength); UpdatePreview() end)
+gLenP.MouseButton1Click:Connect(function() GenLength = GenLength + 1; gLenV.Text = tostring(GenLength); UpdatePreview() end)
+
+-- Mirror Events
+mirrorToggleBtn.MouseButton1Click:Connect(function()
+    MirrorEnabled = not MirrorEnabled
+    if MirrorEnabled then
+        mirrorToggleBtn.Text = "ON 🔄"
+        mirrorToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    else
+        mirrorToggleBtn.Text = "OFF"
+        mirrorToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    end
+end)
+mirrorAxisBtn.MouseButton1Click:Connect(function()
+    MirrorAxisIndex = MirrorAxisIndex + 1
+    if MirrorAxisIndex > #MirrorAxes then MirrorAxisIndex = 1 end
+    mirrorAxisBtn.Text = "Axis: " .. MirrorAxes[MirrorAxisIndex]
+end)
+mirOffV.FocusLost:Connect(function()
+    local val = tonumber(string.match(mirOffV.Text, "%-?%d+%.?%d*") or "0")
+    if val then MirrorOffset = val else MirrorOffset = 0 end
+    mirOffV.Text = "Offset: " .. tostring(MirrorOffset)
+end)
+mirOffM.MouseButton1Click:Connect(function() MirrorOffset = MirrorOffset - 5; mirOffV.Text = "Offset: " .. tostring(MirrorOffset) end)
+mirOffP.MouseButton1Click:Connect(function() MirrorOffset = MirrorOffset + 5; mirOffV.Text = "Offset: " .. tostring(MirrorOffset) end)
+
 -- Smooth Events
 smoothToggleBtn.MouseButton1Click:Connect(function()
     SmoothEnabled = not SmoothEnabled
@@ -1006,3 +1209,4 @@ RunService.RenderStepped:Connect(UpdatePreview)
 print("✅ Terrain Editor v16.2 Loaded!")
 print("🛠️ Fixed: Voxel Snapshot Undo System (Tidak merusak terrain hasil load)")
 print("✨ Added: Paint Mode (Untuk pembuatan jalan)")
+print("🚀 NEW: Mirror/Symmetry Mode & Stairs/Ramp Generator Installed!")
