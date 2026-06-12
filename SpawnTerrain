@@ -1,6 +1,8 @@
+
+--// asli
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector
---// CUSTOM MODIFICATION: Brush Strength, Erase Mode, Rock Mix Toggle, Optimized Materials
+--// Terrain Editor v16.4 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector
+--// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (UPDATED CUSTOM REQUEST)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -24,7 +26,21 @@ local grassColors = {
 	{name="Hijau Normal", color=Color3.fromRGB(75,151,75)},
 	{name="Hijau Sedang", color=Color3.fromRGB(60,140,70)},
 	{name="Hijau Tua",    color=Color3.fromRGB(45,120,55)},
-	{name="Hijau Gelap",  color=Color3.fromRGB(30,100,40)}
+	{name="Hijau Gelap",  color=Color3.fromRGB(30,100,40)},
+	{name="Hijau Lumut",  color=Color3.fromRGB(80,120,60)},
+	{name="Hijau Zamrud", color=Color3.fromRGB(50,180,100)},
+	{name="Hijau Mint",   color=Color3.fromRGB(170,230,150)},
+	{name="Hijau Daun",   color=Color3.fromRGB(70,160,80)},
+	{name="Hijau Hutan",  color=Color3.fromRGB(40,90,50)},
+	{name="Hijau Zaitun", color=Color3.fromRGB(85,107,47)},
+	{name="Hijau Pinus",  color=Color3.fromRGB(50,100,60)},
+	{name="Hijau Tropis", color=Color3.fromRGB(90,180,110)},
+	{name="Hijau Pastel", color=Color3.fromRGB(140,210,130)},
+	{name="Hijau Neon",   color=Color3.fromRGB(100,255,150)},
+	{name="Hijau Apel",   color=Color3.fromRGB(140,200,100)},
+	{name="Hijau Toska",  color=Color3.fromRGB(100,180,140)},
+	{name="Hijau Army",   color=Color3.fromRGB(70,85,50)},
+	{name="Hijau Botol",  color=Color3.fromRGB(40,70,45)}
 }
 local currentGrassColorIndex = 3
 
@@ -34,7 +50,22 @@ local leafyGrassColors = {
 	{name="Daun Cerah",   color=Color3.fromRGB(110,200,80)},
 	{name="Daun Normal",  color=Color3.fromRGB(85,170,60)},
 	{name="Daun Sedang",  color=Color3.fromRGB(70,150,50)},
-	{name="Daun Tua",     color=Color3.fromRGB(55,130,40)}
+	{name="Daun Tua",     color=Color3.fromRGB(55,130,40)},
+	{name="Daun Gelap",   color=Color3.fromRGB(40,110,30)},
+	{name="Daun Hutan",   color=Color3.fromRGB(60,140,45)},
+	{name="Daun Zamrud",  color=Color3.fromRGB(45,160,70)},
+	{name="Daun Mint",    color=Color3.fromRGB(160,240,130)},
+	{name="Daun Lime",    color=Color3.fromRGB(130,220,60)},
+	{name="Daun Sage",    color=Color3.fromRGB(100,160,90)},
+	{name="Daun Olive",   color=Color3.fromRGB(90,130,50)},
+	{name="Daun Fern",    color=Color3.fromRGB(75,145,65)},
+	{name="Daun Moss",    color=Color3.fromRGB(85,125,70)},
+	{name="Daun Jungle",  color=Color3.fromRGB(50,120,40)},
+	{name="Daun Spring",  color=Color3.fromRGB(120,210,100)},
+	{name="Daun Apple",   color=Color3.fromRGB(100,190,70)},
+	{name="Daun Kelly",   color=Color3.fromRGB(65,160,55)},
+	{name="Daun Forest",  color=Color3.fromRGB(45,100,35)},
+	{name="Daun Neon",    color=Color3.fromRGB(90,255,100)}
 }
 local currentLeafyGrassColorIndex = 3
 
@@ -48,7 +79,7 @@ local groundColors = {
 }
 local currentGroundColorIndex = 2
 
---// Materials (No Boxy/Part materials like Wood/Plastic)
+--// Materials 
 local Materials = {
     {Name = "Grass", Color = Color3.fromRGB(86, 125, 70), Mat = Enum.Material.Grass},
     {Name = "Ground", Color = Color3.fromRGB(112, 85, 63), Mat = Enum.Material.Ground},
@@ -59,12 +90,10 @@ local Materials = {
     {Name = "Snow", Color = Color3.fromRGB(255, 255, 255), Mat = Enum.Material.Snow},
     {Name = "Mud", Color = Color3.fromRGB(86, 66, 54), Mat = Enum.Material.Mud},
     {Name = "Asphalt", Color = Color3.fromRGB(80, 80, 80), Mat = Enum.Material.Asphalt},
+    {Name = "Brick", Color = Color3.fromRGB(150, 75, 60), Mat = Enum.Material.Brick},
+    {Name = "Wood", Color = Color3.fromRGB(139, 109, 79), Mat = Enum.Material.WoodPlanks},
     {Name = "Concrete", Color = Color3.fromRGB(127, 127, 127), Mat = Enum.Material.Concrete},
-    {Name = "Ice", Color = Color3.fromRGB(200, 230, 255), Mat = Enum.Material.Ice},
-    {Name = "Basalt", Color = Color3.fromRGB(48, 48, 48), Mat = Enum.Material.Basalt},
-    {Name = "Slate", Color = Color3.fromRGB(63, 63, 63), Mat = Enum.Material.Slate},
-    {Name = "CrackedLava", Color = Color3.fromRGB(255, 100, 0), Mat = Enum.Material.CrackedLava},
-    {Name = "Limestone", Color = Color3.fromRGB(200, 190, 170), Mat = Enum.Material.Limestone}
+    {Name = "Ice", Color = Color3.fromRGB(200, 230, 255), Mat = Enum.Material.Ice}
 }
 
 --// State
@@ -92,8 +121,6 @@ local SmoothEnabled = false
 local SmoothModes = {"Soft Edge", "Gradient", "Noise", "Blend"}
 local CurrentSmoothModeIndex = 1
 local SmoothIntensity = 5
-local BrushStrength = 0
-local MixRockEnabled = false
 
 --// Raycast
 local function GetRaycast()
@@ -146,6 +173,45 @@ local function SnapPosition(pos)
     return Vector3.new(snappedX, snappedY, snappedZ)
 end
 
+--// VISUAL GRID FUNCTION - WARNA BIASA, BUKAN NEON
+local function UpdateGridVisual()
+    for _, line in ipairs(GridLines) do line:Destroy() end
+    GridLines = {}
+    if not ShowGridVisual then return end
+    local playerPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
+    if not playerPos then return end
+    local range = 100 
+    local startX = math.floor((playerPos.X - range) / GridSize) * GridSize
+    local endX = math.floor((playerPos.X + range) / GridSize) * GridSize
+    local startZ = math.floor((playerPos.Z - range) / GridSize) * GridSize
+    local endZ = math.floor((playerPos.Z + range) / GridSize) * GridSize
+    for z = startZ, endZ, GridSize do
+        local line = Instance.new("Part")
+        line.Size = Vector3.new(range * 2, 0.1, 0.1)
+        line.CFrame = CFrame.new(playerPos.X, playerPos.Y - 1, z)
+        line.Anchored = true
+        line.CanCollide = false
+        line.Transparency = 0.8
+        line.Color = Color3.fromRGB(255, 255, 0)
+        line.Material = Enum.Material.SmoothPlastic
+        line.Parent = Workspace
+        table.insert(GridLines, line)
+    end
+    for x = startX, endX, GridSize do
+        local line = Instance.new("Part")
+        line.Size = Vector3.new(0.1, 0.1, range * 2)
+        line.CFrame = CFrame.new(x, playerPos.Y - 1, playerPos.Z)
+        line.Anchored = true
+        line.CanCollide = false
+        line.Transparency = 0.8
+        line.Color = Color3.fromRGB(255, 255, 0)
+        line.Material = Enum.Material.SmoothPlastic
+        line.Parent = Workspace
+        table.insert(GridLines, line)
+    end
+end
+spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end end end)
+
 --// Update Preview
 local function UpdatePreview()
     if not PreviewPart then CreatePreview() end
@@ -154,31 +220,26 @@ local function UpdatePreview()
         local rawPos = result.Position
         local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
         PreviewPos = displayPos
-        
         if CurrentMode == "Flatten" then
             PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
             local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
             PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
-        elseif CurrentMode == "Paint" or CurrentMode == "Erase" then
+        elseif CurrentMode == "Paint" then
             if CurrentShape == "Ball" then
                 PreviewPart.Size = Vector3.new(SizeX, SizeX, SizeX)
             else
-                PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+                PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
             end
-            local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
+            local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0)
             PreviewPart.CFrame = cf
         else
             PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
             local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
             PreviewPart.CFrame = cf
         end
-        
         PreviewPart.Transparency = 0.85
         PreviewPart.EdgeOutline.Transparency = 0
-        if CurrentMode == "Erase" then
-            PreviewPart.Color = Color3.fromRGB(255, 50, 50)
-            PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(255, 50, 50)
-        elseif SnapEnabled then
+        if SnapEnabled then
             PreviewPart.Color = Color3.fromRGB(100, 255, 150)
             PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
         else
@@ -198,8 +259,8 @@ local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[currentGroundColorIndex].color) end)
 end
 
---// SMOOTH TERRAIN ALGORITHM (With Rock Mix & Brush Strength logic)
-local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, bStrength, mixRock)
+--// SMOOTH TERRAIN ALGORITHM
+local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
     for layer = 1, layers do
@@ -208,38 +269,19 @@ local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode,
         local angleStep = 360 / (8 * layer)
         for angle = 0, 359, angleStep do
             local rad = math.rad(angle)
-            local offsetY = bStrength or 0
-            
-            if mode == "Noise" then 
-                offsetY = offsetY + math.random(-4, 4) 
-            elseif mode == "Gradient" then 
-                offsetY = offsetY + math.random(-2, 2) 
-            end
-            
+            local offsetY = 0
+            if mode == "Noise" then offsetY = math.random(-4, 4) elseif mode == "Gradient" then offsetY = math.random(-2, 2) end
             local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
             local pos = centerPos + offset
-            
-            if mode == "Soft Edge" then 
-                Terrain:FillBall(pos, layerSize / 1.5, material)
-            elseif mode == "Noise" then 
-                if math.random() > 0.4 then 
-                    Terrain:FillBall(pos, layerSize / 2, material) 
-                    if mixRock then
-                        Terrain:FillBall(pos - Vector3.new(0, layerSize/2, 0), layerSize / 2, Enum.Material.Rock)
-                    end
-                end
-            elseif mode == "Gradient" then 
-                if math.random() > 0.2 then 
-                    Terrain:FillBall(pos, layerSize / 2, material) 
-                end
-            elseif mode == "Blend" then 
-                Terrain:FillBall(pos, layerSize, material) 
-            end
+            if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
+            elseif mode == "Noise" then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Gradient" then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Blend" then Terrain:FillBall(pos, layerSize, material) end
         end
     end
 end
 
---// BL Function (Build Logic)
+--// BL Function
 local function BL(d)
     local pos = Vector3.new(d[1], d[2], d[3])
     local sx, sy, sz = d[4], d[5], d[6]
@@ -250,22 +292,12 @@ local function BL(d)
     local smoothMode = d[16] or "Soft Edge"
     local smoothInt = d[17] or 5
     local actionMode = d[18] or "Build"
-    local bStrength = d[19] or 0
-    local mixRock = d[20] or false
-    
     local mat = Enum.Material.Grass
     for _, m in ipairs(Materials) do if m.Name == matName then mat = m.Mat break end end
     ApplyMaterialColors()
-    
     local sizeVec = Vector3.new(sx, sy, sz)
     local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
-    
-    if actionMode == "Erase" then
-        if shape == "Block" then Terrain:FillBlock(cf, sizeVec, Enum.Material.Air)
-        elseif shape == "Wedge" then Terrain:FillWedge(cf, sizeVec, Enum.Material.Air)
-        else Terrain:FillBall(pos, math.max(sx, sy, sz)/2, Enum.Material.Air) end
-        
-    elseif actionMode == "Flatten" then
+    if actionMode == "Flatten" then
         local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(ry), 0)
         if shape == "Block" then
             Terrain:FillBlock(baseCf, Vector3.new(sx, 2, sz), mat)
@@ -306,9 +338,7 @@ local function BL(d)
         elseif shape == "Wedge" then Terrain:FillWedge(cf, sizeVec, mat)
         else Terrain:FillBall(pos, math.max(sx, sy, sz)/2, mat) end
     end
-    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" and actionMode ~= "Erase" then 
-        ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode, bStrength, mixRock) 
-    end
+    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" then ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode) end
     return d
 end
 
@@ -318,7 +348,7 @@ gui.Name = "TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
---// POPUP LIMIT WINDOW
+--// POPUP LIMIT WINDOW - JENDELA BARU DI TENGAH
 local limitPopup = Instance.new("Frame", gui)
 limitPopup.Name = "LimitPopup"
 limitPopup.Size = UDim2.new(0, 480, 0, 320)
@@ -332,7 +362,9 @@ local limitStroke = Instance.new("UIStroke", limitPopup)
 limitStroke.Color = Color3.fromRGB(255, 80, 80)
 limitStroke.Thickness = 3
 
+--// TOMBOL CLOSE KIRI ATAS
 local closeLimitBtn = Instance.new("TextButton", limitPopup)
+closeLimitBtn.Name = "CloseLimitBtn"
 closeLimitBtn.Size = UDim2.new(0, 30, 0, 30)
 closeLimitBtn.Position = UDim2.new(0, 8, 0, 8)
 closeLimitBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
@@ -344,6 +376,7 @@ closeLimitBtn.ZIndex = 101
 Instance.new("UICorner", closeLimitBtn).CornerRadius = UDim.new(0, 6)
 closeLimitBtn.MouseButton1Click:Connect(function() limitPopup.Visible = false end)
 
+--// TITLE
 local limitTitle = Instance.new("TextLabel", limitPopup)
 limitTitle.Size = UDim2.new(1, -50, 0, 35)
 limitTitle.Position = UDim2.new(0, 45, 0, 6)
@@ -355,6 +388,7 @@ limitTitle.Font = Enum.Font.GothamBlack
 limitTitle.TextXAlignment = Enum.TextXAlignment.Left
 limitTitle.ZIndex = 101
 
+--// TEXT PERINGATAN LENGKAP
 local limitText = Instance.new("TextLabel", limitPopup)
 limitText.Size = UDim2.new(1, -30, 1, -80)
 limitText.Position = UDim2.new(0, 15, 0, 50)
@@ -367,6 +401,7 @@ limitText.TextWrapped = true
 limitText.TextYAlignment = Enum.TextYAlignment.Top
 limitText.ZIndex = 101
 
+--// TOMBOL TUTUP BAWAH
 local okLimitBtn = Instance.new("TextButton", limitPopup)
 okLimitBtn.Size = UDim2.new(0, 120, 0, 35)
 okLimitBtn.Position = UDim2.new(0.5, -60, 1, -45)
@@ -379,7 +414,7 @@ okLimitBtn.ZIndex = 101
 Instance.new("UICorner", okLimitBtn).CornerRadius = UDim.new(0, 8)
 okLimitBtn.MouseButton1Click:Connect(function() limitPopup.Visible = false end)
 
---// SPAWN COUNTER GUI
+--// SPAWN COUNTER GUI - DIPINDAH LEBIH KE KIRI
 local spawnCounter = Instance.new("TextLabel", gui)
 spawnCounter.Name = "SpawnCounter"
 spawnCounter.Size = UDim2.new(0, 80, 0, 22)
@@ -407,7 +442,7 @@ local function UpdateSpawnCounter()
     end
 end
 
---// Spawn Terrain 
+--// Spawn Terrain - DENGAN PROTEKSI LIMIT
 local function SpawnTerrain()
     if not PreviewPos then return false end
     
@@ -428,8 +463,7 @@ local function SpawnTerrain()
         math.floor(PreviewPos.X), math.floor(PreviewPos.Y), math.floor(PreviewPos.Z),
         SizeX, SizeY, SizeZ, CurrentMaterial.Name, CurrentShape,
         currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
-        RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity, CurrentMode,
-        BrushStrength, MixRockEnabled
+        RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity, CurrentMode
     }
     BL(data)
     local afterMats, afterOccs = Terrain:ReadVoxels(region, 4)
@@ -440,7 +474,7 @@ local function SpawnTerrain()
     return true
 end
 
---// UNDO 
+--// UNDO / REDO
 local function Undo()
     if #UndoHistory == 0 then return false, "Nothing to undo" end
     local lastNode = table.remove(UndoHistory)
@@ -465,7 +499,7 @@ local function GenerateScript()
     code = code .. "}\n\n"
     
     code = code .. [[
-local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, bStrength, mixRock)
+local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
     for layer = 1, layers do
@@ -474,16 +508,12 @@ local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode,
         local angleStep = 360 / (8 * layer)
         for angle = 0, 359, angleStep do
             local rad = math.rad(angle)
-            local offsetY = bStrength or 0
-            if mode == "Noise" then offsetY = offsetY + math.random(-4, 4) elseif mode == "Gradient" then offsetY = offsetY + math.random(-2, 2) end
+            local offsetY = 0
+            if mode == "Noise" then offsetY = math.random(-4, 4) elseif mode == "Gradient" then offsetY = math.random(-2, 2) end
             local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
             local pos = centerPos + offset
             if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
-            elseif mode == "Noise" then 
-                if math.random() > 0.4 then 
-                    Terrain:FillBall(pos, layerSize / 2, material) 
-                    if mixRock then Terrain:FillBall(pos - Vector3.new(0, layerSize/2, 0), layerSize / 2, Enum.Material.Rock) end
-                end
+            elseif mode == "Noise" then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end
             elseif mode == "Gradient" then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end
             elseif mode == "Blend" then Terrain:FillBall(pos, layerSize, material) end
         end
@@ -493,7 +523,7 @@ end
     
     code = code .. "local function BL(d)\n"
     code = code .. "    local pos = Vector3.new(d[1], d[2], d[3])\n"
-    code = code .. "    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice,Basalt=Enum.Material.Basalt,Slate=Enum.Material.Slate,CrackedLava=Enum.Material.CrackedLava,Limestone=Enum.Material.Limestone,Cobblestone=Enum.Material.Cobblestone,Glacier=Enum.Material.Glacier}\n"
+    code = code .. "    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Brick=Enum.Material.Brick,Wood=Enum.Material.WoodPlanks,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice}\n"
     code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
     code = code .. "    local shape, actionMode = d[8] or 'Ball', d[18] or 'Build'\n"
     code = code .. "    local sizeVec = Vector3.new(d[4], d[5], d[6])\n"
@@ -501,13 +531,7 @@ end
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2]) end)\n"
     code = code .. "    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(d[12] or 0), math.rad(d[13] or 0), math.rad(d[14] or 0))\n"
-    
-    code = code .. "    if actionMode == 'Erase' then\n"
-    code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, sizeVec, Enum.Material.Air)\n"
-    code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, Enum.Material.Air)\n"
-    code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, Enum.Material.Air) end\n"
-
-    code = code .. "    elseif actionMode == 'Flatten' then\n"
+    code = code .. "    if actionMode == 'Flatten' then\n"
     code = code .. "        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
     code = code .. "        if shape == 'Block' then Terrain:FillBlock(baseCf, Vector3.new(d[4], 2, d[6]), mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
@@ -529,7 +553,7 @@ end
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat)\n"
     code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat) end\n"
     code = code .. "    end\n"
-    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' and actionMode ~= 'Erase' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16], d[19] or 0, d[20] or false) end\n"
+    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16]) end\n"
     code = code .. "end\n\n"
     
     local batchSize = 20
@@ -541,8 +565,7 @@ end
         for i = startIdx, endIdx do
             local d = SpawnedData[i]
             local sEnabled = d[15] and "true" or "false"
-            local mRockEnabled = d[20] and "true" or "false"
-            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 5) .. ",'" .. (d[18] or "Build") .. "'," .. (d[19] or 0) .. "," .. mRockEnabled .. "}"
+            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 5) .. ",'" .. (d[18] or "Build") .. "'}"
             if i < endIdx then code = code .. "," end
         end
         code = code .. "})do BL(d)end\n"
@@ -625,7 +648,7 @@ Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.4", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -638,7 +661,7 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1600)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1550)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
@@ -713,25 +736,24 @@ ballBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
 local blockBtn = CreateUIBtn(shapeSec, "Block", 0.35, 0.25)
 local wedgeBtn = CreateUIBtn(shapeSec, "Wedge", 0.65, 0.25)
 
---// ACTION MODE SECTION (Added Erase)
+--// ACTION MODE SECTION
 local modeSec = Instance.new("Frame", scroll)
 modeSec.Size, modeSec.BackgroundColor3, modeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", modeSec).CornerRadius = UDim.new(0, 8)
 local modeTitle = Instance.new("TextLabel", modeSec)
 modeTitle.Size, modeTitle.Position, modeTitle.BackgroundTransparency, modeTitle.Text, modeTitle.TextColor3, modeTitle.TextSize, modeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🛠️ Action Mode", Color3.fromRGB(255, 150, 50), 11, Enum.Font.GothamBold
 
-local buildBtn = CreateUIBtn(modeSec, "Build", 0.02, 0.22)
+local buildBtn = CreateUIBtn(modeSec, "Build", 0.05, 0.25)
 buildBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
-local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.26, 0.22)
-local paintBtn = CreateUIBtn(modeSec, "Paint", 0.50, 0.22)
-local eraseBtn = CreateUIBtn(modeSec, "Erase", 0.74, 0.22)
+local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.35, 0.25)
+local paintBtn = CreateUIBtn(modeSec, "Paint", 0.65, 0.25)
 
---// SMOOTH TERRAIN GUI SECTION (Added Brush Strength + Rock Mix)
+--// SMOOTH TERRAIN GUI SECTION
 local smoothSec = Instance.new("Frame", scroll)
-smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
+smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
 local smoothTitle = Instance.new("TextLabel", smoothSec)
-smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain & Brush", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
+smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
 local smoothToggleBtn = Instance.new("TextButton", smoothSec)
 smoothToggleBtn.Size, smoothToggleBtn.Position, smoothToggleBtn.BackgroundColor3, smoothToggleBtn.Text, smoothToggleBtn.TextColor3, smoothToggleBtn.TextSize, smoothToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF ▼", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
@@ -757,27 +779,8 @@ local intPlus = Instance.new("TextButton", smoothSec)
 intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 133, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", intPlus).CornerRadius = UDim.new(0, 4)
 
--- NEW: Brush Strength (replaces Max 200)
-local strL = Instance.new("TextLabel", smoothSec)
-strL.Size, strL.Position, strL.BackgroundTransparency, strL.Text, strL.TextColor3, strL.TextSize, strL.Font = UDim2.new(0, 55, 0, 20), UDim2.new(0, 162, 0, 53), 1, "Strength:", Color3.fromRGB(255, 100, 200), 10, Enum.Font.GothamBold
-
-local strMinus = Instance.new("TextButton", smoothSec)
-strMinus.Size, strMinus.Position, strMinus.BackgroundColor3, strMinus.Text, strMinus.TextColor3, strMinus.TextSize, strMinus.Font = UDim2.new(0, 20, 0, 20), UDim2.new(0, 215, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", strMinus).CornerRadius = UDim.new(0, 4)
-
-local strDisp = Instance.new("TextBox", smoothSec)
-strDisp.Size, strDisp.Position, strDisp.BackgroundColor3, strDisp.Text, strDisp.TextColor3, strDisp.TextSize, strDisp.Font = UDim2.new(0, 20, 0, 20), UDim2.new(0, 238, 0, 53), Color3.fromRGB(40, 40, 50), tostring(BrushStrength), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-strDisp.ClearTextOnFocus = false
-Instance.new("UICorner", strDisp).CornerRadius = UDim.new(0, 4)
-
-local strPlus = Instance.new("TextButton", smoothSec)
-strPlus.Size, strPlus.Position, strPlus.BackgroundColor3, strPlus.Text, strPlus.TextColor3, strPlus.TextSize, strPlus.Font = UDim2.new(0, 20, 0, 20), UDim2.new(0, 261, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", strPlus).CornerRadius = UDim.new(0, 4)
-
--- NEW: Rock Mix Toggle
-local mixRockBtn = Instance.new("TextButton", smoothSec)
-mixRockBtn.Size, mixRockBtn.Position, mixRockBtn.BackgroundColor3, mixRockBtn.Text, mixRockBtn.TextColor3, mixRockBtn.TextSize, mixRockBtn.Font = UDim2.new(1, -12, 0, 22), UDim2.new(0, 6, 0, 78), Color3.fromRGB(60, 60, 75), "Mix Rock (Noise): OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", mixRockBtn).CornerRadius = UDim.new(0, 4)
+local intMaxTxt = Instance.new("TextLabel", smoothSec)
+intMaxTxt.Size, intMaxTxt.Position, intMaxTxt.BackgroundTransparency, intMaxTxt.Text, intMaxTxt.TextColor3, intMaxTxt.TextSize, intMaxTxt.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 162, 0, 53), 1, "(Max 200)", Color3.fromRGB(255, 100, 200), 10, Enum.Font.GothamBold
 
 --// SNAP TO GRID GUI SECTION
 local snapSec = Instance.new("Frame", scroll)
@@ -964,6 +967,7 @@ setupColorBtn(grassLeft, grassRight, grassDisplay, grassColors, {v=currentGrassC
 setupColorBtn(leafyLeft, leafyRight, leafyDisplay, leafyGrassColors, {v=currentLeafyGrassColorIndex}, function() ApplyMaterialColors() end)
 setupColorBtn(groundLeft, groundRight, groundDisplay, groundColors, {v=currentGroundColorIndex}, function() ApplyMaterialColors() end)
 
+-- Tembus Toggle Events
 ghostToggleBtn.MouseButton1Click:Connect(function()
     IgnoreTerrain = not IgnoreTerrain
     if IgnoreTerrain then
@@ -1007,14 +1011,12 @@ local function SelectMode(modeName, selectedBtn)
     buildBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     flatBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     paintBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-    eraseBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     selectedBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
     UpdatePreview()
 end
 buildBtn.MouseButton1Click:Connect(function() SelectMode("Build", buildBtn) end)
 flatBtn.MouseButton1Click:Connect(function() SelectMode("Flatten", flatBtn) end)
 paintBtn.MouseButton1Click:Connect(function() SelectMode("Paint", paintBtn) end)
-eraseBtn.MouseButton1Click:Connect(function() SelectMode("Erase", eraseBtn) end)
 
 smoothToggleBtn.MouseButton1Click:Connect(function()
     SmoothEnabled = not SmoothEnabled
@@ -1024,17 +1026,6 @@ smoothToggleBtn.MouseButton1Click:Connect(function()
     else
         smoothToggleBtn.Text = "OFF ▼"
         smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    end
-end)
-
-mixRockBtn.MouseButton1Click:Connect(function()
-    MixRockEnabled = not MixRockEnabled
-    if MixRockEnabled then
-        mixRockBtn.Text = "Mix Rock (Noise): ON"
-        mixRockBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    else
-        mixRockBtn.Text = "Mix Rock (Noise): OFF"
-        mixRockBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
     end
 end)
 
@@ -1052,36 +1043,25 @@ intDisp.FocusLost:Connect(handleIntInput)
 intMinus.MouseButton1Click:Connect(function() SmoothIntensity = math.max(1, SmoothIntensity - 1); intDisp.Text = tostring(SmoothIntensity) end)
 intPlus.MouseButton1Click:Connect(function() SmoothIntensity = math.min(200, SmoothIntensity + 1); intDisp.Text = tostring(SmoothIntensity) end)
 
-local function handleStrInput()
-    local val = tonumber(strDisp.Text)
-    if val then
-        BrushStrength = math.clamp(math.floor(val), -5, 5)
-        strDisp.Text = tostring(BrushStrength)
-    end
-end
-strDisp.FocusLost:Connect(handleStrInput)
-
-strMinus.MouseButton1Click:Connect(function() BrushStrength = math.max(-5, BrushStrength - 1); strDisp.Text = tostring(BrushStrength) end)
-strPlus.MouseButton1Click:Connect(function() BrushStrength = math.min(5, BrushStrength + 1); strDisp.Text = tostring(BrushStrength) end)
-
 snapToggleBtn.MouseButton1Click:Connect(function()
     SnapEnabled = not SnapEnabled
     if SnapEnabled then snapToggleBtn.Text = "ON ☑️"; snapToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
     else snapToggleBtn.Text = "OFF"; snapToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end
-    UpdatePreview()
+    UpdatePreview(); UpdateGridVisual()
 end)
 
 visualBtn.MouseButton1Click:Connect(function()
     ShowGridVisual = not ShowGridVisual
     if ShowGridVisual then visualBtn.Text = "Visual Guide: ON"; visualBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
     else visualBtn.Text = "Visual Guide: OFF"; visualBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75) end
+    UpdateGridVisual()
 end)
 
 local function SetGridSize(size, btn)
     GridSize = size
     sPreset5.BackgroundColor3 = Color3.fromRGB(80, 80, 100); sPreset10.BackgroundColor3 = Color3.fromRGB(80, 80, 100); sPreset20.BackgroundColor3 = Color3.fromRGB(80, 80, 100); sPreset50.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
     btn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
-    UpdatePreview()
+    UpdatePreview(); UpdateGridVisual()
 end
 sPreset5.MouseButton1Click:Connect(function() SetGridSize(5, sPreset5) end)
 sPreset10.MouseButton1Click:Connect(function() SetGridSize(10, sPreset10) end)
@@ -1197,4 +1177,4 @@ end)
 
 RunService.RenderStepped:Connect(UpdatePreview)
 
-print("✅ Terrain Editor v16.5 Loaded - Added Erase, Rock Mix & Brush Strength!")
+print("✅ Terrain Editor v16.4 Loaded - Counter Fixed, Grid Normal Colors, Limit Popup with Close Button!")
