@@ -1,4 +1,4 @@
---// TERRAIN BY ELBRUZH 
+--// TERRAIN BY shhhhnayy05
 --// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector
 --// + Brush Strength, Rock Mix Toggle, Erase Mode, Full Terrain Materials
 --// FIXED & OPTIMIZED FOR MOBILE EXECUTORS
@@ -111,7 +111,7 @@ local RedoHistory = {}
 local IgnoreTerrain = false
 
 --// BRUSH STRENGTH
-local BrushStrength = 5 -- Default 5 (range 1-10)
+local BrushStrength = 5
 
 --// ROCK MIX TOGGLE - Default OFF
 local RockMixEnabled = false
@@ -180,7 +180,7 @@ local function SnapPosition(pos)
     return Vector3.new(snappedX, snappedY, snappedZ)
 end
 
---// VISUAL GRID FUNCTION - WARNA BIASA, BUKAN NEON
+--// VISUAL GRID FUNCTION
 local function UpdateGridVisual()
     for _, line in ipairs(GridLines) do line:Destroy() end
     GridLines = {}
@@ -315,12 +315,10 @@ local function BL(d)
     local sizeVec = Vector3.new(sx, sy, sz)
     local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
     
-    -- Apply brush strength to size
     local strengthMultiplier = brushStr / 5
     local adjustedSize = sizeVec * strengthMultiplier
     
     if actionMode == "Erase" then
-        -- Erase mode: fill with Air
         if shape == "Block" then
             Terrain:FillBlock(cf, adjustedSize, Enum.Material.Air)
         elseif shape == "Wedge" then
@@ -365,10 +363,8 @@ local function BL(d)
         end
         if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
     else
-        -- Build mode with Rock Mix
         if shape == "Block" then 
             Terrain:FillBlock(cf, adjustedSize, mat)
-            -- Rock Mix: add Rock material randomly around edges
             if rockMix then
                 local rockRadius = math.max(adjustedSize.X, adjustedSize.Y, adjustedSize.Z) / 2
                 for i = 1, math.random(3, 8) do
@@ -428,11 +424,11 @@ end
 
 --// Main GUI Setup
 local gui = Instance.new("ScreenGui")
-gui.Name = "TerrainEditor"
+gui.Name = "shhhhnayy05TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
---// POPUP LIMIT WINDOW - JENDELA BARU DI TENGAH
+--// POPUP LIMIT WINDOW
 local limitPopup = Instance.new("Frame", gui)
 limitPopup.Name = "LimitPopup"
 limitPopup.Size = UDim2.new(0, 480, 0, 320)
@@ -446,7 +442,6 @@ local limitStroke = Instance.new("UIStroke", limitPopup)
 limitStroke.Color = Color3.fromRGB(255, 80, 80)
 limitStroke.Thickness = 3
 
---// TOMBOL CLOSE KIRI ATAS
 local closeLimitBtn = Instance.new("TextButton", limitPopup)
 closeLimitBtn.Name = "CloseLimitBtn"
 closeLimitBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -460,7 +455,6 @@ closeLimitBtn.ZIndex = 101
 Instance.new("UICorner", closeLimitBtn).CornerRadius = UDim.new(0, 6)
 closeLimitBtn.MouseButton1Click:Connect(function() limitPopup.Visible = false end)
 
---// TITLE
 local limitTitle = Instance.new("TextLabel", limitPopup)
 limitTitle.Size = UDim2.new(1, -50, 0, 35)
 limitTitle.Position = UDim2.new(0, 45, 0, 6)
@@ -472,7 +466,6 @@ limitTitle.Font = Enum.Font.GothamBlack
 limitTitle.TextXAlignment = Enum.TextXAlignment.Left
 limitTitle.ZIndex = 101
 
---// TEXT PERINGATAN LENGKAP
 local limitText = Instance.new("TextLabel", limitPopup)
 limitText.Size = UDim2.new(1, -30, 1, -80)
 limitText.Position = UDim2.new(0, 15, 0, 50)
@@ -485,7 +478,6 @@ limitText.TextWrapped = true
 limitText.TextYAlignment = Enum.TextYAlignment.Top
 limitText.ZIndex = 101
 
---// TOMBOL TUTUP BAWAH
 local okLimitBtn = Instance.new("TextButton", limitPopup)
 okLimitBtn.Size = UDim2.new(0, 120, 0, 35)
 okLimitBtn.Position = UDim2.new(0.5, -60, 1, -45)
@@ -498,7 +490,7 @@ okLimitBtn.ZIndex = 101
 Instance.new("UICorner", okLimitBtn).CornerRadius = UDim.new(0, 8)
 okLimitBtn.MouseButton1Click:Connect(function() limitPopup.Visible = false end)
 
---// SPAWN COUNTER GUI - DIPINDAH LEBIH KE KIRI
+--// SPAWN COUNTER GUI
 local spawnCounter = Instance.new("TextLabel", gui)
 spawnCounter.Name = "SpawnCounter"
 spawnCounter.Size = UDim2.new(0, 80, 0, 22)
@@ -526,7 +518,7 @@ local function UpdateSpawnCounter()
     end
 end
 
---// Spawn Terrain - DENGAN PROTEKSI LIMIT
+--// Spawn Terrain
 local function SpawnTerrain()
     if not PreviewPos then return false end
     
@@ -559,7 +551,7 @@ local function SpawnTerrain()
     return true
 end
 
---// UNDO / REDO
+--// UNDO
 local function Undo()
     if #UndoHistory == 0 then return false, "Nothing to undo" end
     local lastNode = table.remove(UndoHistory)
@@ -573,7 +565,7 @@ end
 --// Generate Script
 local function GenerateScript()
     if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
-    local code = "--// Terrain Spawn Script\n--// Total: " .. #SpawnedData .. " terrains\n\n"
+    local code = "--// Terrain Spawn Script by shhhhnayy05\n--// Total: " .. #SpawnedData .. " terrains\n\n"
     code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
     code = code .. "local grassColors = {"
     for i, c in ipairs(grassColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
@@ -751,7 +743,7 @@ Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor shhhhnayy05 v16.5", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -852,7 +844,7 @@ local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.27, 0.2)
 local paintBtn = CreateUIBtn(modeSec, "Paint", 0.49, 0.2)
 local eraseBtn = CreateUIBtn(modeSec, "Erase", 0.71, 0.2)
 
---// BRUSH STRENGTH SECTION - BARU
+--// BRUSH STRENGTH SECTION
 local brushStrSec = Instance.new("Frame", scroll)
 brushStrSec.Size, brushStrSec.BackgroundColor3, brushStrSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", brushStrSec).CornerRadius = UDim.new(0, 8)
@@ -874,11 +866,7 @@ Instance.new("UICorner", brushStrPlus).CornerRadius = UDim.new(0, 6)
 local brushStrInfo = Instance.new("TextLabel", brushStrSec)
 brushStrInfo.Size, brushStrInfo.Position, brushStrInfo.BackgroundTransparency, brushStrInfo.Text, brushStrInfo.TextColor3, brushStrInfo.TextSize, brushStrInfo.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 130, 0, 26), 1, "(1-10)", Color3.fromRGB(150, 150, 150), 10, Enum.Font.GothamBold
 
---// ROCK MIX TOGGLE SECTION - BARU
-local rockMixSec = Instance.new("Frame", scroll)
-rockMixSec.Size, rockMixSec.BackgroundColor3, rockMixSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", rockMixSec).CornerRadius = UDim.new(0, 8)
-local rockMixTitle = Instance.new("TextLabel", rockMixSec)
+--// ROCK MIX TOGGLE SECTION
 rockMixTitle.Size, rockMixTitle.Position, rockMixTitle.BackgroundTransparency, rockMixTitle.Text, rockMixTitle.TextColor3, rockMixTitle.TextSize, rockMixTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🪨 Rock Mix", Color3.fromRGB(139, 125, 107), 11, Enum.Font.GothamBold
 
 local rockMixToggleBtn = Instance.new("TextButton", rockMixSec)
@@ -889,6 +877,7 @@ local rockMixInfo = Instance.new("TextLabel", rockMixSec)
 rockMixInfo.Size, rockMixInfo.Position, rockMixInfo.BackgroundTransparency, rockMixInfo.Text, rockMixInfo.TextColor3, rockMixInfo.TextSize, rockMixInfo.Font = UDim2.new(1, -95, 0, 20), UDim2.new(0, 90, 0, 26), 1, "ON = Campur Rock", Color3.fromRGB(150, 150, 150), 10, Enum.Font.GothamBold
 
 --// SMOOTH TERRAIN GUI SECTION
+local smoothSec = Instance.new("Frame", scroll)
 smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
 local smoothTitle = Instance.new("TextLabel", smoothSec)
@@ -917,6 +906,9 @@ Instance.new("UICorner", intDisp).CornerRadius = UDim.new(0, 4)
 local intPlus = Instance.new("TextButton", smoothSec)
 intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 133, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", intPlus).CornerRadius = UDim.new(0, 4)
+
+local intMaxTxt = Instance.new("TextLabel", smoothSec)
+intMaxTxt.Size, intMaxTxt.Position, intMaxTxt.BackgroundTransparency, intMaxTxt.Text, intMaxTxt.TextColor3, intMaxTxt.TextSize, intMaxTxt.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 162, 0, 53), 1, "(Max 200)", Color3.fromRGB(255, 100, 200), 10, Enum.Font.GothamBold
 
 --// SNAP TO GRID GUI SECTION
 local snapSec = Instance.new("Frame", scroll)
@@ -1340,4 +1332,4 @@ end)
 
 RunService.RenderStepped:Connect(UpdatePreview)
 
-print("✅ Terrain Editor v16.5 Loaded - Brush Strength, Rock Mix, Erase Mode, Full Terrain Materials!")
+print("✅ Terrain Editor v16.5 by shhhhnayy05 Loaded - Brush Strength, Rock Mix, Erase Mode, Full Terrain Materials!")
