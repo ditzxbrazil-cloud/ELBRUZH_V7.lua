@@ -65,8 +65,7 @@ local Materials = {
     {Name = "Slate", Color = Color3.fromRGB(63, 63, 63), Mat = Enum.Material.Slate},
     {Name = "CrackedLava", Color = Color3.fromRGB(255, 100, 0), Mat = Enum.Material.CrackedLava},
     {Name = "Limestone", Color = Color3.fromRGB(200, 190, 170), Mat = Enum.Material.Limestone},
-    {Name = "Cobblestone", Color = Color3.fromRGB(100, 100, 100), Mat = Enum.Material.Cobblestone},
-    {Name = "Glacier", Color = Color3.fromRGB(150, 200, 255), Mat = Enum.Material.Glacier}
+    {Name = "Cobblestone", Color = Color3.fromRGB(100, 100, 100), Mat = Enum.Material.Cobblestone}
 }
 
 --// State
