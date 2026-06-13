@@ -1174,7 +1174,7 @@ local function setPreset(size) SizeX, SizeY, SizeZ = size, size, size; xValue.Te
 preset5.MouseButton1Click:Connect(function() setPreset(5) end)
 preset10.MouseButton1Click:Connect(function() setPreset(10) end)
 preset20.MouseButton1Click:Connect(function() setPreset(20) end)
-preset30.MouseButton1Connect = preset30.MouseButton1Click:Connect(function() setPreset(30) end)
+preset30.MouseButton1Click:Connect(function() setPreset(30) end)
 preset40.MouseButton1Click:Connect(function() setPreset(40) end)
 preset50.MouseButton1Click:Connect(function() setPreset(50) end)
 preset60.MouseButton1Click:Connect(function() setPreset(60) end)
