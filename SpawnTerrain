@@ -1,5 +1,5 @@
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature
+--// Terrain Editor v16.6 - Smooth Terrain Redesigned, Erase Mode, Ghost Mode, Limit Protector
 --// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (UPDATED CUSTOM REQUEST)
 
 local Players = game:GetService("Players")
@@ -114,7 +114,8 @@ local SmoothEnabled = false
 local SmoothModes = {"Soft Edge", "Gradient", "Noise", "Blend"}
 local CurrentSmoothModeIndex = 1
 local SmoothIntensity = 5
-local SmoothHeight = 5 -- Fitur peninggi (Max 100)
+local SmoothHeight = 5
+local MixRockEnabled = false
 
 --// Raycast dengan Pelindung (pcall)
 local function GetRaycast()
@@ -223,6 +224,7 @@ local function UpdatePreview()
             local rawPos = result.Position
             local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
             PreviewPos = displayPos
+            
             if CurrentMode == "Flatten" then
                 PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
                 local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
@@ -240,14 +242,27 @@ local function UpdatePreview()
                 local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
                 PreviewPart.CFrame = cf
             end
+            
             PreviewPart.Transparency = 0.85
             PreviewPart.EdgeOutline.Transparency = 0
-            if SnapEnabled then
-                PreviewPart.Color = Color3.fromRGB(100, 255, 150)
-                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
+            
+            -- Penyesuaian Warna Preview Berdasarkan Mode
+            if CurrentMode == "Erase" then
+                if SnapEnabled then
+                    PreviewPart.Color = Color3.fromRGB(255, 100, 100)
+                    PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(255, 100, 100)
+                else
+                    PreviewPart.Color = Color3.fromRGB(255, 50, 50)
+                    PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(255, 0, 0)
+                end
             else
-                PreviewPart.Color = Color3.fromRGB(255, 255, 255)
-                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
+                if SnapEnabled then
+                    PreviewPart.Color = Color3.fromRGB(100, 255, 150)
+                    PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
+                else
+                    PreviewPart.Color = Color3.fromRGB(255, 255, 255)
+                    PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
+                end
             end
         else
             PreviewPart.Transparency = 1
@@ -263,26 +278,80 @@ local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[currentGroundColorIndex].color) end)
 end
 
---// SMOOTH TERRAIN ALGORITHM DENGAN PENINGGI
-local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)
+--// LOGIKA SMOOTH TERRAIN ROMBAK TOTAL
+local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi, mixRock)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
-    local heightScale = peninggi or 5
-    for layer = 1, layers do
-        local layerRadius = radius + (layer * 2)
-        local layerSize = math.max(2, 6 - layer)
-        local angleStep = 360 / (8 * layer)
-        for angle = 0, 359, angleStep do
-            local rad = math.rad(angle)
-            -- Menambahkan elevasi peninggi yang melandai
-            local offsetY = (heightScale / 2) * (1 - (layer / layers))
-            if mode == "Noise" then offsetY = offsetY + math.random(-4, 4) elseif mode == "Gradient" then offsetY = offsetY + math.random(-2, 2) end
-            local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
-            local pos = centerPos + offset
-            if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
-            elseif mode == "Noise" then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end
-            elseif mode == "Gradient" then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end
-            elseif mode == "Blend" then Terrain:FillBall(pos, layerSize, material) end
+    local hScale = peninggi or 5
+    
+    if mode == "Soft Edge" then
+        -- Gaussian falloff curve: memudar halus seperti bukit natural
+        for layer = 1, layers do
+            local currentRadius = radius * (1 + (layer * 0.5))
+            local stepSize = math.max(2, 6 - layer)
+            local heightY = hScale * math.exp(- (layer^2) / (layers^2 * 0.5))
+            for angle = 0, 359, 360 / (12 * layer) do
+                local rad = math.rad(angle)
+                local pos = centerPos + Vector3.new(math.cos(rad)*currentRadius, heightY - (hScale/2), math.sin(rad)*currentRadius)
+                Terrain:FillBall(pos, stepSize, material)
+            end
+        end
+
+    elseif mode == "Gradient" then
+        -- Slope linear: melebar dan menurun secara bertahap
+        for layer = 1, layers do
+            local offsetDist = (radius / layers) * layer
+            local heightY = hScale * (1 - (layer / layers))
+            local stepSize = radius / layers + 2
+            for angle = 0, 359, 360 / (8 * layer) do
+                local rad = math.rad(angle)
+                local pos = centerPos + Vector3.new(math.cos(rad)*(radius + offsetDist), heightY - (hScale/2), math.sin(rad)*(radius + offsetDist))
+                Terrain:FillBall(pos, stepSize, material)
+            end
+        end
+
+    elseif mode == "Blend" then
+        -- Dithering effect: Menyebar acak di pinggiran untuk menyatu dengan map
+        for layer = 1, layers do
+            local blendRadius = radius + (layer * 3)
+            for angle = 0, 359, 360 / (15 * layer) do
+                if math.random() > (layer / layers) then
+                    local rad = math.rad(angle)
+                    local pos = centerPos + Vector3.new(math.cos(rad)*blendRadius, math.random(-2, 2), math.sin(rad)*blendRadius)
+                    Terrain:FillBall(pos, math.random(2, 4), material)
+                end
+            end
+        end
+
+    elseif mode == "Noise" then
+        -- Pseudo-Perlin calculation (Sesuai request)
+        local gridSize = 4
+        local noiseRadius = radius + (layers * 2)
+        
+        for x = -noiseRadius, noiseRadius, gridSize do
+            for z = -noiseRadius, noiseRadius, gridSize do
+                local dist = math.sqrt(x*x + z*z)
+                if dist <= noiseRadius then
+                    local n1 = math.sin((centerPos.X + x) * 0.15) * math.cos((centerPos.Z + z) * 0.15)
+                    local n2 = math.sin((centerPos.X + x) * 0.3 + (centerPos.Z + z) * 0.2) * 0.5
+                    local hNoise = (n1 + n2) * hScale
+                    
+                    local falloff = 1 - (dist / noiseRadius)
+                    local finalHeight = hNoise * falloff
+                    local pos = centerPos + Vector3.new(x, finalHeight, z)
+                    local currentMat = material
+                    
+                    -- Logika Rock Mix Tanpa Bolong
+                    if mixRock then
+                        if math.abs(hNoise) > (hScale * 0.3) and math.random() > 0.3 then
+                            currentMat = Enum.Material.Rock
+                        end
+                    end
+                    -- Jika mixRock OFF, currentMat tetap material asli, jadi gak berlubang
+                    
+                    Terrain:FillBall(pos, gridSize * 1.2, currentMat)
+                end
+            end
         end
     end
 end
@@ -299,11 +368,15 @@ local function BL(d)
     local smoothInt = d[17] or 5
     local actionMode = d[18] or "Build"
     local smoothHeight = d[19] or 5
+    local mixRock = d[20] or false
+    
     local mat = Enum.Material.Grass
     for _, m in ipairs(Materials) do if m.Name == matName then mat = m.Mat break end end
     ApplyMaterialColors()
+    
     local sizeVec = Vector3.new(sx, sy, sz)
     local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
+    
     if actionMode == "Flatten" then
         local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(ry), 0)
         if shape == "Block" then
@@ -340,12 +413,20 @@ local function BL(d)
             end 
         end
         if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
+    elseif actionMode == "Erase" then
+        if shape == "Block" then Terrain:FillBlock(cf, sizeVec, Enum.Material.Air)
+        elseif shape == "Wedge" then Terrain:FillWedge(cf, sizeVec, Enum.Material.Air)
+        else Terrain:FillBall(pos, math.max(sx, sy, sz)/2, Enum.Material.Air) end
     else
         if shape == "Block" then Terrain:FillBlock(cf, sizeVec, mat)
         elseif shape == "Wedge" then Terrain:FillWedge(cf, sizeVec, mat)
         else Terrain:FillBall(pos, math.max(sx, sy, sz)/2, mat) end
     end
-    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" then ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode, smoothHeight) end
+    
+    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" and actionMode ~= "Erase" then 
+        ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode, smoothHeight, mixRock) 
+    end
+    
     return d
 end
 
@@ -386,7 +467,7 @@ local function SpawnTerrain()
             math.floor(PreviewPos.X), math.floor(PreviewPos.Y), math.floor(PreviewPos.Z),
             SizeX, SizeY, SizeZ, CurrentMaterial.Name, CurrentShape,
             currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
-            RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity, CurrentMode, SmoothHeight
+            RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity, CurrentMode, SmoothHeight, MixRockEnabled
         }
         BL(data)
         local afterMats, afterOccs = Terrain:ReadVoxels(region, 4)
@@ -423,24 +504,64 @@ local function GenerateScript()
     code = code .. "}\n\n"
     
     code = code .. [[
-local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)
+local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi, mixRock)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
     local hScale = peninggi or 5
-    for layer = 1, layers do
-        local layerRadius = radius + (layer * 2)
-        local layerSize = math.max(2, 6 - layer)
-        local angleStep = 360 / (8 * layer)
-        for angle = 0, 359, angleStep do
-            local rad = math.rad(angle)
-            local offsetY = (hScale / 2) * (1 - (layer / layers))
-            if mode == "Noise" then offsetY = offsetY + math.random(-4, 4) elseif mode == "Gradient" then offsetY = offsetY + math.random(-2, 2) end
-            local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
-            local pos = centerPos + offset
-            if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
-            elseif mode == "Noise" then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end
-            elseif mode == "Gradient" then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end
-            elseif mode == "Blend" then Terrain:FillBall(pos, layerSize, material) end
+    
+    if mode == "Soft Edge" then
+        for layer = 1, layers do
+            local currentRadius = radius * (1 + (layer * 0.5))
+            local stepSize = math.max(2, 6 - layer)
+            local heightY = hScale * math.exp(- (layer^2) / (layers^2 * 0.5))
+            for angle = 0, 359, 360 / (12 * layer) do
+                local rad = math.rad(angle)
+                local pos = centerPos + Vector3.new(math.cos(rad)*currentRadius, heightY - (hScale/2), math.sin(rad)*currentRadius)
+                Terrain:FillBall(pos, stepSize, material)
+            end
+        end
+    elseif mode == "Gradient" then
+        for layer = 1, layers do
+            local offsetDist = (radius / layers) * layer
+            local heightY = hScale * (1 - (layer / layers))
+            local stepSize = radius / layers + 2
+            for angle = 0, 359, 360 / (8 * layer) do
+                local rad = math.rad(angle)
+                local pos = centerPos + Vector3.new(math.cos(rad)*(radius + offsetDist), heightY - (hScale/2), math.sin(rad)*(radius + offsetDist))
+                Terrain:FillBall(pos, stepSize, material)
+            end
+        end
+    elseif mode == "Blend" then
+        for layer = 1, layers do
+            local blendRadius = radius + (layer * 3)
+            for angle = 0, 359, 360 / (15 * layer) do
+                if math.random() > (layer / layers) then
+                    local rad = math.rad(angle)
+                    local pos = centerPos + Vector3.new(math.cos(rad)*blendRadius, math.random(-2, 2), math.sin(rad)*blendRadius)
+                    Terrain:FillBall(pos, math.random(2, 4), material)
+                end
+            end
+        end
+    elseif mode == "Noise" then
+        local gridSize = 4
+        local noiseRadius = radius + (layers * 2)
+        for x = -noiseRadius, noiseRadius, gridSize do
+            for z = -noiseRadius, noiseRadius, gridSize do
+                local dist = math.sqrt(x*x + z*z)
+                if dist <= noiseRadius then
+                    local n1 = math.sin((centerPos.X + x) * 0.15) * math.cos((centerPos.Z + z) * 0.15)
+                    local n2 = math.sin((centerPos.X + x) * 0.3 + (centerPos.Z + z) * 0.2) * 0.5
+                    local hNoise = (n1 + n2) * hScale
+                    local falloff = 1 - (dist / noiseRadius)
+                    local finalHeight = hNoise * falloff
+                    local pos = centerPos + Vector3.new(x, finalHeight, z)
+                    local currentMat = material
+                    if mixRock and math.abs(hNoise) > (hScale * 0.3) and math.random() > 0.3 then
+                        currentMat = Enum.Material.Rock
+                    end
+                    Terrain:FillBall(pos, gridSize * 1.2, currentMat)
+                end
+            end
         end
     end
 end
@@ -452,6 +573,7 @@ end
     code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
     code = code .. "    local shape, actionMode = d[8] or 'Ball', d[18] or 'Build'\n"
     code = code .. "    local sizeVec = Vector3.new(d[4], d[5], d[6])\n"
+    code = code .. "    local mixRock = d[20] or false\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[d[9] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2]) end)\n"
@@ -473,12 +595,16 @@ end
     code = code .. "            end\n"
     code = code .. "        end end end\n"
     code = code .. "        Terrain:WriteVoxels(region, 4, m, o)\n"
+    code = code .. "    elseif actionMode == 'Erase' then\n"
+    code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, sizeVec, Enum.Material.Air)\n"
+    code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, Enum.Material.Air)\n"
+    code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, Enum.Material.Air) end\n"
     code = code .. "    else\n"
     code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, sizeVec, mat)\n"
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat)\n"
     code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat) end\n"
     code = code .. "    end\n"
-    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16], d[19]) end\n"
+    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' and actionMode ~= 'Erase' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16], d[19], mixRock) end\n"
     code = code .. "end\n\n"
     
     local batchSize = 20
@@ -490,7 +616,8 @@ end
         for i = startIdx, endIdx do
             local d = SpawnedData[i]
             local sEnabled = d[15] and "true" or "false"
-            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 5) .. ",'" .. (d[18] or "Build") .. "'," .. (d[19] or 5) .. "}"
+            local mRock = d[20] and "true" or "false"
+            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 5) .. ",'" .. (d[18] or "Build") .. "'," .. (d[19] or 5) .. "," .. mRock .. "}"
             if i < endIdx then code = code .. "," end
         end
         code = code .. "})do BL(d)end\n"
@@ -559,7 +686,7 @@ Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.6", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -645,14 +772,16 @@ Instance.new("UICorner", modeSec).CornerRadius = UDim.new(0, 8)
 local modeTitle = Instance.new("TextLabel", modeSec)
 modeTitle.Size, modeTitle.Position, modeTitle.BackgroundTransparency, modeTitle.Text, modeTitle.TextColor3, modeTitle.TextSize, modeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🛠️ Action Mode", Color3.fromRGB(255, 150, 50), 11, Enum.Font.GothamBold
 
-local buildBtn = CreateUIBtn(modeSec, "Build", 0.05, 0.25)
+-- Diatur ulang posisinya biar 4 tombol muat (Build, Flatten, Paint, Erase)
+local buildBtn = CreateUIBtn(modeSec, "Build", 0.02, 0.22)
 buildBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
-local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.35, 0.25)
-local paintBtn = CreateUIBtn(modeSec, "Paint", 0.65, 0.25)
+local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.26, 0.22)
+local paintBtn = CreateUIBtn(modeSec, "Paint", 0.50, 0.22)
+local eraseBtn = CreateUIBtn(modeSec, "Erase", 0.74, 0.22)
 
---// SMOOTH TERRAIN GUI SECTION (DENGAN PENINGGI)
+--// SMOOTH TERRAIN GUI SECTION (DENGAN PENINGGI & MIX ROCK)
 local smoothSec = Instance.new("Frame", scroll)
-smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
+smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 110), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
 local smoothTitle = Instance.new("TextLabel", smoothSec)
 smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
@@ -698,6 +827,11 @@ Instance.new("UICorner", heightDisp).CornerRadius = UDim.new(0, 4)
 local heightPlus = Instance.new("TextButton", smoothSec)
 heightPlus.Size, heightPlus.Position, heightPlus.BackgroundColor3, heightPlus.Text, heightPlus.TextColor3, heightPlus.TextSize, heightPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 236, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", heightPlus).CornerRadius = UDim.new(0, 4)
+
+-- Mix Rock Toggle (Buat mode Noise)
+local mixRockBtn = Instance.new("TextButton", smoothSec)
+mixRockBtn.Size, mixRockBtn.Position, mixRockBtn.BackgroundColor3, mixRockBtn.Text, mixRockBtn.TextColor3, mixRockBtn.TextSize, mixRockBtn.Font = UDim2.new(0, 252, 0, 22), UDim2.new(0, 6, 0, 80), Color3.fromRGB(100, 100, 100), "🪨 Mix Rock (Noise): OFF", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+Instance.new("UICorner", mixRockBtn).CornerRadius = UDim.new(0, 4)
 
 --// SNAP TO GRID GUI SECTION
 local snapSec = Instance.new("Frame", scroll)
@@ -913,12 +1047,19 @@ local function SelectMode(modeName, selectedBtn)
     buildBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     flatBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     paintBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-    selectedBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+    eraseBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
+    
+    if modeName == "Erase" then
+        selectedBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    else
+        selectedBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+    end
     UpdatePreview()
 end
 buildBtn.MouseButton1Click:Connect(function() SelectMode("Build", buildBtn) end)
 flatBtn.MouseButton1Click:Connect(function() SelectMode("Flatten", flatBtn) end)
 paintBtn.MouseButton1Click:Connect(function() SelectMode("Paint", paintBtn) end)
+eraseBtn.MouseButton1Click:Connect(function() SelectMode("Erase", eraseBtn) end)
 
 smoothToggleBtn.MouseButton1Click:Connect(function()
     SmoothEnabled = not SmoothEnabled
@@ -932,6 +1073,17 @@ smoothToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 smoothModeBtn.MouseButton1Click:Connect(function() CurrentSmoothModeIndex = CurrentSmoothModeIndex + 1; if CurrentSmoothModeIndex > #SmoothModes then CurrentSmoothModeIndex = 1 end; smoothModeBtn.Text = SmoothModes[CurrentSmoothModeIndex] end)
+
+mixRockBtn.MouseButton1Click:Connect(function()
+    MixRockEnabled = not MixRockEnabled
+    if MixRockEnabled then
+        mixRockBtn.Text = "🪨 Mix Rock (Noise): ON"
+        mixRockBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    else
+        mixRockBtn.Text = "🪨 Mix Rock (Noise): OFF"
+        mixRockBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    end
+end)
 
 -- Handler untuk Intensity
 local function handleIntInput()
@@ -1118,4 +1270,4 @@ RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("✅ Terrain Editor v16.5 Loaded - Clean Flat UI & Protected Mode Active!")
+print("✅ Terrain Editor v16.6 Loaded - Clean Flat UI & Protected Mode Active!")
