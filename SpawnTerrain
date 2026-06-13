@@ -1,7 +1,6 @@
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector
---// + Brush Strength, Rock Mix Toggle, Erase Mode, Full Terrain Materials
---// FIXED & OPTIMIZED FOR MOBILE EXECUTORS
+--// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature
+--// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (UPDATED CUSTOM REQUEST)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -12,11 +11,6 @@ local Terrain = Workspace:WaitForChild("Terrain")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
-
---// LIMIT SETTINGS
-local MAX_TERRAIN_LIMIT = 1500
-local LimitWarningEnabled = false
-local IsLimitReached = false
 
 --// GRASS COLORS
 local grassColors = {
@@ -78,7 +72,7 @@ local groundColors = {
 }
 local currentGroundColorIndex = 2
 
---// Materials
+--// Materials 
 local Materials = {
     {Name = "Grass", Color = Color3.fromRGB(86, 125, 70), Mat = Enum.Material.Grass},
     {Name = "Ground", Color = Color3.fromRGB(112, 85, 63), Mat = Enum.Material.Ground},
@@ -88,13 +82,11 @@ local Materials = {
     {Name = "Sand", Color = Color3.fromRGB(234, 203, 154), Mat = Enum.Material.Sand},
     {Name = "Snow", Color = Color3.fromRGB(255, 255, 255), Mat = Enum.Material.Snow},
     {Name = "Mud", Color = Color3.fromRGB(86, 66, 54), Mat = Enum.Material.Mud},
-    {Name = "Ice", Color = Color3.fromRGB(200, 230, 255), Mat = Enum.Material.Ice},
-    {Name = "CrackedLava", Color = Color3.fromRGB(80, 30, 20), Mat = Enum.Material.CrackedLava},
-    {Name = "Basalt", Color = Color3.fromRGB(48, 48, 48), Mat = Enum.Material.Basalt},
-    {Name = "Slate", Color = Color3.fromRGB(102, 102, 102), Mat = Enum.Material.Slate},
-    {Name = "Pebble", Color = Color3.fromRGB(160, 160, 160), Mat = Enum.Material.Pebble},
-    {Name = "Limestone", Color = Color3.fromRGB(180, 175, 160), Mat = Enum.Material.Limestone},
-    {Name = "Salt", Color = Color3.fromRGB(240, 240, 240), Mat = Enum.Material.Salt}
+    {Name = "Asphalt", Color = Color3.fromRGB(80, 80, 80), Mat = Enum.Material.Asphalt},
+    {Name = "Brick", Color = Color3.fromRGB(150, 75, 60), Mat = Enum.Material.Brick},
+    {Name = "Wood", Color = Color3.fromRGB(139, 109, 79), Mat = Enum.Material.WoodPlanks},
+    {Name = "Concrete", Color = Color3.fromRGB(127, 127, 127), Mat = Enum.Material.Concrete},
+    {Name = "Ice", Color = Color3.fromRGB(200, 230, 255), Mat = Enum.Material.Ice}
 }
 
 --// State
@@ -110,12 +102,6 @@ local UndoHistory = {}
 local RedoHistory = {}
 local IgnoreTerrain = false
 
---// BRUSH STRENGTH
-local BrushStrength = 5 
-
---// ROCK MIX TOGGLE
-local RockMixEnabled = false
-
 --// SNAP SETTINGS
 local SnapEnabled = false
 local GridSize = 10
@@ -128,46 +114,53 @@ local SmoothEnabled = false
 local SmoothModes = {"Soft Edge", "Gradient", "Noise", "Blend"}
 local CurrentSmoothModeIndex = 1
 local SmoothIntensity = 5
+local SmoothHeight = 5 -- Fitur peninggi (Max 100)
 
---// Raycast
+--// Raycast dengan Pelindung (pcall)
 local function GetRaycast()
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    local ray = Camera:ViewportPointToRay(center.X, center.Y)
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Blacklist
-    local filterList = {}
-    if PreviewPart then table.insert(filterList, PreviewPart) end
-    if IgnoreTerrain then table.insert(filterList, Terrain) end
-    params.FilterDescendantsInstances = filterList
-    return Workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+    local result = nil
+    pcall(function()
+        local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+        local ray = Camera:ViewportPointToRay(center.X, center.Y)
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Blacklist
+        local filterList = {}
+        if PreviewPart then table.insert(filterList, PreviewPart) end
+        if IgnoreTerrain then table.insert(filterList, Terrain) end
+        params.FilterDescendantsInstances = filterList
+        result = Workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+    end)
+    return result
 end
 
 --// Create Preview
 local function CreatePreview()
-    if PreviewPart then PreviewPart:Destroy() end
-    PreviewPart = Instance.new("Part")
-    if CurrentShape == "Ball" then
-        PreviewPart.Shape = Enum.PartType.Ball
-    elseif CurrentShape == "Wedge" then
-        PreviewPart.Shape = Enum.PartType.Wedge
-    else
-        PreviewPart.Shape = Enum.PartType.Block
-    end
-    PreviewPart.Material = Enum.Material.SmoothPlastic
-    PreviewPart.Color = Color3.fromRGB(255, 255, 255)
-    PreviewPart.Transparency = 0.85 
-    PreviewPart.CanCollide = false
-    PreviewPart.Anchored = true
-    PreviewPart.CastShadow = false
-    PreviewPart.Parent = Workspace
-    local selectionBox = Instance.new("SelectionBox")
-    selectionBox.Name = "EdgeOutline"
-    selectionBox.LineThickness = 0.08
-    selectionBox.Color3 = Color3.fromRGB(0, 255, 255)
-    selectionBox.SurfaceColor3 = Color3.fromRGB(0, 255, 255)
-    selectionBox.SurfaceTransparency = 1
-    selectionBox.Adornee = PreviewPart
-    selectionBox.Parent = PreviewPart
+    pcall(function()
+        if PreviewPart then PreviewPart:Destroy() end
+        PreviewPart = Instance.new("Part")
+        if CurrentShape == "Ball" then
+            PreviewPart.Shape = Enum.PartType.Ball
+        elseif CurrentShape == "Wedge" then
+            PreviewPart.Shape = Enum.PartType.Wedge
+        else
+            PreviewPart.Shape = Enum.PartType.Block
+        end
+        PreviewPart.Material = Enum.Material.SmoothPlastic
+        PreviewPart.Color = Color3.fromRGB(255, 255, 255)
+        PreviewPart.Transparency = 0.85 
+        PreviewPart.CanCollide = false
+        PreviewPart.Anchored = true
+        PreviewPart.CastShadow = false
+        PreviewPart.Parent = Workspace
+        local selectionBox = Instance.new("SelectionBox")
+        selectionBox.Name = "EdgeOutline"
+        selectionBox.LineThickness = 0.08
+        selectionBox.Color3 = Color3.fromRGB(0, 255, 255)
+        selectionBox.SurfaceColor3 = Color3.fromRGB(0, 255, 255)
+        selectionBox.SurfaceTransparency = 1
+        selectionBox.Adornee = PreviewPart
+        selectionBox.Parent = PreviewPart
+    end)
 end
 
 --// SNAP FUNCTION
@@ -180,77 +173,73 @@ local function SnapPosition(pos)
     return Vector3.new(snappedX, snappedY, snappedZ)
 end
 
---// VISUAL GRID FUNCTION
+--// VISUAL GRID FUNCTION dengan Pelindung (pcall)
 local function UpdateGridVisual()
-    for _, line in ipairs(GridLines) do line:Destroy() end
-    GridLines = {}
-    if not ShowGridVisual then return end
-    local playerPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-    if not playerPos then return end
-    local range = 100 
-    local startX = math.floor((playerPos.X - range) / GridSize) * GridSize
-    local endX = math.floor((playerPos.X + range) / GridSize) * GridSize
-    local startZ = math.floor((playerPos.Z - range) / GridSize) * GridSize
-    local endZ = math.floor((playerPos.Z + range) / GridSize) * GridSize
-    for z = startZ, endZ, GridSize do
-        local line = Instance.new("Part")
-        line.Size = Vector3.new(range * 2, 0.1, 0.1)
-        line.CFrame = CFrame.new(playerPos.X, playerPos.Y - 1, z)
-        line.Anchored = true
-        line.CanCollide = false
-        line.Transparency = 0.8
-        line.Color = Color3.fromRGB(255, 255, 0)
-        line.Material = Enum.Material.SmoothPlastic
-        line.Parent = Workspace
-        table.insert(GridLines, line)
-    end
-    for x = startX, endX, GridSize do
-        local line = Instance.new("Part")
-        line.Size = Vector3.new(0.1, 0.1, range * 2)
-        line.CFrame = CFrame.new(x, playerPos.Y - 1, playerPos.Z)
-        line.Anchored = true
-        line.CanCollide = false
-        line.Transparency = 0.8
-        line.Color = Color3.fromRGB(255, 255, 0)
-        line.Material = Enum.Material.SmoothPlastic
-        line.Parent = Workspace
-        table.insert(GridLines, line)
-    end
+    pcall(function()
+        for _, line in ipairs(GridLines) do line:Destroy() end
+        GridLines = {}
+        if not ShowGridVisual then return end
+        local playerPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
+        if not playerPos then return end
+        local range = 100 
+        local startX = math.floor((playerPos.X - range) / GridSize) * GridSize
+        local endX = math.floor((playerPos.X + range) / GridSize) * GridSize
+        local startZ = math.floor((playerPos.Z - range) / GridSize) * GridSize
+        local endZ = math.floor((playerPos.Z + range) / GridSize) * GridSize
+        for z = startZ, endZ, GridSize do
+            local line = Instance.new("Part")
+            line.Size = Vector3.new(range * 2, 0.1, 0.1)
+            line.CFrame = CFrame.new(playerPos.X, playerPos.Y - 1, z)
+            line.Anchored = true
+            line.CanCollide = false
+            line.Transparency = 0.8
+            line.Color = Color3.fromRGB(255, 255, 0)
+            line.Material = Enum.Material.SmoothPlastic
+            line.Parent = Workspace
+            table.insert(GridLines, line)
+        end
+        for x = startX, endX, GridSize do
+            local line = Instance.new("Part")
+            line.Size = Vector3.new(0.1, 0.1, range * 2)
+            line.CFrame = CFrame.new(x, playerPos.Y - 1, playerPos.Z)
+            line.Anchored = true
+            line.CanCollide = false
+            line.Transparency = 0.8
+            line.Color = Color3.fromRGB(255, 255, 0)
+            line.Material = Enum.Material.SmoothPlastic
+            line.Parent = Workspace
+            table.insert(GridLines, line)
+        end
+    end)
 end
 spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end end end)
 
---// Update Preview
+--// Update Preview dengan Pelindung
 local function UpdatePreview()
-    if not PreviewPart then CreatePreview() end
-    local result = GetRaycast()
-    if result then
-        local rawPos = result.Position
-        local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
-        PreviewPos = displayPos
-        if CurrentMode == "Flatten" then
-            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
-            local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
-            PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
-        elseif CurrentMode == "Paint" then
-            if CurrentShape == "Ball" then
-                PreviewPart.Size = Vector3.new(SizeX, SizeX, SizeX)
+    pcall(function()
+        if not PreviewPart then CreatePreview() end
+        local result = GetRaycast()
+        if result then
+            local rawPos = result.Position
+            local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
+            PreviewPos = displayPos
+            if CurrentMode == "Flatten" then
+                PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+                local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
+                PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
+            elseif CurrentMode == "Paint" then
+                if CurrentShape == "Ball" then
+                    PreviewPart.Size = Vector3.new(SizeX, SizeX, SizeX)
+                else
+                    PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
+                end
+                local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0)
+                PreviewPart.CFrame = cf
             else
-                PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
+                PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+                local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
+                PreviewPart.CFrame = cf
             end
-            local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0)
-            PreviewPart.CFrame = cf
-        elseif CurrentMode == "Erase" then
-            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
-            local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
-            PreviewPart.CFrame = cf
-            PreviewPart.Color = Color3.fromRGB(255, 50, 50)
-            PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(255, 50, 50)
-        else
-            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
-            local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
-            PreviewPart.CFrame = cf
-        end
-        if CurrentMode ~= "Erase" then
             PreviewPart.Transparency = 0.85
             PreviewPart.EdgeOutline.Transparency = 0
             if SnapEnabled then
@@ -260,11 +249,11 @@ local function UpdatePreview()
                 PreviewPart.Color = Color3.fromRGB(255, 255, 255)
                 PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
             end
+        else
+            PreviewPart.Transparency = 1
+            PreviewPart.EdgeOutline.Transparency = 1
         end
-    else
-        PreviewPart.Transparency = 1
-        PreviewPart.EdgeOutline.Transparency = 1
-    end
+    end)
 end
 
 --// Apply Material Colors
@@ -274,18 +263,20 @@ local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[currentGroundColorIndex].color) end)
 end
 
---// SMOOTH TERRAIN ALGORITHM
-local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
+--// SMOOTH TERRAIN ALGORITHM DENGAN PENINGGI
+local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
+    local heightScale = peninggi or 5
     for layer = 1, layers do
         local layerRadius = radius + (layer * 2)
         local layerSize = math.max(2, 6 - layer)
         local angleStep = 360 / (8 * layer)
         for angle = 0, 359, angleStep do
             local rad = math.rad(angle)
-            local offsetY = 0
-            if mode == "Noise" then offsetY = math.random(-4, 4) elseif mode == "Gradient" then offsetY = math.random(-2, 2) end
+            -- Menambahkan elevasi peninggi yang melandai
+            local offsetY = (heightScale / 2) * (1 - (layer / layers))
+            if mode == "Noise" then offsetY = offsetY + math.random(-4, 4) elseif mode == "Gradient" then offsetY = offsetY + math.random(-2, 2) end
             local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
             local pos = centerPos + offset
             if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
@@ -307,26 +298,13 @@ local function BL(d)
     local smoothMode = d[16] or "Soft Edge"
     local smoothInt = d[17] or 5
     local actionMode = d[18] or "Build"
-    local brushStr = d[19] or 5
-    local rockMix = d[20] or false
+    local smoothHeight = d[19] or 5
     local mat = Enum.Material.Grass
     for _, m in ipairs(Materials) do if m.Name == matName then mat = m.Mat break end end
     ApplyMaterialColors()
     local sizeVec = Vector3.new(sx, sy, sz)
     local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
-    
-    local strengthMultiplier = brushStr / 5
-    local adjustedSize = sizeVec * strengthMultiplier
-    
-    if actionMode == "Erase" then
-        if shape == "Block" then
-            Terrain:FillBlock(cf, adjustedSize, Enum.Material.Air)
-        elseif shape == "Wedge" then
-            Terrain:FillWedge(cf, adjustedSize, Enum.Material.Air)
-        else
-            Terrain:FillBall(pos, math.max(adjustedSize.X, adjustedSize.Y, adjustedSize.Z)/2, Enum.Material.Air)
-        end
-    elseif actionMode == "Flatten" then
+    if actionMode == "Flatten" then
         local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(ry), 0)
         if shape == "Block" then
             Terrain:FillBlock(baseCf, Vector3.new(sx, 2, sz), mat)
@@ -363,62 +341,11 @@ local function BL(d)
         end
         if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
     else
-        if shape == "Block" then 
-            Terrain:FillBlock(cf, adjustedSize, mat)
-            if rockMix then
-                local rockRadius = math.max(adjustedSize.X, adjustedSize.Y, adjustedSize.Z) / 2
-                for i = 1, math.random(3, 8) do
-                    local offset = Vector3.new(
-                        math.random(-rockRadius, rockRadius),
-                        math.random(-rockRadius/2, rockRadius/2),
-                        math.random(-rockRadius, rockRadius)
-                    )
-                    if offset.Magnitude <= rockRadius then
-                        local rockPos = pos + offset
-                        local rockSize = math.random(2, 5)
-                        Terrain:FillBall(rockPos, rockSize, Enum.Material.Rock)
-                    end
-                end
-            end
-        elseif shape == "Wedge" then 
-            Terrain:FillWedge(cf, sizeVec, mat)
-            if rockMix then
-                local rockRadius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
-                for i = 1, math.random(2, 6) do
-                    local offset = Vector3.new(
-                        math.random(-rockRadius, rockRadius),
-                        math.random(-rockRadius/2, 0),
-                        math.random(-rockRadius, rockRadius)
-                    )
-                    if offset.Magnitude <= rockRadius then
-                        local rockPos = pos + offset
-                        local rockSize = math.random(2, 4)
-                        Terrain:FillBall(rockPos, rockSize, Enum.Material.Rock)
-                    end
-                end
-            end
-        else 
-            local radius = math.max(sx, sy, sz)/2
-            Terrain:FillBall(pos, radius, mat)
-            if rockMix then
-                for i = 1, math.random(4, 10) do
-                    local angle = math.random() * math.pi * 2
-                    local dist = math.random() * radius * 0.8
-                    local offset = Vector3.new(
-                        math.cos(angle) * dist,
-                        math.random(-radius/3, radius/3),
-                        math.sin(angle) * dist
-                    )
-                    local rockPos = pos + offset
-                    local rockSize = math.random(1, 4)
-                    Terrain:FillBall(rockPos, rockSize, Enum.Material.Rock)
-                end
-            end
-        end
+        if shape == "Block" then Terrain:FillBlock(cf, sizeVec, mat)
+        elseif shape == "Wedge" then Terrain:FillWedge(cf, sizeVec, mat)
+        else Terrain:FillBall(pos, math.max(sx, sy, sz)/2, mat) end
     end
-    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" and actionMode ~= "Erase" then 
-        ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode) 
-    end
+    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" then ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode, smoothHeight) end
     return d
 end
 
@@ -428,57 +355,47 @@ gui.Name = "TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
---// SPAWN COUNTER GUI (Diletakkan di atas Ikon Spawn)
+--// SPAWN COUNTER GUI
 local spawnCounter = Instance.new("TextLabel", gui)
 spawnCounter.Name = "SpawnCounter"
-spawnCounter.Size = UDim2.new(0, 80, 0, 22)
-spawnCounter.Position = UDim2.new(0, 4, 0, 24) -- Diatur tepat di atas Tombol Spawn (Y:50)
+spawnCounter.Size = UDim2.new(0, 100, 0, 22)
+spawnCounter.Position = UDim2.new(0, 2, 0, 28)
 spawnCounter.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-spawnCounter.Text = "┃ 0 / 1500 ┃"
+spawnCounter.Text = "Terrain: 0"
 spawnCounter.TextColor3 = Color3.fromRGB(255, 255, 255)
-spawnCounter.TextSize = 10
+spawnCounter.TextSize = 12
 spawnCounter.Font = Enum.Font.GothamBold
 spawnCounter.TextXAlignment = Enum.TextXAlignment.Center
 Instance.new("UICorner", spawnCounter).CornerRadius = UDim.new(0, 4)
-local scStroke = Instance.new("UIStroke", spawnCounter)
-scStroke.Color = Color3.fromRGB(0, 150, 255)
-scStroke.Thickness = 1
-spawnCounter.Visible = true
 
 local function UpdateSpawnCounter()
-    spawnCounter.Text = "┃ " .. #SpawnedData .. " / " .. MAX_TERRAIN_LIMIT .. " ┃"
-    if #SpawnedData >= MAX_TERRAIN_LIMIT then
-        spawnCounter.TextColor3 = Color3.fromRGB(255, 80, 80)
-        scStroke.Color = Color3.fromRGB(255, 80, 80)
-    else
-        spawnCounter.TextColor3 = Color3.fromRGB(255, 255, 255)
-        scStroke.Color = Color3.fromRGB(0, 150, 255)
-    end
+    spawnCounter.Text = "Terrain: " .. #SpawnedData
 end
 
 --// Spawn Terrain
 local function SpawnTerrain()
-    if not PreviewPos then return false end
-    
-    local maxDim = math.max(SizeX, SizeY, SizeZ)
-    local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
-    local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
-    local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds):ExpandToGrid(4)
-    local beforeMats, beforeOccs = Terrain:ReadVoxels(region, 4)
-    local data = {
-        math.floor(PreviewPos.X), math.floor(PreviewPos.Y), math.floor(PreviewPos.Z),
-        SizeX, SizeY, SizeZ, CurrentMaterial.Name, CurrentShape,
-        currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
-        RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity, CurrentMode,
-        BrushStrength, RockMixEnabled
-    }
-    BL(data)
-    local afterMats, afterOccs = Terrain:ReadVoxels(region, 4)
-    table.insert(UndoHistory, {Region = region, BeforeMats = beforeMats, BeforeOccs = beforeOccs, AfterMats = afterMats, AfterOccs = afterOccs, Data = data})
-    RedoHistory = {}
-    table.insert(SpawnedData, data)
-    UpdateSpawnCounter()
-    return true
+    local success, _ = pcall(function()
+        if not PreviewPos then return false end
+        
+        local maxDim = math.max(SizeX, SizeY, SizeZ)
+        local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
+        local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
+        local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds):ExpandToGrid(4)
+        local beforeMats, beforeOccs = Terrain:ReadVoxels(region, 4)
+        local data = {
+            math.floor(PreviewPos.X), math.floor(PreviewPos.Y), math.floor(PreviewPos.Z),
+            SizeX, SizeY, SizeZ, CurrentMaterial.Name, CurrentShape,
+            currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
+            RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity, CurrentMode, SmoothHeight
+        }
+        BL(data)
+        local afterMats, afterOccs = Terrain:ReadVoxels(region, 4)
+        table.insert(UndoHistory, {Region = region, BeforeMats = beforeMats, BeforeOccs = beforeOccs, AfterMats = afterMats, AfterOccs = afterOccs, Data = data})
+        RedoHistory = {}
+        table.insert(SpawnedData, data)
+        UpdateSpawnCounter()
+    end)
+    return success
 end
 
 --// UNDO / REDO
@@ -487,7 +404,7 @@ local function Undo()
     local lastNode = table.remove(UndoHistory)
     table.insert(RedoHistory, lastNode)
     for i = #SpawnedData, 1, -1 do if SpawnedData[i] == lastNode.Data then table.remove(SpawnedData, i); break end end
-    Terrain:WriteVoxels(lastNode.Region, 4, lastNode.BeforeMats, lastNode.BeforeOccs)
+    pcall(function() Terrain:WriteVoxels(lastNode.Region, 4, lastNode.BeforeMats, lastNode.BeforeOccs) end)
     UpdateSpawnCounter()
     return true, "Undone 1 terrain"
 end
@@ -506,17 +423,18 @@ local function GenerateScript()
     code = code .. "}\n\n"
     
     code = code .. [[
-local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
+local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
+    local hScale = peninggi or 5
     for layer = 1, layers do
         local layerRadius = radius + (layer * 2)
         local layerSize = math.max(2, 6 - layer)
         local angleStep = 360 / (8 * layer)
         for angle = 0, 359, angleStep do
             local rad = math.rad(angle)
-            local offsetY = 0
-            if mode == "Noise" then offsetY = math.random(-4, 4) elseif mode == "Gradient" then offsetY = math.random(-2, 2) end
+            local offsetY = (hScale / 2) * (1 - (layer / layers))
+            if mode == "Noise" then offsetY = offsetY + math.random(-4, 4) elseif mode == "Gradient" then offsetY = offsetY + math.random(-2, 2) end
             local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
             local pos = centerPos + offset
             if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
@@ -530,23 +448,15 @@ end
     
     code = code .. "local function BL(d)\n"
     code = code .. "    local pos = Vector3.new(d[1], d[2], d[3])\n"
-    code = code .. "    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Ice=Enum.Material.Ice,CrackedLava=Enum.Material.CrackedLava,Basalt=Enum.Material.Basalt,Slate=Enum.Material.Slate,Pebble=Enum.Material.Pebble,Limestone=Enum.Material.Limestone,Salt=Enum.Material.Salt}\n"
+    code = code .. "    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Brick=Enum.Material.Brick,Wood=Enum.Material.WoodPlanks,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice}\n"
     code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
     code = code .. "    local shape, actionMode = d[8] or 'Ball', d[18] or 'Build'\n"
     code = code .. "    local sizeVec = Vector3.new(d[4], d[5], d[6])\n"
-    code = code .. "    local brushStr = d[19] or 5\n"
-    code = code .. "    local rockMix = d[20] or false\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[d[9] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2]) end)\n"
     code = code .. "    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(d[12] or 0), math.rad(d[13] or 0), math.rad(d[14] or 0))\n"
-    code = code .. "    local strengthMultiplier = brushStr / 5\n"
-    code = code .. "    local adjustedSize = sizeVec * strengthMultiplier\n"
-    code = code .. "    if actionMode == 'Erase' then\n"
-    code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, adjustedSize, Enum.Material.Air)\n"
-    code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, adjustedSize, Enum.Material.Air)\n"
-    code = code .. "        else Terrain:FillBall(pos, math.max(adjustedSize.X, adjustedSize.Y, adjustedSize.Z)/2, Enum.Material.Air) end\n"
-    code = code .. "    elseif actionMode == 'Flatten' then\n"
+    code = code .. "    if actionMode == 'Flatten' then\n"
     code = code .. "        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
     code = code .. "        if shape == 'Block' then Terrain:FillBlock(baseCf, Vector3.new(d[4], 2, d[6]), mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
@@ -564,20 +474,11 @@ end
     code = code .. "        end end end\n"
     code = code .. "        Terrain:WriteVoxels(region, 4, m, o)\n"
     code = code .. "    else\n"
-    code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, adjustedSize, mat)\n"
+    code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, sizeVec, mat)\n"
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat)\n"
     code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat) end\n"
-    code = code .. "        if rockMix then\n"
-    code = code .. "            local rockRadius = math.max(adjustedSize.X, adjustedSize.Y, adjustedSize.Z) / 2\n"
-    code = code .. "            for i = 1, math.random(4, 10) do\n"
-    code = code .. "                local angle = math.random() * math.pi * 2\n"
-    code = code .. "                local dist = math.random() * rockRadius * 0.8\n"
-    code = code .. "                local offset = Vector3.new(math.cos(angle) * dist, math.random(-rockRadius/3, rockRadius/3), math.sin(angle) * dist)\n"
-    code = code .. "                Terrain:FillBall(pos + offset, math.random(1, 4), Enum.Material.Rock)\n"
-    code = code .. "            end\n"
-    code = code .. "        end\n"
     code = code .. "    end\n"
-    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' and actionMode ~= 'Erase' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16]) end\n"
+    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16], d[19]) end\n"
     code = code .. "end\n\n"
     
     local batchSize = 20
@@ -589,8 +490,7 @@ end
         for i = startIdx, endIdx do
             local d = SpawnedData[i]
             local sEnabled = d[15] and "true" or "false"
-            local rMix = d[20] and "true" or "false"
-            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 5) .. ",'" .. (d[18] or "Build") .. "'," .. (d[19] or 5) .. "," .. rMix .. "}"
+            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 5) .. ",'" .. (d[18] or "Build") .. "'," .. (d[19] or 5) .. "}"
             if i < endIdx then code = code .. "," end
         end
         code = code .. "})do BL(d)end\n"
@@ -609,42 +509,30 @@ local spawnBtn = Instance.new("TextButton", gui)
 spawnBtn.Name, spawnBtn.Size, spawnBtn.Position, spawnBtn.BackgroundColor3 = "SpawnBtn", UDim2.new(0, 50, 0, 50), UDim2.new(0, 4, 0, 50), Color3.fromRGB(0, 200, 100)
 spawnBtn.Text, spawnBtn.TextSize, spawnBtn.Font = "🎯", 30, Enum.Font.GothamBlack
 Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(1, 0)
-local spawnStroke = Instance.new("UIStroke", spawnBtn)
-spawnStroke.Color, spawnStroke.Thickness = Color3.fromRGB(255, 255, 255), 3
 
 local undoBtn = Instance.new("TextButton", gui)
 undoBtn.Name, undoBtn.Size, undoBtn.Position, undoBtn.BackgroundColor3 = "UndoBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 105), Color3.fromRGB(200, 150, 50)
 undoBtn.Text, undoBtn.TextSize, undoBtn.Font = "↩️", 22, Enum.Font.GothamBlack
 Instance.new("UICorner", undoBtn).CornerRadius = UDim.new(1, 0)
-local undoStroke = Instance.new("UIStroke", undoBtn)
-undoStroke.Color, undoStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
 local matIconBtn = Instance.new("TextButton", gui)
 matIconBtn.Name, matIconBtn.Size, matIconBtn.Position, matIconBtn.BackgroundColor3 = "MatIconBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 155), Color3.fromRGB(80, 120, 200)
 matIconBtn.Text, matIconBtn.TextSize, matIconBtn.Font = "🎨", 22, Enum.Font.GothamBlack
 Instance.new("UICorner", matIconBtn).CornerRadius = UDim.new(1, 0)
-local matIconStroke = Instance.new("UIStroke", matIconBtn)
-matIconStroke.Color, matIconStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
 local openPanelBtn = Instance.new("TextButton", gui)
 openPanelBtn.Name, openPanelBtn.Size, openPanelBtn.Position, openPanelBtn.BackgroundColor3 = "OpenPanelBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 205), Color3.fromRGB(60, 60, 75)
 openPanelBtn.Text, openPanelBtn.TextSize, openPanelBtn.Font, openPanelBtn.Visible = "⚙️", 22, Enum.Font.GothamBlack, false
 Instance.new("UICorner", openPanelBtn).CornerRadius = UDim.new(1, 0)
-local openPanelStroke = Instance.new("UIStroke", openPanelBtn)
-openPanelStroke.Color, openPanelStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
 local unhideBtn = Instance.new("TextButton", gui)
 unhideBtn.Name, unhideBtn.Size, unhideBtn.Position, unhideBtn.BackgroundColor3 = "UnhideBtn", UDim2.new(0, 25, 0, 25), UDim2.new(0, 16, 0, 165), Color3.fromRGB(0, 150, 255)
 unhideBtn.Text, unhideBtn.TextSize, unhideBtn.Font, unhideBtn.Visible, unhideBtn.Active = "👁️", 12, Enum.Font.GothamBold, false, true
 Instance.new("UICorner", unhideBtn).CornerRadius = UDim.new(1, 0)
-local unhideStroke = Instance.new("UIStroke", unhideBtn)
-unhideStroke.Color, unhideStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
 local matWin = Instance.new("Frame", gui)
 matWin.Name, matWin.Size, matWin.Position, matWin.BackgroundColor3, matWin.Visible = "MatWindow", UDim2.new(0, 200, 0, 70), UDim2.new(0, 60, 0, 155), Color3.fromRGB(45, 45, 60), false
 Instance.new("UICorner", matWin).CornerRadius = UDim.new(0, 8)
-local matWinStroke = Instance.new("UIStroke", matWin)
-matWinStroke.Color, matWinStroke.Thickness = Color3.fromRGB(0, 150, 255), 2
 
 local closeMatBtn = Instance.new("TextButton", matWin)
 closeMatBtn.Size, closeMatBtn.Position, closeMatBtn.BackgroundColor3, closeMatBtn.Text, closeMatBtn.TextColor3, closeMatBtn.TextSize, closeMatBtn.Font = UDim2.new(0, 20, 0, 20), UDim2.new(1, -25, 0, 5), Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
@@ -655,8 +543,7 @@ local matScroll = Instance.new("ScrollingFrame", matWin)
 matScroll.Size, matScroll.Position, matScroll.BackgroundTransparency, matScroll.ScrollBarThickness, matScroll.CanvasSize, matScroll.ScrollingDirection = UDim2.new(1, -30, 1, -10), UDim2.new(0, 5, 0, 5), 1, 3, UDim2.new(0, #Materials * 45, 0, 0), Enum.ScrollingDirection.X
 for i, m in ipairs(Materials) do
     local btn = Instance.new("TextButton", matScroll)
-    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font = UDim2.new(0, 40, 0, 40), UDim2.new(0, (i-1) * 45, 0, 10), m.Color, m.Name, Color3.fromRGB(255, 255, 255), 8, Enum.Font.GothamBold
-    btn.TextStrokeTransparency = 1 -- Mengubah teks biasa (tidak neon/glow)
+    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font, btn.TextStrokeTransparency = UDim2.new(0, 40, 0, 40), UDim2.new(0, (i-1) * 45, 0, 10), m.Color, m.Name, Color3.fromRGB(255, 255, 255), 8, Enum.Font.GothamBold, 0.5
     btn.MouseButton1Click:Connect(function() CurrentMaterial = m; end)
 end
 matIconBtn.MouseButton1Click:Connect(function() matWin.Visible = not matWin.Visible end)
@@ -665,8 +552,6 @@ matIconBtn.MouseButton1Click:Connect(function() matWin.Visible = not matWin.Visi
 local panel = Instance.new("Frame", gui)
 panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 450), UDim2.new(0, 6, 1, -460), Color3.fromRGB(30, 30, 40), 0
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
-local panelStroke = Instance.new("UIStroke", panel)
-panelStroke.Color, panelStroke.Thickness = Color3.fromRGB(0, 150, 255), 2
 
 local titleBar = Instance.new("Frame", panel)
 titleBar.Size, titleBar.BackgroundColor3, titleBar.BorderSizePixel = UDim2.new(1, 0, 0, 35), Color3.fromRGB(40, 40, 55), 0
@@ -674,7 +559,7 @@ Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -760,58 +645,15 @@ Instance.new("UICorner", modeSec).CornerRadius = UDim.new(0, 8)
 local modeTitle = Instance.new("TextLabel", modeSec)
 modeTitle.Size, modeTitle.Position, modeTitle.BackgroundTransparency, modeTitle.Text, modeTitle.TextColor3, modeTitle.TextSize, modeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🛠️ Action Mode", Color3.fromRGB(255, 150, 50), 11, Enum.Font.GothamBold
 
-local buildBtn = CreateUIBtn(modeSec, "Build", 0.05, 0.2)
+local buildBtn = CreateUIBtn(modeSec, "Build", 0.05, 0.25)
 buildBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
-local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.27, 0.2)
-local paintBtn = CreateUIBtn(modeSec, "Paint", 0.49, 0.2)
-local eraseBtn = CreateUIBtn(modeSec, "Erase", 0.71, 0.2)
+local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.35, 0.25)
+local paintBtn = CreateUIBtn(modeSec, "Paint", 0.65, 0.25)
 
---// BRUSH STRENGTH SECTION
-local brushStrSec = Instance.new("Frame", scroll)
-brushStrSec.Size, brushStrSec.BackgroundColor3, brushStrSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", brushStrSec).CornerRadius = UDim.new(0, 8)
-local brushStrTitle = Instance.new("TextLabel", brushStrSec)
-brushStrTitle.Size, brushStrTitle.Position, brushStrTitle.BackgroundTransparency, brushStrTitle.Text, brushStrTitle.TextColor3, brushStrTitle.TextSize, brushStrTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "💪 Brush Strength", Color3.fromRGB(255, 200, 100), 11, Enum.Font.GothamBold
-
-local brushStrMinus = Instance.new("TextButton", brushStrSec)
-brushStrMinus.Size, brushStrMinus.Position, brushStrMinus.BackgroundColor3, brushStrMinus.Text, brushStrMinus.TextColor3, brushStrMinus.TextSize, brushStrMinus.Font = UDim2.new(0, 32, 0, 24), UDim2.new(0, 5, 0, 24), Color3.fromRGB(200, 60, 60), "-5", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", brushStrMinus).CornerRadius = UDim.new(0, 6)
-
-local brushStrDisp = Instance.new("TextLabel", brushStrSec)
-brushStrDisp.Size, brushStrDisp.Position, brushStrDisp.BackgroundColor3, brushStrDisp.Text, brushStrDisp.TextColor3, brushStrDisp.TextSize, brushStrDisp.Font = UDim2.new(0, 46, 0, 24), UDim2.new(0, 42, 0, 24), Color3.fromRGB(60, 60, 75), tostring(BrushStrength), Color3.fromRGB(255, 255, 255), 13, Enum.Font.GothamBold
-Instance.new("UICorner", brushStrDisp).CornerRadius = UDim.new(0, 6)
-
-local brushStrPlus = Instance.new("TextButton", brushStrSec)
-brushStrPlus.Size, brushStrPlus.Position, brushStrPlus.BackgroundColor3, brushStrPlus.Text, brushStrPlus.TextColor3, brushStrPlus.TextSize, brushStrPlus.Font = UDim2.new(0, 32, 0, 24), UDim2.new(0, 92, 0, 24), Color3.fromRGB(0, 150, 100), "+5", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", brushStrPlus).CornerRadius = UDim.new(0, 6)
-
-local brushStrInfo = Instance.new("TextLabel", brushStrSec)
-brushStrInfo.Size, brushStrInfo.Position, brushStrInfo.BackgroundTransparency, brushStrInfo.Text, brushStrInfo.TextColor3, brushStrInfo.TextSize, brushStrInfo.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 130, 0, 26), 1, "(1-10)", Color3.fromRGB(150, 150, 150), 10, Enum.Font.GothamBold
-
---// ROCK MIX TOGGLE SECTION
-local rockMixSec = Instance.new("Frame", scroll)
-rockMixSec.Size, rockMixSec.BackgroundColor3, rockMixSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", rockMixSec).CornerRadius = UDim.new(0, 8)
-local rockMixTitle = Instance.new("TextLabel", rockMixSec)
-rockMixTitle.Size, rockMixTitle.Position, rockMixTitle.BackgroundTransparency, rockMixTitle.Text, rockMixTitle.TextColor3, rockMixTitle.TextSize, rockMixTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🪨 Rock Mix", Color3.fromRGB(139, 125, 107), 11, Enum.Font.GothamBold
-
-local rockMixToggleBtn = Instance.new("TextButton", rockMixSec)
-rockMixToggleBtn.Size, rockMixToggleBtn.Position, rockMixToggleBtn.BackgroundColor3, rockMixToggleBtn.Text, rockMixToggleBtn.TextColor3, rockMixToggleBtn.TextSize, rockMixToggleBtn.Font = UDim2.new(0, 80, 0, 26), UDim2.new(0, 5, 0, 24), Color3.fromRGB(200, 60, 60), "OFF", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold
-Instance.new("UICorner", rockMixToggleBtn).CornerRadius = UDim.new(0, 6)
-
-local rockMixInfo = Instance.new("TextLabel", rockMixSec)
-rockMixInfo.Size, rockMixInfo.Position, rockMixInfo.BackgroundTransparency, rockMixInfo.Text, rockMixInfo.TextColor3, rockMixInfo.TextSize, rockMixInfo.Font = UDim2.new(1, -95, 0, 20), UDim2.new(0, 90, 0, 26), 1, "ON = Campur Rock", Color3.fromRGB(150, 150, 150), 10, Enum.Font.GothamBold
-
---// SMOOTH TERRAIN GUI SECTION (FIXED & PROTECTED FOR MOBILE EXECUTORS)
+--// SMOOTH TERRAIN GUI SECTION (DENGAN PENINGGI)
 local smoothSec = Instance.new("Frame", scroll)
-pcall(function()
-    smoothSec.Name = "SmoothSection"
-    smoothSec.Size = UDim2.new(1, -8, 0, 80)
-    smoothSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    smoothSec.BorderSizePixel = 0
-    Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
-end)
-
+smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
 local smoothTitle = Instance.new("TextLabel", smoothSec)
 smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
@@ -823,21 +665,39 @@ local smoothModeBtn = Instance.new("TextButton", smoothSec)
 smoothModeBtn.Size, smoothModeBtn.Position, smoothModeBtn.BackgroundColor3, smoothModeBtn.Text, smoothModeBtn.TextColor3, smoothModeBtn.TextSize, smoothModeBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), SmoothModes[1], Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", smoothModeBtn).CornerRadius = UDim.new(0, 4)
 
+-- Intensitas Control
 local intL = Instance.new("TextLabel", smoothSec)
-intL.Size, intL.Position, intL.BackgroundTransparency, intL.Text, intL.TextColor3, intL.TextSize, intL.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Intensity:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
+intL.Size, intL.Position, intL.BackgroundTransparency, intL.Text, intL.TextColor3, intL.TextSize, intL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Intens:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
 
 local intMinus = Instance.new("TextButton", smoothSec)
-intMinus.Size, intMinus.Position, intMinus.BackgroundColor3, intMinus.Text, intMinus.TextColor3, intMinus.TextSize, intMinus.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 72, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+intMinus.Size, intMinus.Position, intMinus.BackgroundColor3, intMinus.Text, intMinus.TextColor3, intMinus.TextSize, intMinus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 53, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", intMinus).CornerRadius = UDim.new(0, 4)
 
 local intDisp = Instance.new("TextBox", smoothSec)
-intDisp.Size, intDisp.Position, intDisp.BackgroundColor3, intDisp.Text, intDisp.TextColor3, intDisp.TextSize, intDisp.Font = UDim2.new(0, 30, 0, 20), UDim2.new(0, 100, 0, 53), Color3.fromRGB(40, 40, 50), tostring(SmoothIntensity), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+intDisp.Size, intDisp.Position, intDisp.BackgroundColor3, intDisp.Text, intDisp.TextColor3, intDisp.TextSize, intDisp.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 77, 0, 53), Color3.fromRGB(40, 40, 50), tostring(SmoothIntensity), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 intDisp.ClearTextOnFocus = false
 Instance.new("UICorner", intDisp).CornerRadius = UDim.new(0, 4)
 
 local intPlus = Instance.new("TextButton", smoothSec)
-intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 133, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 107, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", intPlus).CornerRadius = UDim.new(0, 4)
+
+-- Peninggi Control
+local heightL = Instance.new("TextLabel", smoothSec)
+heightL.Size, heightL.Position, heightL.BackgroundTransparency, heightL.Text, heightL.TextColor3, heightL.TextSize, heightL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 135, 0, 53), 1, "Tinggi:", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
+
+local heightMinus = Instance.new("TextButton", smoothSec)
+heightMinus.Size, heightMinus.Position, heightMinus.BackgroundColor3, heightMinus.Text, heightMinus.TextColor3, heightMinus.TextSize, heightMinus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 182, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", heightMinus).CornerRadius = UDim.new(0, 4)
+
+local heightDisp = Instance.new("TextBox", smoothSec)
+heightDisp.Size, heightDisp.Position, heightDisp.BackgroundColor3, heightDisp.Text, heightDisp.TextColor3, heightDisp.TextSize, heightDisp.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 206, 0, 53), Color3.fromRGB(40, 40, 50), tostring(SmoothHeight), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+heightDisp.ClearTextOnFocus = false
+Instance.new("UICorner", heightDisp).CornerRadius = UDim.new(0, 4)
+
+local heightPlus = Instance.new("TextButton", smoothSec)
+heightPlus.Size, heightPlus.Position, heightPlus.BackgroundColor3, heightPlus.Text, heightPlus.TextColor3, heightPlus.TextSize, heightPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 236, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", heightPlus).CornerRadius = UDim.new(0, 4)
 
 --// SNAP TO GRID GUI SECTION
 local snapSec = Instance.new("Frame", scroll)
@@ -976,8 +836,6 @@ Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 8)
 local scriptWin = Instance.new("Frame", gui)
 scriptWin.Name, scriptWin.Size, scriptWin.Position, scriptWin.BackgroundColor3, scriptWin.BorderSizePixel, scriptWin.Visible, scriptWin.Active, scriptWin.Draggable = "ScriptWindow", UDim2.new(0, 400, 0, 350), UDim2.new(0.5, -200, 0.5, -175), Color3.fromRGB(30, 30, 35), 0, false, true, true
 Instance.new("UICorner", scriptWin).CornerRadius = UDim.new(0, 12)
-local scriptWinStroke = Instance.new("UIStroke", scriptWin)
-scriptWinStroke.Color, scriptWinStroke.Thickness = Color3.fromRGB(120, 80, 200), 2
 
 local scriptTitle = Instance.new("Frame", scriptWin)
 scriptTitle.Size, scriptTitle.BackgroundColor3, scriptTitle.BorderSizePixel = UDim2.new(1, 0, 0, 40), Color3.fromRGB(45, 45, 55), 0
@@ -1024,6 +882,7 @@ setupColorBtn(grassLeft, grassRight, grassDisplay, grassColors, {v=currentGrassC
 setupColorBtn(leafyLeft, leafyRight, leafyDisplay, leafyGrassColors, {v=currentLeafyGrassColorIndex}, function() ApplyMaterialColors() end)
 setupColorBtn(groundLeft, groundRight, groundDisplay, groundColors, {v=currentGroundColorIndex}, function() ApplyMaterialColors() end)
 
+-- Tembus Toggle Events
 ghostToggleBtn.MouseButton1Click:Connect(function()
     IgnoreTerrain = not IgnoreTerrain
     if IgnoreTerrain then
@@ -1054,55 +913,27 @@ local function SelectMode(modeName, selectedBtn)
     buildBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     flatBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     paintBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-    eraseBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     selectedBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
     UpdatePreview()
 end
 buildBtn.MouseButton1Click:Connect(function() SelectMode("Build", buildBtn) end)
 flatBtn.MouseButton1Click:Connect(function() SelectMode("Flatten", flatBtn) end)
 paintBtn.MouseButton1Click:Connect(function() SelectMode("Paint", paintBtn) end)
-eraseBtn.MouseButton1Click:Connect(function() SelectMode("Erase", eraseBtn) end)
 
-brushStrMinus.MouseButton1Click:Connect(function()
-    BrushStrength = math.max(1, BrushStrength - 1)
-    brushStrDisp.Text = tostring(BrushStrength)
-end)
-
-brushStrPlus.MouseButton1Click:Connect(function()
-    BrushStrength = math.min(10, BrushStrength + 1)
-    brushStrDisp.Text = tostring(BrushStrength)
-end)
-
-rockMixToggleBtn.MouseButton1Click:Connect(function()
-    RockMixEnabled = not RockMixEnabled
-    if RockMixEnabled then
-        rockMixToggleBtn.Text = "ON"
-        rockMixToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-        rockMixInfo.Text = "ON = Terrain tercampur Rock"
+smoothToggleBtn.MouseButton1Click:Connect(function()
+    SmoothEnabled = not SmoothEnabled
+    if SmoothEnabled then
+        smoothToggleBtn.Text = "ON ✨"
+        smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
     else
-        rockMixToggleBtn.Text = "OFF"
-        rockMixToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        rockMixInfo.Text = "OFF = Terrain murni tanpa Rock"
+        smoothToggleBtn.Text = "OFF ▼"
+        smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
     end
 end)
 
-if smoothToggleBtn then
-    smoothToggleBtn.MouseButton1Click:Connect(function()
-        SmoothEnabled = not SmoothEnabled
-        if SmoothEnabled then
-            smoothToggleBtn.Text = "ON ✨"
-            smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-        else
-            smoothToggleBtn.Text = "OFF ▼"
-            smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        end
-    end)
-end
+smoothModeBtn.MouseButton1Click:Connect(function() CurrentSmoothModeIndex = CurrentSmoothModeIndex + 1; if CurrentSmoothModeIndex > #SmoothModes then CurrentSmoothModeIndex = 1 end; smoothModeBtn.Text = SmoothModes[CurrentSmoothModeIndex] end)
 
-if smoothModeBtn then
-    smoothModeBtn.MouseButton1Click:Connect(function() CurrentSmoothModeIndex = CurrentSmoothModeIndex + 1; if CurrentSmoothModeIndex > #SmoothModes then CurrentSmoothModeIndex = 1 end; smoothModeBtn.Text = SmoothModes[CurrentSmoothModeIndex] end)
-end
-
+-- Handler untuk Intensity
 local function handleIntInput()
     local val = tonumber(intDisp.Text)
     if val then
@@ -1110,10 +941,23 @@ local function handleIntInput()
         intDisp.Text = tostring(SmoothIntensity)
     end
 end
-if intDisp then intDisp.FocusLost:Connect(handleIntInput) end
+intDisp.FocusLost:Connect(handleIntInput)
 
-if intMinus then intMinus.MouseButton1Click:Connect(function() SmoothIntensity = math.max(1, SmoothIntensity - 1); intDisp.Text = tostring(SmoothIntensity) end) end
-if intPlus then intPlus.MouseButton1Click:Connect(function() SmoothIntensity = math.min(200, SmoothIntensity + 1); intDisp.Text = tostring(SmoothIntensity) end) end
+intMinus.MouseButton1Click:Connect(function() SmoothIntensity = math.max(1, SmoothIntensity - 1); intDisp.Text = tostring(SmoothIntensity) end)
+intPlus.MouseButton1Click:Connect(function() SmoothIntensity = math.min(200, SmoothIntensity + 1); intDisp.Text = tostring(SmoothIntensity) end)
+
+-- Handler untuk Tinggi (Peninggi)
+local function handleHeightInput()
+    local val = tonumber(heightDisp.Text)
+    if val then
+        SmoothHeight = math.clamp(math.floor(val), 1, 100)
+        heightDisp.Text = tostring(SmoothHeight)
+    end
+end
+heightDisp.FocusLost:Connect(handleHeightInput)
+
+heightMinus.MouseButton1Click:Connect(function() SmoothHeight = math.max(1, SmoothHeight - 1); heightDisp.Text = tostring(SmoothHeight) end)
+heightPlus.MouseButton1Click:Connect(function() SmoothHeight = math.min(100, SmoothHeight + 1); heightDisp.Text = tostring(SmoothHeight) end)
 
 snapToggleBtn.MouseButton1Click:Connect(function()
     SnapEnabled = not SnapEnabled
@@ -1196,7 +1040,31 @@ undoBtn.MouseButton1Click:Connect(function() local success, msg = Undo(); status
 closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
 scriptBtn.MouseButton1Click:Connect(function() codeText.Text = GenerateScript(); scriptWin.Visible = true end)
 closeScriptBtn.MouseButton1Click:Connect(function() scriptWin.Visible = false end)
-copyBtn.MouseButton1Click:Connect(function() if setclipboard then setclipboard(codeText.Text); copyBtn.Text = "Copied!"; delay(1.5, function() copyBtn.Text = "Copy" end) end end)
+
+--// Copy Script Button Error Handling
+copyBtn.MouseButton1Click:Connect(function() 
+    local success, err = pcall(function()
+        if setclipboard then 
+            setclipboard(codeText.Text)
+        else
+            --// Fallback untuk Executor HP yang tidak support setclipboard
+            writefile("Elbruzh_Terrain_"..tostring(math.random(1000,9999))..".txt", codeText.Text)
+        end
+    end)
+    
+    if success then
+        copyBtn.Text = "Copied/Saved!"
+        copyBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 120)
+    else
+        copyBtn.Text = "Error Copy!"
+        copyBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    end
+    
+    delay(1.5, function() 
+        copyBtn.Text = "Copy" 
+        copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    end) 
+end)
 
 clearBtn.MouseButton1Click:Connect(function()
     while #UndoHistory > 0 do Undo() end
@@ -1214,7 +1082,7 @@ spawnBtn.MouseButton1Click:Connect(function()
         
         local spawned = SpawnTerrain()
         if spawned then
-            status.Text = "✅ Spawned! (" .. #SpawnedData .. " / " .. MAX_TERRAIN_LIMIT .. ")"
+            status.Text = "✅ Spawned! (" .. #SpawnedData .. ")"
             status.TextColor3 = Color3.fromRGB(0, 255, 100)
         else
             status.Text = "❌ Failed!"
@@ -1237,12 +1105,17 @@ titleBar.InputBegan:Connect(function(input)
 end)
 titleBar.InputEnded:Connect(function() drag = false end)
 UserInputService.InputChanged:Connect(function(input)
-    if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - startPos
-        panel.Position = UDim2.new(startFrame.X.Scale, startFrame.X.Offset + delta.X, startFrame.Y.Scale, startFrame.Y.Offset + delta.Y)
-    end
+    pcall(function()
+        if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - startPos
+            panel.Position = UDim2.new(startFrame.X.Scale, startFrame.X.Offset + delta.X, startFrame.Y.Scale, startFrame.Y.Offset + delta.Y)
+        end
+    end)
 end)
 
-RunService.RenderStepped:Connect(UpdatePreview)
+--// Membungkus RenderStepped dengan pcall agar meminimalisir error console
+RunService.RenderStepped:Connect(function()
+    pcall(function() UpdatePreview() end)
+end)
 
-print("✅ Terrain Editor v16.5 Loaded Successfully!")
+print("✅ Terrain Editor v16.5 Loaded - Clean Flat UI & Protected Mode Active!")
