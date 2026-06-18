@@ -409,11 +409,29 @@ local function Undo()
     return true, "Undone 1 terrain"
 end
 
---// Generate Script
-local function GenerateScript()
+--// Generate Script (DENGAN CONVERT PART SYSTEM)
+local function GenerateScript(isConvertMode)
     if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
     local code = "--// Terrain Spawn Script\n--// Total: " .. #SpawnedData .. " terrains\n\n"
     code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
+    
+    if isConvertMode then
+        local ox, oy, oz = SpawnedData[1][1], SpawnedData[1][2], SpawnedData[1][3]
+        code = code .. "--// CONVERT PART SYSTEM: Terrain mengikuti posisi Part\n"
+        code = code .. "local baseOrigin = Vector3.new("..ox..", "..oy..", "..oz..")\n"
+        code = code .. "local followPart = workspace:FindFirstChild('TerrainAnchorPart')\n"
+        code = code .. "if not followPart then\n"
+        code = code .. "    followPart = Instance.new('Part')\n"
+        code = code .. "    followPart.Name = 'TerrainAnchorPart'\n"
+        code = code .. "    followPart.Size = Vector3.new(4, 4, 4)\n"
+        code = code .. "    followPart.Position = baseOrigin\n"
+        code = code .. "    followPart.Anchored = true\n"
+        code = code .. "    followPart.BrickColor = BrickColor.new('Cyan')\n"
+        code = code .. "    followPart.Material = Enum.Material.Neon\n"
+        code = code .. "    followPart.Parent = workspace\n"
+        code = code .. "end\n\n"
+    end
+    
     code = code .. "local grassColors = {"
     for i, c in ipairs(grassColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
     code = code .. "}\nlocal leafyGrassColors = {"
@@ -447,7 +465,12 @@ end
 ]]
     
     code = code .. "local function BL(d)\n"
-    code = code .. "    local pos = Vector3.new(d[1], d[2], d[3])\n"
+    if isConvertMode then
+        code = code .. "    local rawPos = Vector3.new(d[1], d[2], d[3])\n"
+        code = code .. "    local pos = followPart.Position + (rawPos - baseOrigin)\n"
+    else
+        code = code .. "    local pos = Vector3.new(d[1], d[2], d[3])\n"
+    end
     code = code .. "    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Brick=Enum.Material.Brick,Wood=Enum.Material.WoodPlanks,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice}\n"
     code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
     code = code .. "    local shape, actionMode = d[8] or 'Ball', d[18] or 'Build'\n"
@@ -832,6 +855,61 @@ local clearBtn = Instance.new("TextButton", scroll)
 clearBtn.Size, clearBtn.BackgroundColor3, clearBtn.Text, clearBtn.TextColor3, clearBtn.TextSize, clearBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(180, 60, 60), "🗑️ Clear All", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 8)
 
+--// EXPORT MODE WINDOW (GET SCRIPT CODE OPTIONS)
+local exportModeWin = Instance.new("Frame", gui)
+exportModeWin.Name, exportModeWin.Size, exportModeWin.Position, exportModeWin.BackgroundColor3, exportModeWin.Visible = "ExportModeWindow", UDim2.new(0, 240, 0, 160), UDim2.new(0.5, -120, 0.5, -80), Color3.fromRGB(20, 20, 30), false
+Instance.new("UICorner", exportModeWin).CornerRadius = UDim.new(0, 12)
+local exportStroke = Instance.new("UIStroke", exportModeWin)
+exportStroke.Color = Color3.fromRGB(0, 255, 255)
+exportStroke.Thickness = 2
+
+local exportTitleBar = Instance.new("Frame", exportModeWin)
+exportTitleBar.Size, exportTitleBar.BackgroundColor3 = UDim2.new(1, 0, 0, 35), Color3.fromRGB(30, 30, 40)
+Instance.new("UICorner", exportTitleBar).CornerRadius = UDim.new(0, 12)
+local exportTitleText = Instance.new("TextLabel", exportTitleBar)
+exportTitleText.Size, exportTitleText.Position, exportTitleText.BackgroundTransparency, exportTitleText.Text, exportTitleText.TextColor3, exportTitleText.TextSize, exportTitleText.Font, exportTitleText.TextXAlignment = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0), 1, "GET SCRIPT CODE", Color3.fromRGB(0, 255, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Center
+
+local closeExportBtn = Instance.new("TextButton", exportTitleBar)
+closeExportBtn.Size, closeExportBtn.Position, closeExportBtn.BackgroundColor3, closeExportBtn.Text, closeExportBtn.TextColor3, closeExportBtn.TextSize, closeExportBtn.Font = UDim2.new(0, 24, 0, 24), UDim2.new(1, -30, 0.5, -12), Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold
+Instance.new("UICorner", closeExportBtn).CornerRadius = UDim.new(0, 6)
+closeExportBtn.MouseButton1Click:Connect(function() exportModeWin.Visible = false end)
+
+local isConvertMode = false
+
+local normalToggleBtn = Instance.new("TextButton", exportModeWin)
+normalToggleBtn.Size, normalToggleBtn.Position, normalToggleBtn.BackgroundColor3, normalToggleBtn.Text, normalToggleBtn.TextColor3, normalToggleBtn.TextSize, normalToggleBtn.Font = UDim2.new(1, -30, 0, 30), UDim2.new(0, 15, 0, 50), Color3.fromRGB(0, 150, 255), "○ Tidak", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", normalToggleBtn).CornerRadius = UDim.new(0, 6)
+
+local convertToggleBtn = Instance.new("TextButton", exportModeWin)
+convertToggleBtn.Size, convertToggleBtn.Position, convertToggleBtn.BackgroundColor3, convertToggleBtn.Text, convertToggleBtn.TextColor3, convertToggleBtn.TextSize, convertToggleBtn.Font = UDim2.new(1, -30, 0, 30), UDim2.new(0, 15, 0, 85), Color3.fromRGB(50, 50, 60), "○ Convert Part", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
+Instance.new("UICorner", convertToggleBtn).CornerRadius = UDim.new(0, 6)
+
+local function UpdateToggleUI()
+    if isConvertMode then
+        normalToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        normalToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        normalToggleBtn.Text = "○ Tidak"
+        convertToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
+        convertToggleBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        convertToggleBtn.Text = "● Convert Part"
+    else
+        normalToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        normalToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        normalToggleBtn.Text = "● Tidak"
+        convertToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        convertToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        convertToggleBtn.Text = "○ Convert Part"
+    end
+end
+UpdateToggleUI()
+
+normalToggleBtn.MouseButton1Click:Connect(function() isConvertMode = false; UpdateToggleUI() end)
+convertToggleBtn.MouseButton1Click:Connect(function() isConvertMode = true; UpdateToggleUI() end)
+
+local executeGenerateBtn = Instance.new("TextButton", exportModeWin)
+executeGenerateBtn.Size, executeGenerateBtn.Position, executeGenerateBtn.BackgroundColor3, executeGenerateBtn.Text, executeGenerateBtn.TextColor3, executeGenerateBtn.TextSize, executeGenerateBtn.Font = UDim2.new(1, -30, 0, 30), UDim2.new(0, 15, 0, 120), Color3.fromRGB(120, 80, 200), "[ GENERATE ]", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBlack
+Instance.new("UICorner", executeGenerateBtn).CornerRadius = UDim.new(0, 6)
+
 --// SCRIPT WINDOW
 local scriptWin = Instance.new("Frame", gui)
 scriptWin.Name, scriptWin.Size, scriptWin.Position, scriptWin.BackgroundColor3, scriptWin.BorderSizePixel, scriptWin.Visible, scriptWin.Active, scriptWin.Draggable = "ScriptWindow", UDim2.new(0, 400, 0, 350), UDim2.new(0.5, -200, 0.5, -175), Color3.fromRGB(30, 30, 35), 0, false, true, true
@@ -1038,7 +1116,24 @@ rotResetBtn.MouseButton1Click:Connect(function() RotX, RotY, RotZ = 0, 0, 0; rxV
 undoBtn.MouseButton1Click:Connect(function() local success, msg = Undo(); status.Text = success and ("↩️ " .. msg .. " (" .. #SpawnedData .. ")") or ("↩️ " .. msg); status.TextColor3 = success and Color3.fromRGB(255, 200, 100) or Color3.fromRGB(255, 100, 100) end)
 
 closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
-scriptBtn.MouseButton1Click:Connect(function() codeText.Text = GenerateScript(); scriptWin.Visible = true end)
+
+-- Modifikasi pada scriptBtn: memunculkan jendela pilihan dulu, bukan langsung script
+scriptBtn.MouseButton1Click:Connect(function() 
+    if #SpawnedData == 0 then
+        codeText.Text = "-- No terrain spawned yet!"
+        scriptWin.Visible = true
+    else
+        exportModeWin.Visible = true 
+    end
+end)
+
+-- Tombol executeGenerateBtn di dalam menu opsi baru
+executeGenerateBtn.MouseButton1Click:Connect(function()
+    exportModeWin.Visible = false
+    codeText.Text = GenerateScript(isConvertMode)
+    scriptWin.Visible = true
+end)
+
 closeScriptBtn.MouseButton1Click:Connect(function() scriptWin.Visible = false end)
 
 --// Copy Script Button Error Handling
