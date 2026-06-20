@@ -1,6 +1,6 @@
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.6 - Smooth Terrain, Snap to Grid, Ghost Mode, Custom Move Offset UI
---// FIXED & OPTIMIZED FOR MOBILE EXECUTORS
+--// Terrain Editor v16.6 - Smooth Terrain, Snap to Grid, Ghost Mode, Move Feature Added
+--// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (COLOR BUG FIXED)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -102,10 +102,10 @@ local UndoHistory = {}
 local RedoHistory = {}
 local IgnoreTerrain = false
 
---// MOVE FEATURE VARIABLES
-local MoveModeActive = false
-local LockedBasePos = nil
-local MoveYOffset = 0
+--// MOVE FEATURE STATES
+local MoveEnabled = false
+local LockedPosition = nil
+local MoveIconMinimized = false
 
 --// SNAP SETTINGS
 local SnapEnabled = false
@@ -219,60 +219,56 @@ local function UpdateGridVisual()
 end
 spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end end end)
 
---// Update Preview dengan Pelindung
+--// Update Preview dengan Pelindung (Dan Logika Move Position)
 local function UpdatePreview()
     pcall(function()
         if not PreviewPart then CreatePreview() end
         
-        local displayPos = nil
+        local displayPos
         
-        -- Override posisi jika MoveModeActive menyala
-        if MoveModeActive and LockedBasePos then
-            displayPos = LockedBasePos + Vector3.new(0, MoveYOffset, 0)
+        -- Cek jika MoveEnabled aktif dan posisi sudah dilock
+        if MoveEnabled and LockedPosition then
+            displayPos = LockedPosition
+            PreviewPos = displayPos
         else
+            -- Mode Normal Raycast
             local result = GetRaycast()
             if result then
                 local rawPos = result.Position
                 displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
+                PreviewPos = displayPos
+            else
+                PreviewPart.Transparency = 1
+                PreviewPart.EdgeOutline.Transparency = 1
+                return
             end
         end
 
-        if displayPos then
-            PreviewPos = displayPos
-            if CurrentMode == "Flatten" then
-                PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
-                local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
-                PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
-            elseif CurrentMode == "Paint" then
-                if CurrentShape == "Ball" then
-                    PreviewPart.Size = Vector3.new(SizeX, SizeX, SizeX)
-                else
-                    PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
-                end
-                local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0)
-                PreviewPart.CFrame = cf
+        if CurrentMode == "Flatten" then
+            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+            local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
+            PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
+        elseif CurrentMode == "Paint" then
+            if CurrentShape == "Ball" then
+                PreviewPart.Size = Vector3.new(SizeX, SizeX, SizeX)
             else
-                PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
-                local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
-                PreviewPart.CFrame = cf
+                PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
             end
-            
-            PreviewPart.Transparency = 0.85
-            PreviewPart.EdgeOutline.Transparency = 0
-            
-            if MoveModeActive then
-                PreviewPart.Color = Color3.fromRGB(255, 200, 0)
-                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(255, 200, 0)
-            elseif SnapEnabled then
-                PreviewPart.Color = Color3.fromRGB(100, 255, 150)
-                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
-            else
-                PreviewPart.Color = Color3.fromRGB(255, 255, 255)
-                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
-            end
+            local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0)
+            PreviewPart.CFrame = cf
         else
-            PreviewPart.Transparency = 1
-            PreviewPart.EdgeOutline.Transparency = 1
+            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+            local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
+            PreviewPart.CFrame = cf
+        end
+        PreviewPart.Transparency = 0.85
+        PreviewPart.EdgeOutline.Transparency = 0
+        if SnapEnabled then
+            PreviewPart.Color = Color3.fromRGB(100, 255, 150)
+            PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
+        else
+            PreviewPart.Color = Color3.fromRGB(255, 255, 255)
+            PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
         end
     end)
 end
@@ -371,6 +367,29 @@ local function BL(d)
     return d
 end
 
+--// Utility function buat UI Draggable
+local function MakeUI_Draggable(uiFrame)
+    local dragStart, startPos, dragging
+    uiFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = uiFrame.Position
+        end
+    end)
+    uiFrame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            uiFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
 --// Main GUI Setup
 local gui = Instance.new("ScreenGui")
 gui.Name = "TerrainEditor"
@@ -431,7 +450,7 @@ local function Undo()
     return true, "Undone 1 terrain"
 end
 
---// Generate Script
+--// Generate Script Function (Disingkat visualisasi string generator-nya)
 local function GenerateScript(exportMode)
     if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
     
@@ -445,12 +464,9 @@ local function GenerateScript(exportMode)
         local minX, minY, minZ = math.huge, math.huge, math.huge
         local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
         for _, d in ipairs(SpawnedData) do
-            if d[1] < minX then minX = d[1] end
-            if d[1] > maxX then maxX = d[1] end
-            if d[2] < minY then minY = d[2] end
-            if d[2] > maxY then maxY = d[2] end
-            if d[3] < minZ then minZ = d[3] end
-            if d[3] > maxZ then maxZ = d[3] end
+            if d[1] < minX then minX = d[1] end; if d[1] > maxX then maxX = d[1] end
+            if d[2] < minY then minY = d[2] end; if d[2] > maxY then maxY = d[2] end
+            if d[3] < minZ then minZ = d[3] end; if d[3] > maxZ then maxZ = d[3] end
         end
         cx, cy, cz = (minX+maxX)/2, (minY+maxY)/2, (minZ+maxZ)/2
         
@@ -627,53 +643,6 @@ for i, m in ipairs(Materials) do
 end
 matIconBtn.MouseButton1Click:Connect(function() matWin.Visible = not matWin.Visible end)
 
-
---// NEW: MOVE WINDOW UI TERSENDIRI
-local moveWin = Instance.new("Frame", gui)
-moveWin.Name, moveWin.Size, moveWin.Position = "MoveWindow", UDim2.new(0, 90, 0, 110), UDim2.new(0.5, 120, 0.5, -55)
-moveWin.BackgroundColor3, moveWin.BorderSizePixel = Color3.fromRGB(35, 35, 45), 2
-moveWin.BorderColor3 = Color3.fromRGB(255, 200, 0)
-moveWin.Visible, moveWin.Active, moveWin.Draggable = false, true, true
-Instance.new("UICorner", moveWin).CornerRadius = UDim.new(0, 8)
-
-local moveMinBtn = Instance.new("TextButton", moveWin)
-moveMinBtn.Size, moveMinBtn.Position, moveMinBtn.BackgroundTransparency = UDim2.new(0, 24, 0, 24), UDim2.new(1, -26, 0, 2), 1
-moveMinBtn.Text, moveMinBtn.TextSize = "⛔", 14
-
-local btnUp = Instance.new("TextButton", moveWin)
-btnUp.Size, btnUp.Position, btnUp.BackgroundColor3 = UDim2.new(0, 60, 0, 35), UDim2.new(0.5, -30, 0, 25), Color3.fromRGB(50, 50, 65)
-btnUp.Text, btnUp.TextSize = "⬆️", 20
-Instance.new("UICorner", btnUp).CornerRadius = UDim.new(0, 6)
-
-local btnDown = Instance.new("TextButton", moveWin)
-btnDown.Size, btnDown.Position, btnDown.BackgroundColor3 = UDim2.new(0, 60, 0, 35), UDim2.new(0.5, -30, 0, 65), Color3.fromRGB(50, 50, 65)
-btnDown.Text, btnDown.TextSize = "⬇️", 20
-Instance.new("UICorner", btnDown).CornerRadius = UDim.new(0, 6)
-
-local moveIcon = Instance.new("TextButton", gui)
-moveIcon.Name, moveIcon.Size, moveIcon.BackgroundColor3 = "MoveIcon", UDim2.new(0, 40, 0, 40), Color3.fromRGB(35, 35, 45)
-moveIcon.Text, moveIcon.TextSize = "🔛", 18
-moveIcon.Visible, moveIcon.Active, moveIcon.Draggable = false, true, true
-Instance.new("UICorner", moveIcon).CornerRadius = UDim.new(0, 8)
-local moveIconStroke = Instance.new("UIStroke", moveIcon)
-moveIconStroke.Color, moveIconStroke.Thickness = Color3.fromRGB(255, 200, 0), 2
-
-moveMinBtn.MouseButton1Click:Connect(function()
-    moveWin.Visible = false
-    moveIcon.Position = moveWin.Position
-    moveIcon.Visible = true
-end)
-
-moveIcon.MouseButton1Click:Connect(function()
-    moveIcon.Visible = false
-    moveWin.Position = moveIcon.Position
-    moveWin.Visible = true
-end)
-
-btnUp.MouseButton1Click:Connect(function() MoveYOffset = MoveYOffset + 1; UpdatePreview() end)
-btnDown.MouseButton1Click:Connect(function() MoveYOffset = MoveYOffset - 1; UpdatePreview() end)
-
-
 --// MAIN PANEL
 local panel = Instance.new("Frame", gui)
 panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 450), UDim2.new(0, 6, 1, -460), Color3.fromRGB(30, 30, 40), 0
@@ -698,7 +667,7 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1620)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1650)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
@@ -709,20 +678,6 @@ Instance.new("UICorner", hideGuiBtn).CornerRadius = UDim.new(0, 8)
 local status = Instance.new("TextLabel", scroll)
 status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, status.TextSize, status.Font = UDim2.new(1, -8, 0, 18), 1, "Aim & tap 🎯 to spawn", Color3.fromRGB(0, 255, 150), 10, Enum.Font.Gotham
 
-
---// FITUR MOVE LOCK SECTION DI PANEL
-local moveLockSec = Instance.new("Frame", scroll)
-moveLockSec.Size, moveLockSec.BackgroundColor3, moveLockSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", moveLockSec).CornerRadius = UDim.new(0, 8)
-local moveLockTitle = Instance.new("TextLabel", moveLockSec)
-moveLockTitle.Size, moveLockTitle.Position, moveLockTitle.BackgroundTransparency, moveLockTitle.Text, moveLockTitle.TextColor3, moveLockTitle.TextSize, moveLockTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "↕️ Lock & Move Terrain", Color3.fromRGB(255, 200, 0), 11, Enum.Font.GothamBold
-
-local moveToggleBtn = Instance.new("TextButton", moveLockSec)
-moveToggleBtn.Size, moveToggleBtn.Position, moveToggleBtn.BackgroundColor3, moveToggleBtn.Text, moveToggleBtn.TextColor3, moveToggleBtn.TextSize, moveToggleBtn.Font = UDim2.new(1, -12, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "Move: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", moveToggleBtn).CornerRadius = UDim.new(0, 4)
-
-
---// FIXED COLOR UI SYSTEM
 local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx)
     local sec = Instance.new("Frame", parent)
     sec.Size, sec.BackgroundColor3, sec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
@@ -758,6 +713,43 @@ Instance.new("UICorner", ghostToggleBtn).CornerRadius = UDim.new(0, 4)
 
 local ghostInfo = Instance.new("TextLabel", ghostSec)
 ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.Text, ghostInfo.TextColor3, ghostInfo.TextSize, ghostInfo.Font = UDim2.new(1, -12, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Tembus OFF = Raycast nabrak gundukan", Color3.fromRGB(150, 150, 150), 10, Enum.Font.Gotham
+
+--// FITUR MOVE TERRAIN (BARU)
+local moveMainSec = Instance.new("Frame", scroll)
+moveMainSec.Size, moveMainSec.BackgroundColor3, moveMainSec.BorderSizePixel = UDim2.new(1, -8, 0, 60), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", moveMainSec).CornerRadius = UDim.new(0, 8)
+local moveMainTitle = Instance.new("TextLabel", moveMainSec)
+moveMainTitle.Size, moveMainTitle.Position, moveMainTitle.BackgroundTransparency, moveMainTitle.Text, moveMainTitle.TextColor3, moveMainTitle.TextSize, moveMainTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🕹️ Move Part (Kunci Posisi)", Color3.fromRGB(255, 255, 100), 11, Enum.Font.GothamBold
+
+local moveMainToggleBtn = Instance.new("TextButton", moveMainSec)
+moveMainToggleBtn.Size, moveMainToggleBtn.Position, moveMainToggleBtn.BackgroundColor3, moveMainToggleBtn.Text, moveMainToggleBtn.TextColor3, moveMainToggleBtn.TextSize, moveMainToggleBtn.Font = UDim2.new(1, -12, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "Move Part: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", moveMainToggleBtn).CornerRadius = UDim.new(0, 4)
+
+--// JENDELA MOVE FLOATING & ICON
+local moveWin = Instance.new("Frame", gui)
+moveWin.Name, moveWin.Size, moveWin.Position, moveWin.BackgroundColor3, moveWin.Visible = "MoveWindow", UDim2.new(0, 70, 0, 105), UDim2.new(0.8, -35, 0.5, -50), Color3.fromRGB(35, 35, 45), false
+Instance.new("UICorner", moveWin).CornerRadius = UDim.new(0, 10)
+local moveWinStroke = Instance.new("UIStroke", moveWin)
+moveWinStroke.Color = Color3.fromRGB(0, 255, 255); moveWinStroke.Thickness = 1.5
+
+local moveMinBtn = Instance.new("TextButton", moveWin)
+moveMinBtn.Size, moveMinBtn.Position, moveMinBtn.BackgroundTransparency, moveMinBtn.Text, moveMinBtn.TextSize = UDim2.new(0, 25, 0, 25), UDim2.new(1, -25, 0, 0), 1, "⛔", 14
+
+local moveUpBtn = Instance.new("TextButton", moveWin)
+moveUpBtn.Size, moveUpBtn.Position, moveUpBtn.BackgroundColor3, moveUpBtn.Text, moveUpBtn.TextSize = UDim2.new(0, 50, 0, 30), UDim2.new(0.5, -25, 0, 25), Color3.fromRGB(60, 60, 75), "⬆️", 16
+Instance.new("UICorner", moveUpBtn).CornerRadius = UDim.new(0, 6)
+
+local moveDownBtn = Instance.new("TextButton", moveWin)
+moveDownBtn.Size, moveDownBtn.Position, moveDownBtn.BackgroundColor3, moveDownBtn.Text, moveDownBtn.TextSize = UDim2.new(0, 50, 0, 30), UDim2.new(0.5, -25, 0, 65), Color3.fromRGB(60, 60, 75), "⬇️", 16
+Instance.new("UICorner", moveDownBtn).CornerRadius = UDim.new(0, 6)
+
+local moveIcon = Instance.new("TextButton", gui)
+moveIcon.Size, moveIcon.Position, moveIcon.BackgroundColor3, moveIcon.Text, moveIcon.TextSize, moveIcon.Visible = UDim2.new(0, 40, 0, 40), UDim2.new(0.8, -20, 0.5, -20), Color3.fromRGB(45, 45, 60), "🔛", 20, false
+Instance.new("UICorner", moveIcon).CornerRadius = UDim.new(1, 0)
+local iconStroke = Instance.new("UIStroke", moveIcon); iconStroke.Color = Color3.fromRGB(0, 255, 255); iconStroke.Thickness = 1.5
+
+MakeUI_Draggable(moveWin)
+MakeUI_Draggable(moveIcon)
 
 --// SHAPE SECTION
 local shapeSec = Instance.new("Frame", scroll)
@@ -1050,6 +1042,65 @@ codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text
 
 --// EVENT CONNECTIONS
 
+-- Event Move Controls
+moveMainToggleBtn.MouseButton1Click:Connect(function()
+    MoveEnabled = not MoveEnabled
+    if MoveEnabled then
+        moveMainToggleBtn.Text = "Move Part: ON"
+        moveMainToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+        
+        -- Kunci posisi saat ini
+        if PreviewPos then
+            LockedPosition = PreviewPos
+        else
+            LockedPosition = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart and LocalPlayer.Character.PrimaryPart.Position or Vector3.new(0,0,0)
+        end
+        
+        if MoveIconMinimized then
+            moveIcon.Visible = true
+            moveWin.Visible = false
+        else
+            moveWin.Visible = true
+            moveIcon.Visible = false
+        end
+    else
+        moveMainToggleBtn.Text = "Move Part: OFF"
+        moveMainToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        moveWin.Visible = false
+        moveIcon.Visible = false
+        LockedPosition = nil
+    end
+end)
+
+moveMinBtn.MouseButton1Click:Connect(function()
+    MoveIconMinimized = true
+    moveWin.Visible = false
+    moveIcon.Position = moveWin.Position 
+    moveIcon.Visible = true
+end)
+
+moveIcon.MouseButton1Click:Connect(function()
+    MoveIconMinimized = false
+    moveIcon.Visible = false
+    moveWin.Position = moveIcon.Position 
+    moveWin.Visible = true
+end)
+
+moveUpBtn.MouseButton1Click:Connect(function()
+    if LockedPosition then
+        LockedPosition = LockedPosition + Vector3.new(0, 1, 0)
+        UpdatePreview()
+    end
+end)
+
+moveDownBtn.MouseButton1Click:Connect(function()
+    if LockedPosition then
+        LockedPosition = LockedPosition - Vector3.new(0, 1, 0)
+        UpdatePreview()
+    end
+end)
+
+
 local function HideAllGui()
     panel.Visible, matIconBtn.Visible, openPanelBtn.Visible, matWin.Visible = false, false, false, false
     unhideBtn.Visible = true
@@ -1066,7 +1117,6 @@ unhideBtn.MouseButton1Click:Connect(ShowAllGui)
 openPanelBtn.MouseButton1Click:Connect(function() openPanelBtn.Visible = false; panel.Visible = true end)
 
 
---// FIX COLOR UPDATER (Menghindari bug pass-by-reference)
 local function UpdateColor(type, direction)
     if type == "Grass" then
         currentGrassColorIndex = currentGrassColorIndex + direction
@@ -1097,38 +1147,6 @@ groundLeft.MouseButton1Click:Connect(function() UpdateColor("Ground", -1) end)
 groundRight.MouseButton1Click:Connect(function() UpdateColor("Ground", 1) end)
 
 
--- Move/Lock Logic
-moveToggleBtn.MouseButton1Click:Connect(function()
-    MoveModeActive = not MoveModeActive
-    if MoveModeActive then
-        if PreviewPos then
-            LockedBasePos = PreviewPos
-            MoveYOffset = 0
-            moveToggleBtn.Text = "Move: ON (Posisi Dikunci)"
-            moveToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-            moveWin.Visible = true
-            moveIcon.Visible = false
-            status.Text = "🔒 Posisi terkunci! Atur ketinggian."
-            status.TextColor3 = Color3.fromRGB(255, 200, 0)
-        else
-            MoveModeActive = false
-            status.Text = "❌ Arahkan layar ke tanah dulu!"
-            status.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
-    else
-        moveToggleBtn.Text = "Move: OFF"
-        moveToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        LockedBasePos = nil
-        MoveYOffset = 0
-        moveWin.Visible = false
-        moveIcon.Visible = false
-        status.Text = "Aim & tap 🎯 to spawn"
-        status.TextColor3 = Color3.fromRGB(0, 255, 150)
-    end
-    UpdatePreview()
-end)
-
--- Tembus Toggle Events
 ghostToggleBtn.MouseButton1Click:Connect(function()
     IgnoreTerrain = not IgnoreTerrain
     if IgnoreTerrain then
@@ -1351,27 +1369,10 @@ spawnBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local drag = false
-local startPos, startFrame
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        drag = true
-        startPos = input.Position
-        startFrame = panel.Position
-    end
-end)
-titleBar.InputEnded:Connect(function() drag = false end)
-UserInputService.InputChanged:Connect(function(input)
-    pcall(function()
-        if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - startPos
-            panel.Position = UDim2.new(startFrame.X.Scale, startFrame.X.Offset + delta.X, startFrame.Y.Scale, startFrame.Y.Offset + delta.Y)
-        end
-    end)
-end)
+MakeUI_Draggable(titleBar) -- Replaced custom drag code with reusable function
 
 RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("✅ Terrain Editor v16.6 Loaded - Move Tracker Fix Added!")
+print("✅ Terrain Editor v16.6 Loaded - Move Feature Locked Pos Active!")
