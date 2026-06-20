@@ -1,6 +1,6 @@
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.6 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Move Position Feature
---// FIXED & OPTIMIZED FOR MOBILE EXECUTORS
+--// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature, Relative to Part
+--// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (COLOR BUG FIXED)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -102,10 +102,6 @@ local UndoHistory = {}
 local RedoHistory = {}
 local IgnoreTerrain = false
 
---// MOVE FEATURE VARIABLES
-local MoveModeEnabled = false
-local LockedPreviewPos = nil
-
 --// SNAP SETTINGS
 local SnapEnabled = false
 local GridSize = 10
@@ -118,7 +114,7 @@ local SmoothEnabled = false
 local SmoothModes = {"Soft Edge", "Gradient", "Noise", "Blend"}
 local CurrentSmoothModeIndex = 1
 local SmoothIntensity = 5
-local SmoothHeight = 5
+local SmoothHeight = 5 
 
 --// Raycast dengan Pelindung (pcall)
 local function GetRaycast()
@@ -222,16 +218,9 @@ spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end 
 local function UpdatePreview()
     pcall(function()
         if not PreviewPart then CreatePreview() end
-        
-        local rawPos = nil
-        if MoveModeEnabled and LockedPreviewPos then
-            rawPos = LockedPreviewPos
-        else
-            local result = GetRaycast()
-            if result then rawPos = result.Position end
-        end
-
-        if rawPos then
+        local result = GetRaycast()
+        if result then
+            local rawPos = result.Position
             local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
             PreviewPos = displayPos
             if CurrentMode == "Flatten" then
@@ -253,9 +242,9 @@ local function UpdatePreview()
             end
             PreviewPart.Transparency = 0.85
             PreviewPart.EdgeOutline.Transparency = 0
-            if SnapEnabled or MoveModeEnabled then
-                PreviewPart.Color = MoveModeEnabled and Color3.fromRGB(255, 150, 50) or Color3.fromRGB(100, 255, 150)
-                PreviewPart.EdgeOutline.Color3 = MoveModeEnabled and Color3.fromRGB(255, 150, 50) or Color3.fromRGB(100, 255, 150)
+            if SnapEnabled then
+                PreviewPart.Color = Color3.fromRGB(100, 255, 150)
+                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
             else
                 PreviewPart.Color = Color3.fromRGB(255, 255, 255)
                 PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
@@ -267,14 +256,14 @@ local function UpdatePreview()
     end)
 end
 
---// Apply Material Colors (GLOBAL UPDATE)
+--// Apply Material Colors
 local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[currentGrassColorIndex].color) end)
     pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[currentLeafyGrassColorIndex].color) end)
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[currentGroundColorIndex].color) end)
 end
 
---// SMOOTH TERRAIN ALGORITHM
+--// SMOOTH TERRAIN ALGORITHM DENGAN PENINGGI
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
@@ -312,11 +301,9 @@ local function BL(d)
     local mat = Enum.Material.Grass
     for _, m in ipairs(Materials) do if m.Name == matName then mat = m.Mat break end end
     
-    -- Pastikan warna diterapkan dengan index tersimpan pada array d
-    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[d[9] or 3].color) end)
-    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3].color) end)
-    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2].color) end)
-
+    -- Fix bug: pastikan global update tereksekusi agar display update
+    ApplyMaterialColors()
+    
     local sizeVec = Vector3.new(sx, sy, sz)
     local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
     if actionMode == "Flatten" then
@@ -424,15 +411,16 @@ local function Undo()
     return true, "Undone 1 terrain"
 end
 
---// Generate Script (UPDATED FIX)
+--// Generate Script
 local function GenerateScript(exportMode)
     if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
     
     local mode = exportMode or "Tidak"
     
-    local code = "--// Terrain Spawn Script (ELBRUZH v16.6)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
+    local code = "--// Terrain Spawn Script (ELBRUZH v16.5)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
     code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
     
+    -- Hitung Pusat Offset jika Mode Convert Part
     local cx, cy, cz = 0, 0, 0
     if mode == "Convert Part" then
         local minX, minY, minZ = math.huge, math.huge, math.huge
@@ -631,7 +619,7 @@ Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.6", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -644,7 +632,7 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1650)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1550)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
@@ -655,69 +643,7 @@ Instance.new("UICorner", hideGuiBtn).CornerRadius = UDim.new(0, 8)
 local status = Instance.new("TextLabel", scroll)
 status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, status.TextSize, status.Font = UDim2.new(1, -8, 0, 18), 1, "Aim & tap 🎯 to spawn", Color3.fromRGB(0, 255, 150), 10, Enum.Font.Gotham
 
---// FITUR MOVE / LOCK POSITION
-local movePosSec = Instance.new("Frame", scroll)
-movePosSec.Size, movePosSec.BackgroundColor3, movePosSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", movePosSec).CornerRadius = UDim.new(0, 8)
-
-local movePosTitle = Instance.new("TextLabel", movePosSec)
-movePosTitle.Size, movePosTitle.Position, movePosTitle.BackgroundTransparency, movePosTitle.Text, movePosTitle.TextColor3, movePosTitle.TextSize, movePosTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📍 Move Position (Lock)", Color3.fromRGB(255, 150, 50), 11, Enum.Font.GothamBold
-
-local movePosToggleBtn = Instance.new("TextButton", movePosSec)
-movePosToggleBtn.Size, movePosToggleBtn.Position, movePosToggleBtn.BackgroundColor3, movePosToggleBtn.Text, movePosToggleBtn.TextColor3, movePosToggleBtn.TextSize, movePosToggleBtn.Font = UDim2.new(1, -12, 0, 24), UDim2.new(0, 6, 0, 24), Color3.fromRGB(200, 60, 60), "Move: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", movePosToggleBtn).CornerRadius = UDim.new(0, 4)
-
--- UI Jendela Move (Floating)
-local moveWin = Instance.new("Frame", gui)
-moveWin.Name = "MoveWindow"
-moveWin.Size = UDim2.new(0, 80, 0, 120)
-moveWin.Position = UDim2.new(0.5, 150, 0.5, -60)
-moveWin.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-moveWin.Visible = false
-moveWin.Active = true
-Instance.new("UICorner", moveWin).CornerRadius = UDim.new(0, 8)
-
-local UIStrokeMove = Instance.new("UIStroke", moveWin)
-UIStrokeMove.Color = Color3.fromRGB(255, 150, 50)
-UIStrokeMove.Thickness = 1.5
-
-local moveMinBtn = Instance.new("TextButton", moveWin)
-moveMinBtn.Size = UDim2.new(1, 0, 0, 25)
-moveMinBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-moveMinBtn.Text = "⛔ Minimize"
-moveMinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-moveMinBtn.Font = Enum.Font.GothamBold
-moveMinBtn.TextSize = 10
-Instance.new("UICorner", moveMinBtn).CornerRadius = UDim.new(0, 8)
-
-local moveUpBtn = Instance.new("TextButton", moveWin)
-moveUpBtn.Size = UDim2.new(1, -10, 0, 38)
-moveUpBtn.Position = UDim2.new(0, 5, 0, 30)
-moveUpBtn.BackgroundColor3 = Color3.fromRGB(60, 150, 200)
-moveUpBtn.Text = "⬆️"
-moveUpBtn.TextSize = 20
-Instance.new("UICorner", moveUpBtn).CornerRadius = UDim.new(0, 6)
-
-local moveDownBtn = Instance.new("TextButton", moveWin)
-moveDownBtn.Size = UDim2.new(1, -10, 0, 38)
-moveDownBtn.Position = UDim2.new(0, 5, 0, 75)
-moveDownBtn.BackgroundColor3 = Color3.fromRGB(60, 150, 200)
-moveDownBtn.Text = "⬇️"
-moveDownBtn.TextSize = 20
-Instance.new("UICorner", moveDownBtn).CornerRadius = UDim.new(0, 6)
-
-local moveIconBtn = Instance.new("TextButton", gui)
-moveIconBtn.Size = UDim2.new(0, 45, 0, 45)
-moveIconBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-moveIconBtn.Text = "🔛"
-moveIconBtn.TextSize = 24
-moveIconBtn.Visible = false
-Instance.new("UICorner", moveIconBtn).CornerRadius = UDim.new(1, 0)
-local iconStroke = Instance.new("UIStroke", moveIconBtn)
-iconStroke.Color = Color3.fromRGB(255, 150, 50)
-iconStroke.Thickness = 2
-
---// COLOR SECTION
+--// FIXED COLOR UI SYSTEM
 local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx)
     local sec = Instance.new("Frame", parent)
     sec.Size, sec.BackgroundColor3, sec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
@@ -785,7 +711,7 @@ buildBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
 local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.35, 0.25)
 local paintBtn = CreateUIBtn(modeSec, "Paint", 0.65, 0.25)
 
---// SMOOTH TERRAIN GUI SECTION (DENGAN PENINGGI)
+--// SMOOTH TERRAIN GUI SECTION
 local smoothSec = Instance.new("Frame", scroll)
 smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
@@ -800,7 +726,6 @@ local smoothModeBtn = Instance.new("TextButton", smoothSec)
 smoothModeBtn.Size, smoothModeBtn.Position, smoothModeBtn.BackgroundColor3, smoothModeBtn.Text, smoothModeBtn.TextColor3, smoothModeBtn.TextSize, smoothModeBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), SmoothModes[1], Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", smoothModeBtn).CornerRadius = UDim.new(0, 4)
 
--- Intensitas Control
 local intL = Instance.new("TextLabel", smoothSec)
 intL.Size, intL.Position, intL.BackgroundTransparency, intL.Text, intL.TextColor3, intL.TextSize, intL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Intens:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
 
@@ -817,7 +742,6 @@ local intPlus = Instance.new("TextButton", smoothSec)
 intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 107, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", intPlus).CornerRadius = UDim.new(0, 4)
 
--- Peninggi Control
 local heightL = Instance.new("TextLabel", smoothSec)
 heightL.Size, heightL.Position, heightL.BackgroundTransparency, heightL.Text, heightL.TextColor3, heightL.TextSize, heightL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 135, 0, 53), 1, "Tinggi:", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
@@ -834,7 +758,7 @@ local heightPlus = Instance.new("TextButton", smoothSec)
 heightPlus.Size, heightPlus.Position, heightPlus.BackgroundColor3, heightPlus.Text, heightPlus.TextColor3, heightPlus.TextSize, heightPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 236, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", heightPlus).CornerRadius = UDim.new(0, 4)
 
---// SNAP TO GRID GUI SECTION
+--// SNAP TO GRID
 local snapSec = Instance.new("Frame", scroll)
 snapSec.Size, snapSec.BackgroundColor3, snapSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", snapSec).CornerRadius = UDim.new(0, 8)
@@ -1062,28 +986,37 @@ minBtn.MouseButton1Click:Connect(function() panel.Visible = false; openPanelBtn.
 unhideBtn.MouseButton1Click:Connect(ShowAllGui)
 openPanelBtn.MouseButton1Click:Connect(function() openPanelBtn.Visible = false; panel.Visible = true end)
 
---// FIXED COLOR BUGS: Menyimpan index aktual langsung ke global variable
-local function setupColorBtn(l, r, disp, arr, initialIdx, onChange)
-    local currentIdx = initialIdx
-    l.MouseButton1Click:Connect(function() 
-        currentIdx = currentIdx - 1 
-        if currentIdx < 1 then currentIdx = #arr end 
-        disp.Text = arr[currentIdx].name 
-        disp.BackgroundColor3 = arr[currentIdx].color 
-        onChange(currentIdx) 
-    end)
-    r.MouseButton1Click:Connect(function() 
-        currentIdx = currentIdx + 1 
-        if currentIdx > #arr then currentIdx = 1 end 
-        disp.Text = arr[currentIdx].name 
-        disp.BackgroundColor3 = arr[currentIdx].color 
-        onChange(currentIdx) 
-    end)
+
+--// FIX COLOR UPDATER (Menghindari bug pass-by-reference)
+local function UpdateColor(type, direction)
+    if type == "Grass" then
+        currentGrassColorIndex = currentGrassColorIndex + direction
+        if currentGrassColorIndex < 1 then currentGrassColorIndex = #grassColors elseif currentGrassColorIndex > #grassColors then currentGrassColorIndex = 1 end
+        grassDisplay.Text = grassColors[currentGrassColorIndex].name
+        grassDisplay.BackgroundColor3 = grassColors[currentGrassColorIndex].color
+    elseif type == "Leafy" then
+        currentLeafyGrassColorIndex = currentLeafyGrassColorIndex + direction
+        if currentLeafyGrassColorIndex < 1 then currentLeafyGrassColorIndex = #leafyGrassColors elseif currentLeafyGrassColorIndex > #leafyGrassColors then currentLeafyGrassColorIndex = 1 end
+        leafyDisplay.Text = leafyGrassColors[currentLeafyGrassColorIndex].name
+        leafyDisplay.BackgroundColor3 = leafyGrassColors[currentLeafyGrassColorIndex].color
+    elseif type == "Ground" then
+        currentGroundColorIndex = currentGroundColorIndex + direction
+        if currentGroundColorIndex < 1 then currentGroundColorIndex = #groundColors elseif currentGroundColorIndex > #groundColors then currentGroundColorIndex = 1 end
+        groundDisplay.Text = groundColors[currentGroundColorIndex].name
+        groundDisplay.BackgroundColor3 = groundColors[currentGroundColorIndex].color
+    end
+    ApplyMaterialColors()
 end
 
-setupColorBtn(grassLeft, grassRight, grassDisplay, grassColors, currentGrassColorIndex, function(idx) currentGrassColorIndex = idx; ApplyMaterialColors() end)
-setupColorBtn(leafyLeft, leafyRight, leafyDisplay, leafyGrassColors, currentLeafyGrassColorIndex, function(idx) currentLeafyGrassColorIndex = idx; ApplyMaterialColors() end)
-setupColorBtn(groundLeft, groundRight, groundDisplay, groundColors, currentGroundColorIndex, function(idx) currentGroundColorIndex = idx; ApplyMaterialColors() end)
+grassLeft.MouseButton1Click:Connect(function() UpdateColor("Grass", -1) end)
+grassRight.MouseButton1Click:Connect(function() UpdateColor("Grass", 1) end)
+
+leafyLeft.MouseButton1Click:Connect(function() UpdateColor("Leafy", -1) end)
+leafyRight.MouseButton1Click:Connect(function() UpdateColor("Leafy", 1) end)
+
+groundLeft.MouseButton1Click:Connect(function() UpdateColor("Ground", -1) end)
+groundRight.MouseButton1Click:Connect(function() UpdateColor("Ground", 1) end)
+
 
 -- Tembus Toggle Events
 ghostToggleBtn.MouseButton1Click:Connect(function()
@@ -1098,74 +1031,6 @@ ghostToggleBtn.MouseButton1Click:Connect(function()
         ghostInfo.Text = "Tembus OFF = Raycast nabrak gundukan"
     end
 end)
-
--- Move Position / Lock Feature Events
-movePosToggleBtn.MouseButton1Click:Connect(function()
-    MoveModeEnabled = not MoveModeEnabled
-    if MoveModeEnabled then
-        movePosToggleBtn.Text = "Move: ON (Locked)"
-        movePosToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-        LockedPreviewPos = PreviewPos or (LocalPlayer.Character and LocalPlayer.Character.PrimaryPart and LocalPlayer.Character.PrimaryPart.Position) or Vector3.new(0, 0, 0)
-        moveWin.Visible = true
-        moveIconBtn.Visible = false
-    else
-        movePosToggleBtn.Text = "Move: OFF"
-        movePosToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        LockedPreviewPos = nil
-        moveWin.Visible = false
-        moveIconBtn.Visible = false
-    end
-    UpdatePreview()
-end)
-
-moveMinBtn.MouseButton1Click:Connect(function()
-    moveWin.Visible = false
-    moveIconBtn.Position = moveWin.Position
-    moveIconBtn.Visible = true
-end)
-
-moveIconBtn.MouseButton1Click:Connect(function()
-    moveIconBtn.Visible = false
-    moveWin.Position = moveIconBtn.Position
-    moveWin.Visible = true
-end)
-
-moveUpBtn.MouseButton1Click:Connect(function()
-    if LockedPreviewPos then
-        LockedPreviewPos = LockedPreviewPos + Vector3.new(0, 1, 0)
-        UpdatePreview()
-    end
-end)
-
-moveDownBtn.MouseButton1Click:Connect(function()
-    if LockedPreviewPos then
-        LockedPreviewPos = LockedPreviewPos - Vector3.new(0, 1, 0)
-        UpdatePreview()
-    end
-end)
-
--- Sistem Drag Universal untuk Mobile dan PC
-local function MakeDraggable(guiObject, dragHandle)
-    local dragging = false
-    local dragStart, startPos
-    dragHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = guiObject.Position
-        end
-    end)
-    dragHandle.InputEnded:Connect(function() dragging = false end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            guiObject.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-
-MakeDraggable(moveWin, moveMinBtn) 
-MakeDraggable(moveIconBtn, moveIconBtn)
 
 local function SelectShape(shapeName, selectedBtn)
     CurrentShape = shapeName
@@ -1399,4 +1264,4 @@ RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("✅ Terrain Editor v16.6 Loaded - Move Lock & Color Fixed!")
+print("✅ Terrain Editor v16.5 Loaded - Clean Flat UI & Protected Mode Active! (Colors Fixed)")
