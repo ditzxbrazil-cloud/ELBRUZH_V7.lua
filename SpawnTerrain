@@ -102,6 +102,11 @@ local UndoHistory = {}
 local RedoHistory = {}
 local IgnoreTerrain = false
 
+--// NEW STATE: MOVE MODE
+local MoveModeEnabled = false
+local LockedPreviewPos = nil
+local MoveOffsetY = 0
+
 --// SNAP SETTINGS
 local SnapEnabled = false
 local GridSize = 10
@@ -214,15 +219,27 @@ local function UpdateGridVisual()
 end
 spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end end end)
 
---// Update Preview dengan Pelindung
+--// Update Preview dengan Pelindung (DITAMBAH LOGIKA MOVE LOCK)
 local function UpdatePreview()
     pcall(function()
         if not PreviewPart then CreatePreview() end
-        local result = GetRaycast()
-        if result then
-            local rawPos = result.Position
+        
+        local rawPos = nil
+        if MoveModeEnabled and LockedPreviewPos then
+            rawPos = LockedPreviewPos
+        else
+            local result = GetRaycast()
+            if result then rawPos = result.Position end
+        end
+
+        if rawPos then
             local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
+            if MoveModeEnabled then
+                displayPos = displayPos + Vector3.new(0, MoveOffsetY, 0)
+            end
+            
             PreviewPos = displayPos
+            
             if CurrentMode == "Flatten" then
                 PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
                 local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
@@ -242,14 +259,15 @@ local function UpdatePreview()
             end
             PreviewPart.Transparency = 0.85
             PreviewPart.EdgeOutline.Transparency = 0
-            if SnapEnabled then
-                PreviewPart.Color = Color3.fromRGB(100, 255, 150)
-                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
+            if SnapEnabled or MoveModeEnabled then
+                PreviewPart.Color = MoveModeEnabled and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(100, 255, 150)
+                PreviewPart.EdgeOutline.Color3 = MoveModeEnabled and Color3.fromRGB(255, 0, 255) or Color3.fromRGB(100, 255, 150)
             else
                 PreviewPart.Color = Color3.fromRGB(255, 255, 255)
                 PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
             end
         else
+            PreviewPos = nil
             PreviewPart.Transparency = 1
             PreviewPart.EdgeOutline.Transparency = 1
         end
@@ -301,7 +319,12 @@ local function BL(d)
     local smoothHeight = d[19] or 5
     local mat = Enum.Material.Grass
     for _, m in ipairs(Materials) do if m.Name == matName then mat = m.Mat break end end
-    ApplyMaterialColors()
+    
+    -- Menerapkan warna dengan Index yang benar
+    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[d[9] or 3].color) end)
+    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3].color) end)
+    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2].color) end)
+    
     local sizeVec = Vector3.new(sx, sy, sz)
     local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
     if actionMode == "Flatten" then
@@ -354,6 +377,31 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+--// Custom Drag Handler untuk Mobile Executors
+local function MakeDraggable(frame)
+    local dragging, dragInput, dragStart, startPos
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+    frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if dragging then
+                local delta = input.Position - dragStart
+                frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end
+    end)
+end
 
 --// SPAWN COUNTER GUI
 local spawnCounter = Instance.new("TextLabel", gui)
@@ -610,6 +658,7 @@ matIconBtn.MouseButton1Click:Connect(function() matWin.Visible = not matWin.Visi
 local panel = Instance.new("Frame", gui)
 panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 450), UDim2.new(0, 6, 1, -460), Color3.fromRGB(30, 30, 40), 0
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
+MakeDraggable(panel)
 
 local titleBar = Instance.new("Frame", panel)
 titleBar.Size, titleBar.BackgroundColor3, titleBar.BorderSizePixel = UDim2.new(1, 0, 0, 35), Color3.fromRGB(40, 40, 55), 0
@@ -630,7 +679,7 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1550)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1650)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
@@ -641,6 +690,7 @@ Instance.new("UICorner", hideGuiBtn).CornerRadius = UDim.new(0, 8)
 local status = Instance.new("TextLabel", scroll)
 status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, status.TextSize, status.Font = UDim2.new(1, -8, 0, 18), 1, "Aim & tap 🎯 to spawn", Color3.fromRGB(0, 255, 150), 10, Enum.Font.Gotham
 
+--// FIXED COLOR UI LOGIC
 local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx)
     local sec = Instance.new("Frame", parent)
     sec.Size, sec.BackgroundColor3, sec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
@@ -677,6 +727,70 @@ Instance.new("UICorner", ghostToggleBtn).CornerRadius = UDim.new(0, 4)
 local ghostInfo = Instance.new("TextLabel", ghostSec)
 ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.Text, ghostInfo.TextColor3, ghostInfo.TextSize, ghostInfo.Font = UDim2.new(1, -12, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Tembus OFF = Raycast nabrak gundukan", Color3.fromRGB(150, 150, 150), 10, Enum.Font.Gotham
 
+--// MOVE MODE SECTION (NEW!)
+local moveSec = Instance.new("Frame", scroll)
+moveSec.Size, moveSec.BackgroundColor3, moveSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", moveSec).CornerRadius = UDim.new(0, 8)
+local moveTitle = Instance.new("TextLabel", moveSec)
+moveTitle.Size, moveTitle.Position, moveTitle.BackgroundTransparency, moveTitle.Text, moveTitle.TextColor3, moveTitle.TextSize, moveTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📍 Lock Position & Move (Y)", Color3.fromRGB(0, 255, 255), 11, Enum.Font.GothamBold
+
+local moveToggleBtn = Instance.new("TextButton", moveSec)
+moveToggleBtn.Size, moveToggleBtn.Position, moveToggleBtn.BackgroundColor3, moveToggleBtn.Text, moveToggleBtn.TextColor3, moveToggleBtn.TextSize, moveToggleBtn.Font = UDim2.new(1, -12, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "MOVE: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", moveToggleBtn).CornerRadius = UDim.new(0, 4)
+
+--// MOVE WINDOW GUI (Hologram Neon Aesthetic)
+local moveWin = Instance.new("Frame", gui)
+moveWin.Name = "MoveWindow"
+moveWin.Size, moveWin.Position = UDim2.new(0, 90, 0, 130), UDim2.new(0.5, 150, 0.5, -65)
+moveWin.BackgroundColor3, moveWin.BorderSizePixel = Color3.fromRGB(25, 25, 35), 0
+moveWin.Visible = false
+Instance.new("UICorner", moveWin).CornerRadius = UDim.new(0, 12)
+MakeDraggable(moveWin)
+
+local moveStroke = Instance.new("UIStroke", moveWin)
+moveStroke.Color = Color3.fromRGB(0, 255, 255)
+moveStroke.Thickness = 2
+moveStroke.Transparency = 0.4
+
+local moveTop = Instance.new("Frame", moveWin)
+moveTop.Size, moveTop.BackgroundColor3 = UDim2.new(1, 0, 0, 30), Color3.fromRGB(40, 40, 55)
+Instance.new("UICorner", moveTop).CornerRadius = UDim.new(0, 12)
+
+local moveMinBtn = Instance.new("TextButton", moveTop)
+moveMinBtn.Size, moveMinBtn.Position, moveMinBtn.BackgroundColor3, moveMinBtn.Text = UDim2.new(0, 24, 0, 24), UDim2.new(1, -28, 0, 3), Color3.fromRGB(200, 60, 60), "⛔"
+Instance.new("UICorner", moveMinBtn).CornerRadius = UDim.new(0, 6)
+
+local moveUpBtn = Instance.new("TextButton", moveWin)
+moveUpBtn.Size, moveUpBtn.Position, moveUpBtn.BackgroundColor3, moveUpBtn.Text, moveUpBtn.TextColor3, moveUpBtn.TextSize, moveUpBtn.Font = UDim2.new(0, 70, 0, 40), UDim2.new(0.5, -35, 0, 38), Color3.fromRGB(45, 45, 60), "⬆️", Color3.fromRGB(255, 255, 255), 20, Enum.Font.GothamBold
+Instance.new("UICorner", moveUpBtn).CornerRadius = UDim.new(0, 8)
+
+local moveDownBtn = Instance.new("TextButton", moveWin)
+moveDownBtn.Size, moveDownBtn.Position, moveDownBtn.BackgroundColor3, moveDownBtn.Text, moveDownBtn.TextColor3, moveDownBtn.TextSize, moveDownBtn.Font = UDim2.new(0, 70, 0, 40), UDim2.new(0.5, -35, 0, 82), Color3.fromRGB(45, 45, 60), "⬇️", Color3.fromRGB(255, 255, 255), 20, Enum.Font.GothamBold
+Instance.new("UICorner", moveDownBtn).CornerRadius = UDim.new(0, 8)
+
+local moveIconBtn = Instance.new("TextButton", gui)
+moveIconBtn.Size, moveIconBtn.BackgroundColor3, moveIconBtn.Text, moveIconBtn.TextSize = UDim2.new(0, 45, 0, 45), Color3.fromRGB(30, 150, 255), "🔛", 24
+moveIconBtn.Visible = false
+Instance.new("UICorner", moveIconBtn).CornerRadius = UDim.new(1, 0)
+MakeDraggable(moveIconBtn)
+
+-- Toggle Logic untuk UI Jendela Move
+moveMinBtn.MouseButton1Click:Connect(function()
+    moveIconBtn.Position = moveWin.Position
+    moveWin.Visible = false
+    moveIconBtn.Visible = true
+end)
+
+moveIconBtn.MouseButton1Click:Connect(function()
+    moveWin.Position = moveIconBtn.Position
+    moveIconBtn.Visible = false
+    moveWin.Visible = true
+end)
+
+-- Move Adjustments (+ / - tinggi)
+moveUpBtn.MouseButton1Click:Connect(function() MoveOffsetY = MoveOffsetY + (SnapEnabled and GridSize or 1); UpdatePreview() end)
+moveDownBtn.MouseButton1Click:Connect(function() MoveOffsetY = MoveOffsetY - (SnapEnabled and GridSize or 1); UpdatePreview() end)
+
 --// SHAPE SECTION
 local shapeSec = Instance.new("Frame", scroll)
 shapeSec.Size, shapeSec.BackgroundColor3, shapeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
@@ -708,7 +822,7 @@ buildBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
 local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.35, 0.25)
 local paintBtn = CreateUIBtn(modeSec, "Paint", 0.65, 0.25)
 
---// SMOOTH TERRAIN GUI SECTION (DENGAN PENINGGI)
+--// SMOOTH TERRAIN GUI SECTION
 local smoothSec = Instance.new("Frame", scroll)
 smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
@@ -723,7 +837,7 @@ local smoothModeBtn = Instance.new("TextButton", smoothSec)
 smoothModeBtn.Size, smoothModeBtn.Position, smoothModeBtn.BackgroundColor3, smoothModeBtn.Text, smoothModeBtn.TextColor3, smoothModeBtn.TextSize, smoothModeBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), SmoothModes[1], Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", smoothModeBtn).CornerRadius = UDim.new(0, 4)
 
--- Intensitas Control
+-- Intensitas & Peninggi
 local intL = Instance.new("TextLabel", smoothSec)
 intL.Size, intL.Position, intL.BackgroundTransparency, intL.Text, intL.TextColor3, intL.TextSize, intL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Intens:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
 
@@ -740,7 +854,6 @@ local intPlus = Instance.new("TextButton", smoothSec)
 intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 107, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", intPlus).CornerRadius = UDim.new(0, 4)
 
--- Peninggi Control
 local heightL = Instance.new("TextLabel", smoothSec)
 heightL.Size, heightL.Position, heightL.BackgroundTransparency, heightL.Text, heightL.TextColor3, heightL.TextSize, heightL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 135, 0, 53), 1, "Tinggi:", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
@@ -890,12 +1003,13 @@ local clearBtn = Instance.new("TextButton", scroll)
 clearBtn.Size, clearBtn.BackgroundColor3, clearBtn.Text, clearBtn.TextColor3, clearBtn.TextSize, clearBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(180, 60, 60), "🗑️ Clear All", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 8)
 
---// NEW FEATURE: SCRIPT EXPORT OPTIONS WINDOW (Hologram Neon Aesthetic)
+--// SCRIPT EXPORT OPTIONS WINDOW
 local exportWin = Instance.new("Frame", gui)
 exportWin.Name, exportWin.Size, exportWin.Position = "ExportWindow", UDim2.new(0, 220, 0, 160), UDim2.new(0.5, -110, 0.5, -80)
 exportWin.BackgroundColor3, exportWin.BorderSizePixel = Color3.fromRGB(25, 25, 35), 0
-exportWin.Visible, exportWin.Active, exportWin.Draggable = false, true, true
+exportWin.Visible = false
 Instance.new("UICorner", exportWin).CornerRadius = UDim.new(0, 12)
+MakeDraggable(exportWin)
 
 local expStroke = Instance.new("UIStroke", exportWin)
 expStroke.Color = Color3.fromRGB(0, 255, 255)
@@ -945,8 +1059,9 @@ Instance.new("UICorner", generateFinalBtn).CornerRadius = UDim.new(0, 6)
 
 --// SCRIPT WINDOW
 local scriptWin = Instance.new("Frame", gui)
-scriptWin.Name, scriptWin.Size, scriptWin.Position, scriptWin.BackgroundColor3, scriptWin.BorderSizePixel, scriptWin.Visible, scriptWin.Active, scriptWin.Draggable = "ScriptWindow", UDim2.new(0, 400, 0, 350), UDim2.new(0.5, -200, 0.5, -175), Color3.fromRGB(30, 30, 35), 0, false, true, true
+scriptWin.Name, scriptWin.Size, scriptWin.Position, scriptWin.BackgroundColor3, scriptWin.BorderSizePixel, scriptWin.Visible = "ScriptWindow", UDim2.new(0, 400, 0, 350), UDim2.new(0.5, -200, 0.5, -175), Color3.fromRGB(30, 30, 35), 0, false
 Instance.new("UICorner", scriptWin).CornerRadius = UDim.new(0, 12)
+MakeDraggable(scriptWin)
 
 local scriptTitle = Instance.new("Frame", scriptWin)
 scriptTitle.Size, scriptTitle.BackgroundColor3, scriptTitle.BorderSizePixel = UDim2.new(1, 0, 0, 40), Color3.fromRGB(45, 45, 55), 0
@@ -969,31 +1084,52 @@ local codeText = Instance.new("TextLabel", codeScroll)
 codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text, codeText.TextColor3, codeText.TextSize, codeText.Font, codeText.TextXAlignment, codeText.TextYAlignment, codeText.AutomaticSize, codeText.TextWrapped = UDim2.new(1, -12, 0, 0), UDim2.new(0, 6, 0, 6), 1, "-- No terrain spawned yet --", Color3.fromRGB(200, 200, 200), 11, Enum.Font.Code, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top, Enum.AutomaticSize.Y, true
 
 --// EVENT CONNECTIONS
-
 local function HideAllGui()
     panel.Visible, matIconBtn.Visible, openPanelBtn.Visible, matWin.Visible = false, false, false, false
     unhideBtn.Visible = true
 end
-
 local function ShowAllGui()
     panel.Visible, matIconBtn.Visible, openPanelBtn.Visible = false, true, true 
     unhideBtn.Visible = false
 end
-
 hideGuiBtn.MouseButton1Click:Connect(HideAllGui)
 minBtn.MouseButton1Click:Connect(function() panel.Visible = false; openPanelBtn.Visible = true end)
 unhideBtn.MouseButton1Click:Connect(ShowAllGui)
 openPanelBtn.MouseButton1Click:Connect(function() openPanelBtn.Visible = false; panel.Visible = true end)
 
-local function setupColorBtn(l, r, disp, arr, idxRef, cb)
-    l.MouseButton1Click:Connect(function() idxRef.v = idxRef.v - 1 if idxRef.v < 1 then idxRef.v = #arr end disp.Text = arr[idxRef.v].name disp.BackgroundColor3 = arr[idxRef.v].color cb() end)
-    r.MouseButton1Click:Connect(function() idxRef.v = idxRef.v + 1 if idxRef.v > #arr then idxRef.v = 1 end disp.Text = arr[idxRef.v].name disp.BackgroundColor3 = arr[idxRef.v].color cb() end)
+-- BUG WARNA FIXED DISINI: Memperbarui nilai integer global menggunakan callback function
+local function setupColorBtnFixed(l, r, disp, arr, getIdx, setIdx, cb)
+    l.MouseButton1Click:Connect(function() 
+        local v = getIdx() - 1 
+        if v < 1 then v = #arr end 
+        setIdx(v) 
+        disp.Text = arr[v].name 
+        disp.BackgroundColor3 = arr[v].color 
+        cb() 
+    end)
+    r.MouseButton1Click:Connect(function() 
+        local v = getIdx() + 1 
+        if v > #arr then v = 1 end 
+        setIdx(v) 
+        disp.Text = arr[v].name 
+        disp.BackgroundColor3 = arr[v].color 
+        cb() 
+    end)
 end
-setupColorBtn(grassLeft, grassRight, grassDisplay, grassColors, {v=currentGrassColorIndex}, function() ApplyMaterialColors() end)
-setupColorBtn(leafyLeft, leafyRight, leafyDisplay, leafyGrassColors, {v=currentLeafyGrassColorIndex}, function() ApplyMaterialColors() end)
-setupColorBtn(groundLeft, groundRight, groundDisplay, groundColors, {v=currentGroundColorIndex}, function() ApplyMaterialColors() end)
 
--- Tembus Toggle Events
+setupColorBtnFixed(grassLeft, grassRight, grassDisplay, grassColors, 
+    function() return currentGrassColorIndex end, 
+    function(v) currentGrassColorIndex = v end, ApplyMaterialColors)
+    
+setupColorBtnFixed(leafyLeft, leafyRight, leafyDisplay, leafyGrassColors, 
+    function() return currentLeafyGrassColorIndex end, 
+    function(v) currentLeafyGrassColorIndex = v end, ApplyMaterialColors)
+    
+setupColorBtnFixed(groundLeft, groundRight, groundDisplay, groundColors, 
+    function() return currentGroundColorIndex end, 
+    function(v) currentGroundColorIndex = v end, ApplyMaterialColors)
+
+-- Tembus Toggle
 ghostToggleBtn.MouseButton1Click:Connect(function()
     IgnoreTerrain = not IgnoreTerrain
     if IgnoreTerrain then
@@ -1005,6 +1141,35 @@ ghostToggleBtn.MouseButton1Click:Connect(function()
         ghostToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
         ghostInfo.Text = "Tembus OFF = Raycast nabrak gundukan"
     end
+end)
+
+-- Move Lock Toggle
+moveToggleBtn.MouseButton1Click:Connect(function()
+    MoveModeEnabled = not MoveModeEnabled
+    if MoveModeEnabled then
+        local ray = GetRaycast()
+        if ray then
+            LockedPreviewPos = ray.Position
+            MoveOffsetY = 0
+            moveToggleBtn.Text = "MOVE: ON 📍"
+            moveToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+            moveWin.Visible = true
+            moveIconBtn.Visible = false
+        else
+            MoveModeEnabled = false -- Gagal lock karena tidak menatap objek
+            moveToggleBtn.Text = "Arahkan ke terrain dulu!"
+            wait(1)
+            moveToggleBtn.Text = "MOVE: OFF"
+        end
+    else
+        moveToggleBtn.Text = "MOVE: OFF"
+        moveToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        moveWin.Visible = false
+        moveIconBtn.Visible = false
+        LockedPreviewPos = nil
+        MoveOffsetY = 0
+    end
+    UpdatePreview()
 end)
 
 local function SelectShape(shapeName, selectedBtn)
@@ -1041,10 +1206,8 @@ smoothToggleBtn.MouseButton1Click:Connect(function()
         smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
     end
 end)
-
 smoothModeBtn.MouseButton1Click:Connect(function() CurrentSmoothModeIndex = CurrentSmoothModeIndex + 1; if CurrentSmoothModeIndex > #SmoothModes then CurrentSmoothModeIndex = 1 end; smoothModeBtn.Text = SmoothModes[CurrentSmoothModeIndex] end)
 
--- Handler untuk Intensity
 local function handleIntInput()
     local val = tonumber(intDisp.Text)
     if val then
@@ -1053,11 +1216,9 @@ local function handleIntInput()
     end
 end
 intDisp.FocusLost:Connect(handleIntInput)
-
 intMinus.MouseButton1Click:Connect(function() SmoothIntensity = math.max(1, SmoothIntensity - 1); intDisp.Text = tostring(SmoothIntensity) end)
 intPlus.MouseButton1Click:Connect(function() SmoothIntensity = math.min(200, SmoothIntensity + 1); intDisp.Text = tostring(SmoothIntensity) end)
 
--- Handler untuk Tinggi (Peninggi)
 local function handleHeightInput()
     local val = tonumber(heightDisp.Text)
     if val then
@@ -1066,7 +1227,6 @@ local function handleHeightInput()
     end
 end
 heightDisp.FocusLost:Connect(handleHeightInput)
-
 heightMinus.MouseButton1Click:Connect(function() SmoothHeight = math.max(1, SmoothHeight - 1); heightDisp.Text = tostring(SmoothHeight) end)
 heightPlus.MouseButton1Click:Connect(function() SmoothHeight = math.min(100, SmoothHeight + 1); heightDisp.Text = tostring(SmoothHeight) end)
 
@@ -1076,7 +1236,6 @@ snapToggleBtn.MouseButton1Click:Connect(function()
     else snapToggleBtn.Text = "OFF"; snapToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end
     UpdatePreview(); UpdateGridVisual()
 end)
-
 visualBtn.MouseButton1Click:Connect(function()
     ShowGridVisual = not ShowGridVisual
     if ShowGridVisual then visualBtn.Text = "Visual Guide: ON"; visualBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
@@ -1147,10 +1306,8 @@ rzPlus.MouseButton1Click:Connect(function() RotZ = (RotZ + 15) % 360; rzValue.Te
 rotResetBtn.MouseButton1Click:Connect(function() RotX, RotY, RotZ = 0, 0, 0; rxValue.Text, ryValue.Text, rzValue.Text = "0°", "0°", "0°"; UpdatePreview() end)
 
 undoBtn.MouseButton1Click:Connect(function() local success, msg = Undo(); status.Text = success and ("↩️ " .. msg .. " (" .. #SpawnedData .. ")") or ("↩️ " .. msg); status.TextColor3 = success and Color3.fromRGB(255, 200, 100) or Color3.fromRGB(255, 100, 100) end)
-
 closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
 
---// MODIFIED: TRIGGER EXPORT WINDOW
 scriptBtn.MouseButton1Click:Connect(function() 
     if #SpawnedData == 0 then
         codeText.Text = "-- No terrain spawned yet!"
@@ -1168,13 +1325,13 @@ end)
 
 closeScriptBtn.MouseButton1Click:Connect(function() scriptWin.Visible = false end)
 
---// Copy Script Button Error Handling
+--// Copy Script Button Error Handling (Custom for Executors without Clipboard)
 copyBtn.MouseButton1Click:Connect(function() 
     local success, err = pcall(function()
         if setclipboard then 
             setclipboard(codeText.Text)
         else
-            --// Fallback untuk Executor HP yang tidak support setclipboard
+            --// Fallback untuk Executor HP
             writefile("Elbruzh_Terrain_"..tostring(math.random(1000,9999))..".txt", codeText.Text)
         end
     end)
@@ -1221,28 +1378,8 @@ spawnBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local drag = false
-local startPos, startFrame
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        drag = true
-        startPos = input.Position
-        startFrame = panel.Position
-    end
-end)
-titleBar.InputEnded:Connect(function() drag = false end)
-UserInputService.InputChanged:Connect(function(input)
-    pcall(function()
-        if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - startPos
-            panel.Position = UDim2.new(startFrame.X.Scale, startFrame.X.Offset + delta.X, startFrame.Y.Scale, startFrame.Y.Offset + delta.Y)
-        end
-    end)
-end)
-
---// Membungkus RenderStepped dengan pcall agar meminimalisir error console
 RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("✅ Terrain Editor v16.5 Loaded - Clean Flat UI & Protected Mode Active!")
+print("✅ Terrain Editor v16.5 Loaded - Added Lock Pos Move Window & Fixed Colors!")
