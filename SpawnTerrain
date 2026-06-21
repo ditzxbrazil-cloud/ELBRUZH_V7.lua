@@ -1,5 +1,5 @@
---// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.6 - Smooth Terrain, Snap to Grid, Ghost Mode, Move Feature Added
+--// TERRAIN BY shhhhnayy05
+--// Terrain Editor v16.6 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature, Relative to Part, MOVE REVIEW PART
 --// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (COLOR BUG FIXED)
 
 local Players = game:GetService("Players")
@@ -102,11 +102,6 @@ local UndoHistory = {}
 local RedoHistory = {}
 local IgnoreTerrain = false
 
---// MOVE FEATURE STATES
-local MoveEnabled = false
-local LockedPosition = nil
-local MoveIconMinimized = false
-
 --// SNAP SETTINGS
 local SnapEnabled = false
 local GridSize = 10
@@ -120,6 +115,14 @@ local SmoothModes = {"Soft Edge", "Gradient", "Noise", "Blend"}
 local CurrentSmoothModeIndex = 1
 local SmoothIntensity = 5
 local SmoothHeight = 5 
+
+--// MOVE REVIEW PART SETTINGS
+local MoveReviewEnabled = false
+local MoveReviewOffset = 0
+local MoveReviewStep = 2
+local MoveReviewWindow = nil
+local MoveReviewIcon = nil
+local MoveReviewLastPosition = nil
 
 --// Raycast dengan Pelindung (pcall)
 local function GetRaycast()
@@ -219,56 +222,50 @@ local function UpdateGridVisual()
 end
 spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end end end)
 
---// Update Preview dengan Pelindung (Dan Logika Move Position)
+--// Update Preview dengan Pelindung
 local function UpdatePreview()
     pcall(function()
         if not PreviewPart then CreatePreview() end
-        
-        local displayPos
-        
-        -- Cek jika MoveEnabled aktif dan posisi sudah dilock
-        if MoveEnabled and LockedPosition then
-            displayPos = LockedPosition
+        local result = GetRaycast()
+        if result then
+            local rawPos = result.Position
+            local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
+            
+            --// MOVE REVIEW PART: Apply offset Y when enabled
+            if MoveReviewEnabled then
+                displayPos = Vector3.new(displayPos.X, displayPos.Y + MoveReviewOffset, displayPos.Z)
+            end
+            
             PreviewPos = displayPos
-        else
-            -- Mode Normal Raycast
-            local result = GetRaycast()
-            if result then
-                local rawPos = result.Position
-                displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
-                PreviewPos = displayPos
+            if CurrentMode == "Flatten" then
+                PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+                local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
+                PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
+            elseif CurrentMode == "Paint" then
+                if CurrentShape == "Ball" then
+                    PreviewPart.Size = Vector3.new(SizeX, SizeX, SizeX)
+                else
+                    PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
+                end
+                local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0)
+                PreviewPart.CFrame = cf
             else
-                PreviewPart.Transparency = 1
-                PreviewPart.EdgeOutline.Transparency = 1
-                return
+                PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
+                local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
+                PreviewPart.CFrame = cf
             end
-        end
-
-        if CurrentMode == "Flatten" then
-            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
-            local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
-            PreviewPart.CFrame = cf * CFrame.new(0, SizeY/2, 0)
-        elseif CurrentMode == "Paint" then
-            if CurrentShape == "Ball" then
-                PreviewPart.Size = Vector3.new(SizeX, SizeX, SizeX)
+            PreviewPart.Transparency = 0.85
+            PreviewPart.EdgeOutline.Transparency = 0
+            if SnapEnabled then
+                PreviewPart.Color = Color3.fromRGB(100, 255, 150)
+                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
             else
-                PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
+                PreviewPart.Color = Color3.fromRGB(255, 255, 255)
+                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
             end
-            local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0)
-            PreviewPart.CFrame = cf
         else
-            PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
-            local cf = CFrame.new(displayPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
-            PreviewPart.CFrame = cf
-        end
-        PreviewPart.Transparency = 0.85
-        PreviewPart.EdgeOutline.Transparency = 0
-        if SnapEnabled then
-            PreviewPart.Color = Color3.fromRGB(100, 255, 150)
-            PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
-        else
-            PreviewPart.Color = Color3.fromRGB(255, 255, 255)
-            PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
+            PreviewPart.Transparency = 1
+            PreviewPart.EdgeOutline.Transparency = 1
         end
     end)
 end
@@ -318,6 +315,7 @@ local function BL(d)
     local mat = Enum.Material.Grass
     for _, m in ipairs(Materials) do if m.Name == matName then mat = m.Mat break end end
     
+    -- Fix bug: pastikan global update tereksekusi agar display update
     ApplyMaterialColors()
     
     local sizeVec = Vector3.new(sx, sy, sz)
@@ -367,32 +365,9 @@ local function BL(d)
     return d
 end
 
---// Utility function buat UI Draggable
-local function MakeUI_Draggable(uiFrame)
-    local dragStart, startPos, dragging
-    uiFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = uiFrame.Position
-        end
-    end)
-    uiFrame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            uiFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-
 --// Main GUI Setup
 local gui = Instance.new("ScreenGui")
-gui.Name = "TerrainEditor"
+gui.Name = "shhhhnayy05TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -450,30 +425,34 @@ local function Undo()
     return true, "Undone 1 terrain"
 end
 
---// Generate Script Function (Disingkat visualisasi string generator-nya)
+--// Generate Script
 local function GenerateScript(exportMode)
     if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
     
     local mode = exportMode or "Tidak"
     
-    local code = "--// Terrain Spawn Script (ELBRUZH v16.6)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
+    local code = "--// Terrain Spawn Script (shhhhnayy05 v16.6)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
     code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
     
+    -- Hitung Pusat Offset jika Mode Convert Part
     local cx, cy, cz = 0, 0, 0
     if mode == "Convert Part" then
         local minX, minY, minZ = math.huge, math.huge, math.huge
         local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
         for _, d in ipairs(SpawnedData) do
-            if d[1] < minX then minX = d[1] end; if d[1] > maxX then maxX = d[1] end
-            if d[2] < minY then minY = d[2] end; if d[2] > maxY then maxY = d[2] end
-            if d[3] < minZ then minZ = d[3] end; if d[3] > maxZ then maxZ = d[3] end
+            if d[1] < minX then minX = d[1] end
+            if d[1] > maxX then maxX = d[1] end
+            if d[2] < minY then minY = d[2] end
+            if d[2] > maxY then maxY = d[2] end
+            if d[3] < minZ then minZ = d[3] end
+            if d[3] > maxZ then maxZ = d[3] end
         end
         cx, cy, cz = (minX+maxX)/2, (minY+maxY)/2, (minZ+maxZ)/2
         
         code = code .. "--// PENTING: Masukkan script ini ke dalam Part!\n"
         code = code .. "local BasePart = script.Parent\n"
         code = code .. "if not BasePart:IsA('BasePart') then\n"
-        code = code .. "    warn('[ELBRUZH] Script tidak dimasukkan ke dalam Part! Terrain dibuat di posisi default.')\n"
+        code = code .. "    warn('[shhhhnayy05] Script tidak dimasukkan ke dalam Part! Terrain dibuat di posisi default.')\n"
         code = code .. "    BasePart = {CFrame = CFrame.new(0,0,0)}\n"
         code = code .. "end\n"
         code = code .. "local OriginPos = Vector3.new(" .. cx .. ", " .. cy .. ", " .. cz .. ")\n\n"
@@ -654,7 +633,7 @@ Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.6", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor shhhhnayy05 v16.6", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -667,7 +646,7 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1650)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1550)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
@@ -678,6 +657,7 @@ Instance.new("UICorner", hideGuiBtn).CornerRadius = UDim.new(0, 8)
 local status = Instance.new("TextLabel", scroll)
 status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, status.TextSize, status.Font = UDim2.new(1, -8, 0, 18), 1, "Aim & tap 🎯 to spawn", Color3.fromRGB(0, 255, 150), 10, Enum.Font.Gotham
 
+--// FIXED COLOR UI SYSTEM
 local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx)
     local sec = Instance.new("Frame", parent)
     sec.Size, sec.BackgroundColor3, sec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
@@ -714,42 +694,236 @@ Instance.new("UICorner", ghostToggleBtn).CornerRadius = UDim.new(0, 4)
 local ghostInfo = Instance.new("TextLabel", ghostSec)
 ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.Text, ghostInfo.TextColor3, ghostInfo.TextSize, ghostInfo.Font = UDim2.new(1, -12, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Tembus OFF = Raycast nabrak gundukan", Color3.fromRGB(150, 150, 150), 10, Enum.Font.Gotham
 
---// FITUR MOVE TERRAIN (BARU)
-local moveMainSec = Instance.new("Frame", scroll)
-moveMainSec.Size, moveMainSec.BackgroundColor3, moveMainSec.BorderSizePixel = UDim2.new(1, -8, 0, 60), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", moveMainSec).CornerRadius = UDim.new(0, 8)
-local moveMainTitle = Instance.new("TextLabel", moveMainSec)
-moveMainTitle.Size, moveMainTitle.Position, moveMainTitle.BackgroundTransparency, moveMainTitle.Text, moveMainTitle.TextColor3, moveMainTitle.TextSize, moveMainTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🕹️ Move Part (Kunci Posisi)", Color3.fromRGB(255, 255, 100), 11, Enum.Font.GothamBold
+--// MOVE REVIEW PART SECTION
+local moveReviewSec = Instance.new("Frame", scroll)
+moveReviewSec.Name = "MoveReviewSection"
+moveReviewSec.Size = UDim2.new(1, -8, 0, 80)
+moveReviewSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+moveReviewSec.BorderSizePixel = 0
+Instance.new("UICorner", moveReviewSec).CornerRadius = UDim.new(0, 8)
 
-local moveMainToggleBtn = Instance.new("TextButton", moveMainSec)
-moveMainToggleBtn.Size, moveMainToggleBtn.Position, moveMainToggleBtn.BackgroundColor3, moveMainToggleBtn.Text, moveMainToggleBtn.TextColor3, moveMainToggleBtn.TextSize, moveMainToggleBtn.Font = UDim2.new(1, -12, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "Move Part: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", moveMainToggleBtn).CornerRadius = UDim.new(0, 4)
+local moveReviewTitle = Instance.new("TextLabel", moveReviewSec)
+moveReviewTitle.Size = UDim2.new(1, 0, 0, 18)
+moveReviewTitle.Position = UDim2.new(0, 0, 0, 2)
+moveReviewTitle.BackgroundTransparency = 1
+moveReviewTitle.Text = "📦 Move Review Part"
+moveReviewTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
+moveReviewTitle.TextSize = 11
+moveReviewTitle.Font = Enum.Font.GothamBold
 
---// JENDELA MOVE FLOATING & ICON
-local moveWin = Instance.new("Frame", gui)
-moveWin.Name, moveWin.Size, moveWin.Position, moveWin.BackgroundColor3, moveWin.Visible = "MoveWindow", UDim2.new(0, 70, 0, 105), UDim2.new(0.8, -35, 0.5, -50), Color3.fromRGB(35, 35, 45), false
-Instance.new("UICorner", moveWin).CornerRadius = UDim.new(0, 10)
-local moveWinStroke = Instance.new("UIStroke", moveWin)
-moveWinStroke.Color = Color3.fromRGB(0, 255, 255); moveWinStroke.Thickness = 1.5
+local moveReviewToggleBtn = Instance.new("TextButton", moveReviewSec)
+moveReviewToggleBtn.Size = UDim2.new(0, 80, 0, 22)
+moveReviewToggleBtn.Position = UDim2.new(0, 6, 0, 25)
+moveReviewToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+moveReviewToggleBtn.Text = "Move: OFF"
+moveReviewToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+moveReviewToggleBtn.TextSize = 11
+moveReviewToggleBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", moveReviewToggleBtn).CornerRadius = UDim.new(0, 4)
 
-local moveMinBtn = Instance.new("TextButton", moveWin)
-moveMinBtn.Size, moveMinBtn.Position, moveMinBtn.BackgroundTransparency, moveMinBtn.Text, moveMinBtn.TextSize = UDim2.new(0, 25, 0, 25), UDim2.new(1, -25, 0, 0), 1, "⛔", 14
+local moveReviewInfo = Instance.new("TextLabel", moveReviewSec)
+moveReviewInfo.Size = UDim2.new(1, -12, 0, 20)
+moveReviewInfo.Position = UDim2.new(0, 6, 0, 53)
+moveReviewInfo.BackgroundTransparency = 1
+moveReviewInfo.Text = "OFF = Preview mengikuti raycast normal"
+moveReviewInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
+moveReviewInfo.TextSize = 10
+moveReviewInfo.Font = Enum.Font.Gotham
 
-local moveUpBtn = Instance.new("TextButton", moveWin)
-moveUpBtn.Size, moveUpBtn.Position, moveUpBtn.BackgroundColor3, moveUpBtn.Text, moveUpBtn.TextSize = UDim2.new(0, 50, 0, 30), UDim2.new(0.5, -25, 0, 25), Color3.fromRGB(60, 60, 75), "⬆️", 16
-Instance.new("UICorner", moveUpBtn).CornerRadius = UDim.new(0, 6)
+--// MOVE REVIEW WINDOW
+local moveReviewWin = Instance.new("Frame", gui)
+moveReviewWin.Name = "MoveReviewWindow"
+moveReviewWin.Size = UDim2.new(0, 120, 0, 140)
+moveReviewWin.Position = UDim2.new(0.5, -60, 0.5, -70)
+moveReviewWin.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+moveReviewWin.BorderSizePixel = 0
+moveReviewWin.Visible = false
+moveReviewWin.Active = true
+Instance.new("UICorner", moveReviewWin).CornerRadius = UDim.new(0, 12)
 
-local moveDownBtn = Instance.new("TextButton", moveWin)
-moveDownBtn.Size, moveDownBtn.Position, moveDownBtn.BackgroundColor3, moveDownBtn.Text, moveDownBtn.TextSize = UDim2.new(0, 50, 0, 30), UDim2.new(0.5, -25, 0, 65), Color3.fromRGB(60, 60, 75), "⬇️", 16
-Instance.new("UICorner", moveDownBtn).CornerRadius = UDim.new(0, 6)
+local moveReviewStroke = Instance.new("UIStroke", moveReviewWin)
+moveReviewStroke.Color = Color3.fromRGB(255, 200, 50)
+moveReviewStroke.Thickness = 2
+moveReviewStroke.Transparency = 0.3
 
-local moveIcon = Instance.new("TextButton", gui)
-moveIcon.Size, moveIcon.Position, moveIcon.BackgroundColor3, moveIcon.Text, moveIcon.TextSize, moveIcon.Visible = UDim2.new(0, 40, 0, 40), UDim2.new(0.8, -20, 0.5, -20), Color3.fromRGB(45, 45, 60), "🔛", 20, false
-Instance.new("UICorner", moveIcon).CornerRadius = UDim.new(1, 0)
-local iconStroke = Instance.new("UIStroke", moveIcon); iconStroke.Color = Color3.fromRGB(0, 255, 255); iconStroke.Thickness = 1.5
+local moveReviewTitleBar = Instance.new("Frame", moveReviewWin)
+moveReviewTitleBar.Size = UDim2.new(1, 0, 0, 30)
+moveReviewTitleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+moveReviewTitleBar.BorderSizePixel = 0
+Instance.new("UICorner", moveReviewTitleBar).CornerRadius = UDim.new(0, 12)
 
-MakeUI_Draggable(moveWin)
-MakeUI_Draggable(moveIcon)
+local moveReviewTitleText = Instance.new("TextLabel", moveReviewTitleBar)
+moveReviewTitleText.Size = UDim2.new(1, -40, 1, 0)
+moveReviewTitleText.Position = UDim2.new(0, 8, 0, 0)
+moveReviewTitleText.BackgroundTransparency = 1
+moveReviewTitleText.Text = "📦 Move Part"
+moveReviewTitleText.TextColor3 = Color3.fromRGB(255, 200, 50)
+moveReviewTitleText.TextSize = 12
+moveReviewTitleText.Font = Enum.Font.GothamBold
+moveReviewTitleText.TextXAlignment = Enum.TextXAlignment.Left
+
+local moveReviewMinBtn = Instance.new("TextButton", moveReviewTitleBar)
+moveReviewMinBtn.Size = UDim2.new(0, 24, 0, 24)
+moveReviewMinBtn.Position = UDim2.new(1, -28, 0.5, -12)
+moveReviewMinBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+moveReviewMinBtn.Text = "⛔"
+moveReviewMinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+moveReviewMinBtn.TextSize = 14
+moveReviewMinBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", moveReviewMinBtn).CornerRadius = UDim.new(0, 6)
+
+local moveReviewUpBtn = Instance.new("TextButton", moveReviewWin)
+moveReviewUpBtn.Size = UDim2.new(0, 80, 0, 35)
+moveReviewUpBtn.Position = UDim2.new(0.5, -40, 0, 40)
+moveReviewUpBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+moveReviewUpBtn.Text = "⬆️ ATAS"
+moveReviewUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+moveReviewUpBtn.TextSize = 14
+moveReviewUpBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", moveReviewUpBtn).CornerRadius = UDim.new(0, 8)
+
+local moveReviewOffsetLabel = Instance.new("TextLabel", moveReviewWin)
+moveReviewOffsetLabel.Size = UDim2.new(1, -16, 0, 20)
+moveReviewOffsetLabel.Position = UDim2.new(0, 8, 0, 80)
+moveReviewOffsetLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+moveReviewOffsetLabel.Text = "Offset: 0"
+moveReviewOffsetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+moveReviewOffsetLabel.TextSize = 11
+moveReviewOffsetLabel.Font = Enum.Font.GothamBold
+Instance.new("UICorner", moveReviewOffsetLabel).CornerRadius = UDim.new(0, 4)
+
+local moveReviewDownBtn = Instance.new("TextButton", moveReviewWin)
+moveReviewDownBtn.Size = UDim2.new(0, 80, 0, 35)
+moveReviewDownBtn.Position = UDim2.new(0.5, -40, 0, 105)
+moveReviewDownBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+moveReviewDownBtn.Text = "⬇️ BAWAH"
+moveReviewDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+moveReviewDownBtn.TextSize = 14
+moveReviewDownBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", moveReviewDownBtn).CornerRadius = UDim.new(0, 8)
+
+--// MOVE REVIEW ICON (Minimized)
+local moveReviewIcon = Instance.new("TextButton", gui)
+moveReviewIcon.Name = "MoveReviewIcon"
+moveReviewIcon.Size = UDim2.new(0, 45, 0, 45)
+moveReviewIcon.Position = UDim2.new(0.5, -22, 0.5, -22)
+moveReviewIcon.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+moveReviewIcon.Text = "🔛"
+moveReviewIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+moveReviewIcon.TextSize = 22
+moveReviewIcon.Font = Enum.Font.GothamBlack
+moveReviewIcon.Visible = false
+Instance.new("UICorner", moveReviewIcon).CornerRadius = UDim.new(1, 0)
+
+--// MOVE REVIEW DRAG SYSTEM
+local moveReviewDrag = false
+local moveReviewStartPos = nil
+local moveReviewStartFrame = nil
+
+moveReviewTitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        moveReviewDrag = true
+        moveReviewStartPos = input.Position
+        moveReviewStartFrame = moveReviewWin.Position
+    end
+end)
+
+moveReviewTitleBar.InputEnded:Connect(function()
+    moveReviewDrag = false
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    pcall(function()
+        if moveReviewDrag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - moveReviewStartPos
+            local newPos = UDim2.new(moveReviewStartFrame.X.Scale, moveReviewStartFrame.X.Offset + delta.X, moveReviewStartFrame.Y.Scale, moveReviewStartFrame.Y.Offset + delta.Y)
+            moveReviewWin.Position = newPos
+        end
+    end)
+end)
+
+--// MOVE REVIEW FUNCTIONS
+local function OpenMoveReviewWindow()
+    moveReviewWin.Visible = true
+    moveReviewIcon.Visible = false
+    -- Simpan posisi terakhir
+    MoveReviewLastPosition = moveReviewWin.Position
+end
+
+local function MinimizeMoveReviewWindow()
+    moveReviewWin.Visible = false
+    moveReviewIcon.Visible = true
+    -- Icon muncul di posisi jendela terakhir
+    if MoveReviewLastPosition then
+        moveReviewIcon.Position = UDim2.new(MoveReviewLastPosition.X.Scale, MoveReviewLastPosition.X.Offset + 37, MoveReviewLastPosition.Y.Scale, MoveReviewLastPosition.Y.Offset + 47)
+    end
+end
+
+local function CloseMoveReviewWindow()
+    moveReviewWin.Visible = false
+    moveReviewIcon.Visible = false
+end
+
+local function EnableMoveReview()
+    MoveReviewEnabled = true
+    MoveReviewOffset = 0
+    moveReviewToggleBtn.Text = "Move: ON"
+    moveReviewToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    moveReviewInfo.Text = "ON = Gunakan tombol ⬆️⬇️ untuk atur posisi"
+    moveReviewWin.Position = UDim2.new(0.5, -60, 0.5, -70)
+    MoveReviewLastPosition = moveReviewWin.Position
+    OpenMoveReviewWindow()
+    UpdatePreview()
+end
+
+local function DisableMoveReview()
+    MoveReviewEnabled = false
+    MoveReviewOffset = 0
+    moveReviewToggleBtn.Text = "Move: OFF"
+    moveReviewToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    moveReviewInfo.Text = "OFF = Preview mengikuti raycast normal"
+    CloseMoveReviewWindow()
+    UpdatePreview()
+end
+
+--// MOVE REVIEW EVENT CONNECTIONS
+moveReviewToggleBtn.MouseButton1Click:Connect(function()
+    if MoveReviewEnabled then
+        DisableMoveReview()
+    else
+        EnableMoveReview()
+    end
+end)
+
+moveReviewMinBtn.MouseButton1Click:Connect(function()
+    MinimizeMoveReviewWindow()
+end)
+
+moveReviewIcon.MouseButton1Click:Connect(function()
+    OpenMoveReviewWindow()
+end)
+
+moveReviewUpBtn.MouseButton1Click:Connect(function()
+    MoveReviewOffset = MoveReviewOffset + MoveReviewStep
+    moveReviewOffsetLabel.Text = "Offset: " .. tostring(MoveReviewOffset)
+    UpdatePreview()
+    -- Animasi tombol
+    TweenService:Create(moveReviewUpBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 75, 0, 32)}):Play()
+    delay(0.1, function()
+        TweenService:Create(moveReviewUpBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 80, 0, 35)}):Play()
+    end)
+end)
+
+moveReviewDownBtn.MouseButton1Click:Connect(function()
+    MoveReviewOffset = MoveReviewOffset - MoveReviewStep
+    moveReviewOffsetLabel.Text = "Offset: " .. tostring(MoveReviewOffset)
+    UpdatePreview()
+    -- Animasi tombol
+    TweenService:Create(moveReviewDownBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 75, 0, 32)}):Play()
+    delay(0.1, function()
+        TweenService:Create(moveReviewDownBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 80, 0, 35)}):Play()
+    end)
+end)
 
 --// SHAPE SECTION
 local shapeSec = Instance.new("Frame", scroll)
@@ -1042,65 +1216,6 @@ codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text
 
 --// EVENT CONNECTIONS
 
--- Event Move Controls
-moveMainToggleBtn.MouseButton1Click:Connect(function()
-    MoveEnabled = not MoveEnabled
-    if MoveEnabled then
-        moveMainToggleBtn.Text = "Move Part: ON"
-        moveMainToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-        
-        -- Kunci posisi saat ini
-        if PreviewPos then
-            LockedPosition = PreviewPos
-        else
-            LockedPosition = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart and LocalPlayer.Character.PrimaryPart.Position or Vector3.new(0,0,0)
-        end
-        
-        if MoveIconMinimized then
-            moveIcon.Visible = true
-            moveWin.Visible = false
-        else
-            moveWin.Visible = true
-            moveIcon.Visible = false
-        end
-    else
-        moveMainToggleBtn.Text = "Move Part: OFF"
-        moveMainToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        moveWin.Visible = false
-        moveIcon.Visible = false
-        LockedPosition = nil
-    end
-end)
-
-moveMinBtn.MouseButton1Click:Connect(function()
-    MoveIconMinimized = true
-    moveWin.Visible = false
-    moveIcon.Position = moveWin.Position 
-    moveIcon.Visible = true
-end)
-
-moveIcon.MouseButton1Click:Connect(function()
-    MoveIconMinimized = false
-    moveIcon.Visible = false
-    moveWin.Position = moveIcon.Position 
-    moveWin.Visible = true
-end)
-
-moveUpBtn.MouseButton1Click:Connect(function()
-    if LockedPosition then
-        LockedPosition = LockedPosition + Vector3.new(0, 1, 0)
-        UpdatePreview()
-    end
-end)
-
-moveDownBtn.MouseButton1Click:Connect(function()
-    if LockedPosition then
-        LockedPosition = LockedPosition - Vector3.new(0, 1, 0)
-        UpdatePreview()
-    end
-end)
-
-
 local function HideAllGui()
     panel.Visible, matIconBtn.Visible, openPanelBtn.Visible, matWin.Visible = false, false, false, false
     unhideBtn.Visible = true
@@ -1117,6 +1232,7 @@ unhideBtn.MouseButton1Click:Connect(ShowAllGui)
 openPanelBtn.MouseButton1Click:Connect(function() openPanelBtn.Visible = false; panel.Visible = true end)
 
 
+--// FIX COLOR UPDATER (Menghindari bug pass-by-reference)
 local function UpdateColor(type, direction)
     if type == "Grass" then
         currentGrassColorIndex = currentGrassColorIndex + direction
@@ -1147,6 +1263,7 @@ groundLeft.MouseButton1Click:Connect(function() UpdateColor("Ground", -1) end)
 groundRight.MouseButton1Click:Connect(function() UpdateColor("Ground", 1) end)
 
 
+-- Tembus Toggle Events
 ghostToggleBtn.MouseButton1Click:Connect(function()
     IgnoreTerrain = not IgnoreTerrain
     if IgnoreTerrain then
@@ -1323,7 +1440,7 @@ copyBtn.MouseButton1Click:Connect(function()
         if setclipboard then 
             setclipboard(codeText.Text)
         else
-            writefile("Elbruzh_Terrain_"..tostring(math.random(1000,9999))..".txt", codeText.Text)
+            writefile("shhhhnayy05_Terrain_"..tostring(math.random(1000,9999))..".txt", codeText.Text)
         end
     end)
     
@@ -1369,10 +1486,27 @@ spawnBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-MakeUI_Draggable(titleBar) -- Replaced custom drag code with reusable function
+local drag = false
+local startPos, startFrame
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        drag = true
+        startPos = input.Position
+        startFrame = panel.Position
+    end
+end)
+titleBar.InputEnded:Connect(function() drag = false end)
+UserInputService.InputChanged:Connect(function(input)
+    pcall(function()
+        if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - startPos
+            panel.Position = UDim2.new(startFrame.X.Scale, startFrame.X.Offset + delta.X, startFrame.Y.Scale, startFrame.Y.Offset + delta.Y)
+        end
+    end)
+end)
 
 RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("✅ Terrain Editor v16.6 Loaded - Move Feature Locked Pos Active!")
+print("✅ Terrain Editor v16.6 Loaded - Move Review Part Feature Added! (shhhhnayy05)")
