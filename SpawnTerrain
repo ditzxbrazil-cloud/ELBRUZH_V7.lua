@@ -1,7 +1,7 @@
 --// TERRAIN BY ELBRUZH 
 --// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature, Relative to Part
---// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (COLOR BUG FIXED)
---// ADDED: Erase Action Mode
+--// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (NIL CALLS & COLOR BUG FIXED)
+--// ADDED: Erase Action Mode & ROCK COLORS
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -10,8 +10,13 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local Terrain = Workspace:WaitForChild("Terrain")
 
+-- Safe LocalPlayer loading for Executors
 local LocalPlayer = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
+if not LocalPlayer then
+    Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+    LocalPlayer = Players.LocalPlayer
+end
+local Camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
 
 --// GRASS COLORS
 local grassColors = {
@@ -72,6 +77,21 @@ local groundColors = {
 	{name="Coklat Gelap",  color=Color3.fromRGB(50,35,15)},
 }
 local currentGroundColorIndex = 2
+
+--// ROCK COLORS
+local rockColors = {
+	{name="Medium Stone Grey", color=Color3.fromRGB(163,162,165)},
+	{name="Dark Stone Grey",   color=Color3.fromRGB(99,95,98)},
+	{name="Smoky Grey",        color=Color3.fromRGB(91,93,105)},
+	{name="Fossil",            color=Color3.fromRGB(159,161,172)},
+	{name="Dark Taupe",        color=Color3.fromRGB(90,76,66)},
+	{name="Reddish Brown",     color=Color3.fromRGB(105,64,40)},
+	{name="Light Stone Grey",  color=Color3.fromRGB(229,228,223)},
+	{name="Brown",             color=Color3.fromRGB(124,92,70)},
+	{name="Sand Red",          color=Color3.fromRGB(149,121,119)},
+	{name="Black",             color=Color3.fromRGB(27,42,53)},
+}
+local currentRockColorIndex = 1
 
 --// Materials 
 local Materials = {
@@ -213,7 +233,13 @@ local function UpdateGridVisual()
         end
     end)
 end
-spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end end end)
+
+-- FIXED: Menggunakan task.spawn dan task.wait
+task.spawn(function() 
+    while task.wait(2) do 
+        if ShowGridVisual then UpdateGridVisual() end 
+    end 
+end)
 
 --// Update Preview dengan Pelindung
 local function UpdatePreview()
@@ -266,6 +292,7 @@ local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[currentGrassColorIndex].color) end)
     pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[currentLeafyGrassColorIndex].color) end)
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[currentGroundColorIndex].color) end)
+    pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[currentRockColorIndex].color) end)
 end
 
 --// SMOOTH TERRAIN ALGORITHM DENGAN PENINGGI
@@ -297,16 +324,15 @@ local function BL(d)
     local sx, sy, sz = d[4], d[5], d[6]
     local matName = d[7]
     local shape = d[8] or "Ball"
-    local rx, ry, rz = d[12] or 0, d[13] or 0, d[14] or 0
-    local smoothOn = d[15] or false
-    local smoothMode = d[16] or "Soft Edge"
-    local smoothInt = d[17] or 5
-    local actionMode = d[18] or "Build"
-    local smoothHeight = d[19] or 5
+    local rx, ry, rz = d[13] or 0, d[14] or 0, d[15] or 0
+    local smoothOn = d[16] or false
+    local smoothMode = d[17] or "Soft Edge"
+    local smoothInt = d[18] or 5
+    local actionMode = d[19] or "Build"
+    local smoothHeight = d[20] or 5
     local mat = Enum.Material.Grass
     for _, m in ipairs(Materials) do if m.Name == matName then mat = m.Mat break end end
     
-    -- Fix bug: pastikan global update tereksekusi agar display update
     ApplyMaterialColors()
     
     local sizeVec = Vector3.new(sx, sy, sz)
@@ -396,7 +422,7 @@ local function SpawnTerrain()
         local data = {
             math.floor(PreviewPos.X), math.floor(PreviewPos.Y), math.floor(PreviewPos.Z),
             SizeX, SizeY, SizeZ, CurrentMaterial.Name, CurrentShape,
-            currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
+            currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex, currentRockColorIndex,    
             RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity, CurrentMode, SmoothHeight
         }
         BL(data)
@@ -429,7 +455,6 @@ local function GenerateScript(exportMode)
     local code = "--// Terrain Spawn Script (ELBRUZH v16.5)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
     code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
     
-    -- Hitung Pusat Offset jika Mode Convert Part
     local cx, cy, cz = 0, 0, 0
     if mode == "Convert Part" then
         local minX, minY, minZ = math.huge, math.huge, math.huge
@@ -459,6 +484,8 @@ local function GenerateScript(exportMode)
     for i, c in ipairs(leafyGrassColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
     code = code .. "}\nlocal groundColors = {"
     for i, c in ipairs(groundColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
+    code = code .. "}\nlocal rockColors = {"
+    for i, c in ipairs(rockColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
     code = code .. "}\n\n"
     
     code = code .. [[
@@ -495,23 +522,24 @@ end
     end
     code = code .. "    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Brick=Enum.Material.Brick,Wood=Enum.Material.WoodPlanks,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice}\n"
     code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
-    code = code .. "    local shape, actionMode = d[8] or 'Ball', d[18] or 'Build'\n"
+    code = code .. "    local shape, actionMode = d[8] or 'Ball', d[19] or 'Build'\n"
     code = code .. "    local sizeVec = Vector3.new(d[4], d[5], d[6])\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[d[9] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2]) end)\n"
+    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[d[12] or 1]) end)\n"
     
     if mode == "Convert Part" then
-        code = code .. "    local cf = worldCF * CFrame.Angles(math.rad(d[12] or 0), math.rad(d[13] or 0), math.rad(d[14] or 0))\n"
+        code = code .. "    local cf = worldCF * CFrame.Angles(math.rad(d[13] or 0), math.rad(d[14] or 0), math.rad(d[15] or 0))\n"
     else
-        code = code .. "    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(d[12] or 0), math.rad(d[13] or 0), math.rad(d[14] or 0))\n"
+        code = code .. "    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(d[13] or 0), math.rad(d[14] or 0), math.rad(d[15] or 0))\n"
     end
     
     code = code .. "    if actionMode == 'Flatten' then\n"
     if mode == "Convert Part" then
-        code = code .. "        local baseCf = worldCF * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
+        code = code .. "        local baseCf = worldCF * CFrame.Angles(0, math.rad(d[14] or 0), 0)\n"
     else
-        code = code .. "        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
+        code = code .. "        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[14] or 0), 0)\n"
     end
     code = code .. "        if shape == 'Block' then Terrain:FillBlock(baseCf, Vector3.new(d[4], 2, d[6]), mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
@@ -537,7 +565,7 @@ end
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat)\n"
     code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat) end\n"
     code = code .. "    end\n"
-    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' and actionMode ~= 'Erase' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16], d[19]) end\n"
+    code = code .. "    if d[16] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' and actionMode ~= 'Erase' then ApplySmoothTerrain(pos, sizeVec, mat, d[18], d[17], d[20]) end\n"
     code = code .. "end\n\n"
     
     if mode == "Convert Part" then
@@ -553,8 +581,8 @@ end
         local endIdx = math.min(b * batchSize, #SpawnedData)
         for i = startIdx, endIdx do
             local d = SpawnedData[i]
-            local sEnabled = d[15] and "true" or "false"
-            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 5) .. ",'" .. (d[18] or "Build") .. "'," .. (d[19] or 5) .. "}"
+            local sEnabled = d[16] and "true" or "false"
+            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 1) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. (d[15] or 0) .. "," .. sEnabled .. ",'" .. (d[17] or "Soft Edge") .. "'," .. (d[18] or 5) .. ",'" .. (d[19] or "Build") .. "'," .. (d[20] or 5) .. "}"
             if i < endIdx then code = code .. "," end
         end
         code = code .. "})do BL(d)end\n"
@@ -645,7 +673,7 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1550)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1600)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
@@ -678,6 +706,7 @@ end
 local grassLeft, grassRight, grassDisplay = CreateColorSec(scroll, "🌿 Grass Color", grassColors, Color3.fromRGB(0, 255, 100), currentGrassColorIndex)
 local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGrass Color", leafyGrassColors, Color3.fromRGB(100, 220, 80), currentLeafyGrassColorIndex)
 local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
+local rockLeft, rockRight, rockDisplay = CreateColorSec(scroll, "🪨 Rock Color", rockColors, Color3.fromRGB(150, 150, 150), currentRockColorIndex)
 
 --// FITUR TEMBUS
 local ghostSec = Instance.new("Frame", scroll)
@@ -929,6 +958,7 @@ Instance.new("UICorner", expCloseBtn).CornerRadius = UDim.new(0, 6)
 
 local expMode = "Tidak"
 
+-- FIXED: Memperbaiki salah penamaan atribut btnBackgroundTransparency
 local btnTidak = Instance.new("TextButton", exportWin)
 btnTidak.Size, btnTidak.Position, btnTidak.BackgroundTransparency, btnTidak.Text, btnTidak.TextColor3, btnTidak.TextSize, btnTidak.Font, btnTidak.TextXAlignment = UDim2.new(1, -20, 0, 30), UDim2.new(0, 10, 0, 40), 1, "● Tidak", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
@@ -1000,8 +1030,6 @@ minBtn.MouseButton1Click:Connect(function() panel.Visible = false; openPanelBtn.
 unhideBtn.MouseButton1Click:Connect(ShowAllGui)
 openPanelBtn.MouseButton1Click:Connect(function() openPanelBtn.Visible = false; panel.Visible = true end)
 
-
---// FIX COLOR UPDATER (Menghindari bug pass-by-reference)
 local function UpdateColor(type, direction)
     if type == "Grass" then
         currentGrassColorIndex = currentGrassColorIndex + direction
@@ -1018,6 +1046,11 @@ local function UpdateColor(type, direction)
         if currentGroundColorIndex < 1 then currentGroundColorIndex = #groundColors elseif currentGroundColorIndex > #groundColors then currentGroundColorIndex = 1 end
         groundDisplay.Text = groundColors[currentGroundColorIndex].name
         groundDisplay.BackgroundColor3 = groundColors[currentGroundColorIndex].color
+    elseif type == "Rock" then
+        currentRockColorIndex = currentRockColorIndex + direction
+        if currentRockColorIndex < 1 then currentRockColorIndex = #rockColors elseif currentRockColorIndex > #rockColors then currentRockColorIndex = 1 end
+        rockDisplay.Text = rockColors[currentRockColorIndex].name
+        rockDisplay.BackgroundColor3 = rockColors[currentRockColorIndex].color
     end
     ApplyMaterialColors()
 end
@@ -1031,6 +1064,8 @@ leafyRight.MouseButton1Click:Connect(function() UpdateColor("Leafy", 1) end)
 groundLeft.MouseButton1Click:Connect(function() UpdateColor("Ground", -1) end)
 groundRight.MouseButton1Click:Connect(function() UpdateColor("Ground", 1) end)
 
+rockLeft.MouseButton1Click:Connect(function() UpdateColor("Rock", -1) end)
+rockRight.MouseButton1Click:Connect(function() UpdateColor("Rock", 1) end)
 
 -- Tembus Toggle Events
 ghostToggleBtn.MouseButton1Click:Connect(function()
@@ -1206,12 +1241,15 @@ end)
 
 closeScriptBtn.MouseButton1Click:Connect(function() scriptWin.Visible = false end)
 
+-- FIXED: Safety Check `writefile` pada logic setclipboard
 copyBtn.MouseButton1Click:Connect(function() 
     local success, err = pcall(function()
         if setclipboard then 
             setclipboard(codeText.Text)
-        else
+        elseif writefile then
             writefile("Elbruzh_Terrain_"..tostring(math.random(1000,9999))..".txt", codeText.Text)
+        else
+            warn("Executor tidak mendukung clipboard atau writefile!")
         end
     end)
     
@@ -1223,7 +1261,7 @@ copyBtn.MouseButton1Click:Connect(function()
         copyBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
     end
     
-    delay(1.5, function() 
+    task.delay(1.5, function() 
         copyBtn.Text = "Copy" 
         copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
     end) 
@@ -1237,10 +1275,11 @@ clearBtn.MouseButton1Click:Connect(function()
     UpdateSpawnCounter()
 end)
 
+-- FIXED: `wait()` diubah ke `task.wait()`
 spawnBtn.MouseButton1Click:Connect(function()
     if PreviewPos then
         TweenService:Create(spawnBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 45, 0, 45)}):Play()
-        wait(0.1)
+        task.wait(0.1)
         TweenService:Create(spawnBtn, TweenInfo.new(0.2), {Size = UDim2.new(0, 50, 0, 50)}):Play()
         
         local spawned = SpawnTerrain()
@@ -1280,4 +1319,4 @@ RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("✅ Terrain Editor v16.5 Loaded - Clean Flat UI & Protected Mode Active! (Colors Fixed)")
+print("✅ Terrain Editor v16.5 Loaded - Clean Flat UI & Protected Mode Active! (Colors & Rock Fixed)")
