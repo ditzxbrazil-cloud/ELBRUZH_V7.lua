@@ -1,6 +1,6 @@
---// TERRAIN BY shhhhnayy05
---// Terrain Editor v16.6 - Move Review Part (FIXED NO EMOJI)
---// OPTIMIZED FOR MOBILE EXECUTORS & LOADSTRING
+--// TERRAIN BY ELBRUZH 
+--// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature, Relative to Part, Preview Offset
+--// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (COLOR BUG FIXED)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -102,6 +102,10 @@ local UndoHistory = {}
 local RedoHistory = {}
 local IgnoreTerrain = false
 
+--// OFFSET PREVIEW SETTINGS
+local PreviewOffsetEnabled = false
+local PreviewOffsetY = 0
+
 --// SNAP SETTINGS
 local SnapEnabled = false
 local GridSize = 10
@@ -115,11 +119,6 @@ local SmoothModes = {"Soft Edge", "Gradient", "Noise", "Blend"}
 local CurrentSmoothModeIndex = 1
 local SmoothIntensity = 5
 local SmoothHeight = 5 
-
---// MOVE REVIEW PART SETTINGS
-local MoveReviewEnabled = false
-local MoveReviewOffset = 0
-local MoveReviewStep = 2
 
 --// Raycast dengan Pelindung (pcall)
 local function GetRaycast()
@@ -178,7 +177,7 @@ local function SnapPosition(pos)
     return Vector3.new(snappedX, snappedY, snappedZ)
 end
 
---// VISUAL GRID FUNCTION
+--// VISUAL GRID FUNCTION dengan Pelindung (pcall)
 local function UpdateGridVisual()
     pcall(function()
         for _, line in ipairs(GridLines) do line:Destroy() end
@@ -217,23 +216,9 @@ local function UpdateGridVisual()
         end
     end)
 end
+spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end end end)
 
---// Grid update loop
-spawn(function()
-    while true do
-        local success = pcall(function()
-            RunService.Heartbeat:Wait()
-        end)
-        if not success then
-            wait(2)
-        else
-            if ShowGridVisual then UpdateGridVisual() end
-            wait(2)
-        end
-    end
-end)
-
---// Update Preview
+--// Update Preview dengan Pelindung
 local function UpdatePreview()
     pcall(function()
         if not PreviewPart then CreatePreview() end
@@ -242,12 +227,13 @@ local function UpdatePreview()
             local rawPos = result.Position
             local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
             
-            --// MOVE REVIEW PART: Apply offset Y when enabled
-            if MoveReviewEnabled then
-                displayPos = Vector3.new(displayPos.X, displayPos.Y + MoveReviewOffset, displayPos.Z)
+            --// APPLY OFFSET Y PREVIEW JIKA DIAKTIFKAN
+            if PreviewOffsetEnabled then
+                displayPos = displayPos + Vector3.new(0, PreviewOffsetY, 0)
             end
             
             PreviewPos = displayPos
+            
             if CurrentMode == "Flatten" then
                 PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
                 local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
@@ -288,7 +274,7 @@ local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[currentGroundColorIndex].color) end)
 end
 
---// SMOOTH TERRAIN ALGORITHM
+--// SMOOTH TERRAIN ALGORITHM DENGAN PENINGGI
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
@@ -326,6 +312,7 @@ local function BL(d)
     local mat = Enum.Material.Grass
     for _, m in ipairs(Materials) do if m.Name == matName then mat = m.Mat break end end
     
+    -- Fix bug: pastikan global update tereksekusi agar display update
     ApplyMaterialColors()
     
     local sizeVec = Vector3.new(sx, sy, sz)
@@ -377,7 +364,7 @@ end
 
 --// Main GUI Setup
 local gui = Instance.new("ScreenGui")
-gui.Name = "shhhhnayy05TerrainEditor"
+gui.Name = "TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -441,9 +428,10 @@ local function GenerateScript(exportMode)
     
     local mode = exportMode or "Tidak"
     
-    local code = "--// Terrain Spawn Script (shhhhnayy05 v16.6)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
+    local code = "--// Terrain Spawn Script (ELBRUZH v16.5)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
     code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
     
+    -- Hitung Pusat Offset jika Mode Convert Part
     local cx, cy, cz = 0, 0, 0
     if mode == "Convert Part" then
         local minX, minY, minZ = math.huge, math.huge, math.huge
@@ -461,7 +449,7 @@ local function GenerateScript(exportMode)
         code = code .. "--// PENTING: Masukkan script ini ke dalam Part!\n"
         code = code .. "local BasePart = script.Parent\n"
         code = code .. "if not BasePart:IsA('BasePart') then\n"
-        code = code .. "    warn('[shhhhnayy05] Script tidak dimasukkan ke dalam Part! Terrain dibuat di posisi default.')\n"
+        code = code .. "    warn('[ELBRUZH] Script tidak dimasukkan ke dalam Part! Terrain dibuat di posisi default.')\n"
         code = code .. "    BasePart = {CFrame = CFrame.new(0,0,0)}\n"
         code = code .. "end\n"
         code = code .. "local OriginPos = Vector3.new(" .. cx .. ", " .. cy .. ", " .. cz .. ")\n\n"
@@ -475,27 +463,29 @@ local function GenerateScript(exportMode)
     for i, c in ipairs(groundColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
     code = code .. "}\n\n"
     
-    code = code .. "local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)\n"
-    code = code .. "    local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2\n"
-    code = code .. "    local layers = intensity or 2\n"
-    code = code .. "    local hScale = peninggi or 5\n"
-    code = code .. "    for layer = 1, layers do\n"
-    code = code .. "        local layerRadius = radius + (layer * 2)\n"
-    code = code .. "        local layerSize = math.max(2, 6 - layer)\n"
-    code = code .. "        local angleStep = 360 / (8 * layer)\n"
-    code = code .. "        for angle = 0, 359, angleStep do\n"
-    code = code .. "            local rad = math.rad(angle)\n"
-    code = code .. "            local offsetY = (hScale / 2) * (1 - (layer / layers))\n"
-    code = code .. "            if mode == 'Noise' then offsetY = offsetY + math.random(-4, 4) elseif mode == 'Gradient' then offsetY = offsetY + math.random(-2, 2) end\n"
-    code = code .. "            local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)\n"
-    code = code .. "            local pos = centerPos + offset\n"
-    code = code .. "            if mode == 'Soft Edge' then Terrain:FillBall(pos, layerSize / 1.5, material)\n"
-    code = code .. "            elseif mode == 'Noise' then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end\n"
-    code = code .. "            elseif mode == 'Gradient' then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end\n"
-    code = code .. "            elseif mode == 'Blend' then Terrain:FillBall(pos, layerSize, material) end\n"
-    code = code .. "        end\n"
-    code = code .. "    end\n"
-    code = code .. "end\n\n"
+    code = code .. [[
+local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)
+    local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
+    local layers = intensity or 2
+    local hScale = peninggi or 5
+    for layer = 1, layers do
+        local layerRadius = radius + (layer * 2)
+        local layerSize = math.max(2, 6 - layer)
+        local angleStep = 360 / (8 * layer)
+        for angle = 0, 359, angleStep do
+            local rad = math.rad(angle)
+            local offsetY = (hScale / 2) * (1 - (layer / layers))
+            if mode == "Noise" then offsetY = offsetY + math.random(-4, 4) elseif mode == "Gradient" then offsetY = offsetY + math.random(-2, 2) end
+            local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
+            local pos = centerPos + offset
+            if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
+            elseif mode == "Noise" then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Gradient" then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Blend" then Terrain:FillBall(pos, layerSize, material) end
+        end
+    end
+end
+]]
     
     code = code .. "local function BL(d)\n"
     if mode == "Convert Part" then
@@ -570,7 +560,9 @@ local function GenerateScript(exportMode)
     
     if mode == "Convert Part" then
         code = code .. "end\n\n"
+        code = code .. "-- Render pertama kali\n"
         code = code .. "RenderTerrain()\n"
+        code = code .. "-- // Hapus komentar di bawah ini jika ingin terrain TERUS MENGIKUTI part secara Real-time (Bisa sedikit ngelag) //\n"
         code = code .. "-- BasePart:GetPropertyChangedSignal('CFrame'):Connect(function() Terrain:Clear() RenderTerrain() end)\n"
     end
     
@@ -578,528 +570,166 @@ local function GenerateScript(exportMode)
     return code
 end
 
---// CROSSHAIR
 local ch = Instance.new("Frame", gui)
-ch.Size = UDim2.new(0, 20, 0, 20)
-ch.Position = UDim2.new(0.5, -10, 0.5, -10)
-ch.BackgroundTransparency = 1
+ch.Size, ch.Position, ch.BackgroundTransparency = UDim2.new(0, 20, 0, 20), UDim2.new(0.5, -10, 0.5, -10), 1
 local dot = Instance.new("Frame", ch)
-dot.Size = UDim2.new(0, 4, 0, 4)
-dot.Position = UDim2.new(0.5, -2, 0.5, -2)
-dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-dot.BorderSizePixel = 0
+dot.Size, dot.Position, dot.BackgroundColor3, dot.BorderSizePixel = UDim2.new(0, 4, 0, 4), UDim2.new(0.5, -2, 0.5, -2), Color3.fromRGB(255, 255, 255), 0
 Instance.new("UICorner", dot)
 
---// SPAWN BUTTON
 local spawnBtn = Instance.new("TextButton", gui)
-spawnBtn.Name = "SpawnBtn"
-spawnBtn.Size = UDim2.new(0, 50, 0, 50)
-spawnBtn.Position = UDim2.new(0, 4, 0, 50)
-spawnBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-spawnBtn.Text = ">"
-spawnBtn.TextSize = 30
-spawnBtn.Font = Enum.Font.GothamBlack
+spawnBtn.Name, spawnBtn.Size, spawnBtn.Position, spawnBtn.BackgroundColor3 = "SpawnBtn", UDim2.new(0, 50, 0, 50), UDim2.new(0, 4, 0, 50), Color3.fromRGB(0, 200, 100)
+spawnBtn.Text, spawnBtn.TextSize, spawnBtn.Font = "🎯", 30, Enum.Font.GothamBlack
 Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(1, 0)
 
---// UNDO BUTTON
 local undoBtn = Instance.new("TextButton", gui)
-undoBtn.Name = "UndoBtn"
-undoBtn.Size = UDim2.new(0, 45, 0, 45)
-undoBtn.Position = UDim2.new(0, 6, 0, 105)
-undoBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-undoBtn.Text = "<"
-undoBtn.TextSize = 22
-undoBtn.Font = Enum.Font.GothamBlack
+undoBtn.Name, undoBtn.Size, undoBtn.Position, undoBtn.BackgroundColor3 = "UndoBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 105), Color3.fromRGB(200, 150, 50)
+undoBtn.Text, undoBtn.TextSize, undoBtn.Font = "↩️", 22, Enum.Font.GothamBlack
 Instance.new("UICorner", undoBtn).CornerRadius = UDim.new(1, 0)
 
---// MATERIAL ICON BUTTON
 local matIconBtn = Instance.new("TextButton", gui)
-matIconBtn.Name = "MatIconBtn"
-matIconBtn.Size = UDim2.new(0, 45, 0, 45)
-matIconBtn.Position = UDim2.new(0, 6, 0, 155)
-matIconBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
-matIconBtn.Text = "M"
-matIconBtn.TextSize = 22
-matIconBtn.Font = Enum.Font.GothamBlack
+matIconBtn.Name, matIconBtn.Size, matIconBtn.Position, matIconBtn.BackgroundColor3 = "MatIconBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 155), Color3.fromRGB(80, 120, 200)
+matIconBtn.Text, matIconBtn.TextSize, matIconBtn.Font = "🎨", 22, Enum.Font.GothamBlack
 Instance.new("UICorner", matIconBtn).CornerRadius = UDim.new(1, 0)
 
---// OPEN PANEL BUTTON
 local openPanelBtn = Instance.new("TextButton", gui)
-openPanelBtn.Name = "OpenPanelBtn"
-openPanelBtn.Size = UDim2.new(0, 45, 0, 45)
-openPanelBtn.Position = UDim2.new(0, 6, 0, 205)
-openPanelBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-openPanelBtn.Text = "S"
-openPanelBtn.TextSize = 22
-openPanelBtn.Font = Enum.Font.GothamBlack
-openPanelBtn.Visible = false
+openPanelBtn.Name, openPanelBtn.Size, openPanelBtn.Position, openPanelBtn.BackgroundColor3 = "OpenPanelBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 205), Color3.fromRGB(60, 60, 75)
+openPanelBtn.Text, openPanelBtn.TextSize, openPanelBtn.Font, openPanelBtn.Visible = "⚙️", 22, Enum.Font.GothamBlack, false
 Instance.new("UICorner", openPanelBtn).CornerRadius = UDim.new(1, 0)
 
---// UNHIDE BUTTON
 local unhideBtn = Instance.new("TextButton", gui)
-unhideBtn.Name = "UnhideBtn"
-unhideBtn.Size = UDim2.new(0, 25, 0, 25)
-unhideBtn.Position = UDim2.new(0, 16, 0, 165)
-unhideBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-unhideBtn.Text = "O"
-unhideBtn.TextSize = 12
-unhideBtn.Font = Enum.Font.GothamBold
-unhideBtn.Visible = false
-unhideBtn.Active = true
+unhideBtn.Name, unhideBtn.Size, unhideBtn.Position, unhideBtn.BackgroundColor3 = "UnhideBtn", UDim2.new(0, 25, 0, 25), UDim2.new(0, 16, 0, 165), Color3.fromRGB(0, 150, 255)
+unhideBtn.Text, unhideBtn.TextSize, unhideBtn.Font, unhideBtn.Visible, unhideBtn.Active = "👁️", 12, Enum.Font.GothamBold, false, true
 Instance.new("UICorner", unhideBtn).CornerRadius = UDim.new(1, 0)
 
---// MATERIAL WINDOW
 local matWin = Instance.new("Frame", gui)
-matWin.Name = "MatWindow"
-matWin.Size = UDim2.new(0, 200, 0, 70)
-matWin.Position = UDim2.new(0, 60, 0, 155)
-matWin.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-matWin.Visible = false
+matWin.Name, matWin.Size, matWin.Position, matWin.BackgroundColor3, matWin.Visible = "MatWindow", UDim2.new(0, 200, 0, 70), UDim2.new(0, 60, 0, 155), Color3.fromRGB(45, 45, 60), false
 Instance.new("UICorner", matWin).CornerRadius = UDim.new(0, 8)
 
 local closeMatBtn = Instance.new("TextButton", matWin)
-closeMatBtn.Size = UDim2.new(0, 20, 0, 20)
-closeMatBtn.Position = UDim2.new(1, -25, 0, 5)
-closeMatBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-closeMatBtn.Text = "X"
-closeMatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeMatBtn.TextSize = 10
-closeMatBtn.Font = Enum.Font.GothamBold
+closeMatBtn.Size, closeMatBtn.Position, closeMatBtn.BackgroundColor3, closeMatBtn.Text, closeMatBtn.TextColor3, closeMatBtn.TextSize, closeMatBtn.Font = UDim2.new(0, 20, 0, 20), UDim2.new(1, -25, 0, 5), Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
 Instance.new("UICorner", closeMatBtn).CornerRadius = UDim.new(0, 4)
 closeMatBtn.MouseButton1Click:Connect(function() matWin.Visible = false end)
 
 local matScroll = Instance.new("ScrollingFrame", matWin)
-matScroll.Size = UDim2.new(1, -30, 1, -10)
-matScroll.Position = UDim2.new(0, 5, 0, 5)
-matScroll.BackgroundTransparency = 1
-matScroll.ScrollBarThickness = 3
-matScroll.CanvasSize = UDim2.new(0, #Materials * 45, 0, 0)
-matScroll.ScrollingDirection = Enum.ScrollingDirection.X
+matScroll.Size, matScroll.Position, matScroll.BackgroundTransparency, matScroll.ScrollBarThickness, matScroll.CanvasSize, matScroll.ScrollingDirection = UDim2.new(1, -30, 1, -10), UDim2.new(0, 5, 0, 5), 1, 3, UDim2.new(0, #Materials * 45, 0, 0), Enum.ScrollingDirection.X
 for i, m in ipairs(Materials) do
     local btn = Instance.new("TextButton", matScroll)
-    btn.Size = UDim2.new(0, 40, 0, 40)
-    btn.Position = UDim2.new(0, (i-1) * 45, 0, 10)
-    btn.BackgroundColor3 = m.Color
-    btn.Text = m.Name
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 8
-    btn.Font = Enum.Font.GothamBold
-    btn.TextStrokeTransparency = 0.5
+    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font, btn.TextStrokeTransparency = UDim2.new(0, 40, 0, 40), UDim2.new(0, (i-1) * 45, 0, 10), m.Color, m.Name, Color3.fromRGB(255, 255, 255), 8, Enum.Font.GothamBold, 0.5
     btn.MouseButton1Click:Connect(function() CurrentMaterial = m; end)
 end
 matIconBtn.MouseButton1Click:Connect(function() matWin.Visible = not matWin.Visible end)
 
 --// MAIN PANEL
 local panel = Instance.new("Frame", gui)
-panel.Name = "MainPanel"
-panel.Size = UDim2.new(0, 290, 0, 450)
-panel.Position = UDim2.new(0, 6, 1, -460)
-panel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-panel.BorderSizePixel = 0
+panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 450), UDim2.new(0, 6, 1, -460), Color3.fromRGB(30, 30, 40), 0
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
 
 local titleBar = Instance.new("Frame", panel)
-titleBar.Size = UDim2.new(1, 0, 0, 35)
-titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-titleBar.BorderSizePixel = 0
+titleBar.Size, titleBar.BackgroundColor3, titleBar.BorderSizePixel = UDim2.new(1, 0, 0, 35), Color3.fromRGB(40, 40, 55), 0
 Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
 
 local titleText = Instance.new("TextLabel", titleBar)
-titleText.Size = UDim2.new(1, -80, 1, 0)
-titleText.Position = UDim2.new(0, 10, 0, 0)
-titleText.BackgroundTransparency = 1
-titleText.Text = "Terrain Editor shhhhnayy05 v16.6"
-titleText.TextColor3 = Color3.fromRGB(0, 200, 255)
-titleText.TextSize = 12
-titleText.Font = Enum.Font.GothamBold
-titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
-minBtn.Size = UDim2.new(0, 28, 0, 28)
-minBtn.Position = UDim2.new(1, -65, 0.5, -14)
-minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-minBtn.Text = "-"
-minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minBtn.TextSize = 18
-minBtn.Font = Enum.Font.GothamBold
+minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
+minBtn.Text, minBtn.TextColor3, minBtn.TextSize, minBtn.Font = "−", Color3.fromRGB(255, 255, 255), 18, Enum.Font.GothamBold
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
 
 local closeBtn = Instance.new("TextButton", titleBar)
-closeBtn.Size = UDim2.new(0, 28, 0, 28)
-closeBtn.Position = UDim2.new(1, -33, 0.5, -14)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextSize = 14
-closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Size, closeBtn.Position, closeBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -33, 0.5, -14), Color3.fromRGB(200, 60, 60)
+closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size = UDim2.new(1, -8, 1, -42)
-scroll.Position = UDim2.new(0, 4, 0, 38)
-scroll.BackgroundTransparency = 1
-scroll.ScrollBarThickness = 3
-scroll.CanvasSize = UDim2.new(0, 0, 0, 1550)
+-- CanvasSize diperbesar untuk memuat menu offset baru
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1650)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
 local hideGuiBtn = Instance.new("TextButton", scroll)
-hideGuiBtn.Size = UDim2.new(1, -8, 0, 32)
-hideGuiBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-hideGuiBtn.Text = "Hide GUI"
-hideGuiBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-hideGuiBtn.TextSize = 11
-hideGuiBtn.Font = Enum.Font.GothamBold
+hideGuiBtn.Size, hideGuiBtn.BackgroundColor3, hideGuiBtn.Text, hideGuiBtn.TextColor3, hideGuiBtn.TextSize, hideGuiBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(50, 50, 65), "👁️ Hide GUI", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", hideGuiBtn).CornerRadius = UDim.new(0, 8)
 
 local status = Instance.new("TextLabel", scroll)
-status.Size = UDim2.new(1, -8, 0, 18)
-status.BackgroundTransparency = 1
-status.Text = "Aim & tap > to spawn"
-status.TextColor3 = Color3.fromRGB(0, 255, 150)
-status.TextSize = 10
-status.Font = Enum.Font.Gotham
+status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, status.TextSize, status.Font = UDim2.new(1, -8, 0, 18), 1, "Aim & tap 🎯 to spawn", Color3.fromRGB(0, 255, 150), 10, Enum.Font.Gotham
 
---// COLOR SECTION CREATOR
+--// FIXED COLOR UI SYSTEM
 local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx)
     local sec = Instance.new("Frame", parent)
-    sec.Size = UDim2.new(1, -8, 0, 50)
-    sec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    sec.BorderSizePixel = 0
+    sec.Size, sec.BackgroundColor3, sec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
     Instance.new("UICorner", sec).CornerRadius = UDim.new(0, 8)
     local t = Instance.new("TextLabel", sec)
-    t.Size = UDim2.new(1, 0, 0, 18)
-    t.Position = UDim2.new(0, 0, 0, 2)
-    t.BackgroundTransparency = 1
-    t.Text = titleStr
-    t.TextColor3 = titleColor
-    t.TextSize = 11
-    t.Font = Enum.Font.GothamBold
+    t.Size, t.Position, t.BackgroundTransparency, t.Text, t.TextColor3, t.TextSize, t.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, titleStr, titleColor, 11, Enum.Font.GothamBold
     local lBtn = Instance.new("TextButton", sec)
-    lBtn.Size = UDim2.new(0, 28, 0, 22)
-    lBtn.Position = UDim2.new(0, 5, 0, 24)
-    lBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-    lBtn.Text = "<"
-    lBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    lBtn.TextSize = 14
-    lBtn.Font = Enum.Font.GothamBold
+    lBtn.Size, lBtn.Position, lBtn.BackgroundColor3, lBtn.Text, lBtn.TextColor3, lBtn.TextSize, lBtn.Font = UDim2.new(0, 28, 0, 22), UDim2.new(0, 5, 0, 24), Color3.fromRGB(60, 60, 75), "←", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
     Instance.new("UICorner", lBtn).CornerRadius = UDim.new(0, 6)
     local disp = Instance.new("TextLabel", sec)
-    disp.Size = UDim2.new(1, -74, 0, 22)
-    disp.Position = UDim2.new(0, 38, 0, 24)
-    disp.BackgroundColor3 = colorArr[initialIdx].color
-    disp.Text = colorArr[initialIdx].name
-    disp.TextColor3 = Color3.fromRGB(255, 255, 255)
-    disp.TextSize = 10
-    disp.Font = Enum.Font.GothamBold
+    disp.Size, disp.Position, disp.BackgroundColor3, disp.Text, disp.TextColor3, disp.TextSize, disp.Font = UDim2.new(1, -74, 0, 22), UDim2.new(0, 38, 0, 24), colorArr[initialIdx].color, colorArr[initialIdx].name, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
     Instance.new("UICorner", disp).CornerRadius = UDim.new(0, 6)
     local rBtn = Instance.new("TextButton", sec)
-    rBtn.Size = UDim2.new(0, 28, 0, 22)
-    rBtn.Position = UDim2.new(1, -33, 0, 24)
-    rBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-    rBtn.Text = ">"
-    rBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    rBtn.TextSize = 14
-    rBtn.Font = Enum.Font.GothamBold
+    rBtn.Size, rBtn.Position, rBtn.BackgroundColor3, rBtn.Text, rBtn.TextColor3, rBtn.TextSize, rBtn.Font = UDim2.new(0, 28, 0, 22), UDim2.new(1, -33, 0, 24), Color3.fromRGB(60, 60, 75), "→", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
     Instance.new("UICorner", rBtn).CornerRadius = UDim.new(0, 6)
     return lBtn, rBtn, disp
 end
 
-local grassLeft, grassRight, grassDisplay = CreateColorSec(scroll, "Grass Color", grassColors, Color3.fromRGB(0, 255, 100), currentGrassColorIndex)
-local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "LeafyGrass Color", leafyGrassColors, Color3.fromRGB(100, 220, 80), currentLeafyGrassColorIndex)
-local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
+local grassLeft, grassRight, grassDisplay = CreateColorSec(scroll, "🌿 Grass Color", grassColors, Color3.fromRGB(0, 255, 100), currentGrassColorIndex)
+local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGrass Color", leafyGrassColors, Color3.fromRGB(100, 220, 80), currentLeafyGrassColorIndex)
+local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
 
---// GHOST MODE SECTION
+--// FITUR TEMBUS
 local ghostSec = Instance.new("Frame", scroll)
-ghostSec.Size = UDim2.new(1, -8, 0, 80)
-ghostSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-ghostSec.BorderSizePixel = 0
+ghostSec.Size, ghostSec.BackgroundColor3, ghostSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", ghostSec).CornerRadius = UDim.new(0, 8)
 local ghostTitle = Instance.new("TextLabel", ghostSec)
-ghostTitle.Size = UDim2.new(1, 0, 0, 18)
-ghostTitle.Position = UDim2.new(0, 0, 0, 2)
-ghostTitle.BackgroundTransparency = 1
-ghostTitle.Text = "Tembus Terrain"
-ghostTitle.TextColor3 = Color3.fromRGB(200, 150, 255)
-ghostTitle.TextSize = 11
-ghostTitle.Font = Enum.Font.GothamBold
+ghostTitle.Size, ghostTitle.Position, ghostTitle.BackgroundTransparency, ghostTitle.Text, ghostTitle.TextColor3, ghostTitle.TextSize, ghostTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "👻 Tembus Terrain", Color3.fromRGB(200, 150, 255), 11, Enum.Font.GothamBold
 
 local ghostToggleBtn = Instance.new("TextButton", ghostSec)
-ghostToggleBtn.Size = UDim2.new(1, -12, 0, 22)
-ghostToggleBtn.Position = UDim2.new(0, 6, 0, 25)
-ghostToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-ghostToggleBtn.Text = "Tembus: OFF"
-ghostToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ghostToggleBtn.TextSize = 11
-ghostToggleBtn.Font = Enum.Font.GothamBold
+ghostToggleBtn.Size, ghostToggleBtn.Position, ghostToggleBtn.BackgroundColor3, ghostToggleBtn.Text, ghostToggleBtn.TextColor3, ghostToggleBtn.TextSize, ghostToggleBtn.Font = UDim2.new(1, -12, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "Tembus: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", ghostToggleBtn).CornerRadius = UDim.new(0, 4)
 
 local ghostInfo = Instance.new("TextLabel", ghostSec)
-ghostInfo.Size = UDim2.new(1, -12, 0, 20)
-ghostInfo.Position = UDim2.new(0, 6, 0, 53)
-ghostInfo.BackgroundTransparency = 1
-ghostInfo.Text = "Tembus OFF = Raycast nabrak gundukan"
-ghostInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
-ghostInfo.TextSize = 10
-ghostInfo.Font = Enum.Font.Gotham
+ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.Text, ghostInfo.TextColor3, ghostInfo.TextSize, ghostInfo.Font = UDim2.new(1, -12, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Tembus OFF = Raycast nabrak gundukan", Color3.fromRGB(150, 150, 150), 10, Enum.Font.Gotham
 
---// MOVE REVIEW PART SECTION
-local moveReviewSec = Instance.new("Frame", scroll)
-moveReviewSec.Name = "MoveReviewSection"
-moveReviewSec.Size = UDim2.new(1, -8, 0, 80)
-moveReviewSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-moveReviewSec.BorderSizePixel = 0
-Instance.new("UICorner", moveReviewSec).CornerRadius = UDim.new(0, 8)
+--// OFFSET PREVIEW SECTION (Di bawah Fitur Tembus)
+local offsetSec = Instance.new("Frame", scroll)
+offsetSec.Size, offsetSec.BackgroundColor3, offsetSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", offsetSec).CornerRadius = UDim.new(0, 8)
+local offsetTitle = Instance.new("TextLabel", offsetSec)
+offsetTitle.Size, offsetTitle.Position, offsetTitle.BackgroundTransparency, offsetTitle.Text, offsetTitle.TextColor3, offsetTitle.TextSize, offsetTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "↕️ Offset Preview (Atas/Bawah)", Color3.fromRGB(0, 255, 150), 11, Enum.Font.GothamBold
 
-local moveReviewTitle = Instance.new("TextLabel", moveReviewSec)
-moveReviewTitle.Size = UDim2.new(1, 0, 0, 18)
-moveReviewTitle.Position = UDim2.new(0, 0, 0, 2)
-moveReviewTitle.BackgroundTransparency = 1
-moveReviewTitle.Text = "Move Review Part"
-moveReviewTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
-moveReviewTitle.TextSize = 11
-moveReviewTitle.Font = Enum.Font.GothamBold
+local offsetToggleBtn = Instance.new("TextButton", offsetSec)
+offsetToggleBtn.Size, offsetToggleBtn.Position, offsetToggleBtn.BackgroundColor3, offsetToggleBtn.Text, offsetToggleBtn.TextColor3, offsetToggleBtn.TextSize, offsetToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF ▼", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", offsetToggleBtn).CornerRadius = UDim.new(0, 4)
 
-local moveReviewToggleBtn = Instance.new("TextButton", moveReviewSec)
-moveReviewToggleBtn.Size = UDim2.new(0, 80, 0, 22)
-moveReviewToggleBtn.Position = UDim2.new(0, 6, 0, 25)
-moveReviewToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-moveReviewToggleBtn.Text = "Move: OFF"
-moveReviewToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-moveReviewToggleBtn.TextSize = 11
-moveReviewToggleBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", moveReviewToggleBtn).CornerRadius = UDim.new(0, 4)
+local offsetMinus = Instance.new("TextButton", offsetSec)
+offsetMinus.Size, offsetMinus.Position, offsetMinus.BackgroundColor3, offsetMinus.Text, offsetMinus.TextColor3, offsetMinus.TextSize, offsetMinus.Font = UDim2.new(0, 28, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", offsetMinus).CornerRadius = UDim.new(0, 4)
 
-local moveReviewInfo = Instance.new("TextLabel", moveReviewSec)
-moveReviewInfo.Size = UDim2.new(1, -12, 0, 20)
-moveReviewInfo.Position = UDim2.new(0, 6, 0, 53)
-moveReviewInfo.BackgroundTransparency = 1
-moveReviewInfo.Text = "OFF = Preview mengikuti raycast normal"
-moveReviewInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
-moveReviewInfo.TextSize = 10
-moveReviewInfo.Font = Enum.Font.Gotham
+local offsetDisp = Instance.new("TextBox", offsetSec)
+offsetDisp.Size, offsetDisp.Position, offsetDisp.BackgroundColor3, offsetDisp.Text, offsetDisp.TextColor3, offsetDisp.TextSize, offsetDisp.Font = UDim2.new(0, 40, 0, 22), UDim2.new(0, 105, 0, 25), Color3.fromRGB(40, 40, 50), tostring(PreviewOffsetY), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+offsetDisp.ClearTextOnFocus = false
+Instance.new("UICorner", offsetDisp).CornerRadius = UDim.new(0, 4)
 
---// MOVE REVIEW WINDOW
-local moveReviewWin = Instance.new("Frame", gui)
-moveReviewWin.Name = "MoveReviewWin"
-moveReviewWin.Size = UDim2.new(0, 120, 0, 140)
-moveReviewWin.Position = UDim2.new(0.5, -60, 0.5, -70)
-moveReviewWin.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-moveReviewWin.BorderSizePixel = 0
-moveReviewWin.Visible = false
-moveReviewWin.Active = true
-Instance.new("UICorner", moveReviewWin).CornerRadius = UDim.new(0, 12)
+local offsetPlus = Instance.new("TextButton", offsetSec)
+offsetPlus.Size, offsetPlus.Position, offsetPlus.BackgroundColor3, offsetPlus.Text, offsetPlus.TextColor3, offsetPlus.TextSize, offsetPlus.Font = UDim2.new(0, 28, 0, 22), UDim2.new(0, 150, 0, 25), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+Instance.new("UICorner", offsetPlus).CornerRadius = UDim.new(0, 4)
 
-local moveReviewStroke = Instance.new("UIStroke", moveReviewWin)
-moveReviewStroke.Color = Color3.fromRGB(255, 200, 50)
-moveReviewStroke.Thickness = 2
-moveReviewStroke.Transparency = 0.3
+local offsetInfo = Instance.new("TextLabel", offsetSec)
+offsetInfo.Size, offsetInfo.Position, offsetInfo.BackgroundTransparency, offsetInfo.Text, offsetInfo.TextColor3, offsetInfo.TextSize, offsetInfo.Font = UDim2.new(1, -12, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Geser preview ke atas (+) atau bawah (-)", Color3.fromRGB(150, 150, 150), 10, Enum.Font.Gotham
 
-local moveReviewTitleBar = Instance.new("Frame", moveReviewWin)
-moveReviewTitleBar.Size = UDim2.new(1, 0, 0, 30)
-moveReviewTitleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-moveReviewTitleBar.BorderSizePixel = 0
-Instance.new("UICorner", moveReviewTitleBar).CornerRadius = UDim.new(0, 12)
-
-local moveReviewTitleText = Instance.new("TextLabel", moveReviewTitleBar)
-moveReviewTitleText.Size = UDim2.new(1, -40, 1, 0)
-moveReviewTitleText.Position = UDim2.new(0, 8, 0, 0)
-moveReviewTitleText.BackgroundTransparency = 1
-moveReviewTitleText.Text = "Move Part"
-moveReviewTitleText.TextColor3 = Color3.fromRGB(255, 200, 50)
-moveReviewTitleText.TextSize = 12
-moveReviewTitleText.Font = Enum.Font.GothamBold
-moveReviewTitleText.TextXAlignment = Enum.TextXAlignment.Left
-
-local moveReviewMinBtn = Instance.new("TextButton", moveReviewTitleBar)
-moveReviewMinBtn.Size = UDim2.new(0, 24, 0, 24)
-moveReviewMinBtn.Position = UDim2.new(1, -28, 0.5, -12)
-moveReviewMinBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-moveReviewMinBtn.Text = "X"
-moveReviewMinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-moveReviewMinBtn.TextSize = 14
-moveReviewMinBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", moveReviewMinBtn).CornerRadius = UDim.new(0, 6)
-
-local moveReviewUpBtn = Instance.new("TextButton", moveReviewWin)
-moveReviewUpBtn.Size = UDim2.new(0, 80, 0, 35)
-moveReviewUpBtn.Position = UDim2.new(0.5, -40, 0, 40)
-moveReviewUpBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-moveReviewUpBtn.Text = "UP"
-moveReviewUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-moveReviewUpBtn.TextSize = 14
-moveReviewUpBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", moveReviewUpBtn).CornerRadius = UDim.new(0, 8)
-
-local moveReviewOffsetLabel = Instance.new("TextLabel", moveReviewWin)
-moveReviewOffsetLabel.Size = UDim2.new(1, -16, 0, 20)
-moveReviewOffsetLabel.Position = UDim2.new(0, 8, 0, 80)
-moveReviewOffsetLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-moveReviewOffsetLabel.Text = "Offset: 0"
-moveReviewOffsetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-moveReviewOffsetLabel.TextSize = 11
-moveReviewOffsetLabel.Font = Enum.Font.GothamBold
-Instance.new("UICorner", moveReviewOffsetLabel).CornerRadius = UDim.new(0, 4)
-
-local moveReviewDownBtn = Instance.new("TextButton", moveReviewWin)
-moveReviewDownBtn.Size = UDim2.new(0, 80, 0, 35)
-moveReviewDownBtn.Position = UDim2.new(0.5, -40, 0, 105)
-moveReviewDownBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-moveReviewDownBtn.Text = "DOWN"
-moveReviewDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-moveReviewDownBtn.TextSize = 14
-moveReviewDownBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", moveReviewDownBtn).CornerRadius = UDim.new(0, 8)
-
---// MOVE REVIEW ICON (Minimized)
-local moveReviewIcon = Instance.new("TextButton", gui)
-moveReviewIcon.Name = "MoveReviewIcon"
-moveReviewIcon.Size = UDim2.new(0, 45, 0, 45)
-moveReviewIcon.Position = UDim2.new(0.5, -22, 0.5, -22)
-moveReviewIcon.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-moveReviewIcon.Text = "M"
-moveReviewIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
-moveReviewIcon.TextSize = 22
-moveReviewIcon.Font = Enum.Font.GothamBlack
-moveReviewIcon.Visible = false
-Instance.new("UICorner", moveReviewIcon).CornerRadius = UDim.new(1, 0)
-
---// MOVE REVIEW DRAG SYSTEM
-local moveReviewDrag = false
-local moveReviewStartPos = nil
-local moveReviewStartFrame = nil
-
-moveReviewTitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        moveReviewDrag = true
-        moveReviewStartPos = input.Position
-        moveReviewStartFrame = moveReviewWin.Position
-    end
-end)
-
-moveReviewTitleBar.InputEnded:Connect(function()
-    moveReviewDrag = false
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    pcall(function()
-        if moveReviewDrag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - moveReviewStartPos
-            local newPos = UDim2.new(moveReviewStartFrame.X.Scale, moveReviewStartFrame.X.Offset + delta.X, moveReviewStartFrame.Y.Scale, moveReviewStartFrame.Y.Offset + delta.Y)
-            moveReviewWin.Position = newPos
-        end
-    end)
-end)
-
---// MOVE REVIEW FUNCTIONS
-local MoveReviewLastPosition = nil
-
-local function OpenMoveReviewWindow()
-    moveReviewWin.Visible = true
-    moveReviewIcon.Visible = false
-    MoveReviewLastPosition = moveReviewWin.Position
-end
-
-local function MinimizeMoveReviewWindow()
-    moveReviewWin.Visible = false
-    moveReviewIcon.Visible = true
-    if MoveReviewLastPosition then
-        moveReviewIcon.Position = UDim2.new(MoveReviewLastPosition.X.Scale, MoveReviewLastPosition.X.Offset + 37, MoveReviewLastPosition.Y.Scale, MoveReviewLastPosition.Y.Offset + 47)
-    end
-end
-
-local function CloseMoveReviewWindow()
-    moveReviewWin.Visible = false
-    moveReviewIcon.Visible = false
-end
-
-local function EnableMoveReview()
-    MoveReviewEnabled = true
-    MoveReviewOffset = 0
-    moveReviewToggleBtn.Text = "Move: ON"
-    moveReviewToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    moveReviewInfo.Text = "ON = Gunakan tombol UP/DOWN"
-    moveReviewWin.Position = UDim2.new(0.5, -60, 0.5, -70)
-    MoveReviewLastPosition = moveReviewWin.Position
-    OpenMoveReviewWindow()
-    UpdatePreview()
-end
-
-local function DisableMoveReview()
-    MoveReviewEnabled = false
-    MoveReviewOffset = 0
-    moveReviewToggleBtn.Text = "Move: OFF"
-    moveReviewToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    moveReviewInfo.Text = "OFF = Preview mengikuti raycast normal"
-    CloseMoveReviewWindow()
-    UpdatePreview()
-end
-
---// MOVE REVIEW EVENT CONNECTIONS
-moveReviewToggleBtn.MouseButton1Click:Connect(function()
-    if MoveReviewEnabled then
-        DisableMoveReview()
-    else
-        EnableMoveReview()
-    end
-end)
-
-moveReviewMinBtn.MouseButton1Click:Connect(function()
-    MinimizeMoveReviewWindow()
-end)
-
-moveReviewIcon.MouseButton1Click:Connect(function()
-    OpenMoveReviewWindow()
-end)
-
-moveReviewUpBtn.MouseButton1Click:Connect(function()
-    MoveReviewOffset = MoveReviewOffset + MoveReviewStep
-    moveReviewOffsetLabel.Text = "Offset: " .. tostring(MoveReviewOffset)
-    UpdatePreview()
-    -- Animasi tombol
-    TweenService:Create(moveReviewUpBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 75, 0, 32)}):Play()
-    spawn(function()
-        wait(0.1)
-        TweenService:Create(moveReviewUpBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 80, 0, 35)}):Play()
-    end)
-end)
-
-moveReviewDownBtn.MouseButton1Click:Connect(function()
-    MoveReviewOffset = MoveReviewOffset - MoveReviewStep
-    moveReviewOffsetLabel.Text = "Offset: " .. tostring(MoveReviewOffset)
-    UpdatePreview()
-    -- Animasi tombol
-    TweenService:Create(moveReviewDownBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 75, 0, 32)}):Play()
-    spawn(function()
-        wait(0.1)
-        TweenService:Create(moveReviewDownBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 80, 0, 35)}):Play()
-    end)
-end)
 
 --// SHAPE SECTION
 local shapeSec = Instance.new("Frame", scroll)
-shapeSec.Size = UDim2.new(1, -8, 0, 55)
-shapeSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-shapeSec.BorderSizePixel = 0
+shapeSec.Size, shapeSec.BackgroundColor3, shapeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", shapeSec).CornerRadius = UDim.new(0, 8)
 local shapeTitle = Instance.new("TextLabel", shapeSec)
-shapeTitle.Size = UDim2.new(1, 0, 0, 18)
-shapeTitle.Position = UDim2.new(0, 0, 0, 2)
-shapeTitle.BackgroundTransparency = 1
-shapeTitle.Text = "Shape (Pilih Bentuk)"
-shapeTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-shapeTitle.TextSize = 11
-shapeTitle.Font = Enum.Font.GothamBold
+shapeTitle.Size, shapeTitle.Position, shapeTitle.BackgroundTransparency, shapeTitle.Text, shapeTitle.TextColor3, shapeTitle.TextSize, shapeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔷 Shape (Pilih Bentuk)", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
 
 local function CreateUIBtn(parent, txt, xPos, width)
     local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(width, 0, 0, 28)
-    btn.Position = UDim2.new(xPos, 0, 0, 22)
-    btn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-    btn.Text = txt
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 10
-    btn.Font = Enum.Font.GothamBold
+    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font = UDim2.new(width, 0, 0, 28), UDim2.new(xPos, 0, 0, 22), Color3.fromRGB(65, 65, 80), txt, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     return btn
 end
@@ -1111,18 +741,10 @@ local wedgeBtn = CreateUIBtn(shapeSec, "Wedge", 0.65, 0.25)
 
 --// ACTION MODE SECTION
 local modeSec = Instance.new("Frame", scroll)
-modeSec.Size = UDim2.new(1, -8, 0, 55)
-modeSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-modeSec.BorderSizePixel = 0
+modeSec.Size, modeSec.BackgroundColor3, modeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", modeSec).CornerRadius = UDim.new(0, 8)
 local modeTitle = Instance.new("TextLabel", modeSec)
-modeTitle.Size = UDim2.new(1, 0, 0, 18)
-modeTitle.Position = UDim2.new(0, 0, 0, 2)
-modeTitle.BackgroundTransparency = 1
-modeTitle.Text = "Action Mode"
-modeTitle.TextColor3 = Color3.fromRGB(255, 150, 50)
-modeTitle.TextSize = 11
-modeTitle.Font = Enum.Font.GothamBold
+modeTitle.Size, modeTitle.Position, modeTitle.BackgroundTransparency, modeTitle.Text, modeTitle.TextColor3, modeTitle.TextSize, modeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🛠️ Action Mode", Color3.fromRGB(255, 150, 50), 11, Enum.Font.GothamBold
 
 local buildBtn = CreateUIBtn(modeSec, "Build", 0.05, 0.25)
 buildBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
@@ -1131,172 +753,72 @@ local paintBtn = CreateUIBtn(modeSec, "Paint", 0.65, 0.25)
 
 --// SMOOTH TERRAIN GUI SECTION
 local smoothSec = Instance.new("Frame", scroll)
-smoothSec.Size = UDim2.new(1, -8, 0, 80)
-smoothSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-smoothSec.BorderSizePixel = 0
+smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
 local smoothTitle = Instance.new("TextLabel", smoothSec)
-smoothTitle.Size = UDim2.new(1, 0, 0, 18)
-smoothTitle.Position = UDim2.new(0, 0, 0, 2)
-smoothTitle.BackgroundTransparency = 1
-smoothTitle.Text = "Smooth Terrain"
-smoothTitle.TextColor3 = Color3.fromRGB(255, 100, 200)
-smoothTitle.TextSize = 11
-smoothTitle.Font = Enum.Font.GothamBold
+smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
 local smoothToggleBtn = Instance.new("TextButton", smoothSec)
-smoothToggleBtn.Size = UDim2.new(0, 60, 0, 22)
-smoothToggleBtn.Position = UDim2.new(0, 6, 0, 25)
-smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-smoothToggleBtn.Text = "OFF"
-smoothToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-smoothToggleBtn.TextSize = 11
-smoothToggleBtn.Font = Enum.Font.GothamBold
+smoothToggleBtn.Size, smoothToggleBtn.Position, smoothToggleBtn.BackgroundColor3, smoothToggleBtn.Text, smoothToggleBtn.TextColor3, smoothToggleBtn.TextSize, smoothToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF ▼", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", smoothToggleBtn).CornerRadius = UDim.new(0, 4)
 
 local smoothModeBtn = Instance.new("TextButton", smoothSec)
-smoothModeBtn.Size = UDim2.new(0, 190, 0, 22)
-smoothModeBtn.Position = UDim2.new(0, 72, 0, 25)
-smoothModeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-smoothModeBtn.Text = SmoothModes[1]
-smoothModeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-smoothModeBtn.TextSize = 11
-smoothModeBtn.Font = Enum.Font.GothamBold
+smoothModeBtn.Size, smoothModeBtn.Position, smoothModeBtn.BackgroundColor3, smoothModeBtn.Text, smoothModeBtn.TextColor3, smoothModeBtn.TextSize, smoothModeBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), SmoothModes[1], Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", smoothModeBtn).CornerRadius = UDim.new(0, 4)
 
 local intL = Instance.new("TextLabel", smoothSec)
-intL.Size = UDim2.new(0, 45, 0, 20)
-intL.Position = UDim2.new(0, 6, 0, 53)
-intL.BackgroundTransparency = 1
-intL.Text = "Intens:"
-intL.TextColor3 = Color3.fromRGB(200, 200, 200)
-intL.TextSize = 11
-intL.Font = Enum.Font.GothamBold
+intL.Size, intL.Position, intL.BackgroundTransparency, intL.Text, intL.TextColor3, intL.TextSize, intL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Intens:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
 
 local intMinus = Instance.new("TextButton", smoothSec)
-intMinus.Size = UDim2.new(0, 22, 0, 20)
-intMinus.Position = UDim2.new(0, 53, 0, 53)
-intMinus.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-intMinus.Text = "-"
-intMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
-intMinus.TextSize = 14
-intMinus.Font = Enum.Font.GothamBold
+intMinus.Size, intMinus.Position, intMinus.BackgroundColor3, intMinus.Text, intMinus.TextColor3, intMinus.TextSize, intMinus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 53, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", intMinus).CornerRadius = UDim.new(0, 4)
 
 local intDisp = Instance.new("TextBox", smoothSec)
-intDisp.Size = UDim2.new(0, 28, 0, 20)
-intDisp.Position = UDim2.new(0, 77, 0, 53)
-intDisp.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-intDisp.Text = tostring(SmoothIntensity)
-intDisp.TextColor3 = Color3.fromRGB(255, 255, 255)
-intDisp.TextSize = 11
-intDisp.Font = Enum.Font.GothamBold
+intDisp.Size, intDisp.Position, intDisp.BackgroundColor3, intDisp.Text, intDisp.TextColor3, intDisp.TextSize, intDisp.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 77, 0, 53), Color3.fromRGB(40, 40, 50), tostring(SmoothIntensity), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 intDisp.ClearTextOnFocus = false
 Instance.new("UICorner", intDisp).CornerRadius = UDim.new(0, 4)
 
 local intPlus = Instance.new("TextButton", smoothSec)
-intPlus.Size = UDim2.new(0, 22, 0, 20)
-intPlus.Position = UDim2.new(0, 107, 0, 53)
-intPlus.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-intPlus.Text = "+"
-intPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
-intPlus.TextSize = 14
-intPlus.Font = Enum.Font.GothamBold
+intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 107, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", intPlus).CornerRadius = UDim.new(0, 4)
 
 local heightL = Instance.new("TextLabel", smoothSec)
-heightL.Size = UDim2.new(0, 45, 0, 20)
-heightL.Position = UDim2.new(0, 135, 0, 53)
-heightL.BackgroundTransparency = 1
-heightL.Text = "Tinggi:"
-heightL.TextColor3 = Color3.fromRGB(255, 100, 200)
-heightL.TextSize = 11
-heightL.Font = Enum.Font.GothamBold
+heightL.Size, heightL.Position, heightL.BackgroundTransparency, heightL.Text, heightL.TextColor3, heightL.TextSize, heightL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 135, 0, 53), 1, "Tinggi:", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
 local heightMinus = Instance.new("TextButton", smoothSec)
-heightMinus.Size = UDim2.new(0, 22, 0, 20)
-heightMinus.Position = UDim2.new(0, 182, 0, 53)
-heightMinus.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-heightMinus.Text = "-"
-heightMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
-heightMinus.TextSize = 14
-heightMinus.Font = Enum.Font.GothamBold
+heightMinus.Size, heightMinus.Position, heightMinus.BackgroundColor3, heightMinus.Text, heightMinus.TextColor3, heightMinus.TextSize, heightMinus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 182, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", heightMinus).CornerRadius = UDim.new(0, 4)
 
 local heightDisp = Instance.new("TextBox", smoothSec)
-heightDisp.Size = UDim2.new(0, 28, 0, 20)
-heightDisp.Position = UDim2.new(0, 206, 0, 53)
-heightDisp.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-heightDisp.Text = tostring(SmoothHeight)
-heightDisp.TextColor3 = Color3.fromRGB(255, 255, 255)
-heightDisp.TextSize = 11
-heightDisp.Font = Enum.Font.GothamBold
+heightDisp.Size, heightDisp.Position, heightDisp.BackgroundColor3, heightDisp.Text, heightDisp.TextColor3, heightDisp.TextSize, heightDisp.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 206, 0, 53), Color3.fromRGB(40, 40, 50), tostring(SmoothHeight), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 heightDisp.ClearTextOnFocus = false
 Instance.new("UICorner", heightDisp).CornerRadius = UDim.new(0, 4)
 
 local heightPlus = Instance.new("TextButton", smoothSec)
-heightPlus.Size = UDim2.new(0, 22, 0, 20)
-heightPlus.Position = UDim2.new(0, 236, 0, 53)
-heightPlus.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-heightPlus.Text = "+"
-heightPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
-heightPlus.TextSize = 14
-heightPlus.Font = Enum.Font.GothamBold
+heightPlus.Size, heightPlus.Position, heightPlus.BackgroundColor3, heightPlus.Text, heightPlus.TextColor3, heightPlus.TextSize, heightPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 236, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", heightPlus).CornerRadius = UDim.new(0, 4)
 
 --// SNAP TO GRID
 local snapSec = Instance.new("Frame", scroll)
-snapSec.Size = UDim2.new(1, -8, 0, 105)
-snapSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-snapSec.BorderSizePixel = 0
+snapSec.Size, snapSec.BackgroundColor3, snapSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", snapSec).CornerRadius = UDim.new(0, 8)
 local snapTitle = Instance.new("TextLabel", snapSec)
-snapTitle.Size = UDim2.new(1, 0, 0, 18)
-snapTitle.Position = UDim2.new(0, 0, 0, 2)
-snapTitle.BackgroundTransparency = 1
-snapTitle.Text = "Snap to Grid"
-snapTitle.TextColor3 = Color3.fromRGB(255, 255, 100)
-snapTitle.TextSize = 11
-snapTitle.Font = Enum.Font.GothamBold
+snapTitle.Size, snapTitle.Position, snapTitle.BackgroundTransparency, snapTitle.Text, snapTitle.TextColor3, snapTitle.TextSize, snapTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📐 Snap to Grid", Color3.fromRGB(255, 255, 100), 11, Enum.Font.GothamBold
 
 local snapToggleBtn = Instance.new("TextButton", snapSec)
-snapToggleBtn.Size = UDim2.new(0, 60, 0, 22)
-snapToggleBtn.Position = UDim2.new(0, 6, 0, 25)
-snapToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-snapToggleBtn.Text = "OFF"
-snapToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-snapToggleBtn.TextSize = 11
-snapToggleBtn.Font = Enum.Font.GothamBold
+snapToggleBtn.Size, snapToggleBtn.Position, snapToggleBtn.BackgroundColor3, snapToggleBtn.Text, snapToggleBtn.TextColor3, snapToggleBtn.TextSize, snapToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", snapToggleBtn).CornerRadius = UDim.new(0, 4)
 
 local visualBtn = Instance.new("TextButton", snapSec)
-visualBtn.Size = UDim2.new(0, 190, 0, 22)
-visualBtn.Position = UDim2.new(0, 72, 0, 25)
-visualBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-visualBtn.Text = "Visual Guide: OFF"
-visualBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-visualBtn.TextSize = 11
-visualBtn.Font = Enum.Font.GothamBold
+visualBtn.Size, visualBtn.Position, visualBtn.BackgroundColor3, visualBtn.Text, visualBtn.TextColor3, visualBtn.TextSize, visualBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), "Visual Guide: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", visualBtn).CornerRadius = UDim.new(0, 4)
 
 local gridSizeL = Instance.new("TextLabel", snapSec)
-gridSizeL.Size = UDim2.new(0, 60, 0, 20)
-gridSizeL.Position = UDim2.new(0, 6, 0, 53)
-gridSizeL.BackgroundTransparency = 1
-gridSizeL.Text = "Grid Size:"
-gridSizeL.TextColor3 = Color3.fromRGB(200, 200, 200)
-gridSizeL.TextSize = 11
-gridSizeL.Font = Enum.Font.GothamBold
+gridSizeL.Size, gridSizeL.Position, gridSizeL.BackgroundTransparency, gridSizeL.Text, gridSizeL.TextColor3, gridSizeL.TextSize, gridSizeL.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Grid Size:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
 
 local function CreateSnapPreset(x, val)
     local b = Instance.new("TextButton", snapSec)
-    b.Size = UDim2.new(0, 25, 0, 20)
-    b.Position = UDim2.new(0, x, 0, 53)
-    b.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-    b.Text = tostring(val)
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.TextSize = 10
-    b.Font = Enum.Font.GothamBold
+    b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, x, 0, 53), Color3.fromRGB(80, 80, 100), tostring(val), Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
     return b
 end
@@ -1307,23 +829,11 @@ local sPreset50 = CreateSnapPreset(156, 50)
 sPreset10.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
 
 local snapAxisL = Instance.new("TextLabel", snapSec)
-snapAxisL.Size = UDim2.new(0, 60, 0, 20)
-snapAxisL.Position = UDim2.new(0, 6, 0, 78)
-snapAxisL.BackgroundTransparency = 1
-snapAxisL.Text = "Axis:"
-snapAxisL.TextColor3 = Color3.fromRGB(200, 200, 200)
-snapAxisL.TextSize = 11
-snapAxisL.Font = Enum.Font.GothamBold
+snapAxisL.Size, snapAxisL.Position, snapAxisL.BackgroundTransparency, snapAxisL.Text, snapAxisL.TextColor3, snapAxisL.TextSize, snapAxisL.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 6, 0, 78), 1, "Axis:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
 
 local function CreateAxisToggle(x, axisStr, isEnabled)
     local b = Instance.new("TextButton", snapSec)
-    b.Size = UDim2.new(0, 25, 0, 20)
-    b.Position = UDim2.new(0, x, 0, 78)
-    b.BackgroundColor3 = isEnabled and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(200, 60, 60)
-    b.Text = axisStr
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.TextSize = 11
-    b.Font = Enum.Font.GothamBold
+    b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, x, 0, 78), isEnabled and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(200, 60, 60), axisStr, Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
     return b
 end
@@ -1333,56 +843,23 @@ local axisZBtn = CreateAxisToggle(128, "Z", SnapAxis.Z)
 
 --// SIZE SECTION
 local sizeSec = Instance.new("Frame", scroll)
-sizeSec.Size = UDim2.new(1, -8, 0, 105)
-sizeSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-sizeSec.BorderSizePixel = 0
+sizeSec.Size, sizeSec.BackgroundColor3, sizeSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", sizeSec).CornerRadius = UDim.new(0, 8)
 
 local sizeTitle = Instance.new("TextLabel", sizeSec)
-sizeTitle.Size = UDim2.new(1, 0, 0, 18)
-sizeTitle.Position = UDim2.new(0, 0, 0, 2)
-sizeTitle.BackgroundTransparency = 1
-sizeTitle.Text = "Size Custom"
-sizeTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-sizeTitle.TextSize = 11
-sizeTitle.Font = Enum.Font.GothamBold
+sizeTitle.Size, sizeTitle.Position, sizeTitle.BackgroundTransparency, sizeTitle.Text, sizeTitle.TextColor3, sizeTitle.TextSize, sizeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📐 Size Custom", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
 
 local function CreateSizeRow(yPos, labelStr, color, initialVal)
     local l = Instance.new("TextLabel", sizeSec)
-    l.Size = UDim2.new(0, 18, 0, 20)
-    l.Position = UDim2.new(0, 6, 0, yPos)
-    l.BackgroundTransparency = 1
-    l.Text = labelStr
-    l.TextColor3 = color
-    l.TextSize = 11
-    l.Font = Enum.Font.GothamBold
+    l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
     local m = Instance.new("TextButton", sizeSec)
-    m.Size = UDim2.new(0, 25, 0, 20)
-    m.Position = UDim2.new(0, 24, 0, yPos)
-    m.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    m.Text = "-"
-    m.TextColor3 = Color3.fromRGB(255, 255, 255)
-    m.TextSize = 14
-    m.Font = Enum.Font.GothamBold
+    m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 24, 0, yPos), Color3.fromRGB(200, 60, 60), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
     Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
     local v = Instance.new("TextBox", sizeSec)
-    v.Size = UDim2.new(0, 36, 0, 20)
-    v.Position = UDim2.new(0, 52, 0, yPos)
-    v.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-    v.Text = tostring(initialVal)
-    v.TextColor3 = Color3.fromRGB(255, 255, 255)
-    v.TextSize = 11
-    v.Font = Enum.Font.GothamBold
-    v.ClearTextOnFocus = false
+    v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font, v.ClearTextOnFocus = UDim2.new(0, 36, 0, 20), UDim2.new(0, 52, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold, false
     Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
     local p = Instance.new("TextButton", sizeSec)
-    p.Size = UDim2.new(0, 25, 0, 20)
-    p.Position = UDim2.new(0, 91, 0, yPos)
-    p.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    p.Text = "+"
-    p.TextColor3 = Color3.fromRGB(255, 255, 255)
-    p.TextSize = 14
-    p.Font = Enum.Font.GothamBold
+    p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 91, 0, yPos), Color3.fromRGB(0, 150, 100), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
     Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
     return m, v, p
 end
@@ -1393,13 +870,7 @@ local zMinus, zValue, zPlus = CreateSizeRow(71, "Z:", Color3.fromRGB(100, 100, 2
 
 local function CreatePresetBtn(x, y, val)
     local b = Instance.new("TextButton", sizeSec)
-    b.Size = UDim2.new(0, 25, 0, 20)
-    b.Position = UDim2.new(0, x, 0, y)
-    b.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-    b.Text = tostring(val)
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.TextSize = 9
-    b.Font = Enum.Font.GothamBold
+    b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, x, 0, y), Color3.fromRGB(80, 80, 100), tostring(val), Color3.fromRGB(255, 255, 255), 9, Enum.Font.GothamBold
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
     return b
 end
@@ -1420,64 +891,26 @@ local preset90 = CreatePresetBtn(234, 48, 90)
 local preset100 = CreatePresetBtn(122, 71, 100)
 
 local sizeMaxTxt = Instance.new("TextLabel", sizeSec)
-sizeMaxTxt.Size = UDim2.new(0, 60, 0, 20)
-sizeMaxTxt.Position = UDim2.new(0, 150, 0, 71)
-sizeMaxTxt.BackgroundTransparency = 1
-sizeMaxTxt.Text = "(Max 500)"
-sizeMaxTxt.TextColor3 = Color3.fromRGB(0, 200, 255)
-sizeMaxTxt.TextSize = 10
-sizeMaxTxt.Font = Enum.Font.GothamBold
+sizeMaxTxt.Size, sizeMaxTxt.Position, sizeMaxTxt.BackgroundTransparency, sizeMaxTxt.Text, sizeMaxTxt.TextColor3, sizeMaxTxt.TextSize, sizeMaxTxt.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 150, 0, 71), 1, "(Max 500)", Color3.fromRGB(0, 200, 255), 10, Enum.Font.GothamBold
 
 --// ROTATION SECTION
 local rotSec = Instance.new("Frame", scroll)
-rotSec.Size = UDim2.new(1, -8, 0, 105)
-rotSec.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-rotSec.BorderSizePixel = 0
+rotSec.Size, rotSec.BackgroundColor3, rotSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", rotSec).CornerRadius = UDim.new(0, 8)
 local rotTitle = Instance.new("TextLabel", rotSec)
-rotTitle.Size = UDim2.new(1, 0, 0, 18)
-rotTitle.Position = UDim2.new(0, 0, 0, 2)
-rotTitle.BackgroundTransparency = 1
-rotTitle.Text = "Rotation (X-Y-Z)"
-rotTitle.TextColor3 = Color3.fromRGB(255, 180, 0)
-rotTitle.TextSize = 11
-rotTitle.Font = Enum.Font.GothamBold
+rotTitle.Size, rotTitle.Position, rotTitle.BackgroundTransparency, rotTitle.Text, rotTitle.TextColor3, rotTitle.TextSize, rotTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔄 Rotation (X-Y-Z)", Color3.fromRGB(255, 180, 0), 11, Enum.Font.GothamBold
 
 local function CreateRotRow(yPos, labelStr, color, initialVal)
     local l = Instance.new("TextLabel", rotSec)
-    l.Size = UDim2.new(0, 18, 0, 20)
-    l.Position = UDim2.new(0, 6, 0, yPos)
-    l.BackgroundTransparency = 1
-    l.Text = labelStr
-    l.TextColor3 = color
-    l.TextSize = 11
-    l.Font = Enum.Font.GothamBold
+    l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
     local m = Instance.new("TextButton", rotSec)
-    m.Size = UDim2.new(0, 32, 0, 20)
-    m.Position = UDim2.new(0, 24, 0, yPos)
-    m.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    m.Text = "-15"
-    m.TextColor3 = Color3.fromRGB(255, 255, 255)
-    m.TextSize = 11
-    m.Font = Enum.Font.GothamBold
+    m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 24, 0, yPos), Color3.fromRGB(200, 60, 60), "-15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
     Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
     local v = Instance.new("TextLabel", rotSec)
-    v.Size = UDim2.new(0, 46, 0, 20)
-    v.Position = UDim2.new(0, 58, 0, yPos)
-    v.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-    v.Text = tostring(initialVal) .. "deg"
-    v.TextColor3 = Color3.fromRGB(255, 255, 255)
-    v.TextSize = 11
-    v.Font = Enum.Font.GothamBold
+    v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font = UDim2.new(0, 46, 0, 20), UDim2.new(0, 58, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal).."°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
     Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
     local p = Instance.new("TextButton", rotSec)
-    p.Size = UDim2.new(0, 32, 0, 20)
-    p.Position = UDim2.new(0, 106, 0, yPos)
-    p.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    p.Text = "+15"
-    p.TextColor3 = Color3.fromRGB(255, 255, 255)
-    p.TextSize = 11
-    p.Font = Enum.Font.GothamBold
+    p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 106, 0, yPos), Color3.fromRGB(0, 150, 100), "+15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
     Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
     return m, v, p
 end
@@ -1487,43 +920,22 @@ local ryMinus, ryValue, ryPlus = CreateRotRow(48, "Y:", Color3.fromRGB(100, 255,
 local rzMinus, rzValue, rzPlus = CreateRotRow(71, "Z:", Color3.fromRGB(100, 100, 255), RotZ)
 
 local rotResetBtn = Instance.new("TextButton", rotSec)
-rotResetBtn.Size = UDim2.new(0, 60, 0, 20)
-rotResetBtn.Position = UDim2.new(0, 150, 0, 48)
-rotResetBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
-rotResetBtn.Text = "Reset 0"
-rotResetBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-rotResetBtn.TextSize = 11
-rotResetBtn.Font = Enum.Font.GothamBold
+rotResetBtn.Size, rotResetBtn.Position, rotResetBtn.BackgroundColor3, rotResetBtn.Text, rotResetBtn.TextColor3, rotResetBtn.TextSize, rotResetBtn.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 150, 0, 48), Color3.fromRGB(150, 150, 150), "Reset 0°", Color3.fromRGB(0, 0, 0), 11, Enum.Font.GothamBold
 Instance.new("UICorner", rotResetBtn).CornerRadius = UDim.new(0, 4)
 
 local scriptBtn = Instance.new("TextButton", scroll)
-scriptBtn.Size = UDim2.new(1, -8, 0, 32)
-scriptBtn.BackgroundColor3 = Color3.fromRGB(120, 80, 200)
-scriptBtn.Text = "Get Script Code"
-scriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-scriptBtn.TextSize = 11
-scriptBtn.Font = Enum.Font.GothamBold
+scriptBtn.Size, scriptBtn.BackgroundColor3, scriptBtn.Text, scriptBtn.TextColor3, scriptBtn.TextSize, scriptBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(120, 80, 200), "📋 Get Script Code", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", scriptBtn).CornerRadius = UDim.new(0, 8)
 
 local clearBtn = Instance.new("TextButton", scroll)
-clearBtn.Size = UDim2.new(1, -8, 0, 32)
-clearBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-clearBtn.Text = "Clear All"
-clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-clearBtn.TextSize = 11
-clearBtn.Font = Enum.Font.GothamBold
+clearBtn.Size, clearBtn.BackgroundColor3, clearBtn.Text, clearBtn.TextColor3, clearBtn.TextSize, clearBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(180, 60, 60), "🗑️ Clear All", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 8)
 
 --// SCRIPT EXPORT OPTIONS WINDOW
 local exportWin = Instance.new("Frame", gui)
-exportWin.Name = "ExportWindow"
-exportWin.Size = UDim2.new(0, 220, 0, 160)
-exportWin.Position = UDim2.new(0.5, -110, 0.5, -80)
-exportWin.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-exportWin.BorderSizePixel = 0
-exportWin.Visible = false
-exportWin.Active = true
-exportWin.Draggable = true
+exportWin.Name, exportWin.Size, exportWin.Position = "ExportWindow", UDim2.new(0, 220, 0, 160), UDim2.new(0.5, -110, 0.5, -80)
+exportWin.BackgroundColor3, exportWin.BorderSizePixel = Color3.fromRGB(25, 25, 35), 0
+exportWin.Visible, exportWin.Active, exportWin.Draggable = false, true, true
 Instance.new("UICorner", exportWin).CornerRadius = UDim.new(0, 12)
 
 local expStroke = Instance.new("UIStroke", exportWin)
@@ -1532,63 +944,34 @@ expStroke.Thickness = 2
 expStroke.Transparency = 0.3
 
 local expTitle = Instance.new("Frame", exportWin)
-expTitle.Size = UDim2.new(1, 0, 0, 30)
-expTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-expTitle.BorderSizePixel = 0
+expTitle.Size, expTitle.BackgroundColor3, expTitle.BorderSizePixel = UDim2.new(1, 0, 0, 30), Color3.fromRGB(40, 40, 55), 0
 Instance.new("UICorner", expTitle).CornerRadius = UDim.new(0, 12)
 local expTitleTxt = Instance.new("TextLabel", expTitle)
-expTitleTxt.Size = UDim2.new(1, -40, 1, 0)
-expTitleTxt.Position = UDim2.new(0, 10, 0, 0)
-expTitleTxt.BackgroundTransparency = 1
-expTitleTxt.Text = "GET SCRIPT CODE"
-expTitleTxt.TextColor3 = Color3.fromRGB(0, 255, 255)
-expTitleTxt.TextSize = 12
-expTitleTxt.Font = Enum.Font.GothamBold
-expTitleTxt.TextXAlignment = Enum.TextXAlignment.Left
+expTitleTxt.Size, expTitleTxt.Position, expTitleTxt.BackgroundTransparency, expTitleTxt.Text, expTitleTxt.TextColor3, expTitleTxt.TextSize, expTitleTxt.Font, expTitleTxt.TextXAlignment = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0), 1, "GET SCRIPT CODE", Color3.fromRGB(0, 255, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local expCloseBtn = Instance.new("TextButton", expTitle)
-expCloseBtn.Size = UDim2.new(0, 24, 0, 24)
-expCloseBtn.Position = UDim2.new(1, -28, 0.5, -12)
-expCloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-expCloseBtn.Text = "X"
-expCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-expCloseBtn.TextSize = 12
-expCloseBtn.Font = Enum.Font.GothamBold
+expCloseBtn.Size, expCloseBtn.Position, expCloseBtn.BackgroundColor3, expCloseBtn.Text, expCloseBtn.TextColor3, expCloseBtn.TextSize, expCloseBtn.Font = UDim2.new(0, 24, 0, 24), UDim2.new(1, -28, 0.5, -12), Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold
 Instance.new("UICorner", expCloseBtn).CornerRadius = UDim.new(0, 6)
 
 local expMode = "Tidak"
 
 local btnTidak = Instance.new("TextButton", exportWin)
-btnTidak.Size = UDim2.new(1, -20, 0, 30)
-btnTidak.Position = UDim2.new(0, 10, 0, 40)
-btnTidak.BackgroundTransparency = 1
-btnTidak.Text = "* Tidak"
-btnTidak.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnTidak.TextSize = 12
-btnTidak.Font = Enum.Font.GothamBold
-btnTidak.TextXAlignment = Enum.TextXAlignment.Left
+btnTidak.Size, btnTidak.Position, btnTidak.BackgroundTransparency, btnTidak.Text, btnTidak.TextColor3, btnTidak.TextSize, btnTidak.Font, btnTidak.TextXAlignment = UDim2.new(1, -20, 0, 30), UDim2.new(0, 10, 0, 40), 1, "● Tidak", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local btnConvert = Instance.new("TextButton", exportWin)
-btnConvert.Size = UDim2.new(1, -20, 0, 30)
-btnConvert.Position = UDim2.new(0, 10, 0, 75)
-btnConvert.BackgroundTransparency = 1
-btnConvert.Text = "o Convert Part"
-btnConvert.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnConvert.TextSize = 12
-btnConvert.Font = Enum.Font.GothamBold
-btnConvert.TextXAlignment = Enum.TextXAlignment.Left
+btnConvert.Size, btnConvert.Position, btnConvert.BackgroundTransparency, btnConvert.Text, btnConvert.TextColor3, btnConvert.TextSize, btnConvert.Font, btnConvert.TextXAlignment = UDim2.new(1, -20, 0, 30), UDim2.new(0, 10, 0, 75), 1, "○ Convert Part", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local function UpdateExpMode(mode)
     expMode = mode
     if mode == "Tidak" then
-        btnTidak.Text = "* Tidak"
+        btnTidak.Text = "● Tidak"
         btnTidak.TextColor3 = Color3.fromRGB(0, 255, 255)
-        btnConvert.Text = "o Convert Part"
+        btnConvert.Text = "○ Convert Part"
         btnConvert.TextColor3 = Color3.fromRGB(200, 200, 200)
     else
-        btnTidak.Text = "o Tidak"
+        btnTidak.Text = "○ Tidak"
         btnTidak.TextColor3 = Color3.fromRGB(200, 200, 200)
-        btnConvert.Text = "* Convert Part"
+        btnConvert.Text = "● Convert Part"
         btnConvert.TextColor3 = Color3.fromRGB(0, 255, 255)
     end
 end
@@ -1598,96 +981,43 @@ btnConvert.MouseButton1Click:Connect(function() UpdateExpMode("Convert Part") en
 expCloseBtn.MouseButton1Click:Connect(function() exportWin.Visible = false end)
 
 local generateFinalBtn = Instance.new("TextButton", exportWin)
-generateFinalBtn.Size = UDim2.new(1, -20, 0, 35)
-generateFinalBtn.Position = UDim2.new(0, 10, 1, -45)
-generateFinalBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-generateFinalBtn.Text = "[ GENERATE ]"
-generateFinalBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-generateFinalBtn.TextSize = 14
-generateFinalBtn.Font = Enum.Font.GothamBlack
+generateFinalBtn.Size, generateFinalBtn.Position, generateFinalBtn.BackgroundColor3, generateFinalBtn.Text, generateFinalBtn.TextColor3, generateFinalBtn.TextSize, generateFinalBtn.Font = UDim2.new(1, -20, 0, 35), UDim2.new(0, 10, 1, -45), Color3.fromRGB(0, 150, 255), "[ GENERATE ]", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBlack
 Instance.new("UICorner", generateFinalBtn).CornerRadius = UDim.new(0, 6)
 
 --// SCRIPT WINDOW
 local scriptWin = Instance.new("Frame", gui)
-scriptWin.Name = "ScriptWindow"
-scriptWin.Size = UDim2.new(0, 400, 0, 350)
-scriptWin.Position = UDim2.new(0.5, -200, 0.5, -175)
-scriptWin.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-scriptWin.BorderSizePixel = 0
-scriptWin.Visible = false
-scriptWin.Active = true
-scriptWin.Draggable = true
+scriptWin.Name, scriptWin.Size, scriptWin.Position, scriptWin.BackgroundColor3, scriptWin.BorderSizePixel, scriptWin.Visible, scriptWin.Active, scriptWin.Draggable = "ScriptWindow", UDim2.new(0, 400, 0, 350), UDim2.new(0.5, -200, 0.5, -175), Color3.fromRGB(30, 30, 35), 0, false, true, true
 Instance.new("UICorner", scriptWin).CornerRadius = UDim.new(0, 12)
 
 local scriptTitle = Instance.new("Frame", scriptWin)
-scriptTitle.Size = UDim2.new(1, 0, 0, 40)
-scriptTitle.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-scriptTitle.BorderSizePixel = 0
+scriptTitle.Size, scriptTitle.BackgroundColor3, scriptTitle.BorderSizePixel = UDim2.new(1, 0, 0, 40), Color3.fromRGB(45, 45, 55), 0
 Instance.new("UICorner", scriptTitle).CornerRadius = UDim.new(0, 12)
 local scriptTitleText = Instance.new("TextLabel", scriptTitle)
-scriptTitleText.Size = UDim2.new(1, -110, 1, 0)
-scriptTitleText.Position = UDim2.new(0, 12, 0, 0)
-scriptTitleText.BackgroundTransparency = 1
-scriptTitleText.Text = "Generated Script"
-scriptTitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-scriptTitleText.TextSize = 14
-scriptTitleText.Font = Enum.Font.GothamBold
-scriptTitleText.TextXAlignment = Enum.TextXAlignment.Left
+scriptTitleText.Size, scriptTitleText.Position, scriptTitleText.BackgroundTransparency, scriptTitleText.Text, scriptTitleText.TextColor3, scriptTitleText.TextSize, scriptTitleText.Font, scriptTitleText.TextXAlignment = UDim2.new(1, -110, 1, 0), UDim2.new(0, 12, 0, 0), 1, "📋 Generated Script", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local copyBtn = Instance.new("TextButton", scriptTitle)
-copyBtn.Size = UDim2.new(0, 60, 0, 30)
-copyBtn.Position = UDim2.new(1, -130, 0.5, -15)
-copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-copyBtn.Text = "Copy"
-copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyBtn.TextSize = 12
-copyBtn.Font = Enum.Font.GothamBold
+copyBtn.Size, copyBtn.Position, copyBtn.BackgroundColor3, copyBtn.Text, copyBtn.TextColor3, copyBtn.TextSize, copyBtn.Font = UDim2.new(0, 60, 0, 30), UDim2.new(1, -130, 0.5, -15), Color3.fromRGB(0, 150, 100), "Copy", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold
 Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 6)
 
 local closeScriptBtn = Instance.new("TextButton", scriptTitle)
-closeScriptBtn.Size = UDim2.new(0, 30, 0, 30)
-closeScriptBtn.Position = UDim2.new(1, -40, 0.5, -15)
-closeScriptBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-closeScriptBtn.Text = "X"
-closeScriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeScriptBtn.TextSize = 14
-closeScriptBtn.Font = Enum.Font.GothamBold
+closeScriptBtn.Size, closeScriptBtn.Position, closeScriptBtn.BackgroundColor3, closeScriptBtn.Text, closeScriptBtn.TextColor3, closeScriptBtn.TextSize, closeScriptBtn.Font = UDim2.new(0, 30, 0, 30), UDim2.new(1, -40, 0.5, -15), Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
 Instance.new("UICorner", closeScriptBtn).CornerRadius = UDim.new(0, 6)
 
 local codeScroll = Instance.new("ScrollingFrame", scriptWin)
-codeScroll.Size = UDim2.new(1, -16, 1, -100)
-codeScroll.Position = UDim2.new(0, 8, 0, 48)
-codeScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-codeScroll.BorderSizePixel = 0
-codeScroll.ScrollBarThickness = 5
+codeScroll.Size, codeScroll.Position, codeScroll.BackgroundColor3, codeScroll.BorderSizePixel, codeScroll.ScrollBarThickness = UDim2.new(1, -16, 1, -100), UDim2.new(0, 8, 0, 48), Color3.fromRGB(20, 20, 25), 0, 5
 Instance.new("UICorner", codeScroll).CornerRadius = UDim.new(0, 6)
 local codeText = Instance.new("TextLabel", codeScroll)
-codeText.Size = UDim2.new(1, -12, 0, 0)
-codeText.Position = UDim2.new(0, 6, 0, 6)
-codeText.BackgroundTransparency = 1
-codeText.Text = "-- No terrain spawned yet --"
-codeText.TextColor3 = Color3.fromRGB(200, 200, 200)
-codeText.TextSize = 11
-codeText.Font = Enum.Font.Code
-codeText.TextXAlignment = Enum.TextXAlignment.Left
-codeText.TextYAlignment = Enum.TextYAlignment.Top
-codeText.AutomaticSize = Enum.AutomaticSize.Y
-codeText.TextWrapped = true
+codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text, codeText.TextColor3, codeText.TextSize, codeText.Font, codeText.TextXAlignment, codeText.TextYAlignment, codeText.AutomaticSize, codeText.TextWrapped = UDim2.new(1, -12, 0, 0), UDim2.new(0, 6, 0, 6), 1, "-- No terrain spawned yet --", Color3.fromRGB(200, 200, 200), 11, Enum.Font.Code, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top, Enum.AutomaticSize.Y, true
 
 --// EVENT CONNECTIONS
 
 local function HideAllGui()
-    panel.Visible = false
-    matIconBtn.Visible = false
-    openPanelBtn.Visible = false
-    matWin.Visible = false
+    panel.Visible, matIconBtn.Visible, openPanelBtn.Visible, matWin.Visible = false, false, false, false
     unhideBtn.Visible = true
 end
 
 local function ShowAllGui()
-    panel.Visible = false
-    matIconBtn.Visible = true
-    openPanelBtn.Visible = true 
+    panel.Visible, matIconBtn.Visible, openPanelBtn.Visible = false, true, true 
     unhideBtn.Visible = false
 end
 
@@ -1697,7 +1027,7 @@ unhideBtn.MouseButton1Click:Connect(ShowAllGui)
 openPanelBtn.MouseButton1Click:Connect(function() openPanelBtn.Visible = false; panel.Visible = true end)
 
 
---// FIX COLOR UPDATER
+--// FIX COLOR UPDATER (Menghindari bug pass-by-reference)
 local function UpdateColor(type, direction)
     if type == "Grass" then
         currentGrassColorIndex = currentGrassColorIndex + direction
@@ -1742,6 +1072,43 @@ ghostToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Offset Toggle Events (BARU)
+offsetToggleBtn.MouseButton1Click:Connect(function()
+    PreviewOffsetEnabled = not PreviewOffsetEnabled
+    if PreviewOffsetEnabled then
+        offsetToggleBtn.Text = "ON 🔼"
+        offsetToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    else
+        offsetToggleBtn.Text = "OFF ▼"
+        offsetToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    end
+    UpdatePreview()
+end)
+
+local function handleOffsetInput()
+    local val = tonumber(offsetDisp.Text)
+    if val then
+        PreviewOffsetY = val
+        offsetDisp.Text = tostring(PreviewOffsetY)
+        UpdatePreview()
+    else
+        offsetDisp.Text = tostring(PreviewOffsetY)
+    end
+end
+offsetDisp.FocusLost:Connect(handleOffsetInput)
+
+offsetMinus.MouseButton1Click:Connect(function()
+    PreviewOffsetY = PreviewOffsetY - 1
+    offsetDisp.Text = tostring(PreviewOffsetY)
+    UpdatePreview()
+end)
+
+offsetPlus.MouseButton1Click:Connect(function()
+    PreviewOffsetY = PreviewOffsetY + 1
+    offsetDisp.Text = tostring(PreviewOffsetY)
+    UpdatePreview()
+end)
+
 local function SelectShape(shapeName, selectedBtn)
     CurrentShape = shapeName
     ballBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
@@ -1769,19 +1136,15 @@ paintBtn.MouseButton1Click:Connect(function() SelectMode("Paint", paintBtn) end)
 smoothToggleBtn.MouseButton1Click:Connect(function()
     SmoothEnabled = not SmoothEnabled
     if SmoothEnabled then
-        smoothToggleBtn.Text = "ON"
+        smoothToggleBtn.Text = "ON ✨"
         smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
     else
-        smoothToggleBtn.Text = "OFF"
+        smoothToggleBtn.Text = "OFF ▼"
         smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
     end
 end)
 
-smoothModeBtn.MouseButton1Click:Connect(function()
-    CurrentSmoothModeIndex = CurrentSmoothModeIndex + 1
-    if CurrentSmoothModeIndex > #SmoothModes then CurrentSmoothModeIndex = 1 end
-    smoothModeBtn.Text = SmoothModes[CurrentSmoothModeIndex]
-end)
+smoothModeBtn.MouseButton1Click:Connect(function() CurrentSmoothModeIndex = CurrentSmoothModeIndex + 1; if CurrentSmoothModeIndex > #SmoothModes then CurrentSmoothModeIndex = 1 end; smoothModeBtn.Text = SmoothModes[CurrentSmoothModeIndex] end)
 
 local function handleIntInput()
     local val = tonumber(intDisp.Text)
@@ -1809,38 +1172,23 @@ heightPlus.MouseButton1Click:Connect(function() SmoothHeight = math.min(100, Smo
 
 snapToggleBtn.MouseButton1Click:Connect(function()
     SnapEnabled = not SnapEnabled
-    if SnapEnabled then
-        snapToggleBtn.Text = "ON"
-        snapToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    else
-        snapToggleBtn.Text = "OFF"
-        snapToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    end
-    UpdatePreview()
-    UpdateGridVisual()
+    if SnapEnabled then snapToggleBtn.Text = "ON ☑️"; snapToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    else snapToggleBtn.Text = "OFF"; snapToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end
+    UpdatePreview(); UpdateGridVisual()
 end)
 
 visualBtn.MouseButton1Click:Connect(function()
     ShowGridVisual = not ShowGridVisual
-    if ShowGridVisual then
-        visualBtn.Text = "Visual Guide: ON"
-        visualBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    else
-        visualBtn.Text = "Visual Guide: OFF"
-        visualBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-    end
+    if ShowGridVisual then visualBtn.Text = "Visual Guide: ON"; visualBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    else visualBtn.Text = "Visual Guide: OFF"; visualBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75) end
     UpdateGridVisual()
 end)
 
 local function SetGridSize(size, btn)
     GridSize = size
-    sPreset5.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-    sPreset10.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-    sPreset20.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
-    sPreset50.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
+    sPreset5.BackgroundColor3 = Color3.fromRGB(80, 80, 100); sPreset10.BackgroundColor3 = Color3.fromRGB(80, 80, 100); sPreset20.BackgroundColor3 = Color3.fromRGB(80, 80, 100); sPreset50.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
     btn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
-    UpdatePreview()
-    UpdateGridVisual()
+    UpdatePreview(); UpdateGridVisual()
 end
 sPreset5.MouseButton1Click:Connect(function() SetGridSize(5, sPreset5) end)
 sPreset10.MouseButton1Click:Connect(function() SetGridSize(10, sPreset10) end)
@@ -1849,11 +1197,7 @@ sPreset50.MouseButton1Click:Connect(function() SetGridSize(50, sPreset50) end)
 
 local function ToggleAxis(axisKey, btn)
     SnapAxis[axisKey] = not SnapAxis[axisKey]
-    if SnapAxis[axisKey] then
-        btn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    else
-        btn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    end
+    if SnapAxis[axisKey] then btn.BackgroundColor3 = Color3.fromRGB(0, 150, 100) else btn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end
     UpdatePreview()
 end
 axisXBtn.MouseButton1Click:Connect(function() ToggleAxis("X", axisXBtn) end)
@@ -1864,16 +1208,9 @@ local function handleSizeInput(box, type)
     local val = tonumber(box.Text)
     if val then
         local clamped = math.clamp(math.floor(val), 1, 500)
-        if type == "X" then
-            SizeX = clamped
-            box.Text = tostring(SizeX)
-        elseif type == "Y" then
-            SizeY = clamped
-            box.Text = tostring(SizeY)
-        elseif type == "Z" then
-            SizeZ = clamped
-            box.Text = tostring(SizeZ)
-        end
+        if type == "X" then SizeX = clamped; box.Text = tostring(SizeX)
+        elseif type == "Y" then SizeY = clamped; box.Text = tostring(SizeY)
+        elseif type == "Z" then SizeZ = clamped; box.Text = tostring(SizeZ) end
         UpdatePreview()
     end
 end
@@ -1888,15 +1225,7 @@ yPlus.MouseButton1Click:Connect(function() SizeY = math.min(500, SizeY + 1); yVa
 zMinus.MouseButton1Click:Connect(function() SizeZ = math.max(1, SizeZ - 1); zValue.Text = tostring(SizeZ); UpdatePreview() end)
 zPlus.MouseButton1Click:Connect(function() SizeZ = math.min(500, SizeZ + 1); zValue.Text = tostring(SizeZ); UpdatePreview() end)
 
-local function setPreset(size)
-    SizeX = size
-    SizeY = size
-    SizeZ = size
-    xValue.Text = tostring(SizeX)
-    yValue.Text = tostring(SizeY)
-    zValue.Text = tostring(SizeZ)
-    UpdatePreview()
-end
+local function setPreset(size) SizeX, SizeY, SizeZ = size, size, size; xValue.Text, yValue.Text, zValue.Text = tostring(SizeX), tostring(SizeY), tostring(SizeZ); UpdatePreview() end
 preset5.MouseButton1Click:Connect(function() setPreset(5) end)
 preset10.MouseButton1Click:Connect(function() setPreset(10) end)
 preset20.MouseButton1Click:Connect(function() setPreset(20) end)
@@ -1909,24 +1238,15 @@ preset80.MouseButton1Click:Connect(function() setPreset(80) end)
 preset90.MouseButton1Click:Connect(function() setPreset(90) end)
 preset100.MouseButton1Click:Connect(function() setPreset(100) end)
 
-rxMinus.MouseButton1Click:Connect(function() RotX = (RotX - 15) % 360; rxValue.Text = tostring(RotX) .. "deg"; UpdatePreview() end)
-rxPlus.MouseButton1Click:Connect(function() RotX = (RotX + 15) % 360; rxValue.Text = tostring(RotX) .. "deg"; UpdatePreview() end)
-ryMinus.MouseButton1Click:Connect(function() RotY = (RotY - 15) % 360; ryValue.Text = tostring(RotY) .. "deg"; UpdatePreview() end)
-ryPlus.MouseButton1Click:Connect(function() RotY = (RotY + 15) % 360; ryValue.Text = tostring(RotY) .. "deg"; UpdatePreview() end)
-rzMinus.MouseButton1Click:Connect(function() RotZ = (RotZ - 15) % 360; rzValue.Text = tostring(RotZ) .. "deg"; UpdatePreview() end)
-rzPlus.MouseButton1Click:Connect(function() RotZ = (RotZ + 15) % 360; rzValue.Text = tostring(RotZ) .. "deg"; UpdatePreview() end)
-rotResetBtn.MouseButton1Click:Connect(function() RotX = 0; RotY = 0; RotZ = 0; rxValue.Text = "0deg"; ryValue.Text = "0deg"; rzValue.Text = "0deg"; UpdatePreview() end)
+rxMinus.MouseButton1Click:Connect(function() RotX = (RotX - 15) % 360; rxValue.Text = tostring(RotX) .. "°"; UpdatePreview() end)
+rxPlus.MouseButton1Click:Connect(function() RotX = (RotX + 15) % 360; rxValue.Text = tostring(RotX) .. "°"; UpdatePreview() end)
+ryMinus.MouseButton1Click:Connect(function() RotY = (RotY - 15) % 360; ryValue.Text = tostring(RotY) .. "°"; UpdatePreview() end)
+ryPlus.MouseButton1Click:Connect(function() RotY = (RotY + 15) % 360; ryValue.Text = tostring(RotY) .. "°"; UpdatePreview() end)
+rzMinus.MouseButton1Click:Connect(function() RotZ = (RotZ - 15) % 360; rzValue.Text = tostring(RotZ) .. "°"; UpdatePreview() end)
+rzPlus.MouseButton1Click:Connect(function() RotZ = (RotZ + 15) % 360; rzValue.Text = tostring(RotZ) .. "°"; UpdatePreview() end)
+rotResetBtn.MouseButton1Click:Connect(function() RotX, RotY, RotZ = 0, 0, 0; rxValue.Text, ryValue.Text, rzValue.Text = "0°", "0°", "0°"; UpdatePreview() end)
 
-undoBtn.MouseButton1Click:Connect(function()
-    local success, msg = Undo()
-    if success then
-        status.Text = "Undone " .. msg .. " (" .. #SpawnedData .. ")"
-        status.TextColor3 = Color3.fromRGB(255, 200, 100)
-    else
-        status.Text = "Undone " .. msg
-        status.TextColor3 = Color3.fromRGB(255, 100, 100)
-    end
-end)
+undoBtn.MouseButton1Click:Connect(function() local success, msg = Undo(); status.Text = success and ("↩️ " .. msg .. " (" .. #SpawnedData .. ")") or ("↩️ " .. msg); status.TextColor3 = success and Color3.fromRGB(255, 200, 100) or Color3.fromRGB(255, 100, 100) end)
 
 closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
 
@@ -1952,7 +1272,7 @@ copyBtn.MouseButton1Click:Connect(function()
         if setclipboard then 
             setclipboard(codeText.Text)
         else
-            writefile("shhhhnayy05_Terrain_"..tostring(math.random(1000,9999))..".txt", codeText.Text)
+            writefile("Elbruzh_Terrain_"..tostring(math.random(1000,9999))..".txt", codeText.Text)
         end
     end)
     
@@ -1964,8 +1284,7 @@ copyBtn.MouseButton1Click:Connect(function()
         copyBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
     end
     
-    spawn(function()
-        wait(1.5)
+    delay(1.5, function() 
         copyBtn.Text = "Copy" 
         copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
     end) 
@@ -1973,10 +1292,8 @@ end)
 
 clearBtn.MouseButton1Click:Connect(function()
     while #UndoHistory > 0 do Undo() end
-    SpawnedData = {}
-    UndoHistory = {}
-    RedoHistory = {}
-    status.Text = "Session cleared!"
+    SpawnedData, UndoHistory, RedoHistory = {}, {}, {}
+    status.Text = "🗑️ Session cleared!"
     status.TextColor3 = Color3.fromRGB(255, 100, 100)
     UpdateSpawnCounter()
 end)
@@ -1984,26 +1301,23 @@ end)
 spawnBtn.MouseButton1Click:Connect(function()
     if PreviewPos then
         TweenService:Create(spawnBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 45, 0, 45)}):Play()
-        spawn(function()
-            wait(0.1)
-            TweenService:Create(spawnBtn, TweenInfo.new(0.2), {Size = UDim2.new(0, 50, 0, 50)}):Play()
-        end)
+        wait(0.1)
+        TweenService:Create(spawnBtn, TweenInfo.new(0.2), {Size = UDim2.new(0, 50, 0, 50)}):Play()
         
         local spawned = SpawnTerrain()
         if spawned then
-            status.Text = "Spawned! (" .. #SpawnedData .. ")"
+            status.Text = "✅ Spawned! (" .. #SpawnedData .. ")"
             status.TextColor3 = Color3.fromRGB(0, 255, 100)
         else
-            status.Text = "Failed!"
+            status.Text = "❌ Failed!"
             status.TextColor3 = Color3.fromRGB(255, 100, 100)
         end
     else
-        status.Text = "Aim at ground!"
+        status.Text = "❌ Aim at ground!"
         status.TextColor3 = Color3.fromRGB(255, 100, 100)
     end
 end)
 
---// MAIN PANEL DRAG
 local drag = false
 local startPos, startFrame
 titleBar.InputBegan:Connect(function(input)
@@ -2027,4 +1341,4 @@ RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("Terrain Editor v16.6 Loaded - Move Review Part Feature Added! (shhhhnayy05)")
+print("✅ Terrain Editor v16.5 Loaded - Clean Flat UI & Protected Mode Active! (Colors Fixed)")
