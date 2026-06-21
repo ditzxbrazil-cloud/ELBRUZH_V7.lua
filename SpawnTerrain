@@ -1,6 +1,6 @@
---// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.6 - FIXED ALL NIL CALLS
---// FIXED: SelectionBox.Transparency, Terrain:SetMaterialColor, Region3:ExpandToGrid, UICorner.CornerRadius
+--// TERRAIN BY shhhhnayy05 
+--// Terrain Editor v16.7 - ALL NIL CALLS FIXED
+--// FIXED: FillWedge (tidak valid), math.random(), Region3 size 0, Terrain:FillBlock rotation
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -160,8 +160,6 @@ local function CreatePreview()
         PreviewPart = Instance.new("Part")
         if CurrentShape == "Ball" then
             PreviewPart.Shape = Enum.PartType.Ball
-        elseif CurrentShape == "Wedge" then
-            PreviewPart.Shape = Enum.PartType.Wedge
         else
             PreviewPart.Shape = Enum.PartType.Block
         end
@@ -193,7 +191,7 @@ local function SnapPosition(pos)
     return Vector3.new(snappedX, snappedY, snappedZ)
 end
 
---// VISUAL GRID FUNCTION dengan Pelindung (pcall)
+--// VISUAL GRID FUNCTION
 local function UpdateGridVisual()
     pcall(function()
         for _, line in ipairs(GridLines) do line:Destroy() end
@@ -233,14 +231,13 @@ local function UpdateGridVisual()
     end)
 end
 
--- FIXED: Menggunakan task.spawn dan task.wait
 task.spawn(function() 
     while task.wait(2) do 
         if ShowGridVisual then UpdateGridVisual() end 
     end 
 end)
 
---// Update Preview dengan Pelindung - FIXED: SelectionBox tidak punya Transparency
+--// Update Preview
 local function UpdatePreview()
     pcall(function()
         if not PreviewPart then CreatePreview() end
@@ -268,7 +265,6 @@ local function UpdatePreview()
             end
             PreviewPart.Transparency = 0.85
             
-            -- FIXED: SelectionBox tidak punya property Transparency, gunakan Visible
             local edgeOutline = PreviewPart:FindFirstChild("EdgeOutline")
             if edgeOutline then
                 edgeOutline.Visible = true
@@ -294,17 +290,16 @@ local function UpdatePreview()
     end)
 end
 
---// Apply Material Colors - FIXED: Hapus Terrain:SetMaterialColor (tidak valid)
+--// Apply Material Colors - Terrain:SetMaterialColor tidak valid di Roblox
 local function ApplyMaterialColors()
-    -- Terrain:SetMaterialColor TIDAK ADA di Roblox API
-    -- Method ini tidak valid, jadi dihapus
-    -- Warna terrain di Roblox sudah fixed per material
-    -- Jika ingin custom color, gunakan FillBlock dengan Material spesifik
+    -- Method ini tidak ada di Roblox API
+    -- Dikosongkan agar tidak error
 end
 
---// SMOOTH TERRAIN ALGORITHM DENGAN PENINGGI
+--// SMOOTH TERRAIN ALGORITHM - FIXED: math.random dengan argumen
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
+    if radius <= 0 then radius = 1 end
     local layers = intensity or 2
     local heightScale = peninggi or 5
     for layer = 1, layers do
@@ -314,18 +309,27 @@ local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode,
         for angle = 0, 359, angleStep do
             local rad = math.rad(angle)
             local offsetY = (heightScale / 2) * (1 - (layer / layers))
-            if mode == "Noise" then offsetY = offsetY + math.random(-4, 4) elseif mode == "Gradient" then offsetY = offsetY + math.random(-2, 2) end
+            if mode == "Noise" then 
+                offsetY = offsetY + math.random(-4, 4) 
+            elseif mode == "Gradient" then 
+                offsetY = offsetY + math.random(-2, 2) 
+            end
             local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
             local pos = centerPos + offset
-            if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
-            elseif mode == "Noise" then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end
-            elseif mode == "Gradient" then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end
-            elseif mode == "Blend" then Terrain:FillBall(pos, layerSize, material) end
+            if mode == "Soft Edge" then 
+                Terrain:FillBall(pos, layerSize / 1.5, material)
+            elseif mode == "Noise" then 
+                if math.random(1, 100) > 40 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Gradient" then 
+                if math.random(1, 100) > 20 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Blend" then 
+                Terrain:FillBall(pos, layerSize, material) 
+            end
         end
     end
 end
 
---// BL Function - FIXED: Hapus ExpandToGrid (tidak valid)
+--// BL Function - FIXED: Hapus FillWedge (tidak valid), Fix FillBlock CFrame
 local function BL(d)
     local pos = Vector3.new(d[1], d[2], d[3])
     local sx, sy, sz = d[4], d[5], d[6]
@@ -343,27 +347,32 @@ local function BL(d)
     ApplyMaterialColors()
     
     local sizeVec = Vector3.new(sx, sy, sz)
-    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
+    
+    -- FIXED: Terrain:FillBlock hanya menerima CFrame posisi (tanpa rotasi)
+    local cf = CFrame.new(pos)
+    local cfWithRot = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
+    
     if actionMode == "Flatten" then
-        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(ry), 0)
+        local baseCf = CFrame.new(pos)
         if shape == "Block" then
             Terrain:FillBlock(baseCf, Vector3.new(sx, 2, sz), mat)
             Terrain:FillBlock(baseCf * CFrame.new(0, (sy/2) + 1, 0), Vector3.new(sx, sy, sz), Enum.Material.Air)
-        elseif shape == "Wedge" then
-            Terrain:FillWedge(cf, sizeVec, mat)
-            Terrain:FillBlock(baseCf * CFrame.new(0, (sy/2) + 1, 0), Vector3.new(sx, sy, sz), Enum.Material.Air)
         else
             local radius = math.max(sx, sy, sz)/2
-            Terrain:FillBall(pos, radius, mat)
-            Terrain:FillBlock(baseCf * CFrame.new(0, radius, 0), Vector3.new(sx, radius*2, sz), Enum.Material.Air)
+            if radius > 0 then
+                Terrain:FillBall(pos, radius, mat)
+                Terrain:FillBlock(baseCf * CFrame.new(0, radius, 0), Vector3.new(sx, radius*2, sz), Enum.Material.Air)
+            end
         end
     elseif actionMode == "Paint" then
         local halfSize = sizeVec / 2
-        -- FIXED: Hapus :ExpandToGrid, gunakan Region3 langsung
+        -- FIXED: Pastikan size tidak 0
+        if halfSize.X <= 0 then halfSize = Vector3.new(1, 1, 1) end
         local region = Region3.new(pos - halfSize, pos + halfSize)
         local mats, occs = Terrain:ReadVoxels(region, 4)
         local changed = false
         local radius = math.max(sx, sy, sz)/2
+        if radius <= 0 then radius = 1 end
         for x = 1, mats.Size.X do 
             for y = 1, mats.Size.Y do 
                 for z = 1, mats.Size.Z do
@@ -382,15 +391,27 @@ local function BL(d)
         end
         if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
     elseif actionMode == "Erase" then
-        if shape == "Block" then Terrain:FillBlock(cf, sizeVec, Enum.Material.Air)
-        elseif shape == "Wedge" then Terrain:FillWedge(cf, sizeVec, Enum.Material.Air)
-        else Terrain:FillBall(pos, math.max(sx, sy, sz)/2, Enum.Material.Air) end
+        if shape == "Block" then 
+            Terrain:FillBlock(cf, sizeVec, Enum.Material.Air)
+        else 
+            local radius = math.max(sx, sy, sz)/2
+            if radius > 0 then
+                Terrain:FillBall(pos, radius, Enum.Material.Air) 
+            end
+        end
     else
-        if shape == "Block" then Terrain:FillBlock(cf, sizeVec, mat)
-        elseif shape == "Wedge" then Terrain:FillWedge(cf, sizeVec, mat)
-        else Terrain:FillBall(pos, math.max(sx, sy, sz)/2, mat) end
+        if shape == "Block" then 
+            Terrain:FillBlock(cf, sizeVec, mat)
+        else 
+            local radius = math.max(sx, sy, sz)/2
+            if radius > 0 then
+                Terrain:FillBall(pos, radius, mat) 
+            end
+        end
     end
-    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" and actionMode ~= "Erase" then ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode, smoothHeight) end
+    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" and actionMode ~= "Erase" then 
+        ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode, smoothHeight) 
+    end
     return d
 end
 
@@ -418,15 +439,15 @@ local function UpdateSpawnCounter()
     spawnCounter.Text = "Terrain: " .. #SpawnedData
 end
 
---// Spawn Terrain - FIXED: Hapus ExpandToGrid
+--// Spawn Terrain - FIXED: Hapus ExpandToGrid, fix size 0
 local function SpawnTerrain()
-    local success, _ = pcall(function()
+    local success, err = pcall(function()
         if not PreviewPos then return false end
         
         local maxDim = math.max(SizeX, SizeY, SizeZ)
+        if maxDim <= 0 then maxDim = 1 end
         local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
         local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
-        -- FIXED: Hapus :ExpandToGrid
         local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds)
         local beforeMats, beforeOccs = Terrain:ReadVoxels(region, 4)
         local data = {
@@ -442,6 +463,9 @@ local function SpawnTerrain()
         table.insert(SpawnedData, data)
         UpdateSpawnCounter()
     end)
+    if not success then
+        warn("[shhhhnayy05] SpawnTerrain Error: " .. tostring(err))
+    end
     return success
 end
 
@@ -450,19 +474,24 @@ local function Undo()
     if #UndoHistory == 0 then return false, "Nothing to undo" end
     local lastNode = table.remove(UndoHistory)
     table.insert(RedoHistory, lastNode)
-    for i = #SpawnedData, 1, -1 do if SpawnedData[i] == lastNode.Data then table.remove(SpawnedData, i); break end end
+    for i = #SpawnedData, 1, -1 do 
+        if SpawnedData[i] == lastNode.Data then 
+            table.remove(SpawnedData, i); 
+            break 
+        end 
+    end
     pcall(function() Terrain:WriteVoxels(lastNode.Region, 4, lastNode.BeforeMats, lastNode.BeforeOccs) end)
     UpdateSpawnCounter()
     return true, "Undone 1 terrain"
 end
 
---// Generate Script - FIXED: Hapus Terrain:SetMaterialColor, ExpandToGrid
+--// Generate Script - FIXED: Hapus FillWedge, SetMaterialColor, ExpandToGrid
 local function GenerateScript(exportMode)
     if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
     
     local mode = exportMode or "Tidak"
     
-    local code = "--// Terrain Spawn Script (shhhhnayy05 v16.6)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
+    local code = "--// Terrain Spawn Script (shhhhnayy05 v16.7)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
     code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
     
     local cx, cy, cz = 0, 0, 0
@@ -482,7 +511,7 @@ local function GenerateScript(exportMode)
         code = code .. "--// PENTING: Masukkan script ini ke dalam Part!\n"
         code = code .. "local BasePart = script.Parent\n"
         code = code .. "if not BasePart:IsA('BasePart') then\n"
-        code = code .. "    warn('[shhhhnayy05] Script tidak dimasukkan ke dalam Part! Terrain dibuat di posisi default.')\n"
+        code = code .. "    warn('[shhhhnayy05] Script tidak dimasukkan ke dalam Part!')\n"
         code = code .. "    BasePart = {CFrame = CFrame.new(0,0,0)}\n"
         code = code .. "end\n"
         code = code .. "local OriginPos = Vector3.new(" .. cx .. ", " .. cy .. ", " .. cz .. ")\n\n"
@@ -501,6 +530,7 @@ local function GenerateScript(exportMode)
     code = code .. [[
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode, peninggi)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
+    if radius <= 0 then radius = 1 end
     local layers = intensity or 2
     local hScale = peninggi or 5
     for layer = 1, layers do
@@ -514,8 +544,8 @@ local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode,
             local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
             local pos = centerPos + offset
             if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
-            elseif mode == "Noise" then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end
-            elseif mode == "Gradient" then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Noise" then if math.random(1, 100) > 40 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Gradient" then if math.random(1, 100) > 20 then Terrain:FillBall(pos, layerSize / 2, material) end
             elseif mode == "Blend" then Terrain:FillBall(pos, layerSize, material) end
         end
     end
@@ -534,29 +564,28 @@ end
     code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
     code = code .. "    local shape, actionMode = d[8] or 'Ball', d[19] or 'Build'\n"
     code = code .. "    local sizeVec = Vector3.new(d[4], d[5], d[6])\n"
-    -- FIXED: Hapus Terrain:SetMaterialColor (tidak valid)
     
     if mode == "Convert Part" then
-        code = code .. "    local cf = worldCF * CFrame.Angles(math.rad(d[13] or 0), math.rad(d[14] or 0), math.rad(d[15] or 0))\n"
+        code = code .. "    local cf = CFrame.new(pos)\n"
     else
-        code = code .. "    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(d[13] or 0), math.rad(d[14] or 0), math.rad(d[15] or 0))\n"
+        code = code .. "    local cf = CFrame.new(pos)\n"
     end
     
     code = code .. "    if actionMode == 'Flatten' then\n"
     if mode == "Convert Part" then
-        code = code .. "        local baseCf = worldCF * CFrame.Angles(0, math.rad(d[14] or 0), 0)\n"
+        code = code .. "        local baseCf = CFrame.new(pos)\n"
     else
-        code = code .. "        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[14] or 0), 0)\n"
+        code = code .. "        local baseCf = CFrame.new(pos)\n"
     end
     code = code .. "        if shape == 'Block' then Terrain:FillBlock(baseCf, Vector3.new(d[4], 2, d[6]), mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
-    code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
-    code = code .. "        else local radius = math.max(d[4], d[5], d[6])/2; Terrain:FillBall(pos, radius, mat); Terrain:FillBlock(baseCf * CFrame.new(0, radius, 0), Vector3.new(d[4], radius*2, d[6]), Enum.Material.Air) end\n"
+    code = code .. "        else local radius = math.max(d[4], d[5], d[6])/2; if radius > 0 then Terrain:FillBall(pos, radius, mat); Terrain:FillBlock(baseCf * CFrame.new(0, radius, 0), Vector3.new(d[4], radius*2, d[6]), Enum.Material.Air) end end\n"
     code = code .. "    elseif actionMode == 'Paint' then\n"
     code = code .. "        local halfSize = sizeVec / 2\n"
-    -- FIXED: Hapus :ExpandToGrid
+    code = code .. "        if halfSize.X <= 0 then halfSize = Vector3.new(1,1,1) end\n"
     code = code .. "        local region = Region3.new(pos - halfSize, pos + halfSize)\n"
     code = code .. "        local m, o = Terrain:ReadVoxels(region, 4)\n"
     code = code .. "        local r = math.max(d[4], d[5], d[6])/2\n"
+    code = code .. "        if r <= 0 then r = 1 end\n"
     code = code .. "        for x = 1, m.Size.X do for y = 1, m.Size.Y do for z = 1, m.Size.Z do\n"
     code = code .. "            if m[x][y][z] ~= Enum.Material.Air and m[x][y][z] ~= mat then\n"
     code = code .. "                if shape == 'Ball' then local vPos = region.CFrame.Position - (region.Size/2) + Vector3.new(x*4-2, y*4-2, z*4-2); if (vPos - pos).Magnitude <= r then m[x][y][z] = mat end\n"
@@ -566,12 +595,10 @@ end
     code = code .. "        Terrain:WriteVoxels(region, 4, m, o)\n"
     code = code .. "    elseif actionMode == 'Erase' then\n"
     code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, sizeVec, Enum.Material.Air)\n"
-    code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, Enum.Material.Air)\n"
-    code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, Enum.Material.Air) end\n"
+    code = code .. "        else local radius = math.max(d[4], d[5], d[6])/2; if radius > 0 then Terrain:FillBall(pos, radius, Enum.Material.Air) end end\n"
     code = code .. "    else\n"
     code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, sizeVec, mat)\n"
-    code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat)\n"
-    code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat) end\n"
+    code = code .. "        else local radius = math.max(d[4], d[5], d[6])/2; if radius > 0 then Terrain:FillBall(pos, radius, mat) end end\n"
     code = code .. "    end\n"
     code = code .. "    if d[16] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' and actionMode ~= 'Erase' then ApplySmoothTerrain(pos, sizeVec, mat, d[18], d[17], d[20]) end\n"
     code = code .. "end\n\n"
@@ -598,10 +625,7 @@ end
     
     if mode == "Convert Part" then
         code = code .. "end\n\n"
-        code = code .. "-- Render pertama kali\n"
         code = code .. "RenderTerrain()\n"
-        code = code .. "-- // Hapus komentar di bawah ini jika ingin terrain TERUS MENGIKUTI part secara Real-time (Bisa sedikit ngelag) //\n"
-        code = code .. "-- BasePart:GetPropertyChangedSignal('CFrame'):Connect(function() Terrain:Clear() RenderTerrain() end)\n"
     end
     
     code = code .. "\nprint('[Terrain] " .. #SpawnedData .. " blocks spawned!')"
@@ -680,7 +704,7 @@ titleBarCorner.CornerRadius = UDim.new(0, 12)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor shhhhnayy05 v16.6", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor shhhhnayy05 v16.7", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -751,7 +775,7 @@ ghostToggleCorner.CornerRadius = UDim.new(0, 4)
 local ghostInfo = Instance.new("TextLabel", ghostSec)
 ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.Text, ghostInfo.TextColor3, ghostInfo.TextSize, ghostInfo.Font = UDim2.new(1, -12, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Tembus OFF = Raycast nabrak gundukan", Color3.fromRGB(150, 150, 150), 10, Enum.Font.Gotham
 
---// SHAPE SECTION
+--// SHAPE SECTION - FIXED: Hapus Wedge (tidak valid untuk terrain)
 local shapeSec = Instance.new("Frame", scroll)
 shapeSec.Size, shapeSec.BackgroundColor3, shapeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
 local shapeSecCorner = Instance.new("UICorner", shapeSec)
@@ -770,7 +794,7 @@ end
 local ballBtn = CreateUIBtn(shapeSec, "Ball", 0.05, 0.25)
 ballBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
 local blockBtn = CreateUIBtn(shapeSec, "Block", 0.35, 0.25)
-local wedgeBtn = CreateUIBtn(shapeSec, "Wedge", 0.65, 0.25)
+-- WEDGE DIHAPUS karena Terrain:FillWedge tidak valid
 
 --// ACTION MODE SECTION
 local modeSec = Instance.new("Frame", scroll)
@@ -992,7 +1016,7 @@ clearBtn.Size, clearBtn.BackgroundColor3, clearBtn.Text, clearBtn.TextColor3, cl
 local clearBtnCorner = Instance.new("UICorner", clearBtn)
 clearBtnCorner.CornerRadius = UDim.new(0, 8)
 
---// SCRIPT EXPORT OPTIONS WINDOW - FIXED: semua UICorner dengan CornerRadius
+--// SCRIPT EXPORT OPTIONS WINDOW
 local exportWin = Instance.new("Frame", gui)
 exportWin.Name, exportWin.Size, exportWin.Position = "ExportWindow", UDim2.new(0, 220, 0, 160), UDim2.new(0.5, -110, 0.5, -80)
 exportWin.BackgroundColor3, exportWin.BorderSizePixel = Color3.fromRGB(25, 25, 35), 0
@@ -1019,7 +1043,6 @@ expCloseCorner.CornerRadius = UDim.new(0, 6)
 
 local expMode = "Tidak"
 
--- FIXED: Proper UICorner with CornerRadius
 local btnTidak = Instance.new("TextButton", exportWin)
 btnTidak.Size, btnTidak.Position, btnTidak.BackgroundTransparency, btnTidak.Text, btnTidak.TextColor3, btnTidak.TextSize, btnTidak.Font, btnTidak.TextXAlignment = UDim2.new(1, -20, 0, 30), UDim2.new(0, 10, 0, 40), 1, "● Tidak", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
@@ -1050,7 +1073,7 @@ generateFinalBtn.Size, generateFinalBtn.Position, generateFinalBtn.BackgroundCol
 local generateFinalCorner = Instance.new("UICorner", generateFinalBtn)
 generateFinalCorner.CornerRadius = UDim.new(0, 6)
 
---// SCRIPT WINDOW - FIXED: semua UICorner dengan CornerRadius
+--// SCRIPT WINDOW
 local scriptWin = Instance.new("Frame", gui)
 scriptWin.Name, scriptWin.Size, scriptWin.Position, scriptWin.BackgroundColor3, scriptWin.BorderSizePixel, scriptWin.Visible, scriptWin.Active, scriptWin.Draggable = "ScriptWindow", UDim2.new(0, 400, 0, 350), UDim2.new(0.5, -200, 0.5, -175), Color3.fromRGB(30, 30, 35), 0, false, true, true
 local scriptWinCorner = Instance.new("UICorner", scriptWin)
@@ -1078,7 +1101,7 @@ codeScroll.Size, codeScroll.Position, codeScroll.BackgroundColor3, codeScroll.Bo
 local codeScrollCorner = Instance.new("UICorner", codeScroll)
 codeScrollCorner.CornerRadius = UDim.new(0, 6)
 local codeText = Instance.new("TextLabel", codeScroll)
-codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text, codeText.TextColor3, codeText.TextSize, codeText.Font, codeText.TextXAlignment, codeText.TextYAlignment, codeText.AutomaticSize, codeText.TextWrapped = UDim2.new(1, -12, 0, 0), UDim2.new(0, 6, 0, 6), 1, "-- No terrain spawned yet --", Color3.fromRGB(200, 200, 200), 11, Enum.Font.Code, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top, Enum.AutomaticSize.Y, true
+codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text, codeText.TextColor3, codeText.TextSize, codeText.Font, codeText.TextXAlignment, codeText.TextYAlignment, codeText.TextWrapped = UDim2.new(1, -12, 0, 0), UDim2.new(0, 6, 0, 6), 1, "-- No terrain spawned yet --", Color3.fromRGB(200, 200, 200), 11, Enum.Font.Code, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top, true
 
 --// EVENT CONNECTIONS
 
@@ -1152,13 +1175,11 @@ local function SelectShape(shapeName, selectedBtn)
     CurrentShape = shapeName
     ballBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     blockBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
-    wedgeBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     selectedBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
     CreatePreview()
 end
 ballBtn.MouseButton1Click:Connect(function() SelectShape("Ball", ballBtn) end)
 blockBtn.MouseButton1Click:Connect(function() SelectShape("Block", blockBtn) end)
-wedgeBtn.MouseButton1Click:Connect(function() SelectShape("Wedge", wedgeBtn) end)
 
 local function SelectMode(modeName, selectedBtn)
     CurrentMode = modeName
@@ -1308,7 +1329,6 @@ end)
 
 closeScriptBtn.MouseButton1Click:Connect(function() scriptWin.Visible = false end)
 
--- FIXED: Safety Check `writefile` pada logic setclipboard
 copyBtn.MouseButton1Click:Connect(function() 
     local success, err = pcall(function()
         if setclipboard then 
@@ -1342,7 +1362,6 @@ clearBtn.MouseButton1Click:Connect(function()
     UpdateSpawnCounter()
 end)
 
--- FIXED: `wait()` diubah ke `task.wait()`
 spawnBtn.MouseButton1Click:Connect(function()
     if PreviewPos then
         TweenService:Create(spawnBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 45, 0, 45)}):Play()
@@ -1386,4 +1405,5 @@ RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("✅ Terrain Editor v16.6 Loaded - ALL NIL CALLS FIXED! (SelectionBox.Transparency, Terrain:SetMaterialColor, Region3:ExpandToGrid, UICorner.CornerRadius)")
+print("✅ Terrain Editor v16.7 Loaded - ALL NIL CALLS FIXED!")
+print("✅ Fixes: FillWedge removed, SetMaterialColor removed, ExpandToGrid removed, SelectionBox.Transparency fixed, math.random fixed, size 0 checks added")
