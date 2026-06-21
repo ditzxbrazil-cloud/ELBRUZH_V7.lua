@@ -1,6 +1,7 @@
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature, Relative to Part, Preview Offset
+--// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature, Relative to Part
 --// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (COLOR BUG FIXED)
+--// ADDED: Erase Action Mode
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -101,10 +102,6 @@ local SpawnedData = {}
 local UndoHistory = {}
 local RedoHistory = {}
 local IgnoreTerrain = false
-
---// OFFSET PREVIEW SETTINGS
-local PreviewOffsetEnabled = false
-local PreviewOffsetY = 0
 
 --// SNAP SETTINGS
 local SnapEnabled = false
@@ -226,14 +223,7 @@ local function UpdatePreview()
         if result then
             local rawPos = result.Position
             local displayPos = SnapEnabled and SnapPosition(rawPos) or rawPos
-            
-            --// APPLY OFFSET Y PREVIEW JIKA DIAKTIFKAN
-            if PreviewOffsetEnabled then
-                displayPos = displayPos + Vector3.new(0, PreviewOffsetY, 0)
-            end
-            
             PreviewPos = displayPos
-            
             if CurrentMode == "Flatten" then
                 PreviewPart.Size = Vector3.new(SizeX, SizeY, SizeZ)
                 local cf = CFrame.new(displayPos) * CFrame.Angles(0, math.rad(RotY), 0) 
@@ -253,7 +243,11 @@ local function UpdatePreview()
             end
             PreviewPart.Transparency = 0.85
             PreviewPart.EdgeOutline.Transparency = 0
-            if SnapEnabled then
+            
+            if CurrentMode == "Erase" then
+                PreviewPart.Color = Color3.fromRGB(255, 50, 50)
+                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(255, 0, 0)
+            elseif SnapEnabled then
                 PreviewPart.Color = Color3.fromRGB(100, 255, 150)
                 PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
             else
@@ -353,12 +347,16 @@ local function BL(d)
             end 
         end
         if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
+    elseif actionMode == "Erase" then
+        if shape == "Block" then Terrain:FillBlock(cf, sizeVec, Enum.Material.Air)
+        elseif shape == "Wedge" then Terrain:FillWedge(cf, sizeVec, Enum.Material.Air)
+        else Terrain:FillBall(pos, math.max(sx, sy, sz)/2, Enum.Material.Air) end
     else
         if shape == "Block" then Terrain:FillBlock(cf, sizeVec, mat)
         elseif shape == "Wedge" then Terrain:FillWedge(cf, sizeVec, mat)
         else Terrain:FillBall(pos, math.max(sx, sy, sz)/2, mat) end
     end
-    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" then ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode, smoothHeight) end
+    if smoothOn and actionMode ~= "Flatten" and actionMode ~= "Paint" and actionMode ~= "Erase" then ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode, smoothHeight) end
     return d
 end
 
@@ -530,12 +528,16 @@ end
     code = code .. "            end\n"
     code = code .. "        end end end\n"
     code = code .. "        Terrain:WriteVoxels(region, 4, m, o)\n"
+    code = code .. "    elseif actionMode == 'Erase' then\n"
+    code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, sizeVec, Enum.Material.Air)\n"
+    code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, Enum.Material.Air)\n"
+    code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, Enum.Material.Air) end\n"
     code = code .. "    else\n"
     code = code .. "        if shape == 'Block' then Terrain:FillBlock(cf, sizeVec, mat)\n"
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat)\n"
     code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat) end\n"
     code = code .. "    end\n"
-    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16], d[19]) end\n"
+    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' and actionMode ~= 'Erase' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16], d[19]) end\n"
     code = code .. "end\n\n"
     
     if mode == "Convert Part" then
@@ -643,8 +645,7 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
--- CanvasSize diperbesar untuk memuat menu offset baru
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1650)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1550)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
@@ -692,34 +693,6 @@ Instance.new("UICorner", ghostToggleBtn).CornerRadius = UDim.new(0, 4)
 local ghostInfo = Instance.new("TextLabel", ghostSec)
 ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.Text, ghostInfo.TextColor3, ghostInfo.TextSize, ghostInfo.Font = UDim2.new(1, -12, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Tembus OFF = Raycast nabrak gundukan", Color3.fromRGB(150, 150, 150), 10, Enum.Font.Gotham
 
---// OFFSET PREVIEW SECTION (Di bawah Fitur Tembus)
-local offsetSec = Instance.new("Frame", scroll)
-offsetSec.Size, offsetSec.BackgroundColor3, offsetSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", offsetSec).CornerRadius = UDim.new(0, 8)
-local offsetTitle = Instance.new("TextLabel", offsetSec)
-offsetTitle.Size, offsetTitle.Position, offsetTitle.BackgroundTransparency, offsetTitle.Text, offsetTitle.TextColor3, offsetTitle.TextSize, offsetTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "↕️ Offset Preview (Atas/Bawah)", Color3.fromRGB(0, 255, 150), 11, Enum.Font.GothamBold
-
-local offsetToggleBtn = Instance.new("TextButton", offsetSec)
-offsetToggleBtn.Size, offsetToggleBtn.Position, offsetToggleBtn.BackgroundColor3, offsetToggleBtn.Text, offsetToggleBtn.TextColor3, offsetToggleBtn.TextSize, offsetToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF ▼", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", offsetToggleBtn).CornerRadius = UDim.new(0, 4)
-
-local offsetMinus = Instance.new("TextButton", offsetSec)
-offsetMinus.Size, offsetMinus.Position, offsetMinus.BackgroundColor3, offsetMinus.Text, offsetMinus.TextColor3, offsetMinus.TextSize, offsetMinus.Font = UDim2.new(0, 28, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", offsetMinus).CornerRadius = UDim.new(0, 4)
-
-local offsetDisp = Instance.new("TextBox", offsetSec)
-offsetDisp.Size, offsetDisp.Position, offsetDisp.BackgroundColor3, offsetDisp.Text, offsetDisp.TextColor3, offsetDisp.TextSize, offsetDisp.Font = UDim2.new(0, 40, 0, 22), UDim2.new(0, 105, 0, 25), Color3.fromRGB(40, 40, 50), tostring(PreviewOffsetY), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-offsetDisp.ClearTextOnFocus = false
-Instance.new("UICorner", offsetDisp).CornerRadius = UDim.new(0, 4)
-
-local offsetPlus = Instance.new("TextButton", offsetSec)
-offsetPlus.Size, offsetPlus.Position, offsetPlus.BackgroundColor3, offsetPlus.Text, offsetPlus.TextColor3, offsetPlus.TextSize, offsetPlus.Font = UDim2.new(0, 28, 0, 22), UDim2.new(0, 150, 0, 25), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", offsetPlus).CornerRadius = UDim.new(0, 4)
-
-local offsetInfo = Instance.new("TextLabel", offsetSec)
-offsetInfo.Size, offsetInfo.Position, offsetInfo.BackgroundTransparency, offsetInfo.Text, offsetInfo.TextColor3, offsetInfo.TextSize, offsetInfo.Font = UDim2.new(1, -12, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Geser preview ke atas (+) atau bawah (-)", Color3.fromRGB(150, 150, 150), 10, Enum.Font.Gotham
-
-
 --// SHAPE SECTION
 local shapeSec = Instance.new("Frame", scroll)
 shapeSec.Size, shapeSec.BackgroundColor3, shapeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
@@ -746,10 +719,11 @@ Instance.new("UICorner", modeSec).CornerRadius = UDim.new(0, 8)
 local modeTitle = Instance.new("TextLabel", modeSec)
 modeTitle.Size, modeTitle.Position, modeTitle.BackgroundTransparency, modeTitle.Text, modeTitle.TextColor3, modeTitle.TextSize, modeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🛠️ Action Mode", Color3.fromRGB(255, 150, 50), 11, Enum.Font.GothamBold
 
-local buildBtn = CreateUIBtn(modeSec, "Build", 0.05, 0.25)
+local buildBtn = CreateUIBtn(modeSec, "Build", 0.02, 0.22)
 buildBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
-local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.35, 0.25)
-local paintBtn = CreateUIBtn(modeSec, "Paint", 0.65, 0.25)
+local flatBtn = CreateUIBtn(modeSec, "Flatten", 0.26, 0.22)
+local paintBtn = CreateUIBtn(modeSec, "Paint", 0.50, 0.22)
+local eraseBtn = CreateUIBtn(modeSec, "Erase", 0.74, 0.22)
 
 --// SMOOTH TERRAIN GUI SECTION
 local smoothSec = Instance.new("Frame", scroll)
@@ -1072,43 +1046,6 @@ ghostToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Offset Toggle Events (BARU)
-offsetToggleBtn.MouseButton1Click:Connect(function()
-    PreviewOffsetEnabled = not PreviewOffsetEnabled
-    if PreviewOffsetEnabled then
-        offsetToggleBtn.Text = "ON 🔼"
-        offsetToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    else
-        offsetToggleBtn.Text = "OFF ▼"
-        offsetToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    end
-    UpdatePreview()
-end)
-
-local function handleOffsetInput()
-    local val = tonumber(offsetDisp.Text)
-    if val then
-        PreviewOffsetY = val
-        offsetDisp.Text = tostring(PreviewOffsetY)
-        UpdatePreview()
-    else
-        offsetDisp.Text = tostring(PreviewOffsetY)
-    end
-end
-offsetDisp.FocusLost:Connect(handleOffsetInput)
-
-offsetMinus.MouseButton1Click:Connect(function()
-    PreviewOffsetY = PreviewOffsetY - 1
-    offsetDisp.Text = tostring(PreviewOffsetY)
-    UpdatePreview()
-end)
-
-offsetPlus.MouseButton1Click:Connect(function()
-    PreviewOffsetY = PreviewOffsetY + 1
-    offsetDisp.Text = tostring(PreviewOffsetY)
-    UpdatePreview()
-end)
-
 local function SelectShape(shapeName, selectedBtn)
     CurrentShape = shapeName
     ballBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
@@ -1126,12 +1063,14 @@ local function SelectMode(modeName, selectedBtn)
     buildBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     flatBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     paintBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
+    eraseBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
     selectedBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
     UpdatePreview()
 end
 buildBtn.MouseButton1Click:Connect(function() SelectMode("Build", buildBtn) end)
 flatBtn.MouseButton1Click:Connect(function() SelectMode("Flatten", flatBtn) end)
 paintBtn.MouseButton1Click:Connect(function() SelectMode("Paint", paintBtn) end)
+eraseBtn.MouseButton1Click:Connect(function() SelectMode("Erase", eraseBtn) end)
 
 smoothToggleBtn.MouseButton1Click:Connect(function()
     SmoothEnabled = not SmoothEnabled
