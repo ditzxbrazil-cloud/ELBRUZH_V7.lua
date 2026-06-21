@@ -1,7 +1,6 @@
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature, Relative to Part
---// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (NIL CALLS & COLOR BUG FIXED)
---// ADDED: Erase Action Mode & ROCK COLORS
+--// Terrain Editor v16.6 - FIXED ALL NIL CALLS
+--// FIXED: SelectionBox.Transparency, Terrain:SetMaterialColor, Region3:ExpandToGrid, UICorner.CornerRadius
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -241,7 +240,7 @@ task.spawn(function()
     end 
 end)
 
---// Update Preview dengan Pelindung
+--// Update Preview dengan Pelindung - FIXED: SelectionBox tidak punya Transparency
 local function UpdatePreview()
     pcall(function()
         if not PreviewPart then CreatePreview() end
@@ -268,31 +267,39 @@ local function UpdatePreview()
                 PreviewPart.CFrame = cf
             end
             PreviewPart.Transparency = 0.85
-            PreviewPart.EdgeOutline.Transparency = 0
+            
+            -- FIXED: SelectionBox tidak punya property Transparency, gunakan Visible
+            local edgeOutline = PreviewPart:FindFirstChild("EdgeOutline")
+            if edgeOutline then
+                edgeOutline.Visible = true
+            end
             
             if CurrentMode == "Erase" then
                 PreviewPart.Color = Color3.fromRGB(255, 50, 50)
-                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(255, 0, 0)
+                if edgeOutline then edgeOutline.Color3 = Color3.fromRGB(255, 0, 0) end
             elseif SnapEnabled then
                 PreviewPart.Color = Color3.fromRGB(100, 255, 150)
-                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(100, 255, 150)
+                if edgeOutline then edgeOutline.Color3 = Color3.fromRGB(100, 255, 150) end
             else
                 PreviewPart.Color = Color3.fromRGB(255, 255, 255)
-                PreviewPart.EdgeOutline.Color3 = Color3.fromRGB(0, 255, 255)
+                if edgeOutline then edgeOutline.Color3 = Color3.fromRGB(0, 255, 255) end
             end
         else
             PreviewPart.Transparency = 1
-            PreviewPart.EdgeOutline.Transparency = 1
+            local edgeOutline = PreviewPart:FindFirstChild("EdgeOutline")
+            if edgeOutline then
+                edgeOutline.Visible = false
+            end
         end
     end)
 end
 
---// Apply Material Colors
+--// Apply Material Colors - FIXED: Hapus Terrain:SetMaterialColor (tidak valid)
 local function ApplyMaterialColors()
-    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[currentGrassColorIndex].color) end)
-    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[currentLeafyGrassColorIndex].color) end)
-    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[currentGroundColorIndex].color) end)
-    pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[currentRockColorIndex].color) end)
+    -- Terrain:SetMaterialColor TIDAK ADA di Roblox API
+    -- Method ini tidak valid, jadi dihapus
+    -- Warna terrain di Roblox sudah fixed per material
+    -- Jika ingin custom color, gunakan FillBlock dengan Material spesifik
 end
 
 --// SMOOTH TERRAIN ALGORITHM DENGAN PENINGGI
@@ -318,7 +325,7 @@ local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode,
     end
 end
 
---// BL Function
+--// BL Function - FIXED: Hapus ExpandToGrid (tidak valid)
 local function BL(d)
     local pos = Vector3.new(d[1], d[2], d[3])
     local sx, sy, sz = d[4], d[5], d[6]
@@ -352,7 +359,8 @@ local function BL(d)
         end
     elseif actionMode == "Paint" then
         local halfSize = sizeVec / 2
-        local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)
+        -- FIXED: Hapus :ExpandToGrid, gunakan Region3 langsung
+        local region = Region3.new(pos - halfSize, pos + halfSize)
         local mats, occs = Terrain:ReadVoxels(region, 4)
         local changed = false
         local radius = math.max(sx, sy, sz)/2
@@ -388,7 +396,7 @@ end
 
 --// Main GUI Setup
 local gui = Instance.new("ScreenGui")
-gui.Name = "TerrainEditor"
+gui.Name = "shhhhnayy05_TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -403,13 +411,14 @@ spawnCounter.TextColor3 = Color3.fromRGB(255, 255, 255)
 spawnCounter.TextSize = 12
 spawnCounter.Font = Enum.Font.GothamBold
 spawnCounter.TextXAlignment = Enum.TextXAlignment.Center
-Instance.new("UICorner", spawnCounter).CornerRadius = UDim.new(0, 4)
+local scCorner = Instance.new("UICorner", spawnCounter)
+scCorner.CornerRadius = UDim.new(0, 4)
 
 local function UpdateSpawnCounter()
     spawnCounter.Text = "Terrain: " .. #SpawnedData
 end
 
---// Spawn Terrain
+--// Spawn Terrain - FIXED: Hapus ExpandToGrid
 local function SpawnTerrain()
     local success, _ = pcall(function()
         if not PreviewPos then return false end
@@ -417,7 +426,8 @@ local function SpawnTerrain()
         local maxDim = math.max(SizeX, SizeY, SizeZ)
         local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
         local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
-        local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds):ExpandToGrid(4)
+        -- FIXED: Hapus :ExpandToGrid
+        local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds)
         local beforeMats, beforeOccs = Terrain:ReadVoxels(region, 4)
         local data = {
             math.floor(PreviewPos.X), math.floor(PreviewPos.Y), math.floor(PreviewPos.Z),
@@ -446,13 +456,13 @@ local function Undo()
     return true, "Undone 1 terrain"
 end
 
---// Generate Script
+--// Generate Script - FIXED: Hapus Terrain:SetMaterialColor, ExpandToGrid
 local function GenerateScript(exportMode)
     if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
     
     local mode = exportMode or "Tidak"
     
-    local code = "--// Terrain Spawn Script (ELBRUZH v16.5)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
+    local code = "--// Terrain Spawn Script (shhhhnayy05 v16.6)\n--// Mode: " .. mode .. "\n--// Total: " .. #SpawnedData .. " terrains\n\n"
     code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
     
     local cx, cy, cz = 0, 0, 0
@@ -472,7 +482,7 @@ local function GenerateScript(exportMode)
         code = code .. "--// PENTING: Masukkan script ini ke dalam Part!\n"
         code = code .. "local BasePart = script.Parent\n"
         code = code .. "if not BasePart:IsA('BasePart') then\n"
-        code = code .. "    warn('[ELBRUZH] Script tidak dimasukkan ke dalam Part! Terrain dibuat di posisi default.')\n"
+        code = code .. "    warn('[shhhhnayy05] Script tidak dimasukkan ke dalam Part! Terrain dibuat di posisi default.')\n"
         code = code .. "    BasePart = {CFrame = CFrame.new(0,0,0)}\n"
         code = code .. "end\n"
         code = code .. "local OriginPos = Vector3.new(" .. cx .. ", " .. cy .. ", " .. cz .. ")\n\n"
@@ -524,10 +534,7 @@ end
     code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
     code = code .. "    local shape, actionMode = d[8] or 'Ball', d[19] or 'Build'\n"
     code = code .. "    local sizeVec = Vector3.new(d[4], d[5], d[6])\n"
-    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[d[9] or 3]) end)\n"
-    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3]) end)\n"
-    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2]) end)\n"
-    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[d[12] or 1]) end)\n"
+    -- FIXED: Hapus Terrain:SetMaterialColor (tidak valid)
     
     if mode == "Convert Part" then
         code = code .. "    local cf = worldCF * CFrame.Angles(math.rad(d[13] or 0), math.rad(d[14] or 0), math.rad(d[15] or 0))\n"
@@ -546,7 +553,8 @@ end
     code = code .. "        else local radius = math.max(d[4], d[5], d[6])/2; Terrain:FillBall(pos, radius, mat); Terrain:FillBlock(baseCf * CFrame.new(0, radius, 0), Vector3.new(d[4], radius*2, d[6]), Enum.Material.Air) end\n"
     code = code .. "    elseif actionMode == 'Paint' then\n"
     code = code .. "        local halfSize = sizeVec / 2\n"
-    code = code .. "        local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)\n"
+    -- FIXED: Hapus :ExpandToGrid
+    code = code .. "        local region = Region3.new(pos - halfSize, pos + halfSize)\n"
     code = code .. "        local m, o = Terrain:ReadVoxels(region, 4)\n"
     code = code .. "        local r = math.max(d[4], d[5], d[6])/2\n"
     code = code .. "        for x = 1, m.Size.X do for y = 1, m.Size.Y do for z = 1, m.Size.Z do\n"
@@ -604,40 +612,48 @@ local ch = Instance.new("Frame", gui)
 ch.Size, ch.Position, ch.BackgroundTransparency = UDim2.new(0, 20, 0, 20), UDim2.new(0.5, -10, 0.5, -10), 1
 local dot = Instance.new("Frame", ch)
 dot.Size, dot.Position, dot.BackgroundColor3, dot.BorderSizePixel = UDim2.new(0, 4, 0, 4), UDim2.new(0.5, -2, 0.5, -2), Color3.fromRGB(255, 255, 255), 0
-Instance.new("UICorner", dot)
+local dotCorner = Instance.new("UICorner", dot)
+dotCorner.CornerRadius = UDim.new(1, 0)
 
 local spawnBtn = Instance.new("TextButton", gui)
 spawnBtn.Name, spawnBtn.Size, spawnBtn.Position, spawnBtn.BackgroundColor3 = "SpawnBtn", UDim2.new(0, 50, 0, 50), UDim2.new(0, 4, 0, 50), Color3.fromRGB(0, 200, 100)
 spawnBtn.Text, spawnBtn.TextSize, spawnBtn.Font = "🎯", 30, Enum.Font.GothamBlack
-Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(1, 0)
+local spawnCorner = Instance.new("UICorner", spawnBtn)
+spawnCorner.CornerRadius = UDim.new(1, 0)
 
 local undoBtn = Instance.new("TextButton", gui)
 undoBtn.Name, undoBtn.Size, undoBtn.Position, undoBtn.BackgroundColor3 = "UndoBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 105), Color3.fromRGB(200, 150, 50)
 undoBtn.Text, undoBtn.TextSize, undoBtn.Font = "↩️", 22, Enum.Font.GothamBlack
-Instance.new("UICorner", undoBtn).CornerRadius = UDim.new(1, 0)
+local undoCorner = Instance.new("UICorner", undoBtn)
+undoCorner.CornerRadius = UDim.new(1, 0)
 
 local matIconBtn = Instance.new("TextButton", gui)
 matIconBtn.Name, matIconBtn.Size, matIconBtn.Position, matIconBtn.BackgroundColor3 = "MatIconBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 155), Color3.fromRGB(80, 120, 200)
 matIconBtn.Text, matIconBtn.TextSize, matIconBtn.Font = "🎨", 22, Enum.Font.GothamBlack
-Instance.new("UICorner", matIconBtn).CornerRadius = UDim.new(1, 0)
+local matIconCorner = Instance.new("UICorner", matIconBtn)
+matIconCorner.CornerRadius = UDim.new(1, 0)
 
 local openPanelBtn = Instance.new("TextButton", gui)
 openPanelBtn.Name, openPanelBtn.Size, openPanelBtn.Position, openPanelBtn.BackgroundColor3 = "OpenPanelBtn", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 205), Color3.fromRGB(60, 60, 75)
 openPanelBtn.Text, openPanelBtn.TextSize, openPanelBtn.Font, openPanelBtn.Visible = "⚙️", 22, Enum.Font.GothamBlack, false
-Instance.new("UICorner", openPanelBtn).CornerRadius = UDim.new(1, 0)
+local openPanelCorner = Instance.new("UICorner", openPanelBtn)
+openPanelCorner.CornerRadius = UDim.new(1, 0)
 
 local unhideBtn = Instance.new("TextButton", gui)
 unhideBtn.Name, unhideBtn.Size, unhideBtn.Position, unhideBtn.BackgroundColor3 = "UnhideBtn", UDim2.new(0, 25, 0, 25), UDim2.new(0, 16, 0, 165), Color3.fromRGB(0, 150, 255)
 unhideBtn.Text, unhideBtn.TextSize, unhideBtn.Font, unhideBtn.Visible, unhideBtn.Active = "👁️", 12, Enum.Font.GothamBold, false, true
-Instance.new("UICorner", unhideBtn).CornerRadius = UDim.new(1, 0)
+local unhideCorner = Instance.new("UICorner", unhideBtn)
+unhideCorner.CornerRadius = UDim.new(1, 0)
 
 local matWin = Instance.new("Frame", gui)
 matWin.Name, matWin.Size, matWin.Position, matWin.BackgroundColor3, matWin.Visible = "MatWindow", UDim2.new(0, 200, 0, 70), UDim2.new(0, 60, 0, 155), Color3.fromRGB(45, 45, 60), false
-Instance.new("UICorner", matWin).CornerRadius = UDim.new(0, 8)
+local matWinCorner = Instance.new("UICorner", matWin)
+matWinCorner.CornerRadius = UDim.new(0, 8)
 
 local closeMatBtn = Instance.new("TextButton", matWin)
 closeMatBtn.Size, closeMatBtn.Position, closeMatBtn.BackgroundColor3, closeMatBtn.Text, closeMatBtn.TextColor3, closeMatBtn.TextSize, closeMatBtn.Font = UDim2.new(0, 20, 0, 20), UDim2.new(1, -25, 0, 5), Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-Instance.new("UICorner", closeMatBtn).CornerRadius = UDim.new(0, 4)
+local closeMatCorner = Instance.new("UICorner", closeMatBtn)
+closeMatCorner.CornerRadius = UDim.new(0, 4)
 closeMatBtn.MouseButton1Click:Connect(function() matWin.Visible = false end)
 
 local matScroll = Instance.new("ScrollingFrame", matWin)
@@ -645,6 +661,8 @@ matScroll.Size, matScroll.Position, matScroll.BackgroundTransparency, matScroll.
 for i, m in ipairs(Materials) do
     local btn = Instance.new("TextButton", matScroll)
     btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font, btn.TextStrokeTransparency = UDim2.new(0, 40, 0, 40), UDim2.new(0, (i-1) * 45, 0, 10), m.Color, m.Name, Color3.fromRGB(255, 255, 255), 8, Enum.Font.GothamBold, 0.5
+    local btnCorner = Instance.new("UICorner", btn)
+    btnCorner.CornerRadius = UDim.new(0, 4)
     btn.MouseButton1Click:Connect(function() CurrentMaterial = m; end)
 end
 matIconBtn.MouseButton1Click:Connect(function() matWin.Visible = not matWin.Visible end)
@@ -652,25 +670,29 @@ matIconBtn.MouseButton1Click:Connect(function() matWin.Visible = not matWin.Visi
 --// MAIN PANEL
 local panel = Instance.new("Frame", gui)
 panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 450), UDim2.new(0, 6, 1, -460), Color3.fromRGB(30, 30, 40), 0
-Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
+local panelCorner = Instance.new("UICorner", panel)
+panelCorner.CornerRadius = UDim.new(0, 12)
 
 local titleBar = Instance.new("Frame", panel)
 titleBar.Size, titleBar.BackgroundColor3, titleBar.BorderSizePixel = UDim2.new(1, 0, 0, 35), Color3.fromRGB(40, 40, 55), 0
-Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
+local titleBarCorner = Instance.new("UICorner", titleBar)
+titleBarCorner.CornerRadius = UDim.new(0, 12)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor shhhhnayy05 v16.6", Color3.fromRGB(0, 200, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
 minBtn.Text, minBtn.TextColor3, minBtn.TextSize, minBtn.Font = "−", Color3.fromRGB(255, 255, 255), 18, Enum.Font.GothamBold
-Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
+local minCorner = Instance.new("UICorner", minBtn)
+minCorner.CornerRadius = UDim.new(0, 6)
 
 local closeBtn = Instance.new("TextButton", titleBar)
 closeBtn.Size, closeBtn.Position, closeBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -33, 0.5, -14), Color3.fromRGB(200, 60, 60)
 closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+local closeCorner = Instance.new("UICorner", closeBtn)
+closeCorner.CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
 scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1600)
@@ -679,7 +701,8 @@ layout.Padding = UDim.new(0, 6)
 
 local hideGuiBtn = Instance.new("TextButton", scroll)
 hideGuiBtn.Size, hideGuiBtn.BackgroundColor3, hideGuiBtn.Text, hideGuiBtn.TextColor3, hideGuiBtn.TextSize, hideGuiBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(50, 50, 65), "👁️ Hide GUI", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", hideGuiBtn).CornerRadius = UDim.new(0, 8)
+local hideGuiCorner = Instance.new("UICorner", hideGuiBtn)
+hideGuiCorner.CornerRadius = UDim.new(0, 8)
 
 local status = Instance.new("TextLabel", scroll)
 status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, status.TextSize, status.Font = UDim2.new(1, -8, 0, 18), 1, "Aim & tap 🎯 to spawn", Color3.fromRGB(0, 255, 150), 10, Enum.Font.Gotham
@@ -688,18 +711,22 @@ status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, stat
 local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx)
     local sec = Instance.new("Frame", parent)
     sec.Size, sec.BackgroundColor3, sec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
-    Instance.new("UICorner", sec).CornerRadius = UDim.new(0, 8)
+    local secCorner = Instance.new("UICorner", sec)
+    secCorner.CornerRadius = UDim.new(0, 8)
     local t = Instance.new("TextLabel", sec)
     t.Size, t.Position, t.BackgroundTransparency, t.Text, t.TextColor3, t.TextSize, t.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, titleStr, titleColor, 11, Enum.Font.GothamBold
     local lBtn = Instance.new("TextButton", sec)
     lBtn.Size, lBtn.Position, lBtn.BackgroundColor3, lBtn.Text, lBtn.TextColor3, lBtn.TextSize, lBtn.Font = UDim2.new(0, 28, 0, 22), UDim2.new(0, 5, 0, 24), Color3.fromRGB(60, 60, 75), "←", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-    Instance.new("UICorner", lBtn).CornerRadius = UDim.new(0, 6)
+    local lBtnCorner = Instance.new("UICorner", lBtn)
+    lBtnCorner.CornerRadius = UDim.new(0, 6)
     local disp = Instance.new("TextLabel", sec)
     disp.Size, disp.Position, disp.BackgroundColor3, disp.Text, disp.TextColor3, disp.TextSize, disp.Font = UDim2.new(1, -74, 0, 22), UDim2.new(0, 38, 0, 24), colorArr[initialIdx].color, colorArr[initialIdx].name, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-    Instance.new("UICorner", disp).CornerRadius = UDim.new(0, 6)
+    local dispCorner = Instance.new("UICorner", disp)
+    dispCorner.CornerRadius = UDim.new(0, 6)
     local rBtn = Instance.new("TextButton", sec)
     rBtn.Size, rBtn.Position, rBtn.BackgroundColor3, rBtn.Text, rBtn.TextColor3, rBtn.TextSize, rBtn.Font = UDim2.new(0, 28, 0, 22), UDim2.new(1, -33, 0, 24), Color3.fromRGB(60, 60, 75), "→", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-    Instance.new("UICorner", rBtn).CornerRadius = UDim.new(0, 6)
+    local rBtnCorner = Instance.new("UICorner", rBtn)
+    rBtnCorner.CornerRadius = UDim.new(0, 6)
     return lBtn, rBtn, disp
 end
 
@@ -711,13 +738,15 @@ local rockLeft, rockRight, rockDisplay = CreateColorSec(scroll, "🪨 Rock Color
 --// FITUR TEMBUS
 local ghostSec = Instance.new("Frame", scroll)
 ghostSec.Size, ghostSec.BackgroundColor3, ghostSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", ghostSec).CornerRadius = UDim.new(0, 8)
+local ghostSecCorner = Instance.new("UICorner", ghostSec)
+ghostSecCorner.CornerRadius = UDim.new(0, 8)
 local ghostTitle = Instance.new("TextLabel", ghostSec)
 ghostTitle.Size, ghostTitle.Position, ghostTitle.BackgroundTransparency, ghostTitle.Text, ghostTitle.TextColor3, ghostTitle.TextSize, ghostTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "👻 Tembus Terrain", Color3.fromRGB(200, 150, 255), 11, Enum.Font.GothamBold
 
 local ghostToggleBtn = Instance.new("TextButton", ghostSec)
 ghostToggleBtn.Size, ghostToggleBtn.Position, ghostToggleBtn.BackgroundColor3, ghostToggleBtn.Text, ghostToggleBtn.TextColor3, ghostToggleBtn.TextSize, ghostToggleBtn.Font = UDim2.new(1, -12, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "Tembus: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", ghostToggleBtn).CornerRadius = UDim.new(0, 4)
+local ghostToggleCorner = Instance.new("UICorner", ghostToggleBtn)
+ghostToggleCorner.CornerRadius = UDim.new(0, 4)
 
 local ghostInfo = Instance.new("TextLabel", ghostSec)
 ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.Text, ghostInfo.TextColor3, ghostInfo.TextSize, ghostInfo.Font = UDim2.new(1, -12, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Tembus OFF = Raycast nabrak gundukan", Color3.fromRGB(150, 150, 150), 10, Enum.Font.Gotham
@@ -725,14 +754,16 @@ ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.
 --// SHAPE SECTION
 local shapeSec = Instance.new("Frame", scroll)
 shapeSec.Size, shapeSec.BackgroundColor3, shapeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", shapeSec).CornerRadius = UDim.new(0, 8)
+local shapeSecCorner = Instance.new("UICorner", shapeSec)
+shapeSecCorner.CornerRadius = UDim.new(0, 8)
 local shapeTitle = Instance.new("TextLabel", shapeSec)
 shapeTitle.Size, shapeTitle.Position, shapeTitle.BackgroundTransparency, shapeTitle.Text, shapeTitle.TextColor3, shapeTitle.TextSize, shapeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔷 Shape (Pilih Bentuk)", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
 
 local function CreateUIBtn(parent, txt, xPos, width)
     local btn = Instance.new("TextButton", parent)
     btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font = UDim2.new(width, 0, 0, 28), UDim2.new(xPos, 0, 0, 22), Color3.fromRGB(65, 65, 80), txt, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    local btnCorner = Instance.new("UICorner", btn)
+    btnCorner.CornerRadius = UDim.new(0, 6)
     return btn
 end
 
@@ -744,7 +775,8 @@ local wedgeBtn = CreateUIBtn(shapeSec, "Wedge", 0.65, 0.25)
 --// ACTION MODE SECTION
 local modeSec = Instance.new("Frame", scroll)
 modeSec.Size, modeSec.BackgroundColor3, modeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", modeSec).CornerRadius = UDim.new(0, 8)
+local modeSecCorner = Instance.new("UICorner", modeSec)
+modeSecCorner.CornerRadius = UDim.new(0, 8)
 local modeTitle = Instance.new("TextLabel", modeSec)
 modeTitle.Size, modeTitle.Position, modeTitle.BackgroundTransparency, modeTitle.Text, modeTitle.TextColor3, modeTitle.TextSize, modeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🛠️ Action Mode", Color3.fromRGB(255, 150, 50), 11, Enum.Font.GothamBold
 
@@ -757,64 +789,76 @@ local eraseBtn = CreateUIBtn(modeSec, "Erase", 0.74, 0.22)
 --// SMOOTH TERRAIN GUI SECTION
 local smoothSec = Instance.new("Frame", scroll)
 smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
+local smoothSecCorner = Instance.new("UICorner", smoothSec)
+smoothSecCorner.CornerRadius = UDim.new(0, 8)
 local smoothTitle = Instance.new("TextLabel", smoothSec)
 smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
 local smoothToggleBtn = Instance.new("TextButton", smoothSec)
 smoothToggleBtn.Size, smoothToggleBtn.Position, smoothToggleBtn.BackgroundColor3, smoothToggleBtn.Text, smoothToggleBtn.TextColor3, smoothToggleBtn.TextSize, smoothToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF ▼", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", smoothToggleBtn).CornerRadius = UDim.new(0, 4)
+local smoothToggleCorner = Instance.new("UICorner", smoothToggleBtn)
+smoothToggleCorner.CornerRadius = UDim.new(0, 4)
 
 local smoothModeBtn = Instance.new("TextButton", smoothSec)
 smoothModeBtn.Size, smoothModeBtn.Position, smoothModeBtn.BackgroundColor3, smoothModeBtn.Text, smoothModeBtn.TextColor3, smoothModeBtn.TextSize, smoothModeBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), SmoothModes[1], Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", smoothModeBtn).CornerRadius = UDim.new(0, 4)
+local smoothModeCorner = Instance.new("UICorner", smoothModeBtn)
+smoothModeCorner.CornerRadius = UDim.new(0, 4)
 
 local intL = Instance.new("TextLabel", smoothSec)
 intL.Size, intL.Position, intL.BackgroundTransparency, intL.Text, intL.TextColor3, intL.TextSize, intL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Intens:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
 
 local intMinus = Instance.new("TextButton", smoothSec)
 intMinus.Size, intMinus.Position, intMinus.BackgroundColor3, intMinus.Text, intMinus.TextColor3, intMinus.TextSize, intMinus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 53, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", intMinus).CornerRadius = UDim.new(0, 4)
+local intMinusCorner = Instance.new("UICorner", intMinus)
+intMinusCorner.CornerRadius = UDim.new(0, 4)
 
 local intDisp = Instance.new("TextBox", smoothSec)
 intDisp.Size, intDisp.Position, intDisp.BackgroundColor3, intDisp.Text, intDisp.TextColor3, intDisp.TextSize, intDisp.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 77, 0, 53), Color3.fromRGB(40, 40, 50), tostring(SmoothIntensity), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 intDisp.ClearTextOnFocus = false
-Instance.new("UICorner", intDisp).CornerRadius = UDim.new(0, 4)
+local intDispCorner = Instance.new("UICorner", intDisp)
+intDispCorner.CornerRadius = UDim.new(0, 4)
 
 local intPlus = Instance.new("TextButton", smoothSec)
 intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 107, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", intPlus).CornerRadius = UDim.new(0, 4)
+local intPlusCorner = Instance.new("UICorner", intPlus)
+intPlusCorner.CornerRadius = UDim.new(0, 4)
 
 local heightL = Instance.new("TextLabel", smoothSec)
 heightL.Size, heightL.Position, heightL.BackgroundTransparency, heightL.Text, heightL.TextColor3, heightL.TextSize, heightL.Font = UDim2.new(0, 45, 0, 20), UDim2.new(0, 135, 0, 53), 1, "Tinggi:", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
 local heightMinus = Instance.new("TextButton", smoothSec)
 heightMinus.Size, heightMinus.Position, heightMinus.BackgroundColor3, heightMinus.Text, heightMinus.TextColor3, heightMinus.TextSize, heightMinus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 182, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", heightMinus).CornerRadius = UDim.new(0, 4)
+local heightMinusCorner = Instance.new("UICorner", heightMinus)
+heightMinusCorner.CornerRadius = UDim.new(0, 4)
 
 local heightDisp = Instance.new("TextBox", smoothSec)
 heightDisp.Size, heightDisp.Position, heightDisp.BackgroundColor3, heightDisp.Text, heightDisp.TextColor3, heightDisp.TextSize, heightDisp.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 206, 0, 53), Color3.fromRGB(40, 40, 50), tostring(SmoothHeight), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 heightDisp.ClearTextOnFocus = false
-Instance.new("UICorner", heightDisp).CornerRadius = UDim.new(0, 4)
+local heightDispCorner = Instance.new("UICorner", heightDisp)
+heightDispCorner.CornerRadius = UDim.new(0, 4)
 
 local heightPlus = Instance.new("TextButton", smoothSec)
 heightPlus.Size, heightPlus.Position, heightPlus.BackgroundColor3, heightPlus.Text, heightPlus.TextColor3, heightPlus.TextSize, heightPlus.Font = UDim2.new(0, 22, 0, 20), UDim2.new(0, 236, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", heightPlus).CornerRadius = UDim.new(0, 4)
+local heightPlusCorner = Instance.new("UICorner", heightPlus)
+heightPlusCorner.CornerRadius = UDim.new(0, 4)
 
 --// SNAP TO GRID
 local snapSec = Instance.new("Frame", scroll)
 snapSec.Size, snapSec.BackgroundColor3, snapSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", snapSec).CornerRadius = UDim.new(0, 8)
+local snapSecCorner = Instance.new("UICorner", snapSec)
+snapSecCorner.CornerRadius = UDim.new(0, 8)
 local snapTitle = Instance.new("TextLabel", snapSec)
 snapTitle.Size, snapTitle.Position, snapTitle.BackgroundTransparency, snapTitle.Text, snapTitle.TextColor3, snapTitle.TextSize, snapTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📐 Snap to Grid", Color3.fromRGB(255, 255, 100), 11, Enum.Font.GothamBold
 
 local snapToggleBtn = Instance.new("TextButton", snapSec)
 snapToggleBtn.Size, snapToggleBtn.Position, snapToggleBtn.BackgroundColor3, snapToggleBtn.Text, snapToggleBtn.TextColor3, snapToggleBtn.TextSize, snapToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", snapToggleBtn).CornerRadius = UDim.new(0, 4)
+local snapToggleCorner = Instance.new("UICorner", snapToggleBtn)
+snapToggleCorner.CornerRadius = UDim.new(0, 4)
 
 local visualBtn = Instance.new("TextButton", snapSec)
 visualBtn.Size, visualBtn.Position, visualBtn.BackgroundColor3, visualBtn.Text, visualBtn.TextColor3, visualBtn.TextSize, visualBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), "Visual Guide: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", visualBtn).CornerRadius = UDim.new(0, 4)
+local visualCorner = Instance.new("UICorner", visualBtn)
+visualCorner.CornerRadius = UDim.new(0, 4)
 
 local gridSizeL = Instance.new("TextLabel", snapSec)
 gridSizeL.Size, gridSizeL.Position, gridSizeL.BackgroundTransparency, gridSizeL.Text, gridSizeL.TextColor3, gridSizeL.TextSize, gridSizeL.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Grid Size:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
@@ -822,7 +866,8 @@ gridSizeL.Size, gridSizeL.Position, gridSizeL.BackgroundTransparency, gridSizeL.
 local function CreateSnapPreset(x, val)
     local b = Instance.new("TextButton", snapSec)
     b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, x, 0, 53), Color3.fromRGB(80, 80, 100), tostring(val), Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    local bCorner = Instance.new("UICorner", b)
+    bCorner.CornerRadius = UDim.new(0, 4)
     return b
 end
 local sPreset5 = CreateSnapPreset(72, 5)
@@ -837,7 +882,8 @@ snapAxisL.Size, snapAxisL.Position, snapAxisL.BackgroundTransparency, snapAxisL.
 local function CreateAxisToggle(x, axisStr, isEnabled)
     local b = Instance.new("TextButton", snapSec)
     b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, x, 0, 78), isEnabled and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(200, 60, 60), axisStr, Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    local bCorner = Instance.new("UICorner", b)
+    bCorner.CornerRadius = UDim.new(0, 4)
     return b
 end
 local axisXBtn = CreateAxisToggle(72, "X", SnapAxis.X)
@@ -847,7 +893,8 @@ local axisZBtn = CreateAxisToggle(128, "Z", SnapAxis.Z)
 --// SIZE SECTION
 local sizeSec = Instance.new("Frame", scroll)
 sizeSec.Size, sizeSec.BackgroundColor3, sizeSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", sizeSec).CornerRadius = UDim.new(0, 8)
+local sizeSecCorner = Instance.new("UICorner", sizeSec)
+sizeSecCorner.CornerRadius = UDim.new(0, 8)
 
 local sizeTitle = Instance.new("TextLabel", sizeSec)
 sizeTitle.Size, sizeTitle.Position, sizeTitle.BackgroundTransparency, sizeTitle.Text, sizeTitle.TextColor3, sizeTitle.TextSize, sizeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📐 Size Custom", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
@@ -857,13 +904,16 @@ local function CreateSizeRow(yPos, labelStr, color, initialVal)
     l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
     local m = Instance.new("TextButton", sizeSec)
     m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 24, 0, yPos), Color3.fromRGB(200, 60, 60), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-    Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
+    local mCorner = Instance.new("UICorner", m)
+    mCorner.CornerRadius = UDim.new(0, 4)
     local v = Instance.new("TextBox", sizeSec)
     v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font, v.ClearTextOnFocus = UDim2.new(0, 36, 0, 20), UDim2.new(0, 52, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold, false
-    Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
+    local vCorner = Instance.new("UICorner", v)
+    vCorner.CornerRadius = UDim.new(0, 4)
     local p = Instance.new("TextButton", sizeSec)
     p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 91, 0, yPos), Color3.fromRGB(0, 150, 100), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
+    local pCorner = Instance.new("UICorner", p)
+    pCorner.CornerRadius = UDim.new(0, 4)
     return m, v, p
 end
 
@@ -874,7 +924,8 @@ local zMinus, zValue, zPlus = CreateSizeRow(71, "Z:", Color3.fromRGB(100, 100, 2
 local function CreatePresetBtn(x, y, val)
     local b = Instance.new("TextButton", sizeSec)
     b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, x, 0, y), Color3.fromRGB(80, 80, 100), tostring(val), Color3.fromRGB(255, 255, 255), 9, Enum.Font.GothamBold
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    local bCorner = Instance.new("UICorner", b)
+    bCorner.CornerRadius = UDim.new(0, 4)
     return b
 end
 
@@ -899,7 +950,8 @@ sizeMaxTxt.Size, sizeMaxTxt.Position, sizeMaxTxt.BackgroundTransparency, sizeMax
 --// ROTATION SECTION
 local rotSec = Instance.new("Frame", scroll)
 rotSec.Size, rotSec.BackgroundColor3, rotSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", rotSec).CornerRadius = UDim.new(0, 8)
+local rotSecCorner = Instance.new("UICorner", rotSec)
+rotSecCorner.CornerRadius = UDim.new(0, 8)
 local rotTitle = Instance.new("TextLabel", rotSec)
 rotTitle.Size, rotTitle.Position, rotTitle.BackgroundTransparency, rotTitle.Text, rotTitle.TextColor3, rotTitle.TextSize, rotTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔄 Rotation (X-Y-Z)", Color3.fromRGB(255, 180, 0), 11, Enum.Font.GothamBold
 
@@ -908,13 +960,16 @@ local function CreateRotRow(yPos, labelStr, color, initialVal)
     l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
     local m = Instance.new("TextButton", rotSec)
     m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 24, 0, yPos), Color3.fromRGB(200, 60, 60), "-15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-    Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
+    local mCorner = Instance.new("UICorner", m)
+    mCorner.CornerRadius = UDim.new(0, 4)
     local v = Instance.new("TextLabel", rotSec)
     v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font = UDim2.new(0, 46, 0, 20), UDim2.new(0, 58, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal).."°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-    Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
+    local vCorner = Instance.new("UICorner", v)
+    vCorner.CornerRadius = UDim.new(0, 4)
     local p = Instance.new("TextButton", rotSec)
     p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 106, 0, yPos), Color3.fromRGB(0, 150, 100), "+15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
+    local pCorner = Instance.new("UICorner", p)
+    pCorner.CornerRadius = UDim.new(0, 4)
     return m, v, p
 end
 
@@ -924,22 +979,26 @@ local rzMinus, rzValue, rzPlus = CreateRotRow(71, "Z:", Color3.fromRGB(100, 100,
 
 local rotResetBtn = Instance.new("TextButton", rotSec)
 rotResetBtn.Size, rotResetBtn.Position, rotResetBtn.BackgroundColor3, rotResetBtn.Text, rotResetBtn.TextColor3, rotResetBtn.TextSize, rotResetBtn.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 150, 0, 48), Color3.fromRGB(150, 150, 150), "Reset 0°", Color3.fromRGB(0, 0, 0), 11, Enum.Font.GothamBold
-Instance.new("UICorner", rotResetBtn).CornerRadius = UDim.new(0, 4)
+local rotResetCorner = Instance.new("UICorner", rotResetBtn)
+rotResetCorner.CornerRadius = UDim.new(0, 4)
 
 local scriptBtn = Instance.new("TextButton", scroll)
 scriptBtn.Size, scriptBtn.BackgroundColor3, scriptBtn.Text, scriptBtn.TextColor3, scriptBtn.TextSize, scriptBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(120, 80, 200), "📋 Get Script Code", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", scriptBtn).CornerRadius = UDim.new(0, 8)
+local scriptBtnCorner = Instance.new("UICorner", scriptBtn)
+scriptBtnCorner.CornerRadius = UDim.new(0, 8)
 
 local clearBtn = Instance.new("TextButton", scroll)
 clearBtn.Size, clearBtn.BackgroundColor3, clearBtn.Text, clearBtn.TextColor3, clearBtn.TextSize, clearBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(180, 60, 60), "🗑️ Clear All", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 8)
+local clearBtnCorner = Instance.new("UICorner", clearBtn)
+clearBtnCorner.CornerRadius = UDim.new(0, 8)
 
---// SCRIPT EXPORT OPTIONS WINDOW
+--// SCRIPT EXPORT OPTIONS WINDOW - FIXED: semua UICorner dengan CornerRadius
 local exportWin = Instance.new("Frame", gui)
 exportWin.Name, exportWin.Size, exportWin.Position = "ExportWindow", UDim2.new(0, 220, 0, 160), UDim2.new(0.5, -110, 0.5, -80)
 exportWin.BackgroundColor3, exportWin.BorderSizePixel = Color3.fromRGB(25, 25, 35), 0
 exportWin.Visible, exportWin.Active, exportWin.Draggable = false, true, true
-Instance.new("UICorner", exportWin).CornerRadius = UDim.new(0, 12)
+local exportWinCorner = Instance.new("UICorner", exportWin)
+exportWinCorner.CornerRadius = UDim.new(0, 12)
 
 local expStroke = Instance.new("UIStroke", exportWin)
 expStroke.Color = Color3.fromRGB(0, 255, 255)
@@ -948,17 +1007,19 @@ expStroke.Transparency = 0.3
 
 local expTitle = Instance.new("Frame", exportWin)
 expTitle.Size, expTitle.BackgroundColor3, expTitle.BorderSizePixel = UDim2.new(1, 0, 0, 30), Color3.fromRGB(40, 40, 55), 0
-Instance.new("UICorner", expTitle).CornerRadius = UDim.new(0, 12)
+local expTitleCorner = Instance.new("UICorner", expTitle)
+expTitleCorner.CornerRadius = UDim.new(0, 12)
 local expTitleTxt = Instance.new("TextLabel", expTitle)
 expTitleTxt.Size, expTitleTxt.Position, expTitleTxt.BackgroundTransparency, expTitleTxt.Text, expTitleTxt.TextColor3, expTitleTxt.TextSize, expTitleTxt.Font, expTitleTxt.TextXAlignment = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0), 1, "GET SCRIPT CODE", Color3.fromRGB(0, 255, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local expCloseBtn = Instance.new("TextButton", expTitle)
 expCloseBtn.Size, expCloseBtn.Position, expCloseBtn.BackgroundColor3, expCloseBtn.Text, expCloseBtn.TextColor3, expCloseBtn.TextSize, expCloseBtn.Font = UDim2.new(0, 24, 0, 24), UDim2.new(1, -28, 0.5, -12), Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold
-Instance.new("UICorner", expCloseBtn).CornerRadius = UDim.new(0, 6)
+local expCloseCorner = Instance.new("UICorner", expCloseBtn)
+expCloseCorner.CornerRadius = UDim.new(0, 6)
 
 local expMode = "Tidak"
 
--- FIXED: Memperbaiki salah penamaan atribut btnBackgroundTransparency
+-- FIXED: Proper UICorner with CornerRadius
 local btnTidak = Instance.new("TextButton", exportWin)
 btnTidak.Size, btnTidak.Position, btnTidak.BackgroundTransparency, btnTidak.Text, btnTidak.TextColor3, btnTidak.TextSize, btnTidak.Font, btnTidak.TextXAlignment = UDim2.new(1, -20, 0, 30), UDim2.new(0, 10, 0, 40), 1, "● Tidak", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
@@ -986,30 +1047,36 @@ expCloseBtn.MouseButton1Click:Connect(function() exportWin.Visible = false end)
 
 local generateFinalBtn = Instance.new("TextButton", exportWin)
 generateFinalBtn.Size, generateFinalBtn.Position, generateFinalBtn.BackgroundColor3, generateFinalBtn.Text, generateFinalBtn.TextColor3, generateFinalBtn.TextSize, generateFinalBtn.Font = UDim2.new(1, -20, 0, 35), UDim2.new(0, 10, 1, -45), Color3.fromRGB(0, 150, 255), "[ GENERATE ]", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBlack
-Instance.new("UICorner", generateFinalBtn).CornerRadius = UDim.new(0, 6)
+local generateFinalCorner = Instance.new("UICorner", generateFinalBtn)
+generateFinalCorner.CornerRadius = UDim.new(0, 6)
 
---// SCRIPT WINDOW
+--// SCRIPT WINDOW - FIXED: semua UICorner dengan CornerRadius
 local scriptWin = Instance.new("Frame", gui)
 scriptWin.Name, scriptWin.Size, scriptWin.Position, scriptWin.BackgroundColor3, scriptWin.BorderSizePixel, scriptWin.Visible, scriptWin.Active, scriptWin.Draggable = "ScriptWindow", UDim2.new(0, 400, 0, 350), UDim2.new(0.5, -200, 0.5, -175), Color3.fromRGB(30, 30, 35), 0, false, true, true
-Instance.new("UICorner", scriptWin).CornerRadius = UDim.new(0, 12)
+local scriptWinCorner = Instance.new("UICorner", scriptWin)
+scriptWinCorner.CornerRadius = UDim.new(0, 12)
 
 local scriptTitle = Instance.new("Frame", scriptWin)
 scriptTitle.Size, scriptTitle.BackgroundColor3, scriptTitle.BorderSizePixel = UDim2.new(1, 0, 0, 40), Color3.fromRGB(45, 45, 55), 0
-Instance.new("UICorner", scriptTitle).CornerRadius = UDim.new(0, 12)
+local scriptTitleCorner = Instance.new("UICorner", scriptTitle)
+scriptTitleCorner.CornerRadius = UDim.new(0, 12)
 local scriptTitleText = Instance.new("TextLabel", scriptTitle)
 scriptTitleText.Size, scriptTitleText.Position, scriptTitleText.BackgroundTransparency, scriptTitleText.Text, scriptTitleText.TextColor3, scriptTitleText.TextSize, scriptTitleText.Font, scriptTitleText.TextXAlignment = UDim2.new(1, -110, 1, 0), UDim2.new(0, 12, 0, 0), 1, "📋 Generated Script", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local copyBtn = Instance.new("TextButton", scriptTitle)
 copyBtn.Size, copyBtn.Position, copyBtn.BackgroundColor3, copyBtn.Text, copyBtn.TextColor3, copyBtn.TextSize, copyBtn.Font = UDim2.new(0, 60, 0, 30), UDim2.new(1, -130, 0.5, -15), Color3.fromRGB(0, 150, 100), "Copy", Color3.fromRGB(255, 255, 255), 12, Enum.Font.GothamBold
-Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 6)
+local copyCorner = Instance.new("UICorner", copyBtn)
+copyCorner.CornerRadius = UDim.new(0, 6)
 
 local closeScriptBtn = Instance.new("TextButton", scriptTitle)
 closeScriptBtn.Size, closeScriptBtn.Position, closeScriptBtn.BackgroundColor3, closeScriptBtn.Text, closeScriptBtn.TextColor3, closeScriptBtn.TextSize, closeScriptBtn.Font = UDim2.new(0, 30, 0, 30), UDim2.new(1, -40, 0.5, -15), Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", closeScriptBtn).CornerRadius = UDim.new(0, 6)
+local closeScriptCorner = Instance.new("UICorner", closeScriptBtn)
+closeScriptCorner.CornerRadius = UDim.new(0, 6)
 
 local codeScroll = Instance.new("ScrollingFrame", scriptWin)
 codeScroll.Size, codeScroll.Position, codeScroll.BackgroundColor3, codeScroll.BorderSizePixel, codeScroll.ScrollBarThickness = UDim2.new(1, -16, 1, -100), UDim2.new(0, 8, 0, 48), Color3.fromRGB(20, 20, 25), 0, 5
-Instance.new("UICorner", codeScroll).CornerRadius = UDim.new(0, 6)
+local codeScrollCorner = Instance.new("UICorner", codeScroll)
+codeScrollCorner.CornerRadius = UDim.new(0, 6)
 local codeText = Instance.new("TextLabel", codeScroll)
 codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text, codeText.TextColor3, codeText.TextSize, codeText.Font, codeText.TextXAlignment, codeText.TextYAlignment, codeText.AutomaticSize, codeText.TextWrapped = UDim2.new(1, -12, 0, 0), UDim2.new(0, 6, 0, 6), 1, "-- No terrain spawned yet --", Color3.fromRGB(200, 200, 200), 11, Enum.Font.Code, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top, Enum.AutomaticSize.Y, true
 
@@ -1247,7 +1314,7 @@ copyBtn.MouseButton1Click:Connect(function()
         if setclipboard then 
             setclipboard(codeText.Text)
         elseif writefile then
-            writefile("Elbruzh_Terrain_"..tostring(math.random(1000,9999))..".txt", codeText.Text)
+            writefile("shhhhnayy05_Terrain_"..tostring(math.random(1000,9999))..".txt", codeText.Text)
         else
             warn("Executor tidak mendukung clipboard atau writefile!")
         end
@@ -1319,4 +1386,4 @@ RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("✅ Terrain Editor v16.5 Loaded - Clean Flat UI & Protected Mode Active! (Colors & Rock Fixed)")
+print("✅ Terrain Editor v16.6 Loaded - ALL NIL CALLS FIXED! (SelectionBox.Transparency, Terrain:SetMaterialColor, Region3:ExpandToGrid, UICorner.CornerRadius)")
