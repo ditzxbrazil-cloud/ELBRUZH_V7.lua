@@ -1,5 +1,5 @@
 --// TERRAIN BY shhhhnayy05
---// Terrain Editor v16.6 - Move Review Part Feature
+--// Terrain Editor v16.6 - Move Review Part (FIXED NO EMOJI)
 --// OPTIMIZED FOR MOBILE EXECUTORS & LOADSTRING
 
 local Players = game:GetService("Players")
@@ -120,17 +120,6 @@ local SmoothHeight = 5
 local MoveReviewEnabled = false
 local MoveReviewOffset = 0
 local MoveReviewStep = 2
-local MoveReviewWindow = nil
-local MoveReviewIcon = nil
-local MoveReviewLastPosition = nil
-
---// SAFE WAIT FUNCTION (compatible with all executors)
-local function SafeWait(seconds)
-    local start = tick()
-    while tick() - start < seconds do
-        RunService.Heartbeat:Wait()
-    end
-end
 
 --// Raycast dengan Pelindung (pcall)
 local function GetRaycast()
@@ -232,8 +221,15 @@ end
 --// Grid update loop
 spawn(function()
     while true do
-        SafeWait(2)
-        if ShowGridVisual then UpdateGridVisual() end
+        local success = pcall(function()
+            RunService.Heartbeat:Wait()
+        end)
+        if not success then
+            wait(2)
+        else
+            if ShowGridVisual then UpdateGridVisual() end
+            wait(2)
+        end
     end
 end)
 
@@ -600,7 +596,7 @@ spawnBtn.Name = "SpawnBtn"
 spawnBtn.Size = UDim2.new(0, 50, 0, 50)
 spawnBtn.Position = UDim2.new(0, 4, 0, 50)
 spawnBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-spawnBtn.Text = "🎯"
+spawnBtn.Text = ">"
 spawnBtn.TextSize = 30
 spawnBtn.Font = Enum.Font.GothamBlack
 Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(1, 0)
@@ -611,7 +607,7 @@ undoBtn.Name = "UndoBtn"
 undoBtn.Size = UDim2.new(0, 45, 0, 45)
 undoBtn.Position = UDim2.new(0, 6, 0, 105)
 undoBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-undoBtn.Text = "↩️"
+undoBtn.Text = "<"
 undoBtn.TextSize = 22
 undoBtn.Font = Enum.Font.GothamBlack
 Instance.new("UICorner", undoBtn).CornerRadius = UDim.new(1, 0)
@@ -622,7 +618,7 @@ matIconBtn.Name = "MatIconBtn"
 matIconBtn.Size = UDim2.new(0, 45, 0, 45)
 matIconBtn.Position = UDim2.new(0, 6, 0, 155)
 matIconBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
-matIconBtn.Text = "🎨"
+matIconBtn.Text = "M"
 matIconBtn.TextSize = 22
 matIconBtn.Font = Enum.Font.GothamBlack
 Instance.new("UICorner", matIconBtn).CornerRadius = UDim.new(1, 0)
@@ -633,7 +629,7 @@ openPanelBtn.Name = "OpenPanelBtn"
 openPanelBtn.Size = UDim2.new(0, 45, 0, 45)
 openPanelBtn.Position = UDim2.new(0, 6, 0, 205)
 openPanelBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-openPanelBtn.Text = "⚙️"
+openPanelBtn.Text = "S"
 openPanelBtn.TextSize = 22
 openPanelBtn.Font = Enum.Font.GothamBlack
 openPanelBtn.Visible = false
@@ -645,7 +641,7 @@ unhideBtn.Name = "UnhideBtn"
 unhideBtn.Size = UDim2.new(0, 25, 0, 25)
 unhideBtn.Position = UDim2.new(0, 16, 0, 165)
 unhideBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-unhideBtn.Text = "👁️"
+unhideBtn.Text = "O"
 unhideBtn.TextSize = 12
 unhideBtn.Font = Enum.Font.GothamBold
 unhideBtn.Visible = false
@@ -712,7 +708,7 @@ local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size = UDim2.new(1, -80, 1, 0)
 titleText.Position = UDim2.new(0, 10, 0, 0)
 titleText.BackgroundTransparency = 1
-titleText.Text = "⚙️ Terrain Editor shhhhnayy05 v16.6"
+titleText.Text = "Terrain Editor shhhhnayy05 v16.6"
 titleText.TextColor3 = Color3.fromRGB(0, 200, 255)
 titleText.TextSize = 12
 titleText.Font = Enum.Font.GothamBold
@@ -722,7 +718,7 @@ local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size = UDim2.new(0, 28, 0, 28)
 minBtn.Position = UDim2.new(1, -65, 0.5, -14)
 minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-minBtn.Text = "−"
+minBtn.Text = "-"
 minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 minBtn.TextSize = 18
 minBtn.Font = Enum.Font.GothamBold
@@ -750,7 +746,7 @@ layout.Padding = UDim.new(0, 6)
 local hideGuiBtn = Instance.new("TextButton", scroll)
 hideGuiBtn.Size = UDim2.new(1, -8, 0, 32)
 hideGuiBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-hideGuiBtn.Text = "👁️ Hide GUI"
+hideGuiBtn.Text = "Hide GUI"
 hideGuiBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 hideGuiBtn.TextSize = 11
 hideGuiBtn.Font = Enum.Font.GothamBold
@@ -759,7 +755,7 @@ Instance.new("UICorner", hideGuiBtn).CornerRadius = UDim.new(0, 8)
 local status = Instance.new("TextLabel", scroll)
 status.Size = UDim2.new(1, -8, 0, 18)
 status.BackgroundTransparency = 1
-status.Text = "Aim & tap 🎯 to spawn"
+status.Text = "Aim & tap > to spawn"
 status.TextColor3 = Color3.fromRGB(0, 255, 150)
 status.TextSize = 10
 status.Font = Enum.Font.Gotham
@@ -783,7 +779,7 @@ local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx
     lBtn.Size = UDim2.new(0, 28, 0, 22)
     lBtn.Position = UDim2.new(0, 5, 0, 24)
     lBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-    lBtn.Text = "←"
+    lBtn.Text = "<"
     lBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     lBtn.TextSize = 14
     lBtn.Font = Enum.Font.GothamBold
@@ -801,7 +797,7 @@ local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx
     rBtn.Size = UDim2.new(0, 28, 0, 22)
     rBtn.Position = UDim2.new(1, -33, 0, 24)
     rBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-    rBtn.Text = "→"
+    rBtn.Text = ">"
     rBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     rBtn.TextSize = 14
     rBtn.Font = Enum.Font.GothamBold
@@ -809,9 +805,9 @@ local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx
     return lBtn, rBtn, disp
 end
 
-local grassLeft, grassRight, grassDisplay = CreateColorSec(scroll, "🌿 Grass Color", grassColors, Color3.fromRGB(0, 255, 100), currentGrassColorIndex)
-local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGrass Color", leafyGrassColors, Color3.fromRGB(100, 220, 80), currentLeafyGrassColorIndex)
-local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
+local grassLeft, grassRight, grassDisplay = CreateColorSec(scroll, "Grass Color", grassColors, Color3.fromRGB(0, 255, 100), currentGrassColorIndex)
+local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "LeafyGrass Color", leafyGrassColors, Color3.fromRGB(100, 220, 80), currentLeafyGrassColorIndex)
+local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
 
 --// GHOST MODE SECTION
 local ghostSec = Instance.new("Frame", scroll)
@@ -823,7 +819,7 @@ local ghostTitle = Instance.new("TextLabel", ghostSec)
 ghostTitle.Size = UDim2.new(1, 0, 0, 18)
 ghostTitle.Position = UDim2.new(0, 0, 0, 2)
 ghostTitle.BackgroundTransparency = 1
-ghostTitle.Text = "👻 Tembus Terrain"
+ghostTitle.Text = "Tembus Terrain"
 ghostTitle.TextColor3 = Color3.fromRGB(200, 150, 255)
 ghostTitle.TextSize = 11
 ghostTitle.Font = Enum.Font.GothamBold
@@ -859,7 +855,7 @@ local moveReviewTitle = Instance.new("TextLabel", moveReviewSec)
 moveReviewTitle.Size = UDim2.new(1, 0, 0, 18)
 moveReviewTitle.Position = UDim2.new(0, 0, 0, 2)
 moveReviewTitle.BackgroundTransparency = 1
-moveReviewTitle.Text = "📦 Move Review Part"
+moveReviewTitle.Text = "Move Review Part"
 moveReviewTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
 moveReviewTitle.TextSize = 11
 moveReviewTitle.Font = Enum.Font.GothamBold
@@ -885,7 +881,7 @@ moveReviewInfo.Font = Enum.Font.Gotham
 
 --// MOVE REVIEW WINDOW
 local moveReviewWin = Instance.new("Frame", gui)
-moveReviewWin.Name = "MoveReviewWindow"
+moveReviewWin.Name = "MoveReviewWin"
 moveReviewWin.Size = UDim2.new(0, 120, 0, 140)
 moveReviewWin.Position = UDim2.new(0.5, -60, 0.5, -70)
 moveReviewWin.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
@@ -909,7 +905,7 @@ local moveReviewTitleText = Instance.new("TextLabel", moveReviewTitleBar)
 moveReviewTitleText.Size = UDim2.new(1, -40, 1, 0)
 moveReviewTitleText.Position = UDim2.new(0, 8, 0, 0)
 moveReviewTitleText.BackgroundTransparency = 1
-moveReviewTitleText.Text = "📦 Move Part"
+moveReviewTitleText.Text = "Move Part"
 moveReviewTitleText.TextColor3 = Color3.fromRGB(255, 200, 50)
 moveReviewTitleText.TextSize = 12
 moveReviewTitleText.Font = Enum.Font.GothamBold
@@ -919,7 +915,7 @@ local moveReviewMinBtn = Instance.new("TextButton", moveReviewTitleBar)
 moveReviewMinBtn.Size = UDim2.new(0, 24, 0, 24)
 moveReviewMinBtn.Position = UDim2.new(1, -28, 0.5, -12)
 moveReviewMinBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-moveReviewMinBtn.Text = "⛔"
+moveReviewMinBtn.Text = "X"
 moveReviewMinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 moveReviewMinBtn.TextSize = 14
 moveReviewMinBtn.Font = Enum.Font.GothamBold
@@ -929,7 +925,7 @@ local moveReviewUpBtn = Instance.new("TextButton", moveReviewWin)
 moveReviewUpBtn.Size = UDim2.new(0, 80, 0, 35)
 moveReviewUpBtn.Position = UDim2.new(0.5, -40, 0, 40)
 moveReviewUpBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-moveReviewUpBtn.Text = "⬆️ ATAS"
+moveReviewUpBtn.Text = "UP"
 moveReviewUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 moveReviewUpBtn.TextSize = 14
 moveReviewUpBtn.Font = Enum.Font.GothamBold
@@ -949,7 +945,7 @@ local moveReviewDownBtn = Instance.new("TextButton", moveReviewWin)
 moveReviewDownBtn.Size = UDim2.new(0, 80, 0, 35)
 moveReviewDownBtn.Position = UDim2.new(0.5, -40, 0, 105)
 moveReviewDownBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-moveReviewDownBtn.Text = "⬇️ BAWAH"
+moveReviewDownBtn.Text = "DOWN"
 moveReviewDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 moveReviewDownBtn.TextSize = 14
 moveReviewDownBtn.Font = Enum.Font.GothamBold
@@ -961,7 +957,7 @@ moveReviewIcon.Name = "MoveReviewIcon"
 moveReviewIcon.Size = UDim2.new(0, 45, 0, 45)
 moveReviewIcon.Position = UDim2.new(0.5, -22, 0.5, -22)
 moveReviewIcon.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-moveReviewIcon.Text = "🔛"
+moveReviewIcon.Text = "M"
 moveReviewIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
 moveReviewIcon.TextSize = 22
 moveReviewIcon.Font = Enum.Font.GothamBlack
@@ -996,6 +992,8 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 --// MOVE REVIEW FUNCTIONS
+local MoveReviewLastPosition = nil
+
 local function OpenMoveReviewWindow()
     moveReviewWin.Visible = true
     moveReviewIcon.Visible = false
@@ -1020,7 +1018,7 @@ local function EnableMoveReview()
     MoveReviewOffset = 0
     moveReviewToggleBtn.Text = "Move: ON"
     moveReviewToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    moveReviewInfo.Text = "ON = Gunakan tombol ⬆️⬇️ untuk atur posisi"
+    moveReviewInfo.Text = "ON = Gunakan tombol UP/DOWN"
     moveReviewWin.Position = UDim2.new(0.5, -60, 0.5, -70)
     MoveReviewLastPosition = moveReviewWin.Position
     OpenMoveReviewWindow()
@@ -1060,8 +1058,10 @@ moveReviewUpBtn.MouseButton1Click:Connect(function()
     UpdatePreview()
     -- Animasi tombol
     TweenService:Create(moveReviewUpBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 75, 0, 32)}):Play()
-    SafeWait(0.1)
-    TweenService:Create(moveReviewUpBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 80, 0, 35)}):Play()
+    spawn(function()
+        wait(0.1)
+        TweenService:Create(moveReviewUpBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 80, 0, 35)}):Play()
+    end)
 end)
 
 moveReviewDownBtn.MouseButton1Click:Connect(function()
@@ -1070,8 +1070,10 @@ moveReviewDownBtn.MouseButton1Click:Connect(function()
     UpdatePreview()
     -- Animasi tombol
     TweenService:Create(moveReviewDownBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 75, 0, 32)}):Play()
-    SafeWait(0.1)
-    TweenService:Create(moveReviewDownBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 80, 0, 35)}):Play()
+    spawn(function()
+        wait(0.1)
+        TweenService:Create(moveReviewDownBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 80, 0, 35)}):Play()
+    end)
 end)
 
 --// SHAPE SECTION
@@ -1084,7 +1086,7 @@ local shapeTitle = Instance.new("TextLabel", shapeSec)
 shapeTitle.Size = UDim2.new(1, 0, 0, 18)
 shapeTitle.Position = UDim2.new(0, 0, 0, 2)
 shapeTitle.BackgroundTransparency = 1
-shapeTitle.Text = "🔷 Shape (Pilih Bentuk)"
+shapeTitle.Text = "Shape (Pilih Bentuk)"
 shapeTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
 shapeTitle.TextSize = 11
 shapeTitle.Font = Enum.Font.GothamBold
@@ -1117,7 +1119,7 @@ local modeTitle = Instance.new("TextLabel", modeSec)
 modeTitle.Size = UDim2.new(1, 0, 0, 18)
 modeTitle.Position = UDim2.new(0, 0, 0, 2)
 modeTitle.BackgroundTransparency = 1
-modeTitle.Text = "🛠️ Action Mode"
+modeTitle.Text = "Action Mode"
 modeTitle.TextColor3 = Color3.fromRGB(255, 150, 50)
 modeTitle.TextSize = 11
 modeTitle.Font = Enum.Font.GothamBold
@@ -1137,7 +1139,7 @@ local smoothTitle = Instance.new("TextLabel", smoothSec)
 smoothTitle.Size = UDim2.new(1, 0, 0, 18)
 smoothTitle.Position = UDim2.new(0, 0, 0, 2)
 smoothTitle.BackgroundTransparency = 1
-smoothTitle.Text = "✨ Smooth Terrain"
+smoothTitle.Text = "Smooth Terrain"
 smoothTitle.TextColor3 = Color3.fromRGB(255, 100, 200)
 smoothTitle.TextSize = 11
 smoothTitle.Font = Enum.Font.GothamBold
@@ -1146,7 +1148,7 @@ local smoothToggleBtn = Instance.new("TextButton", smoothSec)
 smoothToggleBtn.Size = UDim2.new(0, 60, 0, 22)
 smoothToggleBtn.Position = UDim2.new(0, 6, 0, 25)
 smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-smoothToggleBtn.Text = "OFF ▼"
+smoothToggleBtn.Text = "OFF"
 smoothToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 smoothToggleBtn.TextSize = 11
 smoothToggleBtn.Font = Enum.Font.GothamBold
@@ -1252,7 +1254,7 @@ local snapTitle = Instance.new("TextLabel", snapSec)
 snapTitle.Size = UDim2.new(1, 0, 0, 18)
 snapTitle.Position = UDim2.new(0, 0, 0, 2)
 snapTitle.BackgroundTransparency = 1
-snapTitle.Text = "📐 Snap to Grid"
+snapTitle.Text = "Snap to Grid"
 snapTitle.TextColor3 = Color3.fromRGB(255, 255, 100)
 snapTitle.TextSize = 11
 snapTitle.Font = Enum.Font.GothamBold
@@ -1340,7 +1342,7 @@ local sizeTitle = Instance.new("TextLabel", sizeSec)
 sizeTitle.Size = UDim2.new(1, 0, 0, 18)
 sizeTitle.Position = UDim2.new(0, 0, 0, 2)
 sizeTitle.BackgroundTransparency = 1
-sizeTitle.Text = "📐 Size Custom"
+sizeTitle.Text = "Size Custom"
 sizeTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
 sizeTitle.TextSize = 11
 sizeTitle.Font = Enum.Font.GothamBold
@@ -1436,7 +1438,7 @@ local rotTitle = Instance.new("TextLabel", rotSec)
 rotTitle.Size = UDim2.new(1, 0, 0, 18)
 rotTitle.Position = UDim2.new(0, 0, 0, 2)
 rotTitle.BackgroundTransparency = 1
-rotTitle.Text = "🔄 Rotation (X-Y-Z)"
+rotTitle.Text = "Rotation (X-Y-Z)"
 rotTitle.TextColor3 = Color3.fromRGB(255, 180, 0)
 rotTitle.TextSize = 11
 rotTitle.Font = Enum.Font.GothamBold
@@ -1454,7 +1456,7 @@ local function CreateRotRow(yPos, labelStr, color, initialVal)
     m.Size = UDim2.new(0, 32, 0, 20)
     m.Position = UDim2.new(0, 24, 0, yPos)
     m.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    m.Text = "-15°"
+    m.Text = "-15"
     m.TextColor3 = Color3.fromRGB(255, 255, 255)
     m.TextSize = 11
     m.Font = Enum.Font.GothamBold
@@ -1463,7 +1465,7 @@ local function CreateRotRow(yPos, labelStr, color, initialVal)
     v.Size = UDim2.new(0, 46, 0, 20)
     v.Position = UDim2.new(0, 58, 0, yPos)
     v.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-    v.Text = tostring(initialVal).."°"
+    v.Text = tostring(initialVal) .. "deg"
     v.TextColor3 = Color3.fromRGB(255, 255, 255)
     v.TextSize = 11
     v.Font = Enum.Font.GothamBold
@@ -1472,7 +1474,7 @@ local function CreateRotRow(yPos, labelStr, color, initialVal)
     p.Size = UDim2.new(0, 32, 0, 20)
     p.Position = UDim2.new(0, 106, 0, yPos)
     p.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    p.Text = "+15°"
+    p.Text = "+15"
     p.TextColor3 = Color3.fromRGB(255, 255, 255)
     p.TextSize = 11
     p.Font = Enum.Font.GothamBold
@@ -1488,7 +1490,7 @@ local rotResetBtn = Instance.new("TextButton", rotSec)
 rotResetBtn.Size = UDim2.new(0, 60, 0, 20)
 rotResetBtn.Position = UDim2.new(0, 150, 0, 48)
 rotResetBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
-rotResetBtn.Text = "Reset 0°"
+rotResetBtn.Text = "Reset 0"
 rotResetBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 rotResetBtn.TextSize = 11
 rotResetBtn.Font = Enum.Font.GothamBold
@@ -1497,7 +1499,7 @@ Instance.new("UICorner", rotResetBtn).CornerRadius = UDim.new(0, 4)
 local scriptBtn = Instance.new("TextButton", scroll)
 scriptBtn.Size = UDim2.new(1, -8, 0, 32)
 scriptBtn.BackgroundColor3 = Color3.fromRGB(120, 80, 200)
-scriptBtn.Text = "📋 Get Script Code"
+scriptBtn.Text = "Get Script Code"
 scriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 scriptBtn.TextSize = 11
 scriptBtn.Font = Enum.Font.GothamBold
@@ -1506,7 +1508,7 @@ Instance.new("UICorner", scriptBtn).CornerRadius = UDim.new(0, 8)
 local clearBtn = Instance.new("TextButton", scroll)
 clearBtn.Size = UDim2.new(1, -8, 0, 32)
 clearBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-clearBtn.Text = "🗑️ Clear All"
+clearBtn.Text = "Clear All"
 clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 clearBtn.TextSize = 11
 clearBtn.Font = Enum.Font.GothamBold
@@ -1560,7 +1562,7 @@ local btnTidak = Instance.new("TextButton", exportWin)
 btnTidak.Size = UDim2.new(1, -20, 0, 30)
 btnTidak.Position = UDim2.new(0, 10, 0, 40)
 btnTidak.BackgroundTransparency = 1
-btnTidak.Text = "● Tidak"
+btnTidak.Text = "* Tidak"
 btnTidak.TextColor3 = Color3.fromRGB(255, 255, 255)
 btnTidak.TextSize = 12
 btnTidak.Font = Enum.Font.GothamBold
@@ -1570,7 +1572,7 @@ local btnConvert = Instance.new("TextButton", exportWin)
 btnConvert.Size = UDim2.new(1, -20, 0, 30)
 btnConvert.Position = UDim2.new(0, 10, 0, 75)
 btnConvert.BackgroundTransparency = 1
-btnConvert.Text = "○ Convert Part"
+btnConvert.Text = "o Convert Part"
 btnConvert.TextColor3 = Color3.fromRGB(255, 255, 255)
 btnConvert.TextSize = 12
 btnConvert.Font = Enum.Font.GothamBold
@@ -1579,14 +1581,14 @@ btnConvert.TextXAlignment = Enum.TextXAlignment.Left
 local function UpdateExpMode(mode)
     expMode = mode
     if mode == "Tidak" then
-        btnTidak.Text = "● Tidak"
+        btnTidak.Text = "* Tidak"
         btnTidak.TextColor3 = Color3.fromRGB(0, 255, 255)
-        btnConvert.Text = "○ Convert Part"
+        btnConvert.Text = "o Convert Part"
         btnConvert.TextColor3 = Color3.fromRGB(200, 200, 200)
     else
-        btnTidak.Text = "○ Tidak"
+        btnTidak.Text = "o Tidak"
         btnTidak.TextColor3 = Color3.fromRGB(200, 200, 200)
-        btnConvert.Text = "● Convert Part"
+        btnConvert.Text = "* Convert Part"
         btnConvert.TextColor3 = Color3.fromRGB(0, 255, 255)
     end
 end
@@ -1626,7 +1628,7 @@ local scriptTitleText = Instance.new("TextLabel", scriptTitle)
 scriptTitleText.Size = UDim2.new(1, -110, 1, 0)
 scriptTitleText.Position = UDim2.new(0, 12, 0, 0)
 scriptTitleText.BackgroundTransparency = 1
-scriptTitleText.Text = "📋 Generated Script"
+scriptTitleText.Text = "Generated Script"
 scriptTitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 scriptTitleText.TextSize = 14
 scriptTitleText.Font = Enum.Font.GothamBold
@@ -1767,10 +1769,10 @@ paintBtn.MouseButton1Click:Connect(function() SelectMode("Paint", paintBtn) end)
 smoothToggleBtn.MouseButton1Click:Connect(function()
     SmoothEnabled = not SmoothEnabled
     if SmoothEnabled then
-        smoothToggleBtn.Text = "ON ✨"
+        smoothToggleBtn.Text = "ON"
         smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
     else
-        smoothToggleBtn.Text = "OFF ▼"
+        smoothToggleBtn.Text = "OFF"
         smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
     end
 end)
@@ -1808,7 +1810,7 @@ heightPlus.MouseButton1Click:Connect(function() SmoothHeight = math.min(100, Smo
 snapToggleBtn.MouseButton1Click:Connect(function()
     SnapEnabled = not SnapEnabled
     if SnapEnabled then
-        snapToggleBtn.Text = "ON ☑️"
+        snapToggleBtn.Text = "ON"
         snapToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
     else
         snapToggleBtn.Text = "OFF"
@@ -1907,21 +1909,21 @@ preset80.MouseButton1Click:Connect(function() setPreset(80) end)
 preset90.MouseButton1Click:Connect(function() setPreset(90) end)
 preset100.MouseButton1Click:Connect(function() setPreset(100) end)
 
-rxMinus.MouseButton1Click:Connect(function() RotX = (RotX - 15) % 360; rxValue.Text = tostring(RotX) .. "°"; UpdatePreview() end)
-rxPlus.MouseButton1Click:Connect(function() RotX = (RotX + 15) % 360; rxValue.Text = tostring(RotX) .. "°"; UpdatePreview() end)
-ryMinus.MouseButton1Click:Connect(function() RotY = (RotY - 15) % 360; ryValue.Text = tostring(RotY) .. "°"; UpdatePreview() end)
-ryPlus.MouseButton1Click:Connect(function() RotY = (RotY + 15) % 360; ryValue.Text = tostring(RotY) .. "°"; UpdatePreview() end)
-rzMinus.MouseButton1Click:Connect(function() RotZ = (RotZ - 15) % 360; rzValue.Text = tostring(RotZ) .. "°"; UpdatePreview() end)
-rzPlus.MouseButton1Click:Connect(function() RotZ = (RotZ + 15) % 360; rzValue.Text = tostring(RotZ) .. "°"; UpdatePreview() end)
-rotResetBtn.MouseButton1Click:Connect(function() RotX = 0; RotY = 0; RotZ = 0; rxValue.Text = "0°"; ryValue.Text = "0°"; rzValue.Text = "0°"; UpdatePreview() end)
+rxMinus.MouseButton1Click:Connect(function() RotX = (RotX - 15) % 360; rxValue.Text = tostring(RotX) .. "deg"; UpdatePreview() end)
+rxPlus.MouseButton1Click:Connect(function() RotX = (RotX + 15) % 360; rxValue.Text = tostring(RotX) .. "deg"; UpdatePreview() end)
+ryMinus.MouseButton1Click:Connect(function() RotY = (RotY - 15) % 360; ryValue.Text = tostring(RotY) .. "deg"; UpdatePreview() end)
+ryPlus.MouseButton1Click:Connect(function() RotY = (RotY + 15) % 360; ryValue.Text = tostring(RotY) .. "deg"; UpdatePreview() end)
+rzMinus.MouseButton1Click:Connect(function() RotZ = (RotZ - 15) % 360; rzValue.Text = tostring(RotZ) .. "deg"; UpdatePreview() end)
+rzPlus.MouseButton1Click:Connect(function() RotZ = (RotZ + 15) % 360; rzValue.Text = tostring(RotZ) .. "deg"; UpdatePreview() end)
+rotResetBtn.MouseButton1Click:Connect(function() RotX = 0; RotY = 0; RotZ = 0; rxValue.Text = "0deg"; ryValue.Text = "0deg"; rzValue.Text = "0deg"; UpdatePreview() end)
 
 undoBtn.MouseButton1Click:Connect(function()
     local success, msg = Undo()
     if success then
-        status.Text = "↩️ " .. msg .. " (" .. #SpawnedData .. ")"
+        status.Text = "Undone " .. msg .. " (" .. #SpawnedData .. ")"
         status.TextColor3 = Color3.fromRGB(255, 200, 100)
     else
-        status.Text = "↩️ " .. msg
+        status.Text = "Undone " .. msg
         status.TextColor3 = Color3.fromRGB(255, 100, 100)
     end
 end)
@@ -1962,7 +1964,8 @@ copyBtn.MouseButton1Click:Connect(function()
         copyBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
     end
     
-    delay(1.5, function() 
+    spawn(function()
+        wait(1.5)
         copyBtn.Text = "Copy" 
         copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
     end) 
@@ -1973,7 +1976,7 @@ clearBtn.MouseButton1Click:Connect(function()
     SpawnedData = {}
     UndoHistory = {}
     RedoHistory = {}
-    status.Text = "🗑️ Session cleared!"
+    status.Text = "Session cleared!"
     status.TextColor3 = Color3.fromRGB(255, 100, 100)
     UpdateSpawnCounter()
 end)
@@ -1981,19 +1984,21 @@ end)
 spawnBtn.MouseButton1Click:Connect(function()
     if PreviewPos then
         TweenService:Create(spawnBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 45, 0, 45)}):Play()
-        SafeWait(0.1)
-        TweenService:Create(spawnBtn, TweenInfo.new(0.2), {Size = UDim2.new(0, 50, 0, 50)}):Play()
+        spawn(function()
+            wait(0.1)
+            TweenService:Create(spawnBtn, TweenInfo.new(0.2), {Size = UDim2.new(0, 50, 0, 50)}):Play()
+        end)
         
         local spawned = SpawnTerrain()
         if spawned then
-            status.Text = "✅ Spawned! (" .. #SpawnedData .. ")"
+            status.Text = "Spawned! (" .. #SpawnedData .. ")"
             status.TextColor3 = Color3.fromRGB(0, 255, 100)
         else
-            status.Text = "❌ Failed!"
+            status.Text = "Failed!"
             status.TextColor3 = Color3.fromRGB(255, 100, 100)
         end
     else
-        status.Text = "❌ Aim at ground!"
+        status.Text = "Aim at ground!"
         status.TextColor3 = Color3.fromRGB(255, 100, 100)
     end
 end)
@@ -2022,4 +2027,4 @@ RunService.RenderStepped:Connect(function()
     pcall(function() UpdatePreview() end)
 end)
 
-print("✅ Terrain Editor v16.6 Loaded - Move Review Part Feature Added! (shhhhnayy05)")
+print("Terrain Editor v16.6 Loaded - Move Review Part Feature Added! (shhhhnayy05)")
