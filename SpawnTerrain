@@ -1,7 +1,7 @@
 --// TERRAIN BY ELBRUZH 
 --// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Ghost Mode, Limit Protector, Peninggi Feature, Relative to Part
 --// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (COLOR BUG FIXED)
---// ADDED: Erase Action Mode & Rock Colors
+--// ADDED: Erase Action Mode & Rock Color Customization
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -78,13 +78,13 @@ local rockColors = {
 	{name="Medium Stone Grey", color=Color3.fromRGB(163, 162, 165)},
 	{name="Dark Stone Grey",   color=Color3.fromRGB(99, 95, 98)},
 	{name="Smoky Grey",        color=Color3.fromRGB(91, 93, 105)},
-	{name="Fossil",            color=Color3.fromRGB(159, 142, 116)},
-	{name="Dark Taupe",        color=Color3.fromRGB(91, 75, 65)},
+	{name="Fossil",            color=Color3.fromRGB(159, 145, 131)},
+	{name="Dark Taupe",        color=Color3.fromRGB(90, 77, 65)},
 	{name="Reddish Brown",     color=Color3.fromRGB(105, 64, 40)},
-	{name="Light Stone Grey",  color=Color3.fromRGB(229, 228, 222)},
+	{name="Light Stone Grey",  color=Color3.fromRGB(229, 228, 223)},
 	{name="Brown",             color=Color3.fromRGB(124, 92, 70)},
-	{name="Sand Red",          color=Color3.fromRGB(149, 111, 112)},
-	{name="Black",             color=Color3.fromRGB(30, 30, 30)}
+	{name="Sand Red",          color=Color3.fromRGB(149, 121, 119)},
+	{name="Black",             color=Color3.fromRGB(27, 42, 53)}
 }
 local currentRockColorIndex = 1
 
@@ -313,12 +313,12 @@ local function BL(d)
     local sx, sy, sz = d[4], d[5], d[6]
     local matName = d[7]
     local shape = d[8] or "Ball"
-    local rx, ry, rz = d[13] or 0, d[14] or 0, d[15] or 0
-    local smoothOn = d[16] or false
-    local smoothMode = d[17] or "Soft Edge"
-    local smoothInt = d[18] or 5
-    local actionMode = d[19] or "Build"
-    local smoothHeight = d[20] or 5
+    local rx, ry, rz = d[12] or 0, d[13] or 0, d[14] or 0
+    local smoothOn = d[15] or false
+    local smoothMode = d[16] or "Soft Edge"
+    local smoothInt = d[17] or 5
+    local actionMode = d[18] or "Build"
+    local smoothHeight = d[19] or 5
     local mat = Enum.Material.Grass
     for _, m in ipairs(Materials) do if m.Name == matName then mat = m.Mat break end end
     
@@ -412,8 +412,9 @@ local function SpawnTerrain()
         local data = {
             math.floor(PreviewPos.X), math.floor(PreviewPos.Y), math.floor(PreviewPos.Z),
             SizeX, SizeY, SizeZ, CurrentMaterial.Name, CurrentShape,
-            currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex, currentRockColorIndex,    
-            RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity, CurrentMode, SmoothHeight
+            currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
+            RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity, CurrentMode, SmoothHeight,
+            currentRockColorIndex -- Added Rock Color Index (d[20])
         }
         BL(data)
         local afterMats, afterOccs = Terrain:ReadVoxels(region, 4)
@@ -513,24 +514,24 @@ end
     end
     code = code .. "    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Brick=Enum.Material.Brick,Wood=Enum.Material.WoodPlanks,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice}\n"
     code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
-    code = code .. "    local shape, actionMode = d[8] or 'Ball', d[19] or 'Build'\n"
+    code = code .. "    local shape, actionMode = d[8] or 'Ball', d[18] or 'Build'\n"
     code = code .. "    local sizeVec = Vector3.new(d[4], d[5], d[6])\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[d[9] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2]) end)\n"
-    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[d[12] or 1]) end)\n"
+    code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[d[20] or 1]) end)\n"
     
     if mode == "Convert Part" then
-        code = code .. "    local cf = worldCF * CFrame.Angles(math.rad(d[13] or 0), math.rad(d[14] or 0), math.rad(d[15] or 0))\n"
+        code = code .. "    local cf = worldCF * CFrame.Angles(math.rad(d[12] or 0), math.rad(d[13] or 0), math.rad(d[14] or 0))\n"
     else
-        code = code .. "    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(d[13] or 0), math.rad(d[14] or 0), math.rad(d[15] or 0))\n"
+        code = code .. "    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(d[12] or 0), math.rad(d[13] or 0), math.rad(d[14] or 0))\n"
     end
     
     code = code .. "    if actionMode == 'Flatten' then\n"
     if mode == "Convert Part" then
-        code = code .. "        local baseCf = worldCF * CFrame.Angles(0, math.rad(d[14] or 0), 0)\n"
+        code = code .. "        local baseCf = worldCF * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
     else
-        code = code .. "        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[14] or 0), 0)\n"
+        code = code .. "        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
     end
     code = code .. "        if shape == 'Block' then Terrain:FillBlock(baseCf, Vector3.new(d[4], 2, d[6]), mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat); Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
@@ -556,7 +557,7 @@ end
     code = code .. "        elseif shape == 'Wedge' then Terrain:FillWedge(cf, sizeVec, mat)\n"
     code = code .. "        else Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat) end\n"
     code = code .. "    end\n"
-    code = code .. "    if d[16] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' and actionMode ~= 'Erase' then ApplySmoothTerrain(pos, sizeVec, mat, d[18], d[17], d[20]) end\n"
+    code = code .. "    if d[15] and actionMode ~= 'Flatten' and actionMode ~= 'Paint' and actionMode ~= 'Erase' then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16], d[19]) end\n"
     code = code .. "end\n\n"
     
     if mode == "Convert Part" then
@@ -572,8 +573,8 @@ end
         local endIdx = math.min(b * batchSize, #SpawnedData)
         for i = startIdx, endIdx do
             local d = SpawnedData[i]
-            local sEnabled = d[16] and "true" or "false"
-            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 1) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. (d[15] or 0) .. "," .. sEnabled .. ",'" .. (d[17] or "Soft Edge") .. "'," .. (d[18] or 5) .. ",'" .. (d[19] or "Build") .. "'," .. (d[20] or 5) .. "}"
+            local sEnabled = d[15] and "true" or "false"
+            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 5) .. ",'" .. (d[18] or "Build") .. "'," .. (d[19] or 5) .. "," .. (d[20] or 1) .. "}"
             if i < endIdx then code = code .. "," end
         end
         code = code .. "})do BL(d)end\n"
@@ -697,7 +698,7 @@ end
 local grassLeft, grassRight, grassDisplay = CreateColorSec(scroll, "🌿 Grass Color", grassColors, Color3.fromRGB(0, 255, 100), currentGrassColorIndex)
 local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGrass Color", leafyGrassColors, Color3.fromRGB(100, 220, 80), currentLeafyGrassColorIndex)
 local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
-local rockLeft, rockRight, rockDisplay = CreateColorSec(scroll, "🪨 Rock Color", rockColors, Color3.fromRGB(170, 170, 170), currentRockColorIndex)
+local rockLeft, rockRight, rockDisplay = CreateColorSec(scroll, "🪨 Rock Color", rockColors, Color3.fromRGB(150, 150, 150), currentRockColorIndex)
 
 --// FITUR TEMBUS
 local ghostSec = Instance.new("Frame", scroll)
