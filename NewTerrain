@@ -1,5 +1,5 @@
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.7 - Reworked Smooth Algos, Visually Distinct Modes
+--// Terrain Editor v16.8 - TOTAL REWORK: Smooth Modes Completely Different
 --// FIXED & OPTIMIZED FOR MOBILE EXECUTORS
 
 local Players = game:GetService("Players")
@@ -133,9 +133,10 @@ local SnapAxis = {X = true, Y = false, Z = true}
 local ShowGridVisual = false
 local GridLines = {}
 
---// SMOOTH SETTINGS (REWORKED - VISUALLY DISTINCT MODES)
+--// SMOOTH SETTINGS (TOTAL REWORK - COMPLETELY DIFFERENT MODES)
 local SmoothEnabled = false
-local SmoothModes = {"Mound", "Terrace", "Crater", "Spike"}
+-- MODE BARU: Masing-masing benar-benar beda total
+local SmoothModes = {"Volcano", "Valley", "Arch", "Pillar"}
 local CurrentSmoothModeIndex = 1
 local SmoothIntensity = 3
 
@@ -301,89 +302,239 @@ local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[currentRockColorIndex].color) end)
 end
 
---// SMOOTH TERRAIN ALGORITHM (REWORKED - VISUALLY DISTINCT MODES)
+--// ============================================================
+--// SMOOTH TERRAIN ALGORITHM (TOTAL REWORK - COMPLETELY DIFFERENT)
+--// ============================================================
+
+--[[
+VISUAL COMPARISON OF NEW MODES:
+
+VOLCANO:     BENTUK KERUCUT TINGGI dengan lubang di puncak
+             ▲▲▲
+            ▲▲▲▲▲
+           ▲▲▲▲▲▲▲
+          ▲▲▲ ◯ ▲▲▲    <-- lubang di tengah puncak
+         ▲▲▲▲▲▲▲▲▲
+        ▲▲▲▲▲▲▲▲▲▲▲
+       ▓▓▓▓▓▓▓▓▓▓▓▓▓   <-- dasar lebar stabil
+
+VALLEY:      LEMBAH / JURANG - tengah rendah, pinggiran tinggi
+        ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+         ▓▓▓▓     ▓▓▓▓
+          ▓▓▓       ▓▓▓
+           ▓▓   ↓↓↓  ▓▓     <-- tengah bolong/rendah
+            ▓   ↓↓↓   ▓
+             ▓  ↓↓↓  ▓
+              ▓▓▓▓▓▓▓
+
+ARCH:        GERBANG / JEMBATAN - lengkungan di atas, kosong di bawah
+              ███████
+            ██       ██
+           █           █
+          █             █
+         █               █
+        █   ░░░░░░░░░   █   <-- ruang kosong di bawah
+        █   ░░░░░░░░░   █
+        ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+PILLAR:      TIANG TINGGI dengan puncak melebar + dasar stabil
+              ▓▓▓
+             ▓▓▓▓▓
+            ▓▓▓▓▓▓▓
+           ▓▓▓▓▓▓▓▓▓
+          ▓▓▓▓▓▓▓▓▓▓▓
+              |||
+              |||           <-- badan tiang ramping
+              |||
+              |||
+           ▓▓▓▓▓▓▓▓▓        <-- dasar lebar stabil
+--]]
+
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
-    local baseRadius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
+    local baseRadius = math.max(sizeVec.X, sizeVec.Z) / 2
+    local height = SizeY
     local layers = math.clamp(intensity or 2, 1, 5)
     
-    if mode == "Mound" then
-        -- BUKIT BULAT ALAMI: Bola besar di tengah, menipis ke pinggir
-        local maxHeight = baseRadius * 0.8
-        for layer = 1, layers do
-            local progress = layer / layers
-            local layerRadius = baseRadius * (1 - progress * 0.3)
-            local layerHeight = maxHeight * (1 - progress * progress)
-            local pos = centerPos + Vector3.new(0, layerHeight * 0.5, 0)
-            Terrain:FillBall(pos, layerRadius, material)
-        end
-        -- Tambah dasar lebar biar kelihatan bukit beneran
-        Terrain:FillCylinder(CFrame.new(centerPos), 2, baseRadius * 1.2, material)
+    if mode == "Volcano" then
+        -- VOLCANO: Kerucut tinggi dengan lubang di puncak (bukan bola!)
+        -- Badan kerucut dari dasar mengecil ke atas
+        local coneHeight = height * 1.5
+        local steps = 8 + (layers * 2)
         
-    elseif mode == "Terrace" then
-        -- TANGGA TERASERING JELAS: Setiap tingkat beda jauh di Y, ukuran mengecil
-        local stepHeight = math.max(sizeVec.Y * 0.4, 4)
-        for layer = 1, layers do
-            local terraceRadius = baseRadius * (1 - (layer - 1) * 0.25)
-            local terraceY = centerPos.Y + (layer - 1) * stepHeight
-            local cf = CFrame.new(centerPos.X, terraceY, centerPos.Z)
-            -- Tiap teras tebal dan jelas
-            Terrain:FillCylinder(cf, stepHeight * 0.8, terraceRadius, material)
+        for i = 1, steps do
+            local progress = i / steps
+            local currentY = centerPos.Y + (coneHeight * progress)
+            local currentRadius = baseRadius * (1 - progress * 0.85)
+            local thickness = math.max(2, baseRadius * 0.15)
+            
+            -- Cylinder tebal yang mengecil ke atas
+            local cf = CFrame.new(centerPos.X, currentY, centerPos.Z)
+            Terrain:FillCylinder(cf, thickness, currentRadius, material)
         end
         
-    elseif mode == "Crater" then
-        -- KAWAH BOLONG: Dasar datar + dinding tinggi + tengah benar-benar kosong
-        local craterRadius = baseRadius
-        local wallHeight = math.max(sizeVec.Y * 0.6, 6)
-        local floorY = centerPos.Y - wallHeight * 0.3
-        
-        -- Dasar kawah (datar)
-        Terrain:FillCylinder(CFrame.new(centerPos.X, floorY, centerPos.Z), 2, craterRadius * 0.85, material)
-        
-        -- Dinding kawah (lingkaran tebal)
-        local angleStep = math.max(15, math.floor(360 / (layers * 4)))
-        for angle = 0, 359, angleStep do
+        -- Lubang puncak (crater rim)
+        local craterY = centerPos.Y + coneHeight
+        local craterCf = CFrame.new(centerPos.X, craterY, centerPos.Z)
+        -- Ring di sekitar lubang
+        local ringCount = 12
+        for angle = 0, 359, (360 / ringCount) do
             local rad = math.rad(angle)
-            local wallPos = centerPos + Vector3.new(
-                math.cos(rad) * craterRadius * 0.9,
-                0,
-                math.sin(rad) * craterRadius * 0.9
-            )
-            Terrain:FillBall(wallPos, baseRadius * 0.25, material)
+            local ringPos = craterCf * Vector3.new(math.cos(rad) * baseRadius * 0.15, 0, math.sin(rad) * baseRadius * 0.15)
+            Terrain:FillBall(ringPos, baseRadius * 0.12, material)
         end
         
-        -- Hapus tengah benar-benar bolong (Air)
-        local airRadius = craterRadius * 0.7
-        for depth = 1, 3 do
-            Terrain:FillBall(
-                centerPos + Vector3.new(0, floorY - centerPos.Y + depth * 2, 0),
-                airRadius * (1 - depth * 0.15),
-                Enum.Material.Air
-            )
+        -- Lubang tengah (Air)
+        Terrain:FillBall(craterCf.Position + Vector3.new(0, 1, 0), baseRadius * 0.2, Enum.Material.Air)
+        
+        -- Dasar lebar stabil
+        Terrain:FillCylinder(CFrame.new(centerPos.X, centerPos.Y, centerPos.Z), 3, baseRadius * 1.1, material)
+        
+    elseif mode == "Valley" then
+        -- VALLEY: Lembah / jurang - tengah rendah, pinggiran tinggi
+        local valleyDepth = height * 0.6
+        local wallThickness = math.max(3, baseRadius * 0.2)
+        local valleyWidth = baseRadius * 0.4
+        
+        -- Dinding kiri (tinggi)
+        local leftWallCf = CFrame.new(
+            centerPos.X - baseRadius * 0.6,
+            centerPos.Y + height * 0.3,
+            centerPos.Z
+        )
+        Terrain:FillBlock(leftWallCf, Vector3.new(wallThickness, height * 0.8, baseRadius * 2), material)
+        
+        -- Dinding kanan (tinggi)
+        local rightWallCf = CFrame.new(
+            centerPos.X + baseRadius * 0.6,
+            centerPos.Y + height * 0.3,
+            centerPos.Z
+        )
+        Terrain:FillBlock(rightWallCf, Vector3.new(wallThickness, height * 0.8, baseRadius * 2), material)
+        
+        -- Dinding depan & belakang (penutup U-shape)
+        local frontWallCf = CFrame.new(
+            centerPos.X,
+            centerPos.Y + height * 0.3,
+            centerPos.Z + baseRadius * 0.8
+        )
+        Terrain:FillBlock(frontWallCf, Vector3.new(baseRadius * 1.4, height * 0.8, wallThickness), material)
+        
+        local backWallCf = CFrame.new(
+            centerPos.X,
+            centerPos.Y + height * 0.3,
+            centerPos.Z - baseRadius * 0.8
+        )
+        Terrain:FillBlock(backWallCf, Vector3.new(baseRadius * 1.4, height * 0.8, wallThickness), material)
+        
+        -- Dasar lembah (rendah)
+        local floorCf = CFrame.new(
+            centerPos.X,
+            centerPos.Y - valleyDepth * 0.3,
+            centerPos.Z
+        )
+        Terrain:FillBlock(floorCf, Vector3.new(baseRadius * 1.2, 3, baseRadius * 1.6), material)
+        
+        -- Hapus area tengah (jurang)
+        local clearCf = CFrame.new(
+            centerPos.X,
+            centerPos.Y + height * 0.2,
+            centerPos.Z
+        )
+        Terrain:FillBlock(clearCf, Vector3.new(baseRadius * 0.7, height * 0.6, baseRadius * 1.3), Enum.Material.Air)
+        
+    elseif mode == "Arch" then
+        -- ARCH: Gerbang / jembatan lengkung - kosong di bawah
+        local archWidth = baseRadius * 2
+        local archHeight = height * 1.2
+        local pillarWidth = math.max(3, baseRadius * 0.25)
+        local pillarDepth = math.max(3, baseRadius * 0.25)
+        
+        -- Pilar kiri
+        local leftPillarCf = CFrame.new(
+            centerPos.X - baseRadius * 0.6,
+            centerPos.Y + archHeight * 0.4,
+            centerPos.Z
+        )
+        Terrain:FillBlock(leftPillarCf, Vector3.new(pillarWidth, archHeight * 0.8, pillarDepth), material)
+        
+        -- Pilar kanan
+        local rightPillarCf = CFrame.new(
+            centerPos.X + baseRadius * 0.6,
+            centerPos.Y + archHeight * 0.4,
+            centerPos.Z
+        )
+        Terrain:FillBlock(rightPillarCf, Vector3.new(pillarWidth, archHeight * 0.8, pillarDepth), material)
+        
+        -- Lengkungan atas (series of blocks forming arch)
+        local archSegments = 5 + layers
+        for i = 0, archSegments do
+            local progress = i / archSegments
+            local angle = math.pi * progress -- 0 to PI
+            local archX = centerPos.X + math.cos(angle) * baseRadius * 0.6
+            local archY = centerPos.Y + archHeight * 0.8 + math.sin(angle) * baseRadius * 0.3
+            local archZ = centerPos.Z
+            
+            local segmentCf = CFrame.new(archX, archY, archZ)
+            Terrain:FillBlock(segmentCf, Vector3.new(pillarWidth * 1.2, pillarWidth, pillarDepth * 1.5), material)
         end
         
-    elseif mode == "Spike" then
-        -- PUCUK TAJAM: Wedge tinggi + puncak runcing + dasar stabil
-        local spikeHeight = math.max(sizeVec.Y * 1.5, baseRadius * 2)
-        local baseWidth = baseRadius * 0.6
+        -- Top beam (horizontal)
+        local topCf = CFrame.new(
+            centerPos.X,
+            centerPos.Y + archHeight * 1.1,
+            centerPos.Z
+        )
+        Terrain:FillBlock(topCf, Vector3.new(baseRadius * 1.4, pillarWidth, pillarDepth * 1.5), material)
+        
+        -- Hapus area di bawah lengkungan (ruang kosong)
+        local clearCf = CFrame.new(
+            centerPos.X,
+            centerPos.Y + archHeight * 0.35,
+            centerPos.Z
+        )
+        Terrain:FillBlock(clearCf, Vector3.new(baseRadius * 0.9, archHeight * 0.5, pillarDepth * 2), Enum.Material.Air)
+        
+        -- Dasar pilar
+        local baseCf = CFrame.new(centerPos.X, centerPos.Y, centerPos.Z)
+        Terrain:FillBlock(baseCf, Vector3.new(baseRadius * 1.5, 2, pillarDepth * 2), material)
+        
+    elseif mode == "Pillar" then
+        -- PILLAR: Tiang tinggi dengan puncak melebar + dasar stabil
+        local pillarHeight = height * 1.5
+        local pillarRadius = math.max(2, baseRadius * 0.2)
+        local segments = 6 + layers
         
         -- Dasar lebar (stabil)
-        Terrain:FillBall(centerPos, baseRadius * 0.5, material)
+        local baseCf = CFrame.new(centerPos.X, centerPos.Y + 1, centerPos.Z)
+        Terrain:FillCylinder(baseCf, 3, baseRadius * 0.8, material)
         
-        -- Badan spike (wedge tinggi)
-        for i = 1, layers do
-            local progress = i / layers
-            local currentHeight = spikeHeight * progress
-            local currentWidth = baseWidth * (1 - progress * 0.7)
-            local wedgeCf = CFrame.new(
-                centerPos + Vector3.new(0, currentHeight * 0.5, 0)
-            ) * CFrame.Angles(0, math.rad(i * 45), 0)
-            Terrain:FillWedge(wedgeCf, Vector3.new(currentWidth, spikeHeight / layers, currentWidth), material)
+        -- Badan tiang (ramping, naik tinggi)
+        for i = 1, segments do
+            local progress = i / segments
+            local currentY = centerPos.Y + 3 + (pillarHeight * progress)
+            local currentRadius = pillarRadius * (1 + math.sin(progress * math.pi) * 0.3)
+            
+            local cf = CFrame.new(centerPos.X, currentY, centerPos.Z)
+            Terrain:FillCylinder(cf, pillarHeight / segments + 1, currentRadius, material)
         end
         
-        -- Puncak tajam (bola kecil di atas)
+        -- Puncak melebar (crown)
+        local crownY = centerPos.Y + 3 + pillarHeight
+        local crownLayers = 3 + layers
+        for i = 1, crownLayers do
+            local progress = i / crownLayers
+            local crownRadius = pillarRadius * (1 + progress * 2)
+            local crownYPos = crownY + (i * 1.5)
+            
+            local cf = CFrame.new(centerPos.X, crownYPos, centerPos.Z)
+            Terrain:FillCylinder(cf, 2, crownRadius, material)
+        end
+        
+        -- Puncak paling atas (bola kecil)
+        local topY = crownY + (crownLayers * 1.5) + 1
         Terrain:FillBall(
-            centerPos + Vector3.new(0, spikeHeight, 0),
-            baseWidth * 0.2,
+            Vector3.new(centerPos.X, topY, centerPos.Z),
+            pillarRadius * 0.8,
             material
         )
     end
@@ -400,7 +551,7 @@ local function BL(d)
     local groundIdx = d[11] or currentGroundColorIndex
     local rx, ry, rz = d[12] or 0, d[13] or 0, d[14] or 0
     local smoothOn = d[15] or false
-    local smoothMode = d[16] or "Mound"
+    local smoothMode = d[16] or "Volcano"
     local smoothInt = d[17] or 3
     local actionMode = d[18] or "Add"
     local rockIdx = d[19] or currentRockColorIndex
@@ -489,8 +640,8 @@ local function SpawnTerrain()
     if not PreviewPos then return false end
     
     local maxDim = math.max(SizeX, SizeY, SizeZ)
-    local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
-    local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
+    local padding = SmoothEnabled and (SmoothIntensity * 10) or 4
+    local halfBounds = Vector3.new(maxDim/2 + padding, maxDim * 2 + padding, maxDim/2 + padding)
     local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds):ExpandToGrid(4)
 
     local beforeMats, beforeOccs = Terrain:ReadVoxels(region, 4)
@@ -568,57 +719,98 @@ local function GenerateScript()
     
     code = code .. [[
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
-    local baseRadius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
+    local baseRadius = math.max(sizeVec.X, sizeVec.Z) / 2
+    local height = sizeVec.Y
     local layers = math.clamp(intensity or 2, 1, 5)
     
-    if mode == "Mound" then
-        local maxHeight = baseRadius * 0.8
-        for layer = 1, layers do
-            local progress = layer / layers
-            local layerRadius = baseRadius * (1 - progress * 0.3)
-            local layerHeight = maxHeight * (1 - progress * progress)
-            local pos = centerPos + Vector3.new(0, layerHeight * 0.5, 0)
-            Terrain:FillBall(pos, layerRadius, material)
+    if mode == "Volcano" then
+        local coneHeight = height * 1.5
+        local steps = 8 + (layers * 2)
+        for i = 1, steps do
+            local progress = i / steps
+            local currentY = centerPos.Y + (coneHeight * progress)
+            local currentRadius = baseRadius * (1 - progress * 0.85)
+            local thickness = math.max(2, baseRadius * 0.15)
+            local cf = CFrame.new(centerPos.X, currentY, centerPos.Z)
+            Terrain:FillCylinder(cf, thickness, currentRadius, material)
         end
-        Terrain:FillCylinder(CFrame.new(centerPos), 2, baseRadius * 1.2, material)
-        
-    elseif mode == "Terrace" then
-        local stepHeight = math.max(sizeVec.Y * 0.4, 4)
-        for layer = 1, layers do
-            local terraceRadius = baseRadius * (1 - (layer - 1) * 0.25)
-            local terraceY = centerPos.Y + (layer - 1) * stepHeight
-            local cf = CFrame.new(centerPos.X, terraceY, centerPos.Z)
-            Terrain:FillCylinder(cf, stepHeight * 0.8, terraceRadius, material)
-        end
-        
-    elseif mode == "Crater" then
-        local craterRadius = baseRadius
-        local wallHeight = math.max(sizeVec.Y * 0.6, 6)
-        local floorY = centerPos.Y - wallHeight * 0.3
-        Terrain:FillCylinder(CFrame.new(centerPos.X, floorY, centerPos.Z), 2, craterRadius * 0.85, material)
-        local angleStep = math.max(15, math.floor(360 / (layers * 4)))
-        for angle = 0, 359, angleStep do
+        local craterY = centerPos.Y + coneHeight
+        local craterCf = CFrame.new(centerPos.X, craterY, centerPos.Z)
+        local ringCount = 12
+        for angle = 0, 359, (360 / ringCount) do
             local rad = math.rad(angle)
-            local wallPos = centerPos + Vector3.new(math.cos(rad) * craterRadius * 0.9, 0, math.sin(rad) * craterRadius * 0.9)
-            Terrain:FillBall(wallPos, baseRadius * 0.25, material)
+            local ringPos = craterCf * Vector3.new(math.cos(rad) * baseRadius * 0.15, 0, math.sin(rad) * baseRadius * 0.15)
+            Terrain:FillBall(ringPos, baseRadius * 0.12, material)
         end
-        local airRadius = craterRadius * 0.7
-        for depth = 1, 3 do
-            Terrain:FillBall(centerPos + Vector3.new(0, floorY - centerPos.Y + depth * 2, 0), airRadius * (1 - depth * 0.15), Enum.Material.Air)
-        end
+        Terrain:FillBall(craterCf.Position + Vector3.new(0, 1, 0), baseRadius * 0.2, Enum.Material.Air)
+        Terrain:FillCylinder(CFrame.new(centerPos.X, centerPos.Y, centerPos.Z), 3, baseRadius * 1.1, material)
         
-    elseif mode == "Spike" then
-        local spikeHeight = math.max(sizeVec.Y * 1.5, baseRadius * 2)
-        local baseWidth = baseRadius * 0.6
-        Terrain:FillBall(centerPos, baseRadius * 0.5, material)
-        for i = 1, layers do
-            local progress = i / layers
-            local currentHeight = spikeHeight * progress
-            local currentWidth = baseWidth * (1 - progress * 0.7)
-            local wedgeCf = CFrame.new(centerPos + Vector3.new(0, currentHeight * 0.5, 0)) * CFrame.Angles(0, math.rad(i * 45), 0)
-            Terrain:FillWedge(wedgeCf, Vector3.new(currentWidth, spikeHeight / layers, currentWidth), material)
+    elseif mode == "Valley" then
+        local valleyDepth = height * 0.6
+        local wallThickness = math.max(3, baseRadius * 0.2)
+        local leftWallCf = CFrame.new(centerPos.X - baseRadius * 0.6, centerPos.Y + height * 0.3, centerPos.Z)
+        Terrain:FillBlock(leftWallCf, Vector3.new(wallThickness, height * 0.8, baseRadius * 2), material)
+        local rightWallCf = CFrame.new(centerPos.X + baseRadius * 0.6, centerPos.Y + height * 0.3, centerPos.Z)
+        Terrain:FillBlock(rightWallCf, Vector3.new(wallThickness, height * 0.8, baseRadius * 2), material)
+        local frontWallCf = CFrame.new(centerPos.X, centerPos.Y + height * 0.3, centerPos.Z + baseRadius * 0.8)
+        Terrain:FillBlock(frontWallCf, Vector3.new(baseRadius * 1.4, height * 0.8, wallThickness), material)
+        local backWallCf = CFrame.new(centerPos.X, centerPos.Y + height * 0.3, centerPos.Z - baseRadius * 0.8)
+        Terrain:FillBlock(backWallCf, Vector3.new(baseRadius * 1.4, height * 0.8, wallThickness), material)
+        local floorCf = CFrame.new(centerPos.X, centerPos.Y - valleyDepth * 0.3, centerPos.Z)
+        Terrain:FillBlock(floorCf, Vector3.new(baseRadius * 1.2, 3, baseRadius * 1.6), material)
+        local clearCf = CFrame.new(centerPos.X, centerPos.Y + height * 0.2, centerPos.Z)
+        Terrain:FillBlock(clearCf, Vector3.new(baseRadius * 0.7, height * 0.6, baseRadius * 1.3), Enum.Material.Air)
+        
+    elseif mode == "Arch" then
+        local archWidth = baseRadius * 2
+        local archHeight = height * 1.2
+        local pillarWidth = math.max(3, baseRadius * 0.25)
+        local pillarDepth = math.max(3, baseRadius * 0.25)
+        local leftPillarCf = CFrame.new(centerPos.X - baseRadius * 0.6, centerPos.Y + archHeight * 0.4, centerPos.Z)
+        Terrain:FillBlock(leftPillarCf, Vector3.new(pillarWidth, archHeight * 0.8, pillarDepth), material)
+        local rightPillarCf = CFrame.new(centerPos.X + baseRadius * 0.6, centerPos.Y + archHeight * 0.4, centerPos.Z)
+        Terrain:FillBlock(rightPillarCf, Vector3.new(pillarWidth, archHeight * 0.8, pillarDepth), material)
+        local archSegments = 5 + layers
+        for i = 0, archSegments do
+            local progress = i / archSegments
+            local angle = math.pi * progress
+            local archX = centerPos.X + math.cos(angle) * baseRadius * 0.6
+            local archY = centerPos.Y + archHeight * 0.8 + math.sin(angle) * baseRadius * 0.3
+            local archZ = centerPos.Z
+            local segmentCf = CFrame.new(archX, archY, archZ)
+            Terrain:FillBlock(segmentCf, Vector3.new(pillarWidth * 1.2, pillarWidth, pillarDepth * 1.5), material)
         end
-        Terrain:FillBall(centerPos + Vector3.new(0, spikeHeight, 0), baseWidth * 0.2, material)
+        local topCf = CFrame.new(centerPos.X, centerPos.Y + archHeight * 1.1, centerPos.Z)
+        Terrain:FillBlock(topCf, Vector3.new(baseRadius * 1.4, pillarWidth, pillarDepth * 1.5), material)
+        local clearCf = CFrame.new(centerPos.X, centerPos.Y + archHeight * 0.35, centerPos.Z)
+        Terrain:FillBlock(clearCf, Vector3.new(baseRadius * 0.9, archHeight * 0.5, pillarDepth * 2), Enum.Material.Air)
+        local baseCf = CFrame.new(centerPos.X, centerPos.Y, centerPos.Z)
+        Terrain:FillBlock(baseCf, Vector3.new(baseRadius * 1.5, 2, pillarDepth * 2), material)
+        
+    elseif mode == "Pillar" then
+        local pillarHeight = height * 1.5
+        local pillarRadius = math.max(2, baseRadius * 0.2)
+        local segments = 6 + layers
+        local baseCf = CFrame.new(centerPos.X, centerPos.Y + 1, centerPos.Z)
+        Terrain:FillCylinder(baseCf, 3, baseRadius * 0.8, material)
+        for i = 1, segments do
+            local progress = i / segments
+            local currentY = centerPos.Y + 3 + (pillarHeight * progress)
+            local currentRadius = pillarRadius * (1 + math.sin(progress * math.pi) * 0.3)
+            local cf = CFrame.new(centerPos.X, currentY, centerPos.Z)
+            Terrain:FillCylinder(cf, pillarHeight / segments + 1, currentRadius, material)
+        end
+        local crownY = centerPos.Y + 3 + pillarHeight
+        local crownLayers = 3 + layers
+        for i = 1, crownLayers do
+            local progress = i / crownLayers
+            local crownRadius = pillarRadius * (1 + progress * 2)
+            local crownYPos = crownY + (i * 1.5)
+            local cf = CFrame.new(centerPos.X, crownYPos, centerPos.Z)
+            Terrain:FillCylinder(cf, 2, crownRadius, material)
+        end
+        local topY = crownY + (crownLayers * 1.5) + 1
+        Terrain:FillBall(Vector3.new(centerPos.X, topY, centerPos.Z), pillarRadius * 0.8, material)
     end
 end
 ]]
@@ -680,7 +872,7 @@ end
         for i = startIdx, endIdx do
             local d = SpawnedData[i]
             local sEnabled = d[15] and "true" or "false"
-            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Mound") .. "'," .. (d[17] or 3) .. ",'" .. (d[18] or "Add") .. "'," .. (d[19] or 1) .. "}"
+            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Volcano") .. "'," .. (d[17] or 3) .. ",'" .. (d[18] or "Add") .. "'," .. (d[19] or 1) .. "}"
             if i < endIdx then code = code .. "," end
         end
         code = code .. "})do BL(d)end\n"
@@ -763,7 +955,7 @@ MakeDraggable(panel, titleBar)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.7", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.8", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -854,12 +1046,12 @@ local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGr
 local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
 local rockLeft, rockRight, rockDisplay = CreateColorSec(scroll, "🪨 Rock Color", rockColors, Color3.fromRGB(150, 150, 150), currentRockColorIndex)
 
---// SMOOTH TERRAIN GUI SECTION (REWORKED)
+--// SMOOTH TERRAIN GUI SECTION (TOTAL REWORK)
 local smoothSec = Instance.new("Frame", scroll)
 smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
 local smoothTitle = Instance.new("TextLabel", smoothSec)
-smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain (Distinct)", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
+smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain (Totally Different)", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
 local smoothToggleBtn = Instance.new("TextButton", smoothSec)
 smoothToggleBtn.Size, smoothToggleBtn.Position, smoothToggleBtn.BackgroundColor3, smoothToggleBtn.Text, smoothToggleBtn.TextColor3, smoothToggleBtn.TextSize, smoothToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF ▼", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
@@ -1309,10 +1501,9 @@ end)
 
 RunService.RenderStepped:Connect(UpdatePreview)
 
-print("✅ Terrain Editor ELBRUZH v16.7 Loaded!")
-print("🛠️ Reworked: Smooth Terrain Algos - Visually Distinct Modes")
-print("✨ Mound: Natural hill shape with tapering layers")
-print("🏛️ Terrace: Clear stepped terraces with wide Y gaps")
-print("🌑 Crater: Deep hollow with thick walls and empty center")
-print("🗻 Spike: Sharp pointed peak with wide base and small tip")
+print("✅ Terrain Editor ELBRUZH v16.8 Loaded!")
+print("🌋 Volcano: Cone with crater hole at top")
+print("🏞️ Valley: Hollow center with high walls")
+print("🏛️ Arch: Gateway with pillars and curved top")
+print("🗿 Pillar: Tall column with flared crown")
 print("📏 Added: Target Axis Logic for Independent XYZ Sizes")
