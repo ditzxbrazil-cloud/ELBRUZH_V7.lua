@@ -1,6 +1,6 @@
---// TERRAIN BY shhhhnayy05
---// Terrain Editor v17.0 - Shape Works on ALL Modes, Better Smooth, Individual XYZ Size
---// FIXED FOR MOBILE EXECUTORS
+--// TERRAIN BY ELBRUZH 
+--// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Flatten, Paint, Erase (Safe Water), Lock & Move Mode
+--// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (Voxel Snapshot Undo System)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -115,9 +115,9 @@ local Materials = {
 
 --// State
 local CurrentMaterial = Materials[1]
-local CurrentShape = "Ball"
-local CurrentActionMode = "Add"
-local IgnoreTerrain = false
+local CurrentShape = "Ball" -- Ball, Block, Wedge
+local CurrentActionMode = "Add" -- Add, Flatten, Paint, Erase
+local IgnoreTerrain = false -- Tembus Terrain
 local SizeX, SizeY, SizeZ = 6, 6, 6
 local RotX, RotY, RotZ = 0, 0, 0
 local PreviewPos = nil
@@ -135,7 +135,7 @@ local GridLines = {}
 
 --// SMOOTH SETTINGS
 local SmoothEnabled = false
-local SmoothModes = {"Soft Edge", "Noise", "Gradient", "Valley"}
+local SmoothModes = {"Soft Edge", "Gradient", "Noise", "Blend"}
 local CurrentSmoothModeIndex = 1
 local SmoothIntensity = 2
 
@@ -243,6 +243,7 @@ spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end 
 local function UpdatePreview()
     if not PreviewPart then CreatePreview() end
     
+    -- SYSTEM MOVE & LOCK
     if not MoveModeEnabled then
         local result = GetRaycast()
         if result then
@@ -269,7 +270,7 @@ local function UpdatePreview()
         elseif CurrentActionMode == "Paint" then
             local cf = CFrame.new(PreviewPos) * CFrame.Angles(0, math.rad(RotY), 0)
             PreviewPart.CFrame = cf
-            PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
+            PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ) -- Paint preview is flat
         else
             local cf = CFrame.new(PreviewPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
             PreviewPart.CFrame = cf
@@ -304,70 +305,51 @@ local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[currentRockColorIndex].color) end)
 end
 
---// SMOOTH TERRAIN ALGORITHM - 4 BENAR-BENAR BEDA VISUAL
+--// SMOOTH TERRAIN ALGORITHM
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
     
-    if mode == "Soft Edge" then
-        -- Pinggiran halus yang menyebar ke luar
-        for layer = 1, layers do
-            local layerRadius = radius + (layer * 3)
-            local layerSize = math.max(2, 8 - layer)
-            local angleStep = 360 / (12 * layer)
-            for angle = 0, 359, angleStep do
-                local rad = math.rad(angle)
-                local offset = Vector3.new(math.cos(rad) * layerRadius, math.random(-1, 1), math.sin(rad) * layerRadius)
-                Terrain:FillBall(centerPos + offset, layerSize / 2, material)
-            end
-        end
+    for layer = 1, layers do
+        local layerRadius = radius + (layer * 2)
+        local layerSize = math.max(2, 6 - layer)
+        local angleStep = 360 / (8 * layer)
         
-    elseif mode == "Noise" then
-        -- Acak bergejolak, banyak variasi tinggi
-        local seed = math.random(1, 10000)
-        for i = 1, layers * 15 do
-            local angle = math.random() * 360
-            local dist = math.random() * radius * 1.5
+        for angle = 0, 359, angleStep do
             local rad = math.rad(angle)
-            local heightVar = (math.noise(i * 0.3, seed * 0.1) * 8) + math.random(-3, 3)
-            local pos = centerPos + Vector3.new(math.cos(rad) * dist, heightVar, math.sin(rad) * dist)
-            local size = math.random(2, 6)
-            Terrain:FillBall(pos, size, material)
-        end
-        
-    elseif mode == "Gradient" then
-        -- Tanjakan/lereng gradual (slope)
-        for layer = 1, layers * 2 do
-            local layerRadius = radius + (layer * 2)
-            local heightDrop = layer * 1.5
-            local angleStep = 360 / (16 * layer)
-            for angle = 0, 359, angleStep do
-                local rad = math.rad(angle)
-                local offset = Vector3.new(math.cos(rad) * layerRadius, -heightDrop + math.random(-1, 1), math.sin(rad) * layerRadius)
-                Terrain:FillBall(centerPos + offset, math.max(2, 5 - layer * 0.3), material)
+            local offsetY = 0
+            
+            if mode == "Noise" then 
+                offsetY = math.random(-4, 4) 
+            elseif mode == "Gradient" then
+                offsetY = math.random(-2, 2)
+            end
+            
+            local offset = Vector3.new(
+                math.cos(rad) * layerRadius,
+                offsetY,
+                math.sin(rad) * layerRadius
+            )
+            local pos = centerPos + offset
+            
+            if mode == "Soft Edge" then
+                Terrain:FillBall(pos, layerSize / 1.5, material)
+            elseif mode == "Noise" then
+                if math.random() > 0.4 then
+                    Terrain:FillBall(pos, layerSize / 2, material)
+                end
+            elseif mode == "Gradient" then
+                if math.random() > 0.2 then
+                    Terrain:FillBall(pos, layerSize / 2, material)
+                end
+            elseif mode == "Blend" then
+                Terrain:FillBall(pos, layerSize, material)
             end
         end
-        
-    elseif mode == "Valley" then
-        -- Lembah cekung (valley) - terrain di tengah lebih rendah
-        for layer = 1, layers do
-            local layerRadius = radius + (layer * 2.5)
-            local depth = layer * 2
-            local angleStep = 360 / (10 * layer)
-            for angle = 0, 359, angleStep do
-                local rad = math.rad(angle)
-                local distFactor = layer / layers
-                local drop = depth * distFactor
-                local offset = Vector3.new(math.cos(rad) * layerRadius, -drop, math.sin(rad) * layerRadius)
-                Terrain:FillBall(centerPos + offset, math.max(3, 7 - layer), material)
-            end
-        end
-        -- Isi dasar lembah
-        Terrain:FillBall(centerPos - Vector3.new(0, layers * 2, 0), radius * 0.5, material)
     end
 end
 
---// BL Function (Execute Terrain) - SEMUA MODE PAKAI SHAPE YANG DIPILIH
+--// BL Function (Execute Terrain)
 local function BL(d)
     local pos = Vector3.new(d[1], d[2], d[3])
     local sx, sy, sz = d[4], d[5], d[6]
@@ -388,6 +370,7 @@ local function BL(d)
         if m.Name == matName then mat = m.Mat break end
     end
     
+    -- Paksa Update Warna Material
     currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex, currentRockColorIndex = grassIdx, leafyIdx, groundIdx, rockIdx
     ApplyMaterialColors()
     
@@ -395,150 +378,45 @@ local function BL(d)
     local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
     
     if actionMode == "Erase" then
-        -- ERASE PAKAI SHAPE YANG DIPILIH
-        if shape == "Block" then
-            local halfSize = sizeVec / 2
-            local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)
-            local mats, occs = Terrain:ReadVoxels(region, 4)
-            local changed = false
-            for x = 1, mats.Size.X do
-                for y = 1, mats.Size.Y do
-                    for z = 1, mats.Size.Z do
-                        if mats[x][y][z] ~= Enum.Material.Air and mats[x][y][z] ~= Enum.Material.Water then
-                            mats[x][y][z] = Enum.Material.Air
-                            occs[x][y][z] = 0
-                            changed = true
-                        end
+        -- SAFE ERASE MATERIAL (Safe Water)
+        local halfSize = sizeVec / 2
+        local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)
+        local mats, occs = Terrain:ReadVoxels(region, 4)
+        local changed = false
+        for x = 1, mats.Size.X do
+            for y = 1, mats.Size.Y do
+                for z = 1, mats.Size.Z do
+                    if mats[x][y][z] ~= Enum.Material.Air and mats[x][y][z] ~= Enum.Material.Water then
+                        mats[x][y][z] = Enum.Material.Air
+                        occs[x][y][z] = 0
+                        changed = true
                     end
                 end
             end
-            if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
-            
-        elseif shape == "Wedge" then
-            -- Wedge erase: hapus wedge shape
-            local halfSize = sizeVec / 2
-            local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)
-            local mats, occs = Terrain:ReadVoxels(region, 4)
-            local changed = false
-            for x = 1, mats.Size.X do
-                for y = 1, mats.Size.Y do
-                    for z = 1, mats.Size.Z do
-                        if mats[x][y][z] ~= Enum.Material.Air and mats[x][y][z] ~= Enum.Material.Water then
-                            mats[x][y][z] = Enum.Material.Air
-                            occs[x][y][z] = 0
-                            changed = true
-                        end
-                    end
-                end
-            end
-            if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
-            
-        else
-            -- Ball erase
-            local region = Region3.new(pos - sizeVec, pos + sizeVec):ExpandToGrid(4)
-            local mats, occs = Terrain:ReadVoxels(region, 4)
-            local radius = math.max(sx, sy, sz) / 2
-            local changed = false
-            for x = 1, mats.Size.X do
-                for y = 1, mats.Size.Y do
-                    for z = 1, mats.Size.Z do
-                        local voxelPos = region.CFrame * CFrame.new(
-                            (x - 1) * 4 - (mats.Size.X - 1) * 2,
-                            (y - 1) * 4 - (mats.Size.Y - 1) * 2,
-                            (z - 1) * 4 - (mats.Size.Z - 1) * 2
-                        )
-                        local dist = (voxelPos.Position - pos).Magnitude
-                        if dist <= radius and mats[x][y][z] ~= Enum.Material.Air and mats[x][y][z] ~= Enum.Material.Water then
-                            mats[x][y][z] = Enum.Material.Air
-                            occs[x][y][z] = 0
-                            changed = true
-                        end
-                    end
-                end
-            end
-            if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
         end
-        
+        if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
     elseif actionMode == "Flatten" then
-        -- FLATTEN PAKAI SHAPE YANG DIPILIH
-        if shape == "Block" then
-            local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(ry), 0)
-            Terrain:FillBlock(baseCf, Vector3.new(sx, 2, sz), mat)
-            Terrain:FillBlock(baseCf * CFrame.new(0, (sy/2) + 1, 0), Vector3.new(sx, sy, sz), Enum.Material.Air)
-        elseif shape == "Wedge" then
-            local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(ry), 0)
-            Terrain:FillWedge(baseCf, Vector3.new(sx, 2, sz), mat)
-            Terrain:FillWedge(baseCf * CFrame.new(0, (sy/2) + 1, 0), Vector3.new(sx, sy, sz), Enum.Material.Air)
-        else
-            -- Ball flatten
-            local baseRadius = math.max(sx, sy, sz) / 2
-            Terrain:FillBall(pos, baseRadius, mat)
-            Terrain:FillBall(pos + Vector3.new(0, baseRadius + 2, 0), baseRadius, Enum.Material.Air)
-        end
-        
+        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(ry), 0)
+        Terrain:FillBlock(baseCf, Vector3.new(sx, 2, sz), mat)
+        Terrain:FillBlock(baseCf * CFrame.new(0, (sy/2) + 1, 0), Vector3.new(sx, sy, sz), Enum.Material.Air)
     elseif actionMode == "Paint" then
-        -- PAINT PAKAI SHAPE YANG DIPILIH
-        if shape == "Block" then
-            local halfSize = sizeVec / 2
-            local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)
-            local mats, occs = Terrain:ReadVoxels(region, 4)
-            local changed = false
-            for x = 1, mats.Size.X do
-                for y = 1, mats.Size.Y do
-                    for z = 1, mats.Size.Z do
-                        if mats[x][y][z] ~= Enum.Material.Air and mats[x][y][z] ~= mat then
-                            mats[x][y][z] = mat
-                            changed = true
-                        end
+        local halfSize = sizeVec / 2
+        local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)
+        local mats, occs = Terrain:ReadVoxels(region, 4)
+        local changed = false
+        for x = 1, mats.Size.X do
+            for y = 1, mats.Size.Y do
+                for z = 1, mats.Size.Z do
+                    if mats[x][y][z] ~= Enum.Material.Air and mats[x][y][z] ~= mat then
+                        mats[x][y][z] = mat
+                        changed = true
                     end
                 end
             end
-            if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
-            
-        elseif shape == "Wedge" then
-            local halfSize = sizeVec / 2
-            local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)
-            local mats, occs = Terrain:ReadVoxels(region, 4)
-            local changed = false
-            for x = 1, mats.Size.X do
-                for y = 1, mats.Size.Y do
-                    for z = 1, mats.Size.Z do
-                        if mats[x][y][z] ~= Enum.Material.Air and mats[x][y][z] ~= mat then
-                            mats[x][y][z] = mat
-                            changed = true
-                        end
-                    end
-                end
-            end
-            if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
-            
-        else
-            -- Ball paint
-            local region = Region3.new(pos - sizeVec, pos + sizeVec):ExpandToGrid(4)
-            local mats, occs = Terrain:ReadVoxels(region, 4)
-            local radius = math.max(sx, sy, sz) / 2
-            local changed = false
-            for x = 1, mats.Size.X do
-                for y = 1, mats.Size.Y do
-                    for z = 1, mats.Size.Z do
-                        local voxelPos = region.CFrame * CFrame.new(
-                            (x - 1) * 4 - (mats.Size.X - 1) * 2,
-                            (y - 1) * 4 - (mats.Size.Y - 1) * 2,
-                            (z - 1) * 4 - (mats.Size.Z - 1) * 2
-                        )
-                        local dist = (voxelPos.Position - pos).Magnitude
-                        if dist <= radius and mats[x][y][z] ~= Enum.Material.Air and mats[x][y][z] ~= mat then
-                            mats[x][y][z] = mat
-                            changed = true
-                        end
-                    end
-                end
-            end
-            if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
         end
-        
+        if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
     else
-        -- NORMAL ADD - PAKAI SHAPE YANG DIPILIH
+        -- Normal Add
         if shape == "Block" then
             Terrain:FillBlock(cf, sizeVec, mat)
         elseif shape == "Wedge" then
@@ -560,7 +438,7 @@ local function SpawnTerrain()
     if not PreviewPos then return false end
     
     local maxDim = math.max(SizeX, SizeY, SizeZ)
-    local padding = SmoothEnabled and (SmoothIntensity * 8) or 6
+    local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
     local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
     local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds):ExpandToGrid(4)
 
@@ -624,7 +502,7 @@ end
 --// Generate Script
 local function GenerateScript()
     if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
-    local code = "--// Terrain Spawn Script by shhhhnayy05\n--// Total: " .. #SpawnedData .. " terrains\n\n"
+    local code = "--// Terrain Spawn Script\n--// Total: " .. #SpawnedData .. " terrains\n\n"
     code = code .. "local Terrain = workspace:WaitForChild('Terrain')\n\n"
     code = code .. "--// Color Tables\n"
     code = code .. "local grassColors = {"
@@ -641,53 +519,21 @@ local function GenerateScript()
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
     local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
     local layers = intensity or 2
-    if mode == "Soft Edge" then
-        for layer = 1, layers do
-            local layerRadius = radius + (layer * 3)
-            local layerSize = math.max(2, 8 - layer)
-            local angleStep = 360 / (12 * layer)
-            for angle = 0, 359, angleStep do
-                local rad = math.rad(angle)
-                local offset = Vector3.new(math.cos(rad) * layerRadius, math.random(-1, 1), math.sin(rad) * layerRadius)
-                Terrain:FillBall(centerPos + offset, layerSize / 2, material)
-            end
-        end
-    elseif mode == "Noise" then
-        local seed = math.random(1, 10000)
-        for i = 1, layers * 15 do
-            local angle = math.random() * 360
-            local dist = math.random() * radius * 1.5
+    for layer = 1, layers do
+        local layerRadius = radius + (layer * 2)
+        local layerSize = math.max(2, 6 - layer)
+        local angleStep = 360 / (8 * layer)
+        for angle = 0, 359, angleStep do
             local rad = math.rad(angle)
-            local heightVar = (math.noise(i * 0.3, seed * 0.1) * 8) + math.random(-3, 3)
-            local pos = centerPos + Vector3.new(math.cos(rad) * dist, heightVar, math.sin(rad) * dist)
-            local size = math.random(2, 6)
-            Terrain:FillBall(pos, size, material)
+            local offsetY = 0
+            if mode == "Noise" then offsetY = math.random(-4, 4) elseif mode == "Gradient" then offsetY = math.random(-2, 2) end
+            local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
+            local pos = centerPos + offset
+            if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
+            elseif mode == "Noise" then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Gradient" then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end
+            elseif mode == "Blend" then Terrain:FillBall(pos, layerSize, material) end
         end
-    elseif mode == "Gradient" then
-        for layer = 1, layers * 2 do
-            local layerRadius = radius + (layer * 2)
-            local heightDrop = layer * 1.5
-            local angleStep = 360 / (16 * layer)
-            for angle = 0, 359, angleStep do
-                local rad = math.rad(angle)
-                local offset = Vector3.new(math.cos(rad) * layerRadius, -heightDrop + math.random(-1, 1), math.sin(rad) * layerRadius)
-                Terrain:FillBall(centerPos + offset, math.max(2, 5 - layer * 0.3), material)
-            end
-        end
-    elseif mode == "Valley" then
-        for layer = 1, layers do
-            local layerRadius = radius + (layer * 2.5)
-            local depth = layer * 2
-            local angleStep = 360 / (10 * layer)
-            for angle = 0, 359, angleStep do
-                local rad = math.rad(angle)
-                local distFactor = layer / layers
-                local drop = depth * distFactor
-                local offset = Vector3.new(math.cos(rad) * layerRadius, -drop, math.sin(rad) * layerRadius)
-                Terrain:FillBall(centerPos + offset, math.max(3, 7 - layer), material)
-            end
-        end
-        Terrain:FillBall(centerPos - Vector3.new(0, layers * 2, 0), radius * 0.5, material)
     end
 end
 ]]
@@ -698,7 +544,6 @@ end
     code = code .. "    local mat = mats[d[7]] or Enum.Material.Grass\n"
     code = code .. "    local sizeVec = Vector3.new(d[4], d[5], d[6])\n"
     code = code .. "    local actMode = d[18] or 'Add'\n"
-    code = code .. "    local shape = d[8] or 'Ball'\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Grass, grassColors[d[9] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.LeafyGrass, leafyGrassColors[d[10] or 3]) end)\n"
     code = code .. "    pcall(function() Terrain:SetMaterialColor(Enum.Material.Ground, groundColors[d[11] or 2]) end)\n"
@@ -706,64 +551,32 @@ end
     code = code .. "    local cf = CFrame.new(pos) * CFrame.Angles(math.rad(d[12] or 0), math.rad(d[13] or 0), math.rad(d[14] or 0))\n"
     
     code = code .. "    if actMode == 'Erase' then\n"
-    code = code .. "        if shape == 'Block' or shape == 'Wedge' then\n"
-    code = code .. "            local halfSize = sizeVec / 2\n"
-    code = code .. "            local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)\n"
-    code = code .. "            local m, o = Terrain:ReadVoxels(region, 4)\n"
-    code = code .. "            for x = 1, m.Size.X do for y = 1, m.Size.Y do for z = 1, m.Size.Z do\n"
-    code = code .. "                if m[x][y][z] ~= Enum.Material.Air and m[x][y][z] ~= Enum.Material.Water then m[x][y][z] = Enum.Material.Air; o[x][y][z] = 0 end\n"
-    code = code .. "            end end end\n"
-    code = code .. "            Terrain:WriteVoxels(region, 4, m, o)\n"
-    code = code .. "        else\n"
-    code = code .. "            local region = Region3.new(pos - sizeVec, pos + sizeVec):ExpandToGrid(4)\n"
-    code = code .. "            local m, o = Terrain:ReadVoxels(region, 4)\n"
-    code = code .. "            local radius = math.max(d[4], d[5], d[6]) / 2\n"
-    code = code .. "            for x = 1, m.Size.X do for y = 1, m.Size.Y do for z = 1, m.Size.Z do\n"
-    code = code .. "                local voxelPos = region.CFrame * CFrame.new((x-1)*4-(m.Size.X-1)*2, (y-1)*4-(m.Size.Y-1)*2, (z-1)*4-(m.Size.Z-1)*2)\n"
-    code = code .. "                if (voxelPos.Position - pos).Magnitude <= radius and m[x][y][z] ~= Enum.Material.Air and m[x][y][z] ~= Enum.Material.Water then m[x][y][z] = Enum.Material.Air; o[x][y][z] = 0 end\n"
-    code = code .. "            end end end\n"
-    code = code .. "            Terrain:WriteVoxels(region, 4, m, o)\n"
-    code = code .. "        end\n"
+    code = code .. "        local halfSize = sizeVec / 2\n"
+    code = code .. "        local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)\n"
+    code = code .. "        local m, o = Terrain:ReadVoxels(region, 4)\n"
+    code = code .. "        for x = 1, m.Size.X do for y = 1, m.Size.Y do for z = 1, m.Size.Z do\n"
+    code = code .. "            if m[x][y][z] ~= Enum.Material.Air and m[x][y][z] ~= Enum.Material.Water then m[x][y][z] = Enum.Material.Air; o[x][y][z] = 0 end\n"
+    code = code .. "        end end end\n"
+    code = code .. "        Terrain:WriteVoxels(region, 4, m, o)\n"
     
     code = code .. "    elseif actMode == 'Flatten' then\n"
-    code = code .. "        if shape == 'Block' then\n"
-    code = code .. "            local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
-    code = code .. "            Terrain:FillBlock(baseCf, Vector3.new(d[4], 2, d[6]), mat)\n"
-    code = code .. "            Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
-    code = code .. "        elseif shape == 'Wedge' then\n"
-    code = code .. "            local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
-    code = code .. "            Terrain:FillWedge(baseCf, Vector3.new(d[4], 2, d[6]), mat)\n"
-    code = code .. "            Terrain:FillWedge(baseCf * CFrame.new(0, (d[5]/2)+1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
-    code = code .. "        else\n"
-    code = code .. "            local baseRadius = math.max(d[4], d[5], d[6]) / 2\n"
-    code = code .. "            Terrain:FillBall(pos, baseRadius, mat)\n"
-    code = code .. "            Terrain:FillBall(pos + Vector3.new(0, baseRadius + 2, 0), baseRadius, Enum.Material.Air)\n"
-    code = code .. "        end\n"
+    code = code .. "        local baseCf = CFrame.new(pos) * CFrame.Angles(0, math.rad(d[13] or 0), 0)\n"
+    code = code .. "        Terrain:FillBlock(baseCf, Vector3.new(d[4], 2, d[6]), mat)\n"
+    code = code .. "        Terrain:FillBlock(baseCf * CFrame.new(0, (d[5]/2) + 1, 0), Vector3.new(d[4], d[5], d[6]), Enum.Material.Air)\n"
     
     code = code .. "    elseif actMode == 'Paint' then\n"
-    code = code .. "        if shape == 'Block' or shape == 'Wedge' then\n"
-    code = code .. "            local halfSize = sizeVec / 2\n"
-    code = code .. "            local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)\n"
-    code = code .. "            local m, o = Terrain:ReadVoxels(region, 4)\n"
-    code = code .. "            for x = 1, m.Size.X do for y = 1, m.Size.Y do for z = 1, m.Size.Z do\n"
-    code = code .. "                if m[x][y][z] ~= Enum.Material.Air and m[x][y][z] ~= mat then m[x][y][z] = mat end\n"
-    code = code .. "            end end end\n"
-    code = code .. "            Terrain:WriteVoxels(region, 4, m, o)\n"
-    code = code .. "        else\n"
-    code = code .. "            local region = Region3.new(pos - sizeVec, pos + sizeVec):ExpandToGrid(4)\n"
-    code = code .. "            local m, o = Terrain:ReadVoxels(region, 4)\n"
-    code = code .. "            local radius = math.max(d[4], d[5], d[6]) / 2\n"
-    code = code .. "            for x = 1, m.Size.X do for y = 1, m.Size.Y do for z = 1, m.Size.Z do\n"
-    code = code .. "                local voxelPos = region.CFrame * CFrame.new((x-1)*4-(m.Size.X-1)*2, (y-1)*4-(m.Size.Y-1)*2, (z-1)*4-(m.Size.Z-1)*2)\n"
-    code = code .. "                if (voxelPos.Position - pos).Magnitude <= radius and m[x][y][z] ~= Enum.Material.Air and m[x][y][z] ~= mat then m[x][y][z] = mat end\n"
-    code = code .. "            end end end\n"
-    code = code .. "            Terrain:WriteVoxels(region, 4, m, o)\n"
-    code = code .. "        end\n"
+    code = code .. "        local halfSize = sizeVec / 2\n"
+    code = code .. "        local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)\n"
+    code = code .. "        local m, o = Terrain:ReadVoxels(region, 4)\n"
+    code = code .. "        for x = 1, m.Size.X do for y = 1, m.Size.Y do for z = 1, m.Size.Z do\n"
+    code = code .. "            if m[x][y][z] ~= Enum.Material.Air and m[x][y][z] ~= mat then m[x][y][z] = mat end\n"
+    code = code .. "        end end end\n"
+    code = code .. "        Terrain:WriteVoxels(region, 4, m, o)\n"
     
     code = code .. "    else\n"
-    code = code .. "        if shape == 'Block' then\n"
+    code = code .. "        if d[8] == 'Block' then\n"
     code = code .. "            Terrain:FillBlock(cf, sizeVec, mat)\n"
-    code = code .. "        elseif shape == 'Wedge' then\n"
+    code = code .. "        elseif d[8] == 'Wedge' then\n"
     code = code .. "            Terrain:FillWedge(cf, sizeVec, mat)\n"
     code = code .. "        else\n"
     code = code .. "            Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat)\n"
@@ -786,7 +599,7 @@ end
         end
         code = code .. "})do BL(d)end\n"
     end
-    code = code .. "\nprint('[Terrain by shhhhnayy05] " .. #SpawnedData .. " blocks spawned!')"
+    code = code .. "\nprint('[Terrain] " .. #SpawnedData .. " blocks spawned!')"
     return code
 end
 
@@ -820,7 +633,7 @@ end
 
 --// GUI SETUP
 local gui = Instance.new("ScreenGui")
-gui.Name = "shhhhnayy05TerrainEditor"
+gui.Name = "TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -844,6 +657,7 @@ Instance.new("UICorner", minIcon).CornerRadius = UDim.new(1, 0)
 local minIconStroke = Instance.new("UIStroke", minIcon)
 minIconStroke.Color, minIconStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
+-- Material Icon (Tergabung tapi terpisah jendelanya)
 local matIcon = Instance.new("TextButton", gui)
 matIcon.Name, matIcon.Size, matIcon.Position, matIcon.BackgroundColor3 = "MatIcon", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 155), Color3.fromRGB(255, 100, 50)
 matIcon.Text, matIcon.TextSize, matIcon.Font, matIcon.Visible, matIcon.Active = "🎨", 22, Enum.Font.GothamBold, true, true
@@ -852,7 +666,7 @@ local matIconStroke = Instance.new("UIStroke", matIcon)
 matIconStroke.Color, matIconStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
 local panel = Instance.new("Frame", gui)
-panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 300, 0, 520), UDim2.new(1, -310, 1, -530), Color3.fromRGB(30, 30, 40), 0
+panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 450), UDim2.new(1, -300, 1, -460), Color3.fromRGB(30, 30, 40), 0
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
 local panelStroke = Instance.new("UIStroke", panel)
 panelStroke.Color, panelStroke.Thickness = Color3.fromRGB(0, 150, 255), 2
@@ -864,7 +678,7 @@ MakeDraggable(panel, titleBar)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor shhhhnayy05 v17.0", Color3.fromRGB(0, 200, 255), 13, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -877,16 +691,61 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1800)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1400)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
 local status = Instance.new("TextLabel", scroll)
 status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, status.TextSize, status.Font = UDim2.new(1, -8, 0, 18), 1, "Aim & tap 🎯 to spawn", Color3.fromRGB(0, 255, 150), 10, Enum.Font.Gotham
 
---// ============================================
---// 1. COLORS (PALING ATAS)
---// ============================================
+--// GHOST MODE SECTION (Tembus Terrain)
+local ghostSec = Instance.new("Frame", scroll)
+ghostSec.Size, ghostSec.BackgroundColor3, ghostSec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", ghostSec).CornerRadius = UDim.new(0, 8)
+local ghostToggleBtn = Instance.new("TextButton", ghostSec)
+ghostToggleBtn.Size, ghostToggleBtn.Position, ghostToggleBtn.BackgroundColor3, ghostToggleBtn.Text, ghostToggleBtn.TextColor3, ghostToggleBtn.TextSize, ghostToggleBtn.Font = UDim2.new(1, -10, 0, 25), UDim2.new(0, 5, 0, 5), Color3.fromRGB(200, 60, 60), "👻 Tembus Terrain: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", ghostToggleBtn).CornerRadius = UDim.new(0, 6)
+local ghostInfo = Instance.new("TextLabel", ghostSec)
+ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.Text, ghostInfo.TextColor3, ghostInfo.TextSize, ghostInfo.Font = UDim2.new(1, -10, 0, 15), UDim2.new(0, 5, 0, 32), 1, "Raycast menabrak gundukan tanah lama", Color3.fromRGB(150, 150, 160), 9, Enum.Font.Gotham
+
+--// ACTION MODE SECTION
+local actionSec = Instance.new("Frame", scroll)
+actionSec.Size, actionSec.BackgroundColor3, actionSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", actionSec).CornerRadius = UDim.new(0, 8)
+local actionTitle = Instance.new("TextLabel", actionSec)
+actionTitle.Size, actionTitle.Position, actionTitle.BackgroundTransparency, actionTitle.Text, actionTitle.TextColor3, actionTitle.TextSize, actionTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "⚡ Action Mode", Color3.fromRGB(255, 200, 50), 11, Enum.Font.GothamBold
+
+local function CreateActionBtn(txt, xPos)
+    local btn = Instance.new("TextButton", actionSec)
+    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font = UDim2.new(0.22, 0, 0, 28), UDim2.new(xPos, 0, 0, 25), Color3.fromRGB(65, 65, 80), txt, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
+local actAddBtn = CreateActionBtn("Add", 0.02)
+actAddBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
+local actEraseBtn = CreateActionBtn("Erase", 0.26)
+local actFlatBtn = CreateActionBtn("Flatten", 0.50)
+local actPaintBtn = CreateActionBtn("Paint", 0.74)
+
+--// SHAPE SECTION
+local shapeSec = Instance.new("Frame", scroll)
+shapeSec.Size, shapeSec.BackgroundColor3, shapeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", shapeSec).CornerRadius = UDim.new(0, 8)
+local shapeTitle = Instance.new("TextLabel", shapeSec)
+shapeTitle.Size, shapeTitle.Position, shapeTitle.BackgroundTransparency, shapeTitle.Text, shapeTitle.TextColor3, shapeTitle.TextSize, shapeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔷 Shape", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
+
+local function CreateShapeBtn(txt, xPos)
+    local btn = Instance.new("TextButton", shapeSec)
+    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font = UDim2.new(0.30, 0, 0, 28), UDim2.new(xPos, 0, 0, 25), Color3.fromRGB(65, 65, 80), txt, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
+local ballBtn = CreateShapeBtn("Ball", 0.02)
+ballBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+local blockBtn = CreateShapeBtn("Block", 0.34)
+local wedgeBtn = CreateShapeBtn("Wedge", 0.66)
+
+--// COLORS
 local function CreateColorSec(parent, titleStr, colorArr, titleColor, initialIdx)
     local sec = Instance.new("Frame", parent)
     sec.Size, sec.BackgroundColor3, sec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
@@ -909,223 +768,6 @@ local grassLeft, grassRight, grassDisplay = CreateColorSec(scroll, "🌿 Grass C
 local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGrass Color", leafyGrassColors, Color3.fromRGB(100, 220, 80), currentLeafyGrassColorIndex)
 local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
 local rockLeft, rockRight, rockDisplay = CreateColorSec(scroll, "🪨 Rock Color", rockColors, Color3.fromRGB(150, 150, 150), currentRockColorIndex)
-
---// ============================================
---// 2. SHAPE
---// ============================================
-local shapeSec = Instance.new("Frame", scroll)
-shapeSec.Size, shapeSec.BackgroundColor3, shapeSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", shapeSec).CornerRadius = UDim.new(0, 8)
-local shapeTitle = Instance.new("TextLabel", shapeSec)
-shapeTitle.Size, shapeTitle.Position, shapeTitle.BackgroundTransparency, shapeTitle.Text, shapeTitle.TextColor3, shapeTitle.TextSize, shapeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔷 Shape", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
-
-local function CreateShapeBtn(txt, xPos)
-    local btn = Instance.new("TextButton", shapeSec)
-    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font = UDim2.new(0.30, 0, 0, 28), UDim2.new(xPos, 0, 0, 25), Color3.fromRGB(65, 65, 80), txt, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    return btn
-end
-local ballBtn = CreateShapeBtn("Ball", 0.02)
-ballBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-local blockBtn = CreateShapeBtn("Block", 0.34)
-local wedgeBtn = CreateShapeBtn("Wedge", 0.66)
-
---// ============================================
---// 3. ACTION MODE
---// ============================================
-local actionSec = Instance.new("Frame", scroll)
-actionSec.Size, actionSec.BackgroundColor3, actionSec.BorderSizePixel = UDim2.new(1, -8, 0, 55), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", actionSec).CornerRadius = UDim.new(0, 8)
-local actionTitle = Instance.new("TextLabel", actionSec)
-actionTitle.Size, actionTitle.Position, actionTitle.BackgroundTransparency, actionTitle.Text, actionTitle.TextColor3, actionTitle.TextSize, actionTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "⚡ Action Mode", Color3.fromRGB(255, 200, 50), 11, Enum.Font.GothamBold
-
-local function CreateActionBtn(txt, xPos)
-    local btn = Instance.new("TextButton", actionSec)
-    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font = UDim2.new(0.22, 0, 0, 28), UDim2.new(xPos, 0, 0, 25), Color3.fromRGB(65, 65, 80), txt, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    return btn
-end
-local actAddBtn = CreateActionBtn("Add", 0.02)
-actAddBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
-local actEraseBtn = CreateActionBtn("Erase", 0.26)
-local actFlatBtn = CreateActionBtn("Flatten", 0.50)
-local actPaintBtn = CreateActionBtn("Paint", 0.74)
-
---// ============================================
---// 4. TEMBUS TERRAIN (GHOST MODE)
---// ============================================
-local ghostSec = Instance.new("Frame", scroll)
-ghostSec.Size, ghostSec.BackgroundColor3, ghostSec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", ghostSec).CornerRadius = UDim.new(0, 8)
-local ghostToggleBtn = Instance.new("TextButton", ghostSec)
-ghostToggleBtn.Size, ghostToggleBtn.Position, ghostToggleBtn.BackgroundColor3, ghostToggleBtn.Text, ghostToggleBtn.TextColor3, ghostToggleBtn.TextSize, ghostToggleBtn.Font = UDim2.new(1, -10, 0, 25), UDim2.new(0, 5, 0, 5), Color3.fromRGB(200, 60, 60), "👻 Tembus Terrain: OFF", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", ghostToggleBtn).CornerRadius = UDim.new(0, 6)
-local ghostInfo = Instance.new("TextLabel", ghostSec)
-ghostInfo.Size, ghostInfo.Position, ghostInfo.BackgroundTransparency, ghostInfo.Text, ghostInfo.TextColor3, ghostInfo.TextSize, ghostInfo.Font = UDim2.new(1, -10, 0, 15), UDim2.new(0, 5, 0, 32), 1, "Raycast menabrak gundukan tanah lama", Color3.fromRGB(150, 150, 160), 9, Enum.Font.Gotham
-
---// ============================================
---// 5. MOVE TERRAIN (LOCK & MOVE)
---// ============================================
-local moveMainSec = Instance.new("Frame", scroll)
-moveMainSec.Size, moveMainSec.BackgroundColor3, moveMainSec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", moveMainSec).CornerRadius = UDim.new(0, 8)
-local moveMainTitle = Instance.new("TextLabel", moveMainSec)
-moveMainTitle.Size, moveMainTitle.Position, moveMainTitle.BackgroundTransparency, moveMainTitle.Text, moveMainTitle.TextColor3, moveMainTitle.TextSize, moveMainTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔒 Lock & Move Position", Color3.fromRGB(255, 150, 255), 11, Enum.Font.GothamBold
-
-local moveMainToggleBtn = Instance.new("TextButton", moveMainSec)
-moveMainToggleBtn.Size, moveMainToggleBtn.Position, moveMainToggleBtn.BackgroundColor3, moveMainToggleBtn.Text, moveMainToggleBtn.TextColor3, moveMainToggleBtn.TextSize, moveMainToggleBtn.Font = UDim2.new(0, 250, 0, 22), UDim2.new(0, 6, 0, 24), Color3.fromRGB(200, 60, 60), "OFF - Posisi Bebas", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", moveMainToggleBtn).CornerRadius = UDim.new(0, 4)
-
---// JENDELA FLOATING MOVE
-local moveWin = Instance.new("Frame", gui)
-moveWin.Name, moveWin.Size, moveWin.Position, moveWin.BackgroundColor3, moveWin.Visible, moveWin.Active = "MoveWindow", UDim2.new(0, 110, 0, 130), UDim2.new(0.5, 100, 0.5, -50), Color3.fromRGB(30, 30, 40), false, true
-Instance.new("UICorner", moveWin).CornerRadius = UDim.new(0, 10)
-local moveWinStroke = Instance.new("UIStroke", moveWin)
-moveWinStroke.Color, moveWinStroke.Thickness = Color3.fromRGB(255, 150, 255), 2
-
-local moveWinTitle = Instance.new("Frame", moveWin)
-moveWinTitle.Size, moveWinTitle.BackgroundColor3, moveWinTitle.Active = UDim2.new(1, 0, 0, 25), Color3.fromRGB(45, 45, 60), true
-Instance.new("UICorner", moveWinTitle).CornerRadius = UDim.new(0, 10)
-MakeDraggable(moveWin, moveWinTitle)
-
-local moveMinBtn = Instance.new("TextButton", moveWinTitle)
-moveMinBtn.Size, moveMinBtn.Position, moveMinBtn.BackgroundColor3, moveMinBtn.Text, moveMinBtn.TextColor3, moveMinBtn.TextSize, moveMinBtn.Font = UDim2.new(0, 20, 0, 20), UDim2.new(1, -22, 0, 2), Color3.fromRGB(200, 60, 60), "⛔", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-Instance.new("UICorner", moveMinBtn).CornerRadius = UDim.new(0, 4)
-
-local moveWinUpBtn = Instance.new("TextButton", moveWin)
-moveWinUpBtn.Size, moveWinUpBtn.Position, moveWinUpBtn.BackgroundColor3, moveWinUpBtn.Text, moveWinUpBtn.TextSize = UDim2.new(0, 40, 0, 30), UDim2.new(0.5, -20, 0, 30), Color3.fromRGB(60, 60, 75), "⬆️", 18
-Instance.new("UICorner", moveWinUpBtn).CornerRadius = UDim.new(0, 6)
-
-local moveWinStepInput = Instance.new("TextBox", moveWin)
-moveWinStepInput.Size, moveWinStepInput.Position, moveWinStepInput.BackgroundColor3, moveWinStepInput.Text, moveWinStepInput.TextColor3, moveWinStepInput.TextSize, moveWinStepInput.Font = UDim2.new(0, 40, 0, 20), UDim2.new(0.5, -20, 0, 65), Color3.fromRGB(45, 45, 60), "1", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", moveWinStepInput).CornerRadius = UDim.new(0, 4)
-
-local moveWinDownBtn = Instance.new("TextButton", moveWin)
-moveWinDownBtn.Size, moveWinDownBtn.Position, moveWinDownBtn.BackgroundColor3, moveWinDownBtn.Text, moveWinDownBtn.TextSize = UDim2.new(0, 40, 0, 30), UDim2.new(0.5, -20, 0, 90), Color3.fromRGB(60, 60, 75), "⬇️", 18
-Instance.new("UICorner", moveWinDownBtn).CornerRadius = UDim.new(0, 6)
-
--- Move Icon (Bisa di drag)
-local moveIconFloat = Instance.new("TextButton", gui)
-moveIconFloat.Size, moveIconFloat.Position, moveIconFloat.BackgroundColor3, moveIconFloat.Text, moveIconFloat.TextSize, moveIconFloat.Visible, moveIconFloat.Active = UDim2.new(0, 40, 0, 40), UDim2.new(0, 0, 0, 0), Color3.fromRGB(255, 150, 255), "🔛", 20, false, true
-Instance.new("UICorner", moveIconFloat).CornerRadius = UDim.new(1, 0)
-MakeDraggable(moveIconFloat, moveIconFloat)
-
---// ============================================
---// SIZE SECTION - XYZ INDIVIDUAL DENGAN SET & ALL
---// ============================================
-local sizeSec = Instance.new("Frame", scroll)
-sizeSec.Size, sizeSec.BackgroundColor3, sizeSec.BorderSizePixel = UDim2.new(1, -8, 0, 170), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", sizeSec).CornerRadius = UDim.new(0, 8)
-
-local sizeTitle = Instance.new("TextLabel", sizeSec)
-sizeTitle.Size, sizeTitle.Position, sizeTitle.BackgroundTransparency, sizeTitle.Text, sizeTitle.TextColor3, sizeTitle.TextSize, sizeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📐 Size (Custom XYZ + Set)", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
-
--- X Row
-local xLabel = Instance.new("TextLabel", sizeSec)
-xLabel.Size, xLabel.Position, xLabel.BackgroundTransparency, xLabel.Text, xLabel.TextColor3, xLabel.TextSize, xLabel.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, 24), 1, "X:", Color3.fromRGB(255, 100, 100), 11, Enum.Font.GothamBold
-local xMinus = Instance.new("TextButton", sizeSec)
-xMinus.Size, xMinus.Position, xMinus.BackgroundColor3, xMinus.Text, xMinus.TextColor3, xMinus.TextSize, xMinus.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 24, 0, 24), Color3.fromRGB(200, 60, 60), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", xMinus).CornerRadius = UDim.new(0, 4)
-local xValue = Instance.new("TextBox", sizeSec)
-xValue.Size, xValue.Position, xValue.BackgroundColor3, xValue.Text, xValue.TextColor3, xValue.TextSize, xValue.Font, xValue.ClearTextOnFocus = UDim2.new(0, 40, 0, 20), UDim2.new(0, 54, 0, 24), Color3.fromRGB(60, 60, 75), tostring(SizeX), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold, false
-Instance.new("UICorner", xValue).CornerRadius = UDim.new(0, 4)
-local xPlus = Instance.new("TextButton", sizeSec)
-xPlus.Size, xPlus.Position, xPlus.BackgroundColor3, xPlus.Text, xPlus.TextColor3, xPlus.TextSize, xPlus.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 96, 0, 24), Color3.fromRGB(0, 150, 100), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", xPlus).CornerRadius = UDim.new(0, 4)
-local xSetBtn = Instance.new("TextButton", sizeSec)
-xSetBtn.Size, xSetBtn.Position, xSetBtn.BackgroundColor3, xSetBtn.Text, xSetBtn.TextColor3, xSetBtn.TextSize, xSetBtn.Font = UDim2.new(0, 38, 0, 20), UDim2.new(0, 128, 0, 24), Color3.fromRGB(100, 100, 200), "SET", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-Instance.new("UICorner", xSetBtn).CornerRadius = UDim.new(0, 4)
-
--- Y Row
-local yLabel = Instance.new("TextLabel", sizeSec)
-yLabel.Size, yLabel.Position, yLabel.BackgroundTransparency, yLabel.Text, yLabel.TextColor3, yLabel.TextSize, yLabel.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, 48), 1, "Y:", Color3.fromRGB(100, 255, 100), 11, Enum.Font.GothamBold
-local yMinus = Instance.new("TextButton", sizeSec)
-yMinus.Size, yMinus.Position, yMinus.BackgroundColor3, yMinus.Text, yMinus.TextColor3, yMinus.TextSize, yMinus.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 24, 0, 48), Color3.fromRGB(200, 60, 60), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", yMinus).CornerRadius = UDim.new(0, 4)
-local yValue = Instance.new("TextBox", sizeSec)
-yValue.Size, yValue.Position, yValue.BackgroundColor3, yValue.Text, yValue.TextColor3, yValue.TextSize, yValue.Font, yValue.ClearTextOnFocus = UDim2.new(0, 40, 0, 20), UDim2.new(0, 54, 0, 48), Color3.fromRGB(60, 60, 75), tostring(SizeY), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold, false
-Instance.new("UICorner", yValue).CornerRadius = UDim.new(0, 4)
-local yPlus = Instance.new("TextButton", sizeSec)
-yPlus.Size, yPlus.Position, yPlus.BackgroundColor3, yPlus.Text, yPlus.TextColor3, yPlus.TextSize, yPlus.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 96, 0, 48), Color3.fromRGB(0, 150, 100), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", yPlus).CornerRadius = UDim.new(0, 4)
-local ySetBtn = Instance.new("TextButton", sizeSec)
-ySetBtn.Size, ySetBtn.Position, ySetBtn.BackgroundColor3, ySetBtn.Text, ySetBtn.TextColor3, ySetBtn.TextSize, ySetBtn.Font = UDim2.new(0, 38, 0, 20), UDim2.new(0, 128, 0, 48), Color3.fromRGB(100, 100, 200), "SET", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-Instance.new("UICorner", ySetBtn).CornerRadius = UDim.new(0, 4)
-
--- Z Row
-local zLabel = Instance.new("TextLabel", sizeSec)
-zLabel.Size, zLabel.Position, zLabel.BackgroundTransparency, zLabel.Text, zLabel.TextColor3, zLabel.TextSize, zLabel.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, 72), 1, "Z:", Color3.fromRGB(100, 100, 255), 11, Enum.Font.GothamBold
-local zMinus = Instance.new("TextButton", sizeSec)
-zMinus.Size, zMinus.Position, zMinus.BackgroundColor3, zMinus.Text, zMinus.TextColor3, zMinus.TextSize, zMinus.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 24, 0, 72), Color3.fromRGB(200, 60, 60), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", zMinus).CornerRadius = UDim.new(0, 4)
-local zValue = Instance.new("TextBox", sizeSec)
-zValue.Size, zValue.Position, zValue.BackgroundColor3, zValue.Text, zValue.TextColor3, zValue.TextSize, zValue.Font, zValue.ClearTextOnFocus = UDim2.new(0, 40, 0, 20), UDim2.new(0, 54, 0, 72), Color3.fromRGB(60, 60, 75), tostring(SizeZ), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold, false
-Instance.new("UICorner", zValue).CornerRadius = UDim.new(0, 4)
-local zPlus = Instance.new("TextButton", sizeSec)
-zPlus.Size, zPlus.Position, zPlus.BackgroundColor3, zPlus.Text, zPlus.TextColor3, zPlus.TextSize, zPlus.Font = UDim2.new(0, 28, 0, 20), UDim2.new(0, 96, 0, 72), Color3.fromRGB(0, 150, 100), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", zPlus).CornerRadius = UDim.new(0, 4)
-local zSetBtn = Instance.new("TextButton", sizeSec)
-zSetBtn.Size, zSetBtn.Position, zSetBtn.BackgroundColor3, zSetBtn.Text, zSetBtn.TextColor3, zSetBtn.TextSize, zSetBtn.Font = UDim2.new(0, 38, 0, 20), UDim2.new(0, 128, 0, 72), Color3.fromRGB(100, 100, 200), "SET", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-Instance.new("UICorner", zSetBtn).CornerRadius = UDim.new(0, 4)
-
--- Tombol ALL (Set semua sekaligus)
-local allSetBtn = Instance.new("TextButton", sizeSec)
-allSetBtn.Size, allSetBtn.Position, allSetBtn.BackgroundColor3, allSetBtn.Text, allSetBtn.TextColor3, allSetBtn.TextSize, allSetBtn.Font = UDim2.new(0, 50, 0, 22), UDim2.new(0, 175, 0, 24), Color3.fromRGB(200, 100, 50), "| ALL |", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-Instance.new("UICorner", allSetBtn).CornerRadius = UDim.new(0, 4)
-
---// PRESET SIZE - TOMBOL LEBIH BESAR
-local function CreatePresetBtn(x, y, val)
-    local b = Instance.new("TextButton", sizeSec)
-    b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 32, 0, 22), UDim2.new(0, x, 0, y), Color3.fromRGB(80, 80, 100), tostring(val), Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
-    return b
-end
-
-local presetRow1Y = 100
-local presetRow2Y = 126
-CreatePresetBtn(6, presetRow1Y, 5); CreatePresetBtn(42, presetRow1Y, 10).BackgroundColor3 = Color3.fromRGB(0, 150, 200); CreatePresetBtn(78, presetRow1Y, 20); CreatePresetBtn(114, presetRow1Y, 30); CreatePresetBtn(150, presetRow1Y, 40); CreatePresetBtn(186, presetRow1Y, 50); CreatePresetBtn(222, presetRow1Y, 60)
-CreatePresetBtn(6, presetRow2Y, 80); CreatePresetBtn(42, presetRow2Y, 100); CreatePresetBtn(78, presetRow2Y, 150); CreatePresetBtn(114, presetRow2Y, 200); CreatePresetBtn(150, presetRow2Y, 300); CreatePresetBtn(186, presetRow2Y, 400); CreatePresetBtn(222, presetRow2Y, 500)
-
--- Connect Presets
-for _, child in ipairs(sizeSec:GetChildren()) do
-    if child:IsA("TextButton") and tonumber(child.Text) and tonumber(child.Text) >= 5 then
-        child.MouseButton1Click:Connect(function() 
-            local size = tonumber(child.Text)
-            SizeX, SizeY, SizeZ = size, size, size
-            xValue.Text, yValue.Text, zValue.Text = tostring(SizeX), tostring(SizeY), tostring(SizeZ)
-            UpdatePreview() 
-        end)
-    end
-end
-
---// ROTATION SECTION
-local rotSec = Instance.new("Frame", scroll)
-rotSec.Size, rotSec.BackgroundColor3, rotSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", rotSec).CornerRadius = UDim.new(0, 8)
-local rotTitle = Instance.new("TextLabel", rotSec)
-rotTitle.Size, rotTitle.Position, rotTitle.BackgroundTransparency, rotTitle.Text, rotTitle.TextColor3, rotTitle.TextSize, rotTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔄 Rotation (X-Y-Z)", Color3.fromRGB(255, 180, 0), 11, Enum.Font.GothamBold
-
-local function CreateRotRow(yPos, labelStr, color, initialVal)
-    local l = Instance.new("TextLabel", rotSec)
-    l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
-    local m = Instance.new("TextButton", rotSec)
-    m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 24, 0, yPos), Color3.fromRGB(200, 60, 60), "-15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-    Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
-    local v = Instance.new("TextLabel", rotSec)
-    v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font = UDim2.new(0, 46, 0, 20), UDim2.new(0, 58, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal).."°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-    Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
-    local p = Instance.new("TextButton", rotSec)
-    p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 106, 0, yPos), Color3.fromRGB(0, 150, 100), "+15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
-    return m, v, p
-end
-local rxMinus, rxValue, rxPlus = CreateRotRow(25, "X:", Color3.fromRGB(255, 100, 100), RotX)
-local ryMinus, ryValue, ryPlus = CreateRotRow(48, "Y:", Color3.fromRGB(100, 255, 100), RotY)
-local rzMinus, rzValue, rzPlus = CreateRotRow(71, "Z:", Color3.fromRGB(100, 100, 255), RotZ)
-
-local rotResetBtn = Instance.new("TextButton", rotSec)
-rotResetBtn.Size, rotResetBtn.Position, rotResetBtn.BackgroundColor3, rotResetBtn.Text, rotResetBtn.TextColor3, rotResetBtn.TextSize, rotResetBtn.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 150, 0, 48), Color3.fromRGB(150, 150, 150), "Reset 0°", Color3.fromRGB(0, 0, 0), 11, Enum.Font.GothamBold
-Instance.new("UICorner", rotResetBtn).CornerRadius = UDim.new(0, 4)
 
 --// SMOOTH TERRAIN GUI SECTION
 local smoothSec = Instance.new("Frame", scroll)
@@ -1191,7 +833,132 @@ local function CreateAxisToggle(x, axisStr, isEnabled)
 end
 local axisXBtn = CreateAxisToggle(72, "X", SnapAxis.X); local axisYBtn = CreateAxisToggle(100, "Y", SnapAxis.Y); local axisZBtn = CreateAxisToggle(128, "Z", SnapAxis.Z)
 
---// SCRIPT & CLEAR BUTTONS
+--// NEW: MOVE & LOCK POSITION GUI SECTION
+local moveMainSec = Instance.new("Frame", scroll)
+moveMainSec.Size, moveMainSec.BackgroundColor3, moveMainSec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", moveMainSec).CornerRadius = UDim.new(0, 8)
+local moveMainTitle = Instance.new("TextLabel", moveMainSec)
+moveMainTitle.Size, moveMainTitle.Position, moveMainTitle.BackgroundTransparency, moveMainTitle.Text, moveMainTitle.TextColor3, moveMainTitle.TextSize, moveMainTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔒 Lock & Move Position", Color3.fromRGB(255, 150, 255), 11, Enum.Font.GothamBold
+
+local moveMainToggleBtn = Instance.new("TextButton", moveMainSec)
+moveMainToggleBtn.Size, moveMainToggleBtn.Position, moveMainToggleBtn.BackgroundColor3, moveMainToggleBtn.Text, moveMainToggleBtn.TextColor3, moveMainToggleBtn.TextSize, moveMainToggleBtn.Font = UDim2.new(0, 250, 0, 22), UDim2.new(0, 6, 0, 24), Color3.fromRGB(200, 60, 60), "OFF - Posisi Bebas", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", moveMainToggleBtn).CornerRadius = UDim.new(0, 4)
+
+--// JENDELA FLOATING MOVE
+local moveWin = Instance.new("Frame", gui)
+moveWin.Name, moveWin.Size, moveWin.Position, moveWin.BackgroundColor3, moveWin.Visible, moveWin.Active = "MoveWindow", UDim2.new(0, 110, 0, 130), UDim2.new(0.5, 100, 0.5, -50), Color3.fromRGB(30, 30, 40), false, true
+Instance.new("UICorner", moveWin).CornerRadius = UDim.new(0, 10)
+local moveWinStroke = Instance.new("UIStroke", moveWin)
+moveWinStroke.Color, moveWinStroke.Thickness = Color3.fromRGB(255, 150, 255), 2
+
+local moveWinTitle = Instance.new("Frame", moveWin)
+moveWinTitle.Size, moveWinTitle.BackgroundColor3, moveWinTitle.Active = UDim2.new(1, 0, 0, 25), Color3.fromRGB(45, 45, 60), true
+Instance.new("UICorner", moveWinTitle).CornerRadius = UDim.new(0, 10)
+MakeDraggable(moveWin, moveWinTitle)
+
+local moveMinBtn = Instance.new("TextButton", moveWinTitle)
+moveMinBtn.Size, moveMinBtn.Position, moveMinBtn.BackgroundColor3, moveMinBtn.Text, moveMinBtn.TextColor3, moveMinBtn.TextSize, moveMinBtn.Font = UDim2.new(0, 20, 0, 20), UDim2.new(1, -22, 0, 2), Color3.fromRGB(200, 60, 60), "⛔", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+Instance.new("UICorner", moveMinBtn).CornerRadius = UDim.new(0, 4)
+
+local moveWinUpBtn = Instance.new("TextButton", moveWin)
+moveWinUpBtn.Size, moveWinUpBtn.Position, moveWinUpBtn.BackgroundColor3, moveWinUpBtn.Text, moveWinUpBtn.TextSize = UDim2.new(0, 40, 0, 30), UDim2.new(0.5, -20, 0, 30), Color3.fromRGB(60, 60, 75), "⬆️", 18
+Instance.new("UICorner", moveWinUpBtn).CornerRadius = UDim.new(0, 6)
+
+local moveWinStepInput = Instance.new("TextBox", moveWin)
+moveWinStepInput.Size, moveWinStepInput.Position, moveWinStepInput.BackgroundColor3, moveWinStepInput.Text, moveWinStepInput.TextColor3, moveWinStepInput.TextSize, moveWinStepInput.Font = UDim2.new(0, 40, 0, 20), UDim2.new(0.5, -20, 0, 65), Color3.fromRGB(45, 45, 60), "1", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+Instance.new("UICorner", moveWinStepInput).CornerRadius = UDim.new(0, 4)
+
+local moveWinDownBtn = Instance.new("TextButton", moveWin)
+moveWinDownBtn.Size, moveWinDownBtn.Position, moveWinDownBtn.BackgroundColor3, moveWinDownBtn.Text, moveWinDownBtn.TextSize = UDim2.new(0, 40, 0, 30), UDim2.new(0.5, -20, 0, 90), Color3.fromRGB(60, 60, 75), "⬇️", 18
+Instance.new("UICorner", moveWinDownBtn).CornerRadius = UDim.new(0, 6)
+
+-- Move Icon (Bisa di drag)
+local moveIconFloat = Instance.new("TextButton", gui)
+moveIconFloat.Size, moveIconFloat.Position, moveIconFloat.BackgroundColor3, moveIconFloat.Text, moveIconFloat.TextSize, moveIconFloat.Visible, moveIconFloat.Active = UDim2.new(0, 40, 0, 40), UDim2.new(0, 0, 0, 0), Color3.fromRGB(255, 150, 255), "🔛", 20, false, true
+Instance.new("UICorner", moveIconFloat).CornerRadius = UDim.new(1, 0)
+MakeDraggable(moveIconFloat, moveIconFloat)
+
+--// SIZE SECTION
+local sizeSec = Instance.new("Frame", scroll)
+sizeSec.Size, sizeSec.BackgroundColor3, sizeSec.BorderSizePixel = UDim2.new(1, -8, 0, 185), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", sizeSec).CornerRadius = UDim.new(0, 8)
+
+local sizeTitle = Instance.new("TextLabel", sizeSec)
+sizeTitle.Size, sizeTitle.Position, sizeTitle.BackgroundTransparency, sizeTitle.Text, sizeTitle.TextColor3, sizeTitle.TextSize, sizeTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "📐 Size (Custom Text Max 500)", Color3.fromRGB(0, 200, 255), 11, Enum.Font.GothamBold
+
+local function CreateSizeRow(yPos, labelStr, color, initialVal)
+    local l = Instance.new("TextLabel", sizeSec)
+    l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
+    local m = Instance.new("TextButton", sizeSec)
+    m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 24, 0, yPos), Color3.fromRGB(200, 60, 60), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+    Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
+    local v = Instance.new("TextBox", sizeSec)
+    v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font, v.ClearTextOnFocus = UDim2.new(0, 36, 0, 20), UDim2.new(0, 58, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold, false
+    Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
+    local p = Instance.new("TextButton", sizeSec)
+    p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 96, 0, yPos), Color3.fromRGB(0, 150, 100), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
+    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
+    return m, v, p
+end
+local xMinus, xValue, xPlus = CreateSizeRow(25, "X:", Color3.fromRGB(255, 100, 100), SizeX)
+local yMinus, yValue, yPlus = CreateSizeRow(48, "Y:", Color3.fromRGB(100, 255, 100), SizeY)
+local zMinus, zValue, zPlus = CreateSizeRow(71, "Z:", Color3.fromRGB(100, 100, 255), SizeZ)
+
+local function CreatePresetBtn(x, y, val)
+    local b = Instance.new("TextButton", sizeSec)
+    b.Size, b.Position, b.BackgroundColor3, b.Text, b.TextColor3, b.TextSize, b.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, x, 0, y), Color3.fromRGB(80, 80, 100), tostring(val), Color3.fromRGB(255, 255, 255), 9, Enum.Font.GothamBold
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    return b
+end
+
+-- Preset layout logic up to 500
+local presetRow1Y = 100
+local presetRow2Y = 125
+local presetRow3Y = 150
+CreatePresetBtn(6, presetRow1Y, 5); CreatePresetBtn(36, presetRow1Y, 10).BackgroundColor3 = Color3.fromRGB(0, 150, 200); CreatePresetBtn(66, presetRow1Y, 20); CreatePresetBtn(96, presetRow1Y, 30); CreatePresetBtn(126, presetRow1Y, 40); CreatePresetBtn(156, presetRow1Y, 50); CreatePresetBtn(186, presetRow1Y, 60); CreatePresetBtn(216, presetRow1Y, 70)
+CreatePresetBtn(6, presetRow2Y, 80); CreatePresetBtn(36, presetRow2Y, 90); CreatePresetBtn(66, presetRow2Y, 100); CreatePresetBtn(96, presetRow2Y, 200); CreatePresetBtn(126, presetRow2Y, 300); CreatePresetBtn(156, presetRow2Y, 400); CreatePresetBtn(186, presetRow2Y, 500)
+
+-- Connect Presets
+for _, child in ipairs(sizeSec:GetChildren()) do
+    if child:IsA("TextButton") and tonumber(child.Text) and tonumber(child.Text) >= 5 then
+        child.MouseButton1Click:Connect(function() 
+            local size = tonumber(child.Text)
+            SizeX, SizeY, SizeZ = size, size, size
+            xValue.Text, yValue.Text, zValue.Text = tostring(SizeX), tostring(SizeY), tostring(SizeZ)
+            UpdatePreview() 
+        end)
+    end
+end
+
+--// ROTATION SECTION
+local rotSec = Instance.new("Frame", scroll)
+rotSec.Size, rotSec.BackgroundColor3, rotSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", rotSec).CornerRadius = UDim.new(0, 8)
+local rotTitle = Instance.new("TextLabel", rotSec)
+rotTitle.Size, rotTitle.Position, rotTitle.BackgroundTransparency, rotTitle.Text, rotTitle.TextColor3, rotTitle.TextSize, rotTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🔄 Rotation (X-Y-Z)", Color3.fromRGB(255, 180, 0), 11, Enum.Font.GothamBold
+
+local function CreateRotRow(yPos, labelStr, color, initialVal)
+    local l = Instance.new("TextLabel", rotSec)
+    l.Size, l.Position, l.BackgroundTransparency, l.Text, l.TextColor3, l.TextSize, l.Font = UDim2.new(0, 18, 0, 20), UDim2.new(0, 6, 0, yPos), 1, labelStr, color, 11, Enum.Font.GothamBold
+    local m = Instance.new("TextButton", rotSec)
+    m.Size, m.Position, m.BackgroundColor3, m.Text, m.TextColor3, m.TextSize, m.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 24, 0, yPos), Color3.fromRGB(200, 60, 60), "-15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+    Instance.new("UICorner", m).CornerRadius = UDim.new(0, 4)
+    local v = Instance.new("TextLabel", rotSec)
+    v.Size, v.Position, v.BackgroundColor3, v.Text, v.TextColor3, v.TextSize, v.Font = UDim2.new(0, 46, 0, 20), UDim2.new(0, 58, 0, yPos), Color3.fromRGB(60, 60, 75), tostring(initialVal).."°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+    Instance.new("UICorner", v).CornerRadius = UDim.new(0, 4)
+    local p = Instance.new("TextButton", rotSec)
+    p.Size, p.Position, p.BackgroundColor3, p.Text, p.TextColor3, p.TextSize, p.Font = UDim2.new(0, 32, 0, 20), UDim2.new(0, 106, 0, yPos), Color3.fromRGB(0, 150, 100), "+15°", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
+    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 4)
+    return m, v, p
+end
+local rxMinus, rxValue, rxPlus = CreateRotRow(25, "X:", Color3.fromRGB(255, 100, 100), RotX)
+local ryMinus, ryValue, ryPlus = CreateRotRow(48, "Y:", Color3.fromRGB(100, 255, 100), RotY)
+local rzMinus, rzValue, rzPlus = CreateRotRow(71, "Z:", Color3.fromRGB(100, 100, 255), RotZ)
+
+local rotResetBtn = Instance.new("TextButton", rotSec)
+rotResetBtn.Size, rotResetBtn.Position, rotResetBtn.BackgroundColor3, rotResetBtn.Text, rotResetBtn.TextColor3, rotResetBtn.TextSize, rotResetBtn.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 150, 0, 48), Color3.fromRGB(150, 150, 150), "Reset 0°", Color3.fromRGB(0, 0, 0), 11, Enum.Font.GothamBold
+Instance.new("UICorner", rotResetBtn).CornerRadius = UDim.new(0, 4)
+
 local scriptBtn = Instance.new("TextButton", scroll)
 scriptBtn.Size, scriptBtn.BackgroundColor3, scriptBtn.Text, scriptBtn.TextColor3, scriptBtn.TextSize, scriptBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(120, 80, 200), "📋 Get Script Code", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", scriptBtn).CornerRadius = UDim.new(0, 8)
@@ -1200,7 +967,7 @@ local clearBtn = Instance.new("TextButton", scroll)
 clearBtn.Size, clearBtn.BackgroundColor3, clearBtn.Text, clearBtn.TextColor3, clearBtn.TextSize, clearBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(180, 60, 60), "🗑️ Clear All", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 8)
 
---// SEPARATED UNDO/REDO WINDOW
+--// NEW: SEPARATED UNDO/REDO WINDOW
 local undoRedoWin = Instance.new("Frame", gui)
 undoRedoWin.Name, undoRedoWin.Size, undoRedoWin.Position, undoRedoWin.BackgroundColor3, undoRedoWin.BorderSizePixel, undoRedoWin.Visible, undoRedoWin.Active = "UndoRedoWindow", UDim2.new(0, 180, 0, 60), UDim2.new(0.5, 0, 0.8, 0), Color3.fromRGB(30, 30, 40), 0, true, true
 Instance.new("UICorner", undoRedoWin).CornerRadius = UDim.new(0, 10)
@@ -1238,7 +1005,7 @@ local redoBtn = Instance.new("TextButton", undoRedoWin)
 redoBtn.Size, redoBtn.Position, redoBtn.BackgroundColor3, redoBtn.Text, redoBtn.TextColor3, redoBtn.TextSize, redoBtn.Font = UDim2.new(0.45, 0, 0, 30), UDim2.new(0.53, 0, 0, 25), Color3.fromRGB(80, 120, 200), "↪️ Redo", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", redoBtn).CornerRadius = UDim.new(0, 6)
 
---// SEPARATED MATERIAL WINDOW
+--// NEW: SEPARATED MATERIAL WINDOW
 local matWin = Instance.new("Frame", gui)
 matWin.Name, matWin.Size, matWin.Position, matWin.BackgroundColor3, matWin.BorderSizePixel, matWin.Visible, matWin.Active = "MatWindow", UDim2.new(0, 320, 0, 140), UDim2.new(0.5, -160, 0.5, 0), Color3.fromRGB(30, 30, 40), 0, false, true
 Instance.new("UICorner", matWin).CornerRadius = UDim.new(0, 12)
@@ -1300,9 +1067,8 @@ Instance.new("UICorner", codeScroll).CornerRadius = UDim.new(0, 6)
 local codeText = Instance.new("TextLabel", codeScroll)
 codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text, codeText.TextColor3, codeText.TextSize, codeText.Font, codeText.TextXAlignment, codeText.TextYAlignment, codeText.AutomaticSize, codeText.TextWrapped = UDim2.new(1, -12, 0, 0), UDim2.new(0, 6, 0, 6), 1, "-- No terrain spawned yet --", Color3.fromRGB(200, 200, 200), 11, Enum.Font.Code, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top, Enum.AutomaticSize.Y, true
 
---// ============================================
+
 --// EVENT CONNECTIONS
---// ============================================
 
 -- Ghost Mode (Tembus Terrain)
 ghostToggleBtn.MouseButton1Click:Connect(function()
@@ -1456,7 +1222,7 @@ sPreset5.MouseButton1Click:Connect(function() SetGridSize(5, sPreset5) end); sPr
 local function ToggleAxis(axisKey, btn) SnapAxis[axisKey] = not SnapAxis[axisKey]; if SnapAxis[axisKey] then btn.BackgroundColor3 = Color3.fromRGB(0, 150, 100) else btn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end; UpdatePreview() end
 axisXBtn.MouseButton1Click:Connect(function() ToggleAxis("X", axisXBtn) end); axisYBtn.MouseButton1Click:Connect(function() ToggleAxis("Y", axisYBtn) end); axisZBtn.MouseButton1Click:Connect(function() ToggleAxis("Z", axisZBtn) end)
 
---// SIZE XYZ INDIVIDUAL + SET + ALL
+-- TEXTBOX CUSTOM SIZES
 local function handleSizeInput(box, type)
     local val = tonumber(box.Text)
     if val then
@@ -1465,37 +1231,10 @@ local function handleSizeInput(box, type)
         UpdatePreview()
     end
 end
-
--- SET buttons (individual)
-xSetBtn.MouseButton1Click:Connect(function() handleSizeInput(xValue, "X") end)
-ySetBtn.MouseButton1Click:Connect(function() handleSizeInput(yValue, "Y") end)
-zSetBtn.MouseButton1Click:Connect(function() handleSizeInput(zValue, "Z") end)
-
--- ALL button (set semua sekaligus)
-allSetBtn.MouseButton1Click:Connect(function()
-    local val = tonumber(xValue.Text)
-    if val then
-        local clamped = math.clamp(math.floor(val), 1, 500)
-        SizeX, SizeY, SizeZ = clamped, clamped, clamped
-        xValue.Text = tostring(SizeX)
-        yValue.Text = tostring(SizeY)
-        zValue.Text = tostring(SizeZ)
-        UpdatePreview()
-    end
-end)
-
--- Plus/Minus per axis
-xMinus.MouseButton1Click:Connect(function() SizeX = math.max(1, SizeX - 1); xValue.Text = tostring(SizeX); UpdatePreview() end)
-xPlus.MouseButton1Click:Connect(function() SizeX = math.min(500, SizeX + 1); xValue.Text = tostring(SizeX); UpdatePreview() end)
-yMinus.MouseButton1Click:Connect(function() SizeY = math.max(1, SizeY - 1); yValue.Text = tostring(SizeY); UpdatePreview() end)
-yPlus.MouseButton1Click:Connect(function() SizeY = math.min(500, SizeY + 1); yValue.Text = tostring(SizeY); UpdatePreview() end)
-zMinus.MouseButton1Click:Connect(function() SizeZ = math.max(1, SizeZ - 1); zValue.Text = tostring(SizeZ); UpdatePreview() end)
-zPlus.MouseButton1Click:Connect(function() SizeZ = math.min(500, SizeZ + 1); zValue.Text = tostring(SizeZ); UpdatePreview() end)
-
--- FocusLost juga works
-xValue.FocusLost:Connect(function() handleSizeInput(xValue, "X") end)
-yValue.FocusLost:Connect(function() handleSizeInput(yValue, "Y") end)
-zValue.FocusLost:Connect(function() handleSizeInput(zValue, "Z") end)
+xValue.FocusLost:Connect(function() handleSizeInput(xValue, "X") end); yValue.FocusLost:Connect(function() handleSizeInput(yValue, "Y") end); zValue.FocusLost:Connect(function() handleSizeInput(zValue, "Z") end)
+xMinus.MouseButton1Click:Connect(function() SizeX = math.max(1, SizeX - 1); xValue.Text = tostring(SizeX); UpdatePreview() end); xPlus.MouseButton1Click:Connect(function() SizeX = math.min(500, SizeX + 1); xValue.Text = tostring(SizeX); UpdatePreview() end)
+yMinus.MouseButton1Click:Connect(function() SizeY = math.max(1, SizeY - 1); yValue.Text = tostring(SizeY); UpdatePreview() end); yPlus.MouseButton1Click:Connect(function() SizeY = math.min(500, SizeY + 1); yValue.Text = tostring(SizeY); UpdatePreview() end)
+zMinus.MouseButton1Click:Connect(function() SizeZ = math.max(1, SizeZ - 1); zValue.Text = tostring(SizeZ); UpdatePreview() end); zPlus.MouseButton1Click:Connect(function() SizeZ = math.min(500, SizeZ + 1); zValue.Text = tostring(SizeZ); UpdatePreview() end)
 
 -- Rotation
 rxMinus.MouseButton1Click:Connect(function() RotX = (RotX - 15) % 360; rxValue.Text = tostring(RotX) .. "°"; UpdatePreview() end); rxPlus.MouseButton1Click:Connect(function() RotX = (RotX + 15) % 360; rxValue.Text = tostring(RotX) .. "°"; UpdatePreview() end)
@@ -1546,8 +1285,8 @@ end)
 
 RunService.RenderStepped:Connect(UpdatePreview)
 
-print("✅ Terrain Editor v17.0 by shhhhnayy05 Loaded!")
-print("🔷 Shape works on ALL modes (Add/Erase/Flatten/Paint)")
-print("✨ Smooth Terrain: Soft Edge | Noise | Gradient | Valley")
-print("📐 XYZ Size: Individual SET + ALL mode")
-print("👻 Ghost Mode | 🔒 Lock & Move | 📋 Script Generator")
+print("✅ Terrain Editor v16.5 Loaded!")
+print("🛠️ Fixed: Universal Dragging (Smooth touch untuk mobile executor)")
+print("✨ Added: Lock & Move Position Mode (Hold to Move support)")
+print("👻 Added: Ghost Mode (Tembus Terrain)")
+print("🧹 Added: Safe Erase (Water kept intact)")
