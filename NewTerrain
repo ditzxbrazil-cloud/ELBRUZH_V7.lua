@@ -1,5 +1,5 @@
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.7 - New Natural Smooth Algos (Rugged, Valley, Ramp, Crater)
+--// Terrain Editor v16.7 - Reworked Smooth Algos, Visually Distinct Modes
 --// FIXED & OPTIMIZED FOR MOBILE EXECUTORS
 
 local Players = game:GetService("Players")
@@ -115,9 +115,9 @@ local Materials = {
 
 --// State
 local CurrentMaterial = Materials[1]
-local CurrentShape = "Ball" 
+local CurrentShape = "Ball"
 local CurrentActionMode = "Add"
-local IgnoreTerrain = false 
+local IgnoreTerrain = false
 local SizeX, SizeY, SizeZ = 6, 6, 6
 local RotX, RotY, RotZ = 0, 0, 0
 local PreviewPos = nil
@@ -133,11 +133,11 @@ local SnapAxis = {X = true, Y = false, Z = true}
 local ShowGridVisual = false
 local GridLines = {}
 
---// NEW SMOOTH SETTINGS (RUGGED, VALLEY, RAMP, CRATER)
+--// SMOOTH SETTINGS (REWORKED - VISUALLY DISTINCT MODES)
 local SmoothEnabled = false
-local SmoothModes = {"Rugged", "Valley", "Ramp", "Crater"}
+local SmoothModes = {"Mound", "Terrace", "Crater", "Spike"}
 local CurrentSmoothModeIndex = 1
-local SmoothIntensity = 2
+local SmoothIntensity = 3
 
 --// MOVE SETTINGS
 local MoveModeEnabled = false
@@ -301,45 +301,91 @@ local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[currentRockColorIndex].color) end)
 end
 
---// NEW ORGANIC SMOOTH TERRAIN ALGORITHM
+--// SMOOTH TERRAIN ALGORITHM (REWORKED - VISUALLY DISTINCT MODES)
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
-    local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
-    local layers = intensity or 2
+    local baseRadius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
+    local layers = math.clamp(intensity or 2, 1, 5)
     
-    for layer = 1, layers do
-        local layerRadius = radius + (layer * 2)
-        
-        if mode == "Rugged" then
-            -- Gunung Gradakan: Permukaan bergelombang & berbatu
-            Terrain:FillBall(centerPos + Vector3.new(0, layer, 0), layerRadius/1.2, material)
-            for i = 1, layer * 6 do
-                local offsetX = math.random(-layerRadius, layerRadius) * 0.8
-                local offsetZ = math.random(-layerRadius, layerRadius) * 0.8
-                local offsetY = math.random(0, layerRadius/2)
-                Terrain:FillBall(centerPos + Vector3.new(offsetX, offsetY, offsetZ), math.random(2, 5), material)
-            end
-        elseif mode == "Valley" then
-            -- Lembah: Bentuk U, bukit di pinggir dan kerukan di tengah
-            Terrain:FillBall(centerPos + Vector3.new(layerRadius, layer*2, 0), layerRadius/1.2, material)
-            Terrain:FillBall(centerPos + Vector3.new(-layerRadius, layer*2, 0), layerRadius/1.2, material)
-            -- Keruk area tengah biar natural lembahnya
-            local cylCf = CFrame.new(centerPos + Vector3.new(0, layer, 0)) * CFrame.Angles(math.rad(90), 0, 0)
-            Terrain:FillCylinder(cylCf, layerRadius*3, layerRadius/1.5, Enum.Material.Air)
-        elseif mode == "Ramp" then
-            -- Tanjakan: Incline wedge yang membaur
-            local wedgeCf = CFrame.new(centerPos + Vector3.new(0, layer, 0))
-            Terrain:FillWedge(wedgeCf, Vector3.new(layerRadius*2, layerRadius, layerRadius*3), material)
-        elseif mode == "Crater" then
-            -- Kawah: Pinggiran melingkar, tengah cekung
-            local angleStep = 360 / (12 * layer)
-            for angle = 0, 359, angleStep do
-                local rad = math.rad(angle)
-                local pos = centerPos + Vector3.new(math.cos(rad) * layerRadius, layer, math.sin(rad) * layerRadius)
-                Terrain:FillBall(pos, 4 + layer, material)
-            end
-            -- Hapus area tengah sedikit biar berbentuk kawah
-            Terrain:FillBall(centerPos + Vector3.new(0, layers, 0), layerRadius/1.2, Enum.Material.Air)
+    if mode == "Mound" then
+        -- BUKIT BULAT ALAMI: Bola besar di tengah, menipis ke pinggir
+        local maxHeight = baseRadius * 0.8
+        for layer = 1, layers do
+            local progress = layer / layers
+            local layerRadius = baseRadius * (1 - progress * 0.3)
+            local layerHeight = maxHeight * (1 - progress * progress)
+            local pos = centerPos + Vector3.new(0, layerHeight * 0.5, 0)
+            Terrain:FillBall(pos, layerRadius, material)
         end
+        -- Tambah dasar lebar biar kelihatan bukit beneran
+        Terrain:FillCylinder(CFrame.new(centerPos), 2, baseRadius * 1.2, material)
+        
+    elseif mode == "Terrace" then
+        -- TANGGA TERASERING JELAS: Setiap tingkat beda jauh di Y, ukuran mengecil
+        local stepHeight = math.max(sizeVec.Y * 0.4, 4)
+        for layer = 1, layers do
+            local terraceRadius = baseRadius * (1 - (layer - 1) * 0.25)
+            local terraceY = centerPos.Y + (layer - 1) * stepHeight
+            local cf = CFrame.new(centerPos.X, terraceY, centerPos.Z)
+            -- Tiap teras tebal dan jelas
+            Terrain:FillCylinder(cf, stepHeight * 0.8, terraceRadius, material)
+        end
+        
+    elseif mode == "Crater" then
+        -- KAWAH BOLONG: Dasar datar + dinding tinggi + tengah benar-benar kosong
+        local craterRadius = baseRadius
+        local wallHeight = math.max(sizeVec.Y * 0.6, 6)
+        local floorY = centerPos.Y - wallHeight * 0.3
+        
+        -- Dasar kawah (datar)
+        Terrain:FillCylinder(CFrame.new(centerPos.X, floorY, centerPos.Z), 2, craterRadius * 0.85, material)
+        
+        -- Dinding kawah (lingkaran tebal)
+        local angleStep = math.max(15, math.floor(360 / (layers * 4)))
+        for angle = 0, 359, angleStep do
+            local rad = math.rad(angle)
+            local wallPos = centerPos + Vector3.new(
+                math.cos(rad) * craterRadius * 0.9,
+                0,
+                math.sin(rad) * craterRadius * 0.9
+            )
+            Terrain:FillBall(wallPos, baseRadius * 0.25, material)
+        end
+        
+        -- Hapus tengah benar-benar bolong (Air)
+        local airRadius = craterRadius * 0.7
+        for depth = 1, 3 do
+            Terrain:FillBall(
+                centerPos + Vector3.new(0, floorY - centerPos.Y + depth * 2, 0),
+                airRadius * (1 - depth * 0.15),
+                Enum.Material.Air
+            )
+        end
+        
+    elseif mode == "Spike" then
+        -- PUCUK TAJAM: Wedge tinggi + puncak runcing + dasar stabil
+        local spikeHeight = math.max(sizeVec.Y * 1.5, baseRadius * 2)
+        local baseWidth = baseRadius * 0.6
+        
+        -- Dasar lebar (stabil)
+        Terrain:FillBall(centerPos, baseRadius * 0.5, material)
+        
+        -- Badan spike (wedge tinggi)
+        for i = 1, layers do
+            local progress = i / layers
+            local currentHeight = spikeHeight * progress
+            local currentWidth = baseWidth * (1 - progress * 0.7)
+            local wedgeCf = CFrame.new(
+                centerPos + Vector3.new(0, currentHeight * 0.5, 0)
+            ) * CFrame.Angles(0, math.rad(i * 45), 0)
+            Terrain:FillWedge(wedgeCf, Vector3.new(currentWidth, spikeHeight / layers, currentWidth), material)
+        end
+        
+        -- Puncak tajam (bola kecil di atas)
+        Terrain:FillBall(
+            centerPos + Vector3.new(0, spikeHeight, 0),
+            baseWidth * 0.2,
+            material
+        )
     end
 end
 
@@ -354,8 +400,8 @@ local function BL(d)
     local groundIdx = d[11] or currentGroundColorIndex
     local rx, ry, rz = d[12] or 0, d[13] or 0, d[14] or 0
     local smoothOn = d[15] or false
-    local smoothMode = d[16] or "Rugged"
-    local smoothInt = d[17] or 2
+    local smoothMode = d[16] or "Mound"
+    local smoothInt = d[17] or 3
     local actionMode = d[18] or "Add"
     local rockIdx = d[19] or currentRockColorIndex
     
@@ -504,7 +550,7 @@ local function Redo()
     return true, "Redone 1 terrain"
 end
 
---// Generate Script (UPDATED ALGORITHMS)
+--// Generate Script
 local function GenerateScript()
     if #SpawnedData == 0 then return "-- No terrain spawned yet!" end
     local code = "--// Terrain Spawn Script\n--// Total: " .. #SpawnedData .. " terrains\n\n"
@@ -522,35 +568,57 @@ local function GenerateScript()
     
     code = code .. [[
 local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
-    local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
-    local layers = intensity or 2
-    for layer = 1, layers do
-        local layerRadius = radius + (layer * 2)
-        if mode == "Rugged" then
-            Terrain:FillBall(centerPos + Vector3.new(0, layer, 0), layerRadius/1.2, material)
-            for i = 1, layer * 6 do
-                local offsetX = math.random(-layerRadius, layerRadius) * 0.8
-                local offsetZ = math.random(-layerRadius, layerRadius) * 0.8
-                local offsetY = math.random(0, layerRadius/2)
-                Terrain:FillBall(centerPos + Vector3.new(offsetX, offsetY, offsetZ), math.random(2, 5), material)
-            end
-        elseif mode == "Valley" then
-            Terrain:FillBall(centerPos + Vector3.new(layerRadius, layer*2, 0), layerRadius/1.2, material)
-            Terrain:FillBall(centerPos + Vector3.new(-layerRadius, layer*2, 0), layerRadius/1.2, material)
-            local cylCf = CFrame.new(centerPos + Vector3.new(0, layer, 0)) * CFrame.Angles(math.rad(90), 0, 0)
-            Terrain:FillCylinder(cylCf, layerRadius*3, layerRadius/1.5, Enum.Material.Air)
-        elseif mode == "Ramp" then
-            local wedgeCf = CFrame.new(centerPos + Vector3.new(0, layer, 0))
-            Terrain:FillWedge(wedgeCf, Vector3.new(layerRadius*2, layerRadius, layerRadius*3), material)
-        elseif mode == "Crater" then
-            local angleStep = 360 / (12 * layer)
-            for angle = 0, 359, angleStep do
-                local rad = math.rad(angle)
-                local pos = centerPos + Vector3.new(math.cos(rad) * layerRadius, layer, math.sin(rad) * layerRadius)
-                Terrain:FillBall(pos, 4 + layer, material)
-            end
-            Terrain:FillBall(centerPos + Vector3.new(0, layers, 0), layerRadius/1.2, Enum.Material.Air)
+    local baseRadius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
+    local layers = math.clamp(intensity or 2, 1, 5)
+    
+    if mode == "Mound" then
+        local maxHeight = baseRadius * 0.8
+        for layer = 1, layers do
+            local progress = layer / layers
+            local layerRadius = baseRadius * (1 - progress * 0.3)
+            local layerHeight = maxHeight * (1 - progress * progress)
+            local pos = centerPos + Vector3.new(0, layerHeight * 0.5, 0)
+            Terrain:FillBall(pos, layerRadius, material)
         end
+        Terrain:FillCylinder(CFrame.new(centerPos), 2, baseRadius * 1.2, material)
+        
+    elseif mode == "Terrace" then
+        local stepHeight = math.max(sizeVec.Y * 0.4, 4)
+        for layer = 1, layers do
+            local terraceRadius = baseRadius * (1 - (layer - 1) * 0.25)
+            local terraceY = centerPos.Y + (layer - 1) * stepHeight
+            local cf = CFrame.new(centerPos.X, terraceY, centerPos.Z)
+            Terrain:FillCylinder(cf, stepHeight * 0.8, terraceRadius, material)
+        end
+        
+    elseif mode == "Crater" then
+        local craterRadius = baseRadius
+        local wallHeight = math.max(sizeVec.Y * 0.6, 6)
+        local floorY = centerPos.Y - wallHeight * 0.3
+        Terrain:FillCylinder(CFrame.new(centerPos.X, floorY, centerPos.Z), 2, craterRadius * 0.85, material)
+        local angleStep = math.max(15, math.floor(360 / (layers * 4)))
+        for angle = 0, 359, angleStep do
+            local rad = math.rad(angle)
+            local wallPos = centerPos + Vector3.new(math.cos(rad) * craterRadius * 0.9, 0, math.sin(rad) * craterRadius * 0.9)
+            Terrain:FillBall(wallPos, baseRadius * 0.25, material)
+        end
+        local airRadius = craterRadius * 0.7
+        for depth = 1, 3 do
+            Terrain:FillBall(centerPos + Vector3.new(0, floorY - centerPos.Y + depth * 2, 0), airRadius * (1 - depth * 0.15), Enum.Material.Air)
+        end
+        
+    elseif mode == "Spike" then
+        local spikeHeight = math.max(sizeVec.Y * 1.5, baseRadius * 2)
+        local baseWidth = baseRadius * 0.6
+        Terrain:FillBall(centerPos, baseRadius * 0.5, material)
+        for i = 1, layers do
+            local progress = i / layers
+            local currentHeight = spikeHeight * progress
+            local currentWidth = baseWidth * (1 - progress * 0.7)
+            local wedgeCf = CFrame.new(centerPos + Vector3.new(0, currentHeight * 0.5, 0)) * CFrame.Angles(0, math.rad(i * 45), 0)
+            Terrain:FillWedge(wedgeCf, Vector3.new(currentWidth, spikeHeight / layers, currentWidth), material)
+        end
+        Terrain:FillBall(centerPos + Vector3.new(0, spikeHeight, 0), baseWidth * 0.2, material)
     end
 end
 ]]
@@ -612,7 +680,7 @@ end
         for i = startIdx, endIdx do
             local d = SpawnedData[i]
             local sEnabled = d[15] and "true" or "false"
-            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Rugged") .. "'," .. (d[17] or 2) .. ",'" .. (d[18] or "Add") .. "'," .. (d[19] or 1) .. "}"
+            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Mound") .. "'," .. (d[17] or 3) .. ",'" .. (d[18] or "Add") .. "'," .. (d[19] or 1) .. "}"
             if i < endIdx then code = code .. "," end
         end
         code = code .. "})do BL(d)end\n"
@@ -651,7 +719,7 @@ end
 
 --// GUI SETUP
 local gui = Instance.new("ScreenGui")
-gui.Name = "TerrainEditor"
+gui.Name = "shhhhnayy05_TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -786,12 +854,12 @@ local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGr
 local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
 local rockLeft, rockRight, rockDisplay = CreateColorSec(scroll, "🪨 Rock Color", rockColors, Color3.fromRGB(150, 150, 150), currentRockColorIndex)
 
---// SMOOTH TERRAIN GUI SECTION
+--// SMOOTH TERRAIN GUI SECTION (REWORKED)
 local smoothSec = Instance.new("Frame", scroll)
 smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
 local smoothTitle = Instance.new("TextLabel", smoothSec)
-smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
+smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain (Distinct)", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
 
 local smoothToggleBtn = Instance.new("TextButton", smoothSec)
 smoothToggleBtn.Size, smoothToggleBtn.Position, smoothToggleBtn.BackgroundColor3, smoothToggleBtn.Text, smoothToggleBtn.TextColor3, smoothToggleBtn.TextSize, smoothToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF ▼", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
@@ -893,7 +961,7 @@ moveIconFloat.Size, moveIconFloat.Position, moveIconFloat.BackgroundColor3, move
 Instance.new("UICorner", moveIconFloat).CornerRadius = UDim.new(1, 0)
 MakeDraggable(moveIconFloat, moveIconFloat)
 
---// SIZE SECTION 
+--// SIZE SECTION (MODIFIED FOR XYZ TARGETING)
 local sizeSec = Instance.new("Frame", scroll)
 sizeSec.Size, sizeSec.BackgroundColor3, sizeSec.BorderSizePixel = UDim2.new(1, -8, 0, 220), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", sizeSec).CornerRadius = UDim.new(0, 8)
@@ -919,6 +987,7 @@ local xMinus, xValue, xPlus = CreateSizeRow(25, "X:", Color3.fromRGB(255, 100, 1
 local yMinus, yValue, yPlus = CreateSizeRow(48, "Y:", Color3.fromRGB(100, 255, 100), SizeY)
 local zMinus, zValue, zPlus = CreateSizeRow(71, "Z:", Color3.fromRGB(100, 100, 255), SizeZ)
 
+-- TARGET AXIS TOGGLE
 local targetAxis = "ALL"
 local axisToggleBtn = Instance.new("TextButton", sizeSec)
 axisToggleBtn.Size, axisToggleBtn.Position, axisToggleBtn.BackgroundColor3 = UDim2.new(0, 150, 0, 22), UDim2.new(0, 6, 0, 100), Color3.fromRGB(0, 180, 150)
@@ -1095,6 +1164,7 @@ local codeText = Instance.new("TextLabel", codeScroll)
 codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text, codeText.TextColor3, codeText.TextSize, codeText.Font, codeText.TextXAlignment, codeText.TextYAlignment, codeText.AutomaticSize, codeText.TextWrapped = UDim2.new(1, -12, 0, 0), UDim2.new(0, 6, 0, 6), 1, "-- No terrain spawned yet --", Color3.fromRGB(200, 200, 200), 11, Enum.Font.Code, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top, Enum.AutomaticSize.Y, true
 
 --// EVENT CONNECTIONS
+
 ghostToggleBtn.MouseButton1Click:Connect(function()
     IgnoreTerrain = not IgnoreTerrain
     if IgnoreTerrain then
@@ -1240,4 +1310,9 @@ end)
 RunService.RenderStepped:Connect(UpdatePreview)
 
 print("✅ Terrain Editor ELBRUZH v16.7 Loaded!")
-print("⛰️ Added: Natural Smooth Algos (Rugged, Valley, Ramp, Crater)")
+print("🛠️ Reworked: Smooth Terrain Algos - Visually Distinct Modes")
+print("✨ Mound: Natural hill shape with tapering layers")
+print("🏛️ Terrace: Clear stepped terraces with wide Y gaps")
+print("🌑 Crater: Deep hollow with thick walls and empty center")
+print("🗻 Spike: Sharp pointed peak with wide base and small tip")
+print("📏 Added: Target Axis Logic for Independent XYZ Sizes")
