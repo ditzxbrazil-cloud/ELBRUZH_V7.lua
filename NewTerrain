@@ -1,6 +1,6 @@
 --// TERRAIN BY ELBRUZH 
---// Terrain Editor v16.5 - Smooth Terrain, Snap to Grid, Flatten, Paint, Erase (Safe Water), Lock & Move Mode
---// FIXED & OPTIMIZED FOR MOBILE EXECUTORS (Voxel Snapshot Undo System)
+--// Terrain Editor v17.1 - Brush Mode System (Fixed)
+--// FIXED: attempt to call a nil value | continue -> if then end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -12,7 +12,20 @@ local Terrain = Workspace:WaitForChild("Terrain")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
+--// ============================================
+--// BRUSH CONFIG (NEW - MAX 100)
+--// ============================================
+local BrushSize = 6
+local BrushStrength = 3
+local BrushMode = "Smooth"
+local BrushRockEnabled = false
+local FlattenLevel = nil
+local IsDrawing = false
+local LastTouchPos = nil
+
+--// ============================================
 --// GRASS COLORS
+--// ============================================
 local grassColors = {
 	{name="Hijau Muda",   color=Color3.fromRGB(150,220,120)},
 	{name="Hijau Cerah",  color=Color3.fromRGB(120,200,100)},
@@ -115,9 +128,9 @@ local Materials = {
 
 --// State
 local CurrentMaterial = Materials[1]
-local CurrentShape = "Ball" -- Ball, Block, Wedge
-local CurrentActionMode = "Add" -- Add, Flatten, Paint, Erase
-local IgnoreTerrain = false -- Tembus Terrain
+local CurrentShape = "Ball"
+local CurrentActionMode = "Add"
+local IgnoreTerrain = false
 local SizeX, SizeY, SizeZ = 6, 6, 6
 local RotX, RotY, RotZ = 0, 0, 0
 local PreviewPos = nil
@@ -133,19 +146,257 @@ local SnapAxis = {X = true, Y = false, Z = true}
 local ShowGridVisual = false
 local GridLines = {}
 
---// SMOOTH SETTINGS
-local SmoothEnabled = false
-local SmoothModes = {"Soft Edge", "Gradient", "Noise", "Blend"}
-local CurrentSmoothModeIndex = 1
-local SmoothIntensity = 2
-
 --// MOVE SETTINGS
 local MoveModeEnabled = false
 local LockedPosition = Vector3.new(0,0,0)
 local MoveOffset = Vector3.new(0,0,0)
 local MoveStep = 1
 
---// Raycast
+--// ============================================
+--// BRUSH MODE FUNCTIONS (5 MODES - FIXED)
+--// ============================================
+
+local function getGridPosition(pos, gridSize)
+    return Vector3.new(
+        math.floor(pos.X / gridSize) * gridSize,
+        math.floor(pos.Y / gridSize) * gridSize,
+        math.floor(pos.Z / gridSize) * gridSize
+    )
+end
+
+--// 1. SMOOTH BRUSH
+local function smoothBrush(hitPos)
+    local gridSize = 2
+    local radius = BrushSize
+    local strength = BrushStrength
+    
+    local center = getGridPosition(hitPos, gridSize)
+    local modifiedPositions = {}
+    
+    for x = -radius, radius, gridSize do
+        for z = -radius, radius, gridSize do
+            local dist = math.sqrt(x*x + z*z)
+            if dist <= radius then
+                local falloff = 1 - (dist / radius)
+                falloff = falloff * falloff
+                
+                local heightOffset = strength * falloff * 2
+                local randomVar = math.random(-1, 1) * 0.5
+                
+                local pos = center + Vector3.new(x, heightOffset + randomVar, z)
+                local size = Vector3.new(gridSize + 1, math.max(2, strength * falloff * 2 + 2), gridSize + 1)
+                
+                if BrushRockEnabled then
+                    Terrain:FillBlock(
+                        CFrame.new(pos - Vector3.new(0, size.Y * 0.3, 0)),
+                        Vector3.new(size.X, size.Y * 0.6, size.Z),
+                        Enum.Material.Rock
+                    )
+                    Terrain:FillBlock(
+                        CFrame.new(pos + Vector3.new(0, size.Y * 0.2, 0)),
+                        Vector3.new(size.X, size.Y * 0.5, size.Z),
+                        CurrentMaterial.Mat
+                    )
+                else
+                    Terrain:FillBlock(CFrame.new(pos), size, CurrentMaterial.Mat)
+                end
+                
+                table.insert(modifiedPositions, pos)
+            end
+        end
+    end
+    return modifiedPositions
+end
+
+--// 2. FLATTEN BRUSH
+local function flattenBrush(hitPos)
+    local gridSize = 2
+    local radius = BrushSize
+    
+    if not FlattenLevel then
+        FlattenLevel = math.floor(hitPos.Y / gridSize) * gridSize
+    end
+    
+    local flattenY = FlattenLevel
+    local centerX = math.floor(hitPos.X / gridSize) * gridSize
+    local centerZ = math.floor(hitPos.Z / gridSize) * gridSize
+    local modifiedPositions = {}
+    
+    for x = -radius, radius, gridSize do
+        for z = -radius, radius, gridSize do
+            local dist = math.sqrt(x*x + z*z)
+            if dist <= radius then
+                local pos = Vector3.new(centerX + x, flattenY, centerZ + z)
+                local size = Vector3.new(gridSize + 1, 4, gridSize + 1)
+                
+                Terrain:FillBlock(CFrame.new(pos), size, Enum.Material.Air)
+                Terrain:FillBlock(CFrame.new(pos), size, CurrentMaterial.Mat)
+                
+                table.insert(modifiedPositions, pos)
+            end
+        end
+    end
+    return modifiedPositions
+end
+
+--// 3. NOISE BRUSH
+local function noiseBrush(hitPos)
+    local gridSize = 2
+    local radius = BrushSize
+    local strength = BrushStrength
+    
+    local center = getGridPosition(hitPos, gridSize)
+    local modifiedPositions = {}
+    
+    for x = -radius, radius, gridSize do
+        for z = -radius, radius, gridSize do
+            local dist = math.sqrt(x*x + z*z)
+            if dist <= radius then
+                local noise1 = math.sin((center.X + x) * 0.3) * math.cos((center.Z + z) * 0.3)
+                local noise2 = math.sin((center.X + x) * 0.7 + (center.Z + z) * 0.5) * 0.5
+                local heightNoise = (noise1 + noise2) * strength
+                
+                local pos = center + Vector3.new(x, heightNoise * 2, z)
+                local size = Vector3.new(gridSize + 1, math.max(3, math.abs(heightNoise) * 2 + 3), gridSize + 1)
+                
+                if BrushRockEnabled then
+                    Terrain:FillBlock(
+                        CFrame.new(pos - Vector3.new(0, 1, 0)),
+                        Vector3.new(size.X, size.Y * 0.7, size.Z),
+                        Enum.Material.Rock
+                    )
+                    Terrain:FillBlock(
+                        CFrame.new(pos + Vector3.new(0, 1, 0)),
+                        Vector3.new(size.X, size.Y * 0.4, size.Z),
+                        CurrentMaterial.Mat
+                    )
+                else
+                    Terrain:FillBlock(CFrame.new(pos), size, CurrentMaterial.Mat)
+                end
+                
+                table.insert(modifiedPositions, pos)
+            end
+        end
+    end
+    return modifiedPositions
+end
+
+--// 4. PAINT BRUSH
+local function paintBrush(hitPos)
+    local gridSize = 2
+    local radius = BrushSize
+    
+    local center = getGridPosition(hitPos, gridSize)
+    local halfSize = Vector3.new(radius + 2, 10, radius + 2)
+    local region = Region3.new(center - halfSize, center + halfSize):ExpandToGrid(4)
+    
+    local mats, occs = Terrain:ReadVoxels(region, 4)
+    local changed = false
+    
+    for xi = 1, mats.Size.X do
+        for yi = 1, mats.Size.Y do
+            for zi = 1, mats.Size.Z do
+                if mats[xi][yi][zi] ~= Enum.Material.Air and mats[xi][yi][zi] ~= CurrentMaterial.Mat then
+                    mats[xi][yi][zi] = CurrentMaterial.Mat
+                    changed = true
+                end
+            end
+        end
+    end
+    
+    if changed then
+        Terrain:WriteVoxels(region, 4, mats, occs)
+    end
+    
+    return {center}
+end
+
+--// 5. RIDGE BRUSH (NEW)
+local function ridgeBrush(hitPos)
+    local gridSize = 2
+    local radius = BrushSize
+    local strength = BrushStrength
+    
+    local center = getGridPosition(hitPos, gridSize)
+    local modifiedPositions = {}
+    
+    local camLook = Camera.CFrame.LookVector
+    local ridgeDir = Vector3.new(camLook.X, 0, camLook.Z)
+    if ridgeDir.Magnitude > 0.001 then
+        ridgeDir = ridgeDir.Unit
+    else
+        ridgeDir = Vector3.new(1, 0, 0)
+    end
+    
+    for x = -radius, radius, gridSize do
+        for z = -radius, radius, gridSize do
+            local offset = Vector3.new(x, 0, z)
+            local dist = offset.Magnitude
+            if dist <= radius then
+                local along = math.abs(offset:Dot(ridgeDir))
+                local across = math.abs(offset:Dot(Vector3.new(-ridgeDir.Z, 0, ridgeDir.X)))
+                
+                local ridgeHeight = strength * (1 - across/radius) * math.exp(-along*along/(radius*radius*0.5))
+                local falloff = 1 - (dist / radius)
+                falloff = falloff * falloff
+                
+                local heightOffset = ridgeHeight * falloff * 3
+                local pos = center + Vector3.new(x, heightOffset, z)
+                local size = Vector3.new(gridSize + 1, math.max(2, heightOffset + 2), gridSize + 1)
+                
+                if BrushRockEnabled then
+                    Terrain:FillBlock(
+                        CFrame.new(pos - Vector3.new(0, size.Y * 0.4, 0)),
+                        Vector3.new(size.X, size.Y * 0.7, size.Z),
+                        Enum.Material.Rock
+                    )
+                    Terrain:FillBlock(
+                        CFrame.new(pos + Vector3.new(0, size.Y * 0.15, 0)),
+                        Vector3.new(size.X, size.Y * 0.4, size.Z),
+                        CurrentMaterial.Mat
+                    )
+                else
+                    Terrain:FillBlock(CFrame.new(pos), size, CurrentMaterial.Mat)
+                end
+                
+                table.insert(modifiedPositions, pos)
+            end
+        end
+    end
+    return modifiedPositions
+end
+
+--// Main brush apply
+local function applyBrush(screenX, screenY)
+    local ray = Camera:ViewportPointToRay(screenX, screenY)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    local filterList = {}
+    if LocalPlayer.Character then table.insert(filterList, LocalPlayer.Character) end
+    if IgnoreTerrain then table.insert(filterList, Terrain) end
+    params.FilterDescendantsInstances = filterList
+    
+    local result = Workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+    if not result then return end
+    
+    local hitPos = result.Position
+    
+    if BrushMode == "Smooth" then
+        smoothBrush(hitPos)
+    elseif BrushMode == "Flatten" then
+        flattenBrush(hitPos)
+    elseif BrushMode == "Noise" then
+        noiseBrush(hitPos)
+    elseif BrushMode == "Paint" then
+        paintBrush(hitPos)
+    elseif BrushMode == "Ridge" then
+        ridgeBrush(hitPos)
+    end
+end
+
+--// ============================================
+--// RAYCAST & PREVIEW (ORIGINAL)
+--// ============================================
 local function GetRaycast()
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     local ray = Camera:ViewportPointToRay(center.X, center.Y)
@@ -243,7 +494,6 @@ spawn(function() while wait(2) do if ShowGridVisual then UpdateGridVisual() end 
 local function UpdatePreview()
     if not PreviewPart then CreatePreview() end
     
-    -- SYSTEM MOVE & LOCK
     if not MoveModeEnabled then
         local result = GetRaycast()
         if result then
@@ -270,7 +520,7 @@ local function UpdatePreview()
         elseif CurrentActionMode == "Paint" then
             local cf = CFrame.new(PreviewPos) * CFrame.Angles(0, math.rad(RotY), 0)
             PreviewPart.CFrame = cf
-            PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ) -- Paint preview is flat
+            PreviewPart.Size = Vector3.new(SizeX, 1, SizeZ)
         else
             local cf = CFrame.new(PreviewPos) * CFrame.Angles(math.rad(RotX), math.rad(RotY), math.rad(RotZ))
             PreviewPart.CFrame = cf
@@ -305,50 +555,6 @@ local function ApplyMaterialColors()
     pcall(function() Terrain:SetMaterialColor(Enum.Material.Rock, rockColors[currentRockColorIndex].color) end)
 end
 
---// SMOOTH TERRAIN ALGORITHM
-local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
-    local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
-    local layers = intensity or 2
-    
-    for layer = 1, layers do
-        local layerRadius = radius + (layer * 2)
-        local layerSize = math.max(2, 6 - layer)
-        local angleStep = 360 / (8 * layer)
-        
-        for angle = 0, 359, angleStep do
-            local rad = math.rad(angle)
-            local offsetY = 0
-            
-            if mode == "Noise" then 
-                offsetY = math.random(-4, 4) 
-            elseif mode == "Gradient" then
-                offsetY = math.random(-2, 2)
-            end
-            
-            local offset = Vector3.new(
-                math.cos(rad) * layerRadius,
-                offsetY,
-                math.sin(rad) * layerRadius
-            )
-            local pos = centerPos + offset
-            
-            if mode == "Soft Edge" then
-                Terrain:FillBall(pos, layerSize / 1.5, material)
-            elseif mode == "Noise" then
-                if math.random() > 0.4 then
-                    Terrain:FillBall(pos, layerSize / 2, material)
-                end
-            elseif mode == "Gradient" then
-                if math.random() > 0.2 then
-                    Terrain:FillBall(pos, layerSize / 2, material)
-                end
-            elseif mode == "Blend" then
-                Terrain:FillBall(pos, layerSize, material)
-            end
-        end
-    end
-end
-
 --// BL Function (Execute Terrain)
 local function BL(d)
     local pos = Vector3.new(d[1], d[2], d[3])
@@ -359,9 +565,6 @@ local function BL(d)
     local leafyIdx = d[10] or currentLeafyGrassColorIndex
     local groundIdx = d[11] or currentGroundColorIndex
     local rx, ry, rz = d[12] or 0, d[13] or 0, d[14] or 0
-    local smoothOn = d[15] or false
-    local smoothMode = d[16] or "Soft Edge"
-    local smoothInt = d[17] or 2
     local actionMode = d[18] or "Add"
     local rockIdx = d[19] or currentRockColorIndex
     
@@ -370,7 +573,6 @@ local function BL(d)
         if m.Name == matName then mat = m.Mat break end
     end
     
-    -- Paksa Update Warna Material
     currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex, currentRockColorIndex = grassIdx, leafyIdx, groundIdx, rockIdx
     ApplyMaterialColors()
     
@@ -378,7 +580,6 @@ local function BL(d)
     local cf = CFrame.new(pos) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
     
     if actionMode == "Erase" then
-        -- SAFE ERASE MATERIAL (Safe Water)
         local halfSize = sizeVec / 2
         local region = Region3.new(pos - halfSize, pos + halfSize):ExpandToGrid(4)
         local mats, occs = Terrain:ReadVoxels(region, 4)
@@ -416,17 +617,12 @@ local function BL(d)
         end
         if changed then Terrain:WriteVoxels(region, 4, mats, occs) end
     else
-        -- Normal Add
         if shape == "Block" then
             Terrain:FillBlock(cf, sizeVec, mat)
         elseif shape == "Wedge" then
             Terrain:FillWedge(cf, sizeVec, mat)
         else
             Terrain:FillBall(pos, math.max(sx, sy, sz)/2, mat)
-        end
-        
-        if smoothOn then
-            ApplySmoothTerrain(pos, sizeVec, mat, smoothInt, smoothMode)
         end
     end
     
@@ -438,7 +634,7 @@ local function SpawnTerrain()
     if not PreviewPos then return false end
     
     local maxDim = math.max(SizeX, SizeY, SizeZ)
-    local padding = SmoothEnabled and (SmoothIntensity * 6) or 4
+    local padding = 4
     local halfBounds = Vector3.new(maxDim/2 + padding, maxDim/2 + padding, maxDim/2 + padding)
     local region = Region3.new(PreviewPos - halfBounds, PreviewPos + halfBounds):ExpandToGrid(4)
 
@@ -448,7 +644,7 @@ local function SpawnTerrain()
         PreviewPos.X, PreviewPos.Y, PreviewPos.Z, 
         SizeX, SizeY, SizeZ, CurrentMaterial.Name, CurrentShape,
         currentGrassColorIndex, currentLeafyGrassColorIndex, currentGroundColorIndex,     
-        RotX, RotY, RotZ, SmoothEnabled, SmoothModes[CurrentSmoothModeIndex], SmoothIntensity,
+        RotX, RotY, RotZ, false, "Soft Edge", 2,
         CurrentActionMode, currentRockColorIndex
     }
     
@@ -515,29 +711,6 @@ local function GenerateScript()
     for i, c in ipairs(rockColors) do code = code .. (i > 1 and "," or "") .. "Color3.fromRGB(" .. math.floor(c.color.R*255) .. "," .. math.floor(c.color.G*255) .. "," .. math.floor(c.color.B*255) .. ")" end
     code = code .. "}\n\n"
     
-    code = code .. [[
-local function ApplySmoothTerrain(centerPos, sizeVec, material, intensity, mode)
-    local radius = math.max(sizeVec.X, sizeVec.Y, sizeVec.Z) / 2
-    local layers = intensity or 2
-    for layer = 1, layers do
-        local layerRadius = radius + (layer * 2)
-        local layerSize = math.max(2, 6 - layer)
-        local angleStep = 360 / (8 * layer)
-        for angle = 0, 359, angleStep do
-            local rad = math.rad(angle)
-            local offsetY = 0
-            if mode == "Noise" then offsetY = math.random(-4, 4) elseif mode == "Gradient" then offsetY = math.random(-2, 2) end
-            local offset = Vector3.new(math.cos(rad) * layerRadius, offsetY, math.sin(rad) * layerRadius)
-            local pos = centerPos + offset
-            if mode == "Soft Edge" then Terrain:FillBall(pos, layerSize / 1.5, material)
-            elseif mode == "Noise" then if math.random() > 0.4 then Terrain:FillBall(pos, layerSize / 2, material) end
-            elseif mode == "Gradient" then if math.random() > 0.2 then Terrain:FillBall(pos, layerSize / 2, material) end
-            elseif mode == "Blend" then Terrain:FillBall(pos, layerSize, material) end
-        end
-    end
-end
-]]
-    
     code = code .. "local function BL(d)\n"
     code = code .. "    local pos = Vector3.new(d[1], d[2], d[3])\n"
     code = code .. "    local mats = {Grass=Enum.Material.Grass,LeafyGrass=Enum.Material.LeafyGrass,Rock=Enum.Material.Rock,Sand=Enum.Material.Sand,Water=Enum.Material.Water,Snow=Enum.Material.Snow,Mud=Enum.Material.Mud,Ground=Enum.Material.Ground,Asphalt=Enum.Material.Asphalt,Brick=Enum.Material.Brick,Wood=Enum.Material.WoodPlanks,Concrete=Enum.Material.Concrete,Ice=Enum.Material.Ice,Slate=Enum.Material.Slate,Basalt=Enum.Material.Basalt,Limestone=Enum.Material.Limestone,Sandstone=Enum.Material.Sandstone,Cobblestone=Enum.Material.Cobblestone,Pavement=Enum.Material.Pavement,Salt=Enum.Material.Salt,Glacier=Enum.Material.Glacier,CrackedLava=Enum.Material.CrackedLava}\n"
@@ -581,7 +754,6 @@ end
     code = code .. "        else\n"
     code = code .. "            Terrain:FillBall(pos, math.max(d[4], d[5], d[6])/2, mat)\n"
     code = code .. "        end\n"
-    code = code .. "        if d[15] then ApplySmoothTerrain(pos, sizeVec, mat, d[17], d[16]) end\n"
     code = code .. "    end\n"
     code = code .. "end\n\n"
     
@@ -593,8 +765,7 @@ end
         local endIdx = math.min(b * batchSize, #SpawnedData)
         for i = startIdx, endIdx do
             local d = SpawnedData[i]
-            local sEnabled = d[15] and "true" or "false"
-            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. "," .. sEnabled .. ",'" .. (d[16] or "Soft Edge") .. "'," .. (d[17] or 2) .. ",'" .. (d[18] or "Add") .. "'," .. (d[19] or 1) .. "}"
+            code = code .. "{" .. d[1] .. "," .. d[2] .. "," .. d[3] .. "," .. d[4] .. "," .. d[5] .. "," .. d[6] .. ",'" .. d[7] .. "','" .. (d[8] or "Ball") .. "'," .. (d[9] or 3) .. "," .. (d[10] or 3) .. "," .. (d[11] or 2) .. "," .. (d[12] or 0) .. "," .. (d[13] or 0) .. "," .. (d[14] or 0) .. ",false,'Soft Edge',2,'" .. (d[18] or "Add") .. "'," .. (d[19] or 1) .. "}"
             if i < endIdx then code = code .. "," end
         end
         code = code .. "})do BL(d)end\n"
@@ -631,9 +802,11 @@ local function MakeDraggable(frame, handle, connectionRef)
     if connectionRef then connectionRef.conns = conns end
 end
 
+--// ============================================
 --// GUI SETUP
+--// ============================================
 local gui = Instance.new("ScreenGui")
-gui.Name = "TerrainEditor"
+gui.Name = "shhhhnayy05_TerrainEditor"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -643,6 +816,7 @@ local dot = Instance.new("Frame", ch)
 dot.Size, dot.Position, dot.BackgroundColor3, dot.BorderSizePixel = UDim2.new(0, 4, 0, 4), UDim2.new(0.5, -2, 0.5, -2), Color3.fromRGB(255, 255, 255), 0
 Instance.new("UICorner", dot)
 
+--// Spawn Button
 local spawnBtn = Instance.new("TextButton", gui)
 spawnBtn.Name, spawnBtn.Size, spawnBtn.Position, spawnBtn.BackgroundColor3 = "SpawnBtn", UDim2.new(0, 50, 0, 50), UDim2.new(0, 4, 0, 50), Color3.fromRGB(0, 200, 100)
 spawnBtn.Text, spawnBtn.TextSize, spawnBtn.Font = "🎯", 30, Enum.Font.GothamBlack
@@ -650,6 +824,7 @@ Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(1, 0)
 local spawnStroke = Instance.new("UIStroke", spawnBtn)
 spawnStroke.Color, spawnStroke.Thickness = Color3.fromRGB(255, 255, 255), 3
 
+--// Minimize Icon
 local minIcon = Instance.new("TextButton", gui)
 minIcon.Name, minIcon.Size, minIcon.Position, minIcon.BackgroundColor3 = "MinIcon", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 105), Color3.fromRGB(0, 150, 255)
 minIcon.Text, minIcon.TextSize, minIcon.Font, minIcon.Visible, minIcon.Active = "⚙️", 22, Enum.Font.GothamBold, false, true
@@ -657,7 +832,7 @@ Instance.new("UICorner", minIcon).CornerRadius = UDim.new(1, 0)
 local minIconStroke = Instance.new("UIStroke", minIcon)
 minIconStroke.Color, minIconStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
--- Material Icon (Tergabung tapi terpisah jendelanya)
+--// Material Icon
 local matIcon = Instance.new("TextButton", gui)
 matIcon.Name, matIcon.Size, matIcon.Position, matIcon.BackgroundColor3 = "MatIcon", UDim2.new(0, 45, 0, 45), UDim2.new(0, 6, 0, 155), Color3.fromRGB(255, 100, 50)
 matIcon.Text, matIcon.TextSize, matIcon.Font, matIcon.Visible, matIcon.Active = "🎨", 22, Enum.Font.GothamBold, true, true
@@ -665,8 +840,9 @@ Instance.new("UICorner", matIcon).CornerRadius = UDim.new(1, 0)
 local matIconStroke = Instance.new("UIStroke", matIcon)
 matIconStroke.Color, matIconStroke.Thickness = Color3.fromRGB(255, 255, 255), 2
 
+--// MAIN PANEL
 local panel = Instance.new("Frame", gui)
-panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 450), UDim2.new(1, -300, 1, -460), Color3.fromRGB(30, 30, 40), 0
+panel.Name, panel.Size, panel.Position, panel.BackgroundColor3, panel.BorderSizePixel = "MainPanel", UDim2.new(0, 290, 0, 520), UDim2.new(1, -300, 1, -530), Color3.fromRGB(30, 30, 40), 0
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
 local panelStroke = Instance.new("UIStroke", panel)
 panelStroke.Color, panelStroke.Thickness = Color3.fromRGB(0, 150, 255), 2
@@ -678,7 +854,7 @@ MakeDraggable(panel, titleBar)
 
 local titleText = Instance.new("TextLabel", titleBar)
 titleText.Size, titleText.Position, titleText.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 10, 0, 0), 1
-titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v16.5", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
+titleText.Text, titleText.TextColor3, titleText.TextSize, titleText.Font, titleText.TextXAlignment = "⚙️ Terrain Editor ELBRUZH v17.1", Color3.fromRGB(0, 200, 255), 14, Enum.Font.GothamBold, Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", titleBar)
 minBtn.Size, minBtn.Position, minBtn.BackgroundColor3 = UDim2.new(0, 28, 0, 28), UDim2.new(1, -65, 0.5, -14), Color3.fromRGB(60, 60, 75)
@@ -691,14 +867,69 @@ closeBtn.Text, closeBtn.TextColor3, closeBtn.TextSize, closeBtn.Font = "X", Colo
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1400)
+scroll.Size, scroll.Position, scroll.BackgroundTransparency, scroll.ScrollBarThickness, scroll.CanvasSize = UDim2.new(1, -8, 1, -42), UDim2.new(0, 4, 0, 38), 1, 3, UDim2.new(0, 0, 0, 1800)
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 6)
 
 local status = Instance.new("TextLabel", scroll)
 status.Size, status.BackgroundTransparency, status.Text, status.TextColor3, status.TextSize, status.Font = UDim2.new(1, -8, 0, 18), 1, "Aim & tap 🎯 to spawn", Color3.fromRGB(0, 255, 150), 10, Enum.Font.Gotham
 
---// GHOST MODE SECTION (Tembus Terrain)
+--// ============================================
+--// BRUSH MODE SECTION (5 MODES)
+--// ============================================
+local brushSec = Instance.new("Frame", scroll)
+brushSec.Size, brushSec.BackgroundColor3, brushSec.BorderSizePixel = UDim2.new(1, -8, 0, 140), Color3.fromRGB(45, 45, 60), 0
+Instance.new("UICorner", brushSec).CornerRadius = UDim.new(0, 8)
+local brushTitle = Instance.new("TextLabel", brushSec)
+brushTitle.Size, brushTitle.Position, brushTitle.BackgroundTransparency, brushTitle.Text, brushTitle.TextColor3, brushTitle.TextSize, brushTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "🖌️ Brush Mode (Hold to Draw)", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
+
+-- Brush Mode Buttons
+local brushModeBtns = {}
+
+local function CreateBrushModeBtn(txt, xPos, yPos)
+    local btn = Instance.new("TextButton", brushSec)
+    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextColor3, btn.TextSize, btn.Font = UDim2.new(0.30, -4, 0, 26), UDim2.new(xPos, 0, 0, yPos), Color3.fromRGB(65, 65, 80), txt, Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
+
+brushModeBtns["Smooth"] = CreateBrushModeBtn("Smooth", 0.02, 25)
+brushModeBtns["Smooth"].BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+brushModeBtns["Flatten"] = CreateBrushModeBtn("Flatten", 0.34, 25)
+brushModeBtns["Noise"] = CreateBrushModeBtn("Noise", 0.66, 25)
+brushModeBtns["Paint"] = CreateBrushModeBtn("Paint", 0.02, 55)
+brushModeBtns["Ridge"] = CreateBrushModeBtn("Ridge", 0.34, 55)
+
+-- Brush Size Slider
+local sizeLabel = Instance.new("TextLabel", brushSec)
+sizeLabel.Size, sizeLabel.Position, sizeLabel.BackgroundTransparency, sizeLabel.Text, sizeLabel.TextColor3, sizeLabel.TextSize, sizeLabel.Font = UDim2.new(0, 80, 0, 16), UDim2.new(0, 6, 0, 86), 1, "Size: 6", Color3.fromRGB(180, 180, 200), 10, Enum.Font.GothamBold
+
+local sizeSlider = Instance.new("TextButton", brushSec)
+sizeSlider.Size, sizeSlider.Position, sizeSlider.BackgroundColor3, sizeSlider.Text, sizeSlider.AutoButtonColor = UDim2.new(0, 170, 0, 8), UDim2.new(0, 6, 0, 105), Color3.fromRGB(50, 50, 70), "", false
+Instance.new("UICorner", sizeSlider).CornerRadius = UDim.new(0, 4)
+
+local sizeFill = Instance.new("Frame", sizeSlider)
+sizeFill.Size, sizeFill.BackgroundColor3, sizeFill.BorderSizePixel = UDim2.new(BrushSize / 100, 0, 1, 0), Color3.fromRGB(80, 120, 200), 0
+Instance.new("UICorner", sizeFill).CornerRadius = UDim.new(0, 4)
+
+-- Brush Strength Slider
+local strLabel = Instance.new("TextLabel", brushSec)
+strLabel.Size, strLabel.Position, strLabel.BackgroundTransparency, strLabel.Text, strLabel.TextColor3, strLabel.TextSize, strLabel.Font = UDim2.new(0, 80, 0, 16), UDim2.new(0, 6, 0, 118), 1, "Strength: 3", Color3.fromRGB(180, 180, 200), 10, Enum.Font.GothamBold
+
+local strSlider = Instance.new("TextButton", brushSec)
+strSlider.Size, strSlider.Position, strSlider.BackgroundColor3, strSlider.Text, strSlider.AutoButtonColor = UDim2.new(0, 170, 0, 8), UDim2.new(0, 6, 0, 137), Color3.fromRGB(50, 50, 70), "", false
+Instance.new("UICorner", strSlider).CornerRadius = UDim.new(0, 4)
+
+local strFill = Instance.new("Frame", strSlider)
+strFill.Size, strFill.BackgroundColor3, strFill.BorderSizePixel = UDim2.new(BrushStrength / 100, 0, 1, 0), Color3.fromRGB(200, 100, 100), 0
+Instance.new("UICorner", strFill).CornerRadius = UDim.new(0, 4)
+
+-- Rock Toggle
+local rockToggleBtn = Instance.new("TextButton", brushSec)
+rockToggleBtn.Size, rockToggleBtn.Position, rockToggleBtn.BackgroundColor3, rockToggleBtn.Text, rockToggleBtn.TextColor3, rockToggleBtn.TextSize, rockToggleBtn.Font = UDim2.new(0, 80, 0, 22), UDim2.new(0.72, 0, 0, 86), Color3.fromRGB(200, 60, 60), "🪨 Rock: OFF", Color3.fromRGB(255, 255, 255), 10, Enum.Font.GothamBold
+Instance.new("UICorner", rockToggleBtn).CornerRadius = UDim.new(0, 6)
+
+--// GHOST MODE SECTION
 local ghostSec = Instance.new("Frame", scroll)
 ghostSec.Size, ghostSec.BackgroundColor3, ghostSec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", ghostSec).CornerRadius = UDim.new(0, 8)
@@ -769,33 +1000,6 @@ local leafyLeft, leafyRight, leafyDisplay = CreateColorSec(scroll, "🍃 LeafyGr
 local groundLeft, groundRight, groundDisplay = CreateColorSec(scroll, "🟫 Ground Color", groundColors, Color3.fromRGB(200, 150, 100), currentGroundColorIndex)
 local rockLeft, rockRight, rockDisplay = CreateColorSec(scroll, "🪨 Rock Color", rockColors, Color3.fromRGB(150, 150, 150), currentRockColorIndex)
 
---// SMOOTH TERRAIN GUI SECTION
-local smoothSec = Instance.new("Frame", scroll)
-smoothSec.Size, smoothSec.BackgroundColor3, smoothSec.BorderSizePixel = UDim2.new(1, -8, 0, 80), Color3.fromRGB(45, 45, 60), 0
-Instance.new("UICorner", smoothSec).CornerRadius = UDim.new(0, 8)
-local smoothTitle = Instance.new("TextLabel", smoothSec)
-smoothTitle.Size, smoothTitle.Position, smoothTitle.BackgroundTransparency, smoothTitle.Text, smoothTitle.TextColor3, smoothTitle.TextSize, smoothTitle.Font = UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 2), 1, "✨ Smooth Terrain", Color3.fromRGB(255, 100, 200), 11, Enum.Font.GothamBold
-
-local smoothToggleBtn = Instance.new("TextButton", smoothSec)
-smoothToggleBtn.Size, smoothToggleBtn.Position, smoothToggleBtn.BackgroundColor3, smoothToggleBtn.Text, smoothToggleBtn.TextColor3, smoothToggleBtn.TextSize, smoothToggleBtn.Font = UDim2.new(0, 60, 0, 22), UDim2.new(0, 6, 0, 25), Color3.fromRGB(200, 60, 60), "OFF ▼", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", smoothToggleBtn).CornerRadius = UDim.new(0, 4)
-
-local smoothModeBtn = Instance.new("TextButton", smoothSec)
-smoothModeBtn.Size, smoothModeBtn.Position, smoothModeBtn.BackgroundColor3, smoothModeBtn.Text, smoothModeBtn.TextColor3, smoothModeBtn.TextSize, smoothModeBtn.Font = UDim2.new(0, 190, 0, 22), UDim2.new(0, 72, 0, 25), Color3.fromRGB(60, 60, 75), SmoothModes[1], Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", smoothModeBtn).CornerRadius = UDim.new(0, 4)
-
-local intL = Instance.new("TextLabel", smoothSec)
-intL.Size, intL.Position, intL.BackgroundTransparency, intL.Text, intL.TextColor3, intL.TextSize, intL.Font = UDim2.new(0, 60, 0, 20), UDim2.new(0, 6, 0, 53), 1, "Intensity:", Color3.fromRGB(200, 200, 200), 11, Enum.Font.GothamBold
-local intMinus = Instance.new("TextButton", smoothSec)
-intMinus.Size, intMinus.Position, intMinus.BackgroundColor3, intMinus.Text, intMinus.TextColor3, intMinus.TextSize, intMinus.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 72, 0, 53), Color3.fromRGB(60, 60, 75), "-", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", intMinus).CornerRadius = UDim.new(0, 4)
-local intDisp = Instance.new("TextLabel", smoothSec)
-intDisp.Size, intDisp.Position, intDisp.BackgroundColor3, intDisp.Text, intDisp.TextColor3, intDisp.TextSize, intDisp.Font = UDim2.new(0, 30, 0, 20), UDim2.new(0, 100, 0, 53), Color3.fromRGB(40, 40, 50), tostring(SmoothIntensity), Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
-Instance.new("UICorner", intDisp).CornerRadius = UDim.new(0, 4)
-local intPlus = Instance.new("TextButton", smoothSec)
-intPlus.Size, intPlus.Position, intPlus.BackgroundColor3, intPlus.Text, intPlus.TextColor3, intPlus.TextSize, intPlus.Font = UDim2.new(0, 25, 0, 20), UDim2.new(0, 133, 0, 53), Color3.fromRGB(60, 60, 75), "+", Color3.fromRGB(255, 255, 255), 14, Enum.Font.GothamBold
-Instance.new("UICorner", intPlus).CornerRadius = UDim.new(0, 4)
-
 --// SNAP TO GRID GUI SECTION
 local snapSec = Instance.new("Frame", scroll)
 snapSec.Size, snapSec.BackgroundColor3, snapSec.BorderSizePixel = UDim2.new(1, -8, 0, 105), Color3.fromRGB(45, 45, 60), 0
@@ -833,7 +1037,7 @@ local function CreateAxisToggle(x, axisStr, isEnabled)
 end
 local axisXBtn = CreateAxisToggle(72, "X", SnapAxis.X); local axisYBtn = CreateAxisToggle(100, "Y", SnapAxis.Y); local axisZBtn = CreateAxisToggle(128, "Z", SnapAxis.Z)
 
---// NEW: MOVE & LOCK POSITION GUI SECTION
+--// MOVE & LOCK POSITION GUI SECTION
 local moveMainSec = Instance.new("Frame", scroll)
 moveMainSec.Size, moveMainSec.BackgroundColor3, moveMainSec.BorderSizePixel = UDim2.new(1, -8, 0, 50), Color3.fromRGB(45, 45, 60), 0
 Instance.new("UICorner", moveMainSec).CornerRadius = UDim.new(0, 8)
@@ -967,7 +1171,7 @@ local clearBtn = Instance.new("TextButton", scroll)
 clearBtn.Size, clearBtn.BackgroundColor3, clearBtn.Text, clearBtn.TextColor3, clearBtn.TextSize, clearBtn.Font = UDim2.new(1, -8, 0, 32), Color3.fromRGB(180, 60, 60), "🗑️ Clear All", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 8)
 
---// NEW: SEPARATED UNDO/REDO WINDOW
+--// SEPARATED UNDO/REDO WINDOW
 local undoRedoWin = Instance.new("Frame", gui)
 undoRedoWin.Name, undoRedoWin.Size, undoRedoWin.Position, undoRedoWin.BackgroundColor3, undoRedoWin.BorderSizePixel, undoRedoWin.Visible, undoRedoWin.Active = "UndoRedoWindow", UDim2.new(0, 180, 0, 60), UDim2.new(0.5, 0, 0.8, 0), Color3.fromRGB(30, 30, 40), 0, true, true
 Instance.new("UICorner", undoRedoWin).CornerRadius = UDim.new(0, 10)
@@ -1005,7 +1209,7 @@ local redoBtn = Instance.new("TextButton", undoRedoWin)
 redoBtn.Size, redoBtn.Position, redoBtn.BackgroundColor3, redoBtn.Text, redoBtn.TextColor3, redoBtn.TextSize, redoBtn.Font = UDim2.new(0.45, 0, 0, 30), UDim2.new(0.53, 0, 0, 25), Color3.fromRGB(80, 120, 200), "↪️ Redo", Color3.fromRGB(255, 255, 255), 11, Enum.Font.GothamBold
 Instance.new("UICorner", redoBtn).CornerRadius = UDim.new(0, 6)
 
---// NEW: SEPARATED MATERIAL WINDOW
+--// SEPARATED MATERIAL WINDOW
 local matWin = Instance.new("Frame", gui)
 matWin.Name, matWin.Size, matWin.Position, matWin.BackgroundColor3, matWin.BorderSizePixel, matWin.Visible, matWin.Active = "MatWindow", UDim2.new(0, 320, 0, 140), UDim2.new(0.5, -160, 0.5, 0), Color3.fromRGB(30, 30, 40), 0, false, true
 Instance.new("UICorner", matWin).CornerRadius = UDim.new(0, 12)
@@ -1067,8 +1271,9 @@ Instance.new("UICorner", codeScroll).CornerRadius = UDim.new(0, 6)
 local codeText = Instance.new("TextLabel", codeScroll)
 codeText.Size, codeText.Position, codeText.BackgroundTransparency, codeText.Text, codeText.TextColor3, codeText.TextSize, codeText.Font, codeText.TextXAlignment, codeText.TextYAlignment, codeText.AutomaticSize, codeText.TextWrapped = UDim2.new(1, -12, 0, 0), UDim2.new(0, 6, 0, 6), 1, "-- No terrain spawned yet --", Color3.fromRGB(200, 200, 200), 11, Enum.Font.Code, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top, Enum.AutomaticSize.Y, true
 
-
+--// ============================================
 --// EVENT CONNECTIONS
+--// ============================================
 
 -- Ghost Mode (Tembus Terrain)
 ghostToggleBtn.MouseButton1Click:Connect(function()
@@ -1191,21 +1396,6 @@ ballBtn.MouseButton1Click:Connect(function() SelectShape("Ball", ballBtn) end)
 blockBtn.MouseButton1Click:Connect(function() SelectShape("Block", blockBtn) end)
 wedgeBtn.MouseButton1Click:Connect(function() SelectShape("Wedge", wedgeBtn) end)
 
--- Smooth Events
-smoothToggleBtn.MouseButton1Click:Connect(function()
-    SmoothEnabled = not SmoothEnabled
-    if SmoothEnabled then
-        smoothToggleBtn.Text = "ON ✨"
-        smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-    else
-        smoothToggleBtn.Text = "OFF ▼"
-        smoothToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    end
-end)
-smoothModeBtn.MouseButton1Click:Connect(function() CurrentSmoothModeIndex = CurrentSmoothModeIndex + 1; if CurrentSmoothModeIndex > #SmoothModes then CurrentSmoothModeIndex = 1 end; smoothModeBtn.Text = SmoothModes[CurrentSmoothModeIndex] end)
-intMinus.MouseButton1Click:Connect(function() SmoothIntensity = math.max(1, SmoothIntensity - 1); intDisp.Text = tostring(SmoothIntensity) end)
-intPlus.MouseButton1Click:Connect(function() SmoothIntensity = math.min(5, SmoothIntensity + 1); intDisp.Text = tostring(SmoothIntensity) end)
-
 -- Snap Events
 snapToggleBtn.MouseButton1Click:Connect(function()
     SnapEnabled = not SnapEnabled
@@ -1283,10 +1473,176 @@ spawnBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+--// ============================================
+--// BRUSH MODE EVENTS (NEW)
+--// ============================================
+
+-- Brush Mode Selection
+local function SelectBrushMode(modeName, selectedBtn)
+    BrushMode = modeName
+    for _, btn in pairs(brushModeBtns) do
+        btn.BackgroundColor3 = Color3.fromRGB(65, 65, 80)
+    end
+    selectedBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+    FlattenLevel = nil
+    status.Text = "🖌️ Brush: " .. modeName
+    status.TextColor3 = Color3.fromRGB(255, 100, 200)
+end
+
+brushModeBtns["Smooth"].MouseButton1Click:Connect(function() SelectBrushMode("Smooth", brushModeBtns["Smooth"]) end)
+brushModeBtns["Flatten"].MouseButton1Click:Connect(function() SelectBrushMode("Flatten", brushModeBtns["Flatten"]) end)
+brushModeBtns["Noise"].MouseButton1Click:Connect(function() SelectBrushMode("Noise", brushModeBtns["Noise"]) end)
+brushModeBtns["Paint"].MouseButton1Click:Connect(function() SelectBrushMode("Paint", brushModeBtns["Paint"]) end)
+brushModeBtns["Ridge"].MouseButton1Click:Connect(function() SelectBrushMode("Ridge", brushModeBtns["Ridge"]) end)
+
+-- Brush Size Slider Function
+local function setupSlider(slider, fill, label, configKey, max, suffix)
+    local dragging = false
+    
+    slider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+        end
+    end)
+    
+    local function updateSlider(input)
+        if not dragging then return end
+        local pos = input.Position.X - slider.AbsolutePosition.X
+        local scale = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
+        local value = math.floor(scale * max)
+        if value < 1 then value = 1 end
+        
+        if configKey == "BrushSize" then
+            BrushSize = value
+        elseif configKey == "BrushStrength" then
+            BrushStrength = value
+        end
+        
+        fill.Size = UDim2.new(scale, 0, 1, 0)
+        label.Text = configKey .. ": " .. value .. (suffix or "")
+    end
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateSlider(input)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+setupSlider(sizeSlider, sizeFill, sizeLabel, "BrushSize", 100)
+setupSlider(strSlider, strFill, strLabel, "BrushStrength", 100)
+
+-- Rock Toggle
+rockToggleBtn.MouseButton1Click:Connect(function()
+    BrushRockEnabled = not BrushRockEnabled
+    if BrushRockEnabled then
+        rockToggleBtn.Text = "🪨 Rock: ON"
+        rockToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+        status.Text = "🪨 Rock Layer ON"
+        status.TextColor3 = Color3.fromRGB(150, 100, 50)
+    else
+        rockToggleBtn.Text = "🪨 Rock: OFF"
+        rockToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        status.Text = "🪨 Rock Layer OFF"
+        status.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+end)
+
+--// ============================================
+--// BRUSH INPUT HANDLING (Touch & Mouse)
+--// ============================================
+local activeTouches = {}
+
+UserInputService.TouchStarted:Connect(function(touch, gameProcessed)
+    if gameProcessed then return end
+    if panel.Visible == false then return end
+    
+    -- Check if touch is on GUI
+    local guiObjects = gui:GetGuiObjectsAtPosition(touch.Position.X, touch.Position.Y)
+    for _, obj in ipairs(guiObjects) do
+        if obj:IsDescendantOf(panel) or obj:IsDescendantOf(matWin) or obj:IsDescendantOf(moveWin) or obj:IsDescendantOf(undoRedoWin) or obj:IsDescendantOf(scriptWin) or obj == matIcon or obj == spawnBtn or obj == minIcon or obj == moveIconFloat then
+            return
+        end
+    end
+    
+    activeTouches[touch] = true
+    IsDrawing = true
+    LastTouchPos = touch.Position
+    
+    applyBrush(touch.Position.X, touch.Position.Y)
+end)
+
+UserInputService.TouchMoved:Connect(function(touch, gameProcessed)
+    if gameProcessed then return end
+    if not activeTouches[touch] then return end
+    if not IsDrawing then return end
+    
+    -- Throttle: only apply every few pixels moved
+    local lastPos = LastTouchPos
+    if lastPos then
+        local dist = (touch.Position - lastPos).Magnitude
+        if dist < 8 then return end
+    end
+    
+    LastTouchPos = touch.Position
+    applyBrush(touch.Position.X, touch.Position.Y)
+end)
+
+UserInputService.TouchEnded:Connect(function(touch, gameProcessed)
+    if activeTouches[touch] then
+        activeTouches[touch] = nil
+        IsDrawing = false
+        LastTouchPos = nil
+        FlattenLevel = nil
+    end
+end)
+
+-- Mouse fallback for PC
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        -- Check if mouse is on GUI
+        local guiObjects = gui:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y)
+        for _, obj in ipairs(guiObjects) do
+            if obj:IsDescendantOf(panel) or obj:IsDescendantOf(matWin) or obj:IsDescendantOf(moveWin) or obj:IsDescendantOf(undoRedoWin) or obj:IsDescendantOf(scriptWin) or obj == matIcon or obj == spawnBtn or obj == minIcon or obj == moveIconFloat then
+                return
+            end
+        end
+        
+        IsDrawing = true
+        applyBrush(input.Position.X, input.Position.Y)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseMovement and IsDrawing then
+        applyBrush(input.Position.X, input.Position.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        IsDrawing = false
+        FlattenLevel = nil
+    end
+end)
+
+--// ============================================
+--// RENDER LOOP
+--// ============================================
 RunService.RenderStepped:Connect(UpdatePreview)
 
-print("✅ Terrain Editor v16.5 Loaded!")
-print("🛠️ Fixed: Universal Dragging (Smooth touch untuk mobile executor)")
-print("✨ Added: Lock & Move Position Mode (Hold to Move support)")
-print("👻 Added: Ghost Mode (Tembus Terrain)")
-print("🧹 Added: Safe Erase (Water kept intact)")
+print("✅ Terrain Editor v17.1 Loaded!")
+print("🖌️ Brush Modes: Smooth | Flatten | Noise | Paint | Ridge")
+print("📏 Brush Size: 1-100 | Brush Strength: 1-100")
+print("🪨 Rock Toggle: OFF (default)")
+print("👻 Ghost Mode | 🔒 Lock & Move | 📐 Snap to Grid")
+print("🎨 Full Material & Color Support")
+print("🔧 FIXED: attempt to call a nil value (continue -> if then end)")
